@@ -45,24 +45,24 @@ import {Component, Prop, Watch} from "vue-property-decorator";
 import {dia, layout, shapes, util} from "jointjs";
 import dagre from "dagre";
 import graphlib from "graphlib";
-import {CaseNotion, CaseNotionEdges} from "@/openapi";
+import {RelationshipGraph} from "@/openapi";
 
 @Component
 export default class CaseNotionEditor extends Vue {
   @Prop({default: false})
   readonly value!: boolean;
   @Prop({default: null})
-  readonly selectedNodes?: string[] | null;
+  readonly selectedNodes?: number[] | null;
   @Prop({default: null})
-  readonly selectedLinks?: Array<CaseNotionEdges> | null;
+  readonly selectedLinks?: Array<number> | null;
   @Prop({default: null})
-  readonly relationshipGraph?: CaseNotion | null;
+  readonly relationshipGraph?: RelationshipGraph | null;
   @Prop({default: "network-simplex"})
   readonly layoutAlgorithm?: "network-simplex" | "tight-tree" | "longest-path";
 
   private graph = new dia.Graph();
   private paper = new dia.Paper({});
-  private nodes = new Map<string, shapes.standard.Rectangle>();
+  private nodes = new Map<number, shapes.standard.Rectangle>();
   private links = new Map<[shapes.standard.Rectangle, shapes.standard.Rectangle], shapes.standard.Link>();
 
   @Watch("selectedNodes")
@@ -79,15 +79,16 @@ export default class CaseNotionEditor extends Vue {
   }
 
   @Watch("relationshipGraph")
-  relationshipGraphChanged(relationshipGraph: CaseNotion | null) {
+  relationshipGraphChanged(relationshipGraph: RelationshipGraph | null) {
     if (relationshipGraph == null) return;
 
     this.graph = new dia.Graph();
-    this.nodes = new Map<string, shapes.standard.Rectangle>();
+    this.nodes = new Map<number, shapes.standard.Rectangle>();
     this.links = new Map<[shapes.standard.Rectangle, shapes.standard.Rectangle], shapes.standard.Link>();
 
-    for (let classId in relationshipGraph.classes) {
-      const className = relationshipGraph.classes[classId];
+    for (let classDescriptor of relationshipGraph.classes) {
+      const classId = classDescriptor.id;
+      const className = classDescriptor.name;
       const nodeWidth = 100 + className.length;
       const nodeHeight = 50;
       const rect = new shapes.standard.Rectangle();
@@ -111,9 +112,8 @@ export default class CaseNotionEditor extends Vue {
     });
 
     relationshipGraph.edges.forEach(edge => {
-      const sourceClassId = edge.sourceClassId?.toString();
-      const targetClassId = edge.targetClassId?.toString();
-      if (sourceClassId === undefined || targetClassId === undefined) return;
+      const sourceClassId = edge.sourceClassId;
+      const targetClassId = edge.targetClassId;
       const sourceNode = this.nodes.get(sourceClassId);
       const targetNode = this.nodes.get(targetClassId);
 
@@ -172,7 +172,7 @@ export default class CaseNotionEditor extends Vue {
   updateLinksSelection() {
     if (this.selectedLinks == null) return;
 
-    const selectedLinks = new Set(this.selectedLinks.map((link) => link.id));
+    const selectedLinks = new Set(this.selectedLinks);
 
     this.links.forEach((link, [sourceNode, targetNode]) => {
       const relationshipId = link.attr('annotations')?.relationship?.id;

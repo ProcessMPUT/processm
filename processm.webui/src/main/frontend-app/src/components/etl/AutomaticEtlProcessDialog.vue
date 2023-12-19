@@ -55,7 +55,7 @@
                 >
                   <template v-slot:item="{ item }">
                     <v-list-item-content>
-                      <v-list-item-title>{{ Object.values(item.classes).join(", ") }}</v-list-item-title>
+                      <v-list-item-title>{{ getCaseNotionName(item) }}</v-list-item-title>
                       <v-list-item-subtitle class="case-notion-description">{{
                           getCaseNotionDescription(item)
                         }}
@@ -64,7 +64,7 @@
                   </template>
                   <template v-slot:selection="{ item }">
                     <span v-if="!isCaseNotionManuallyModified">
-                      {{ Object.values(item.classes).join(", ") }}
+                      {{ getCaseNotionName(item) }}
                     </span>
                     <span v-else> {{ $t("data-stores.etl.custom-case-notion") }} item </span>
                   </template>
@@ -126,7 +126,7 @@ import App from "@/App.vue";
 import {capitalize} from "@/utils/StringCaseConverter";
 import {notEmptyRule} from "@/utils/FormValidationRules";
 import CaseNotionEditor from "./CaseNotionEditor.vue";
-import {AutomaticEtlProcess, CaseNotion, CaseNotionEdges, EtlProcessType} from "@/openapi";
+import {AutomaticEtlProcess, CaseNotion, EtlProcessType, RelationshipGraph, RelationshipGraphEdges} from "@/openapi";
 
 @Component({
   components: {
@@ -157,9 +157,11 @@ export default class AutomaticEtlProcessDialog extends Vue {
   isSubmitting = false;
   isLoadingCaseNotions = false;
   isCaseNotionManuallyModified = false;
-  selectedClasses: string[] = [];
-  selectedLinks: Array<CaseNotionEdges> = [];
-  relationshipGraph: CaseNotion | null = null;
+  selectedClasses: number[] = [];
+  selectedLinks: Array<number> = [];
+  relationshipGraph: RelationshipGraph | null = null;
+  classIdToName: Record<number, string> = {}
+  relationIdToDefinition: Record<number, RelationshipGraphEdges> = {};
   notEmptyRule = [(v: string) => notEmptyRule(v, this.$t("add-data-connector-dialog.validation.non-empty-field").toString())];
 
   @Watch("dataConnectors")
@@ -196,7 +198,14 @@ export default class AutomaticEtlProcessDialog extends Vue {
     }
 
     this.relationshipGraph = await this.dataStoreService.getRelationshipGraph(this.dataStoreId, this.selectedDataConnectorId);
-
+    this.classIdToName = {};
+    this.relationshipGraph.classes.forEach((item) => {
+      this.classIdToName[item.id] = item.name;
+    });
+    this.relationIdToDefinition = {};
+    this.relationshipGraph.edges.forEach((item) => {
+      this.relationIdToDefinition[item.id] = item;
+    });
 
     try {
       this.isLoadingCaseNotions = true;
@@ -218,13 +227,7 @@ export default class AutomaticEtlProcessDialog extends Vue {
 
     try {
       const caseNotion = {
-        classes: this.selectedClasses.reduce(
-            (obj, classId) => ({
-              ...obj,
-              [classId]: this.relationshipGraph?.classes[classId] || ""
-            }),
-            {}
-        ),
+        classes: this.selectedClasses,
         edges: this.selectedLinks
       };
       this.isSubmitting = true;
@@ -251,26 +254,31 @@ export default class AutomaticEtlProcessDialog extends Vue {
     this.resetForm();
   }
 
+  getCaseNotionName(caseNotion: CaseNotion): string {
+    return caseNotion.classes.map((classId) => this.classIdToName[classId]).join(", ");
+  }
+
   getCaseNotionDescription(caseNotion: CaseNotion): string {
     return capitalize(
         caseNotion.edges
-            .map((relation) =>
-                this.$t("data-stores.automatic-etl-process.case-notion-description", {
-                  source: caseNotion.classes[relation.sourceClassId!.toString()],
-                  target: caseNotion.classes[relation.targetClassId!.toString()]
-                })
-            )
+            .map((relationId) => {
+              const relation = this.relationIdToDefinition[relationId];
+              return this.$t("data-stores.automatic-etl-process.case-notion-description", {
+                source: this.classIdToName[relation.sourceClassId],
+                target: this.classIdToName[relation.targetClassId]
+              })
+            })
             .join(", ") + "."
     );
   }
 
   caseNotionSelected() {
-    this.selectedClasses = Array.from(Object.keys(this.selectedCaseNotion?.classes ?? {}));
+    this.selectedClasses = this.selectedCaseNotion?.classes ?? [];
     this.selectedLinks = this.getSelectedLinks(this.selectedClasses);
     this.isCaseNotionManuallyModified = false;
   }
 
-  nodeSelected(nodeId: string) {
+  nodeSelected(nodeId: number) {
     if (this.relationshipGraph == null) return;
 
     const nodeIndex = this.selectedClasses.findIndex((id) => id == nodeId);
@@ -300,16 +308,16 @@ export default class AutomaticEtlProcessDialog extends Vue {
     (this.$refs.etlProcessConfiguration as HTMLFormElement)?.reset();
   }
 
-  private getSelectedLinks(selectedClasses: string[]) {
+  private getSelectedLinks(selectedClasses: number[]) {
     if (this.relationshipGraph == null) return [];
 
     const selectedClassesSet = new Set(selectedClasses);
 
-    return this.relationshipGraph.edges.reduce((selectedRelations: Array<CaseNotionEdges>, relation: CaseNotionEdges) => {
-      const sourceClassId = relation.sourceClassId?.toString();
-      const targetClassId = relation.targetClassId?.toString();
+    return this.relationshipGraph.edges.reduce((selectedRelations: Array<number>, relation: RelationshipGraphEdges) => {
+      const sourceClassId = relation.sourceClassId;
+      const targetClassId = relation.targetClassId;
       if (sourceClassId !== undefined && targetClassId !== undefined && selectedClassesSet.has(sourceClassId) && selectedClassesSet.has(targetClassId)) {
-        selectedRelations.push(relation);
+        selectedRelations.push(relation.id);
       }
       return selectedRelations;
     }, []);

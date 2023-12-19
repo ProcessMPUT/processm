@@ -596,7 +596,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/CaseNotion'
+                $ref: '#/components/schemas/RelationshipGraph'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -2390,19 +2390,25 @@ components:
         isPrivate:
           type: boolean
           description: Indicates whether the organization can be accessed by ancestral organizations members
-    CaseNotion:
+    RelationshipGraph:
       type: object
       required: [ classes, edges ]
       properties:
         classes:
-          type: object
-          additionalProperties:
-            type: string
+          type: array
+          items:
+            type: object
+            required: [ id, name ]
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
         edges:
           type: array
           items:
             type: object
-            required: [ id ]
+            required: [ id, attributeName, sourceClassId, targetClassId ]
             properties:
               id:
                 type: integer
@@ -2412,6 +2418,18 @@ components:
                 type: integer
               targetClassId:
                 type: integer
+    CaseNotion:
+      type: object
+      required: [ classes, edges ]
+      properties:
+        classes:
+          type: array
+          items:
+            type: integer
+        edges:
+          type: array
+          items:
+            type: integer
     JdbcEtlProcessConfiguration:
       type: object
       required: [ query, enabled, batch, traceId, eventId, attributes ]

@@ -208,18 +208,19 @@ class DataStoreService(private val producer: Producer) {
     fun getCaseNotionSuggestions(
         dataStoreId: UUID,
         dataConnectorId: UUID
-    ): List<Pair<List<Pair<String, String>>, Set<Relationship>>> {
+    ): List<CaseNotion> {
         assertDataStoreExists(dataStoreId)
         return transaction(DBCache.get("$dataStoreId").database) {
             val dataModelId = ensureDataModelExistenceForDataConnector(dataStoreId, dataConnectorId)
             val metaModelReader = MetaModelReader(dataModelId.value)
             val businessPerspectiveExplorer = DAGBusinessPerspectiveExplorer("$dataStoreId", metaModelReader)
-            val classNames = metaModelReader.getClassNames()
             return@transaction businessPerspectiveExplorer.discoverBusinessPerspectives(true)
                 .sortedBy { (_, score) -> score }
                 .map { (businessPerspective, _) ->
-                    val relations = businessPerspective.graph.edgeSet()
-                    businessPerspective.identifyingClasses.map { classId -> "${classId.value}" to classNames[classId]!! } to relations
+                    val relations = businessPerspective.graph.edgeSet().mapToArray { it.id.value }
+                    assert(businessPerspective.convergingClasses.isEmpty()) { "The REST API currently does not support converging classes." }
+                    val classes = businessPerspective.identifyingClasses.mapToArray { it.value }
+                    CaseNotion(classes, relations)
                 }
         }
     }
@@ -230,7 +231,7 @@ class DataStoreService(private val producer: Producer) {
     fun getRelationshipGraph(
         dataStoreId: UUID,
         dataConnectorId: UUID
-    ): Pair<Map<String, String>, Set<Relationship>> {
+    ): RelationshipGraph {
         assertDataStoreExists(dataStoreId)
         return transaction(DBCache.get("$dataStoreId").database) {
             val dataModelId = ensureDataModelExistenceForDataConnector(dataStoreId, dataConnectorId)
@@ -240,7 +241,17 @@ class DataStoreService(private val producer: Producer) {
             val relationshipGraph = businessPerspectiveExplorer.getRelationshipGraph()
             val relations = relationshipGraph.edgeSet()
 
-            return@transaction classNames.mapKeys { "${it.key}" } to relations
+            return@transaction RelationshipGraph(
+                classNames.entries.mapToArray { RelationshipGraphClassesInner(it.key.value, it.value) },
+                relations.mapToArray {
+                    RelationshipGraphEdgesInner(
+                        it.id.value,
+                        it.referencingAttributesName.name,
+                        it.sourceClass.id.value,
+                        it.targetClass.id.value
+                    )
+                }
+            )
         }
     }
 
@@ -363,19 +374,19 @@ class DataStoreService(private val producer: Producer) {
         return@transaction saveJdbcEtl(etlId, dataConnectorId, name, configuration)
     }
 
-    private fun SizedIterable<Relationship>.toCaseNotion():CaseNotion {
-        val classes = HashMap<String, String>()
-        val edges = ArrayList<CaseNotionEdgesInner>()
-        for(r in this) {
-            classes[r.sourceClass.id.value.toString()] = r.sourceClass.name
-            classes[r.targetClass.id.value.toString()] = r.targetClass.name
-            edges.add(CaseNotionEdgesInner(r.id.value, r.referencingAttributesName.name, r.sourceClass.id.value, r.targetClass.id.value))
+    private fun SizedIterable<Relationship>.toCaseNotion(): CaseNotion {
+        val classes = HashSet<Int>()
+        val edges = ArrayList<Int>()
+        for (r in this) {
+            classes.add(r.sourceClass.id.value)
+            classes.add(r.targetClass.id.value)
+            edges.add(r.id.value)
         }
-        return CaseNotion(classes, edges.toTypedArray())
+        return CaseNotion(classes.toTypedArray(), edges.toTypedArray())
     }
 
     private fun ETLConfiguration.toJdbcEtlProcessConfiguration(): JdbcEtlProcessConfiguration {
-        val cfg=this
+        val cfg = this
         return JdbcEtlProcessConfiguration(
             query = cfg.query,
             enabled = cfg.enabled,
@@ -402,10 +413,10 @@ class DataStoreService(private val producer: Producer) {
             val result = ArrayList<AbstractEtlProcess>()
             AutomaticEtlProcess.all().mapTo(result) {
                 AbstractEtlProcess(
-                    id=it.id.value,
-                    name=it.etlProcessMetadata.name,
+                    id = it.id.value,
+                    name = it.etlProcessMetadata.name,
                     dataConnectorId = it.etlProcessMetadata.dataConnector.id.value,
-                    isActive =  it.etlProcessMetadata.isActive,
+                    isActive = it.etlProcessMetadata.isActive,
                     lastExecutionTime = it.etlProcessMetadata.lastExecutionTime?.toLocalDateTime(),
                     type = EtlProcessType.automatic,
                     caseNotion = it.relations.toCaseNotion()
@@ -413,9 +424,9 @@ class DataStoreService(private val producer: Producer) {
             }
             ETLConfiguration.all().mapTo(result) {
                 AbstractEtlProcess(
-                    id=it.metadata.id.value,
+                    id = it.metadata.id.value,
                     name = it.metadata.name,
-                    isActive =  it.metadata.isActive,
+                    isActive = it.metadata.isActive,
                     lastExecutionTime = it.metadata.lastExecutionTime?.toLocalDateTime(),
                     type = EtlProcessType.jdbc,
                     configuration = it.toJdbcEtlProcessConfiguration()
