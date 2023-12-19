@@ -10,6 +10,7 @@ import org.jgrapht.graph.AsSubgraph
 import org.jgrapht.graph.DefaultDirectedGraph
 import processm.core.helpers.mapToSet
 import processm.core.persistence.connection.DBCache
+import processm.dbmodels.models.DataModel
 import processm.dbmodels.models.Relationship
 import kotlin.math.abs
 import kotlin.math.hypot
@@ -20,11 +21,11 @@ import kotlin.math.sqrt
  * Explores possible business perspectives and evaluates their potential relevance.
  *
  * @param dataStoreDBName Name of database containing meta model data.
- * @param metaModelReader Component for acquiring meta model data.
+ * @param dataModelId ID of the datamodel to explore
  */
 class DAGBusinessPerspectiveExplorer(
     private val dataStoreDBName: String,
-    private val metaModelReader: MetaModelReader
+    private val dataModelId: EntityID<Int>
 ) {
 
     /**
@@ -55,8 +56,8 @@ class DAGBusinessPerspectiveExplorer(
         transaction(DBCache.get(dataStoreDBName).database) {
             val relationshipGraph: Graph<EntityID<Int>, Relationship> = DefaultDirectedGraph(Relationship::class.java)
 
-            metaModelReader.getRelationships()
-                .forEach {relationship ->
+            DataModel.findById(dataModelId)?.relationships
+                ?.forEach { relationship ->
                     val referencingClassId = relationship.sourceClass.id
                     val referencedClassId = relationship.targetClass.id
 

@@ -18,10 +18,15 @@ import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.DatabaseChecker
 import processm.core.querylanguage.Query
+import processm.dbmodels.models.Classes
+import processm.dbmodels.models.DataModel
 import processm.dbmodels.models.Relationship
 import processm.dbmodels.models.Relationships
 import processm.etl.discovery.SchemaCrawlerExplorer
-import processm.etl.metamodel.*
+import processm.etl.metamodel.AutomaticEtlProcessExecutor
+import processm.etl.metamodel.DAGBusinessPerspectiveDefinition
+import processm.etl.metamodel.LogGeneratingDatabaseChangeApplier
+import processm.etl.metamodel.buildMetaModel
 import java.io.File
 import java.net.URI
 import java.nio.file.Files
@@ -342,19 +347,19 @@ class DebeziumChangeTrackerTest {
             val etlProcessId = UUID.randomUUID()
 
             val executor = processm.core.persistence.connection.transaction(dataStoreDBName) {
-                val classes = MetaModelReader(metaModelId.value).getClassNames()
+                val classes = DataModel.findById(metaModelId)!!.classes
                 val graph =
                     DefaultDirectedGraph<EntityID<Int>, Relationship>(Relationship::class.java)
+                val subquery = Classes.slice(Classes.id).select { Classes.dataModelId eq metaModelId }
                 Relationships
-                    .select { (Relationships.sourceClassId inList classes.keys) and (Relationships.targetClassId inList classes.keys) }
+                    .select { (Relationships.sourceClassId inSubQuery subquery) and (Relationships.targetClassId inSubQuery subquery) }
                     .forEach {
                         val r = Relationship.wrapRow(it)
                         graph.addVertex(r.sourceClass.id)
                         graph.addVertex(r.targetClass.id)
                         graph.addEdge(r.sourceClass.id, r.targetClass.id, r)
                     }
-                val identifyingClassesIds =
-                    classes.entries.filter { it.value in identifyingClasses }.mapToSet { it.key }
+                val identifyingClassesIds = classes.filter { it.name in identifyingClasses }.mapToSet { it.id }
                 AutomaticEtlProcessExecutor(
                     dataStoreDBName,
                     etlProcessId,

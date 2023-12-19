@@ -163,11 +163,11 @@ class LogGeneratingDatabaseChangeApplierTest {
 
     private fun getApplier(identifyingClasses: Set<EntityID<Int>>): LogGeneratingDatabaseChangeApplier {
         val executor = processm.core.persistence.connection.transaction(temporaryDB) {
-            val classes = MetaModelReader(metaModelId!!).getClassNames()
+            val subquery = Classes.slice(Classes.id).select { Classes.dataModelId eq metaModelId }
             val graph =
                 DefaultDirectedGraph<EntityID<Int>, Relationship>(Relationship::class.java)
             Relationships
-                .select { (Relationships.sourceClassId inList classes.keys) and (Relationships.targetClassId inList classes.keys) }
+                .select { (Relationships.sourceClassId inSubQuery subquery) and (Relationships.targetClassId inSubQuery subquery) }
                 .forEach {
                     val r = Relationship.wrapRow(it)
                     graph.addVertex(r.sourceClass.id)

@@ -29,7 +29,6 @@ import processm.etl.discovery.SchemaCrawlerExplorer
 import processm.etl.helpers.getDataSource
 import processm.etl.jdbc.notifyUsers
 import processm.etl.metamodel.DAGBusinessPerspectiveExplorer
-import processm.etl.metamodel.MetaModelReader
 import processm.etl.metamodel.buildMetaModel
 import processm.services.api.models.*
 import java.math.BigDecimal
@@ -212,8 +211,7 @@ class DataStoreService(private val producer: Producer) {
         assertDataStoreExists(dataStoreId)
         return transaction(DBCache.get("$dataStoreId").database) {
             val dataModelId = ensureDataModelExistenceForDataConnector(dataStoreId, dataConnectorId)
-            val metaModelReader = MetaModelReader(dataModelId.value)
-            val businessPerspectiveExplorer = DAGBusinessPerspectiveExplorer("$dataStoreId", metaModelReader)
+            val businessPerspectiveExplorer = DAGBusinessPerspectiveExplorer("$dataStoreId", dataModelId)
             return@transaction businessPerspectiveExplorer.discoverBusinessPerspectives(true)
                 .sortedBy { (_, score) -> score }
                 .map { (businessPerspective, _) ->
@@ -235,14 +233,13 @@ class DataStoreService(private val producer: Producer) {
         assertDataStoreExists(dataStoreId)
         return transaction(DBCache.get("$dataStoreId").database) {
             val dataModelId = ensureDataModelExistenceForDataConnector(dataStoreId, dataConnectorId)
-            val metaModelReader = MetaModelReader(dataModelId.value)
-            val businessPerspectiveExplorer = DAGBusinessPerspectiveExplorer("$dataStoreId", metaModelReader)
-            val classNames = metaModelReader.getClassNames()
+            val businessPerspectiveExplorer = DAGBusinessPerspectiveExplorer("$dataStoreId", dataModelId)
+            val classNames = DataModel.findById(dataModelId)!!.classes
             val relationshipGraph = businessPerspectiveExplorer.getRelationshipGraph()
             val relations = relationshipGraph.edgeSet()
 
             return@transaction RelationshipGraph(
-                classNames.entries.mapToArray { RelationshipGraphClassesInner(it.key.value, it.value) },
+                classNames.mapToArray { RelationshipGraphClassesInner(it.id.value, it.name) },
                 relations.mapToArray {
                     RelationshipGraphEdgesInner(
                         it.id.value,
