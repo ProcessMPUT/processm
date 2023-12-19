@@ -63,7 +63,7 @@ export default class CaseNotionEditor extends Vue {
   private graph = new dia.Graph();
   private paper = new dia.Paper({});
   private nodes = new Map<number, shapes.standard.Rectangle>();
-  private links = new Map<[shapes.standard.Rectangle, shapes.standard.Rectangle], shapes.standard.Link>();
+  private links = new Array<shapes.standard.Link>();
 
   @Watch("selectedNodes")
   selectedNodesChanged() {
@@ -84,7 +84,7 @@ export default class CaseNotionEditor extends Vue {
 
     this.graph = new dia.Graph();
     this.nodes = new Map<number, shapes.standard.Rectangle>();
-    this.links = new Map<[shapes.standard.Rectangle, shapes.standard.Rectangle], shapes.standard.Link>();
+    this.links = new Array<shapes.standard.Link>();
 
     for (let classDescriptor of relationshipGraph.classes) {
       const classId = classDescriptor.id;
@@ -126,7 +126,7 @@ export default class CaseNotionEditor extends Vue {
       link.attr({
         annotations: {relationship: edge}
       });
-      this.links.set([sourceNode, targetNode], link);
+      this.links.push(link);
     });
 
     this.links.forEach((link: shapes.standard.Link) => {
@@ -174,7 +174,7 @@ export default class CaseNotionEditor extends Vue {
 
     const selectedLinks = new Set(this.selectedLinks);
 
-    this.links.forEach((link, [sourceNode, targetNode]) => {
+    this.links.forEach(link => {
       const relationshipId = link.attr('annotations')?.relationship?.id;
       const isSelected = selectedLinks.has(relationshipId);
       link.attr({
