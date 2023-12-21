@@ -2,7 +2,7 @@
   <v-dialog v-model="value" fullscreen hide-overlay transition="dialog-bottom-transition">
     <v-card>
       <v-toolbar dark color="primary">
-        <v-btn icon dark @click="closeConfiguration">
+        <v-btn icon dark @click="closeConfiguration" name="btn-close-configuration">
           <v-icon>arrow_back</v-icon>
         </v-btn>
         <v-spacer />
@@ -112,7 +112,7 @@
                 </v-tooltip>
                 <v-fade-transition leave-absolute>
                   <div v-if="open" class="add-button-group">
-                    <v-btn class="mx-2" color="primary" @click.stop="addDataConnectorDialog = true">
+                    <v-btn class="mx-2" color="primary" @click.stop="addDataConnectorDialog = true" name="btn-add-data-connector">
                       {{ $t("data-stores.add-data-connector") }}
                     </v-btn>
                   </div>
@@ -212,6 +212,7 @@
                             :disabled="dataConnectors.length == 0"
                             @click.stop="automaticEtlProcessDialogVisible = true"
                             v-bind="attrs"
+                            name="btn-add-automatic-etl-process"
                           >
                             {{ $t("data-stores.automatic-etl-process.title") }}
                           </v-btn>
@@ -305,7 +306,7 @@
                 </v-tooltip>
                 <v-tooltip bottom>
                   <template v-slot:activator="{ on, attrs }">
-                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on" name="btn-show-etl-process-details">
                       <v-icon small @click="showEtlProcessDetails(item)">info</v-icon>
                     </v-btn>
                   </template>

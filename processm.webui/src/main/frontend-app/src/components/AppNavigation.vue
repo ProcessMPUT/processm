@@ -26,7 +26,7 @@
         </v-list-item-action>
         <v-list-item-content>{{ $t("navigation.users") }}</v-list-item-content>
       </v-list-item>
-      <v-list-item :to="'data-stores'" color="primary">
+      <v-list-item :to="'data-stores'" color="primary" name="goto-data-stores">
         <v-list-item-action>
           <v-icon>folder</v-icon>
         </v-list-item-action>
@@ -34,7 +34,7 @@
           $t("navigation.data-stores")
         }}</v-list-item-content>
       </v-list-item>
-      <v-list-item :to="'pql-interpreter'" color="primary">
+      <v-list-item :to="'pql-interpreter'" color="primary" name="goto-pql-interpreter">
         <v-list-item-action>
           <v-icon>code</v-icon>
         </v-list-item-action>

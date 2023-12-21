@@ -80,6 +80,7 @@
           label="Query"
           v-model="query"
           @input="queryModified"
+          name="query"
         >
         </v-textarea>
       </v-col>
@@ -91,6 +92,7 @@
           class="mr-4"
           :disabled="isLoadingData"
           @click="submitQuery"
+          name="btn-submit-query"
         >
           Execute
           <v-progress-circular

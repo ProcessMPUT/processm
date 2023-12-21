@@ -62,7 +62,7 @@
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn color="secondary" text @click.stop="cancel">
+        <v-btn color="secondary" text @click.stop="cancel" name="btn-process-details-dialog-cancel">
           {{ $t("common.close") }}
         </v-btn>
       </v-card-actions>

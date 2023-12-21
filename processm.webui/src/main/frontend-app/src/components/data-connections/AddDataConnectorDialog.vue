@@ -29,7 +29,7 @@
             </v-expansion-panel-content>
           </v-expansion-panel>
           <v-expansion-panel>
-            <v-expansion-panel-header>{{ $t("add-data-connector-dialog.specify-connection-properties") }} </v-expansion-panel-header>
+            <v-expansion-panel-header name="header-specify-connection-properties">{{ $t("add-data-connector-dialog.specify-connection-properties") }} </v-expansion-panel-header>
             <v-expansion-panel-content>
               <v-form ref="connectionPropertiesForm" lazy-validation>
                 <v-text-field
@@ -37,6 +37,7 @@
                   :label="$t('add-data-connector-dialog.connector-name')"
                   required
                   :rules="connectionNameRules"
+                  name="connection-name"
                 ></v-text-field>
 
                 <v-select
@@ -44,6 +45,7 @@
                   :items="availableConnectionTypes"
                   :label="$t('add-data-connector-dialog.connection-type')"
                   required
+                  name="available-connection-types"
                 ></v-select>
 
                 <component :is="connectionTypeComponent" v-if="connectionProperties['connection-type']" v-model="connectionProperties"></component>
@@ -64,7 +66,7 @@
           {{ $t("add-data-connector-dialog.test-connection") }}
         </v-btn>
 
-        <v-btn :loading="isSubmitting" color="primary" text @click.stop="createDataConnector">
+        <v-btn :loading="isSubmitting" color="primary" text @click.stop="createDataConnector" name="btn-create-data-connector">
           {{ $t("common.save") }}
         </v-btn>
       </v-card-actions>

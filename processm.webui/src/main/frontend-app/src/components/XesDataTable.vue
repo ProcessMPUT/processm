@@ -2,7 +2,7 @@
   <!-- Setting v-container.fluid to 'true' makes the container take up all the full width. -->
   <v-container :fluid="true">
     <v-row>
-      <tree-table
+      <tree-table name="xes-data-table"
         ref="treeTable"
         v-bind="$attrs"
         :data="filteredItems"

@@ -7,7 +7,7 @@
       <v-card-text>
         <v-form ref="etlProcessConfiguration" lazy-validation>
           <v-text-field v-model="processName" :label="$t('data-stores.etl.process-name')" :rules="notEmptyRule"
-                        required></v-text-field>
+                        required name="process-name"></v-text-field>
 
           <v-select
               v-model="selectedDataConnectorId"
@@ -17,6 +17,7 @@
               :items="availableDataConnectors"
               :label="$t('data-stores.etl.data-connector')"
               :rules="notEmptyRule"
+              name="selected-data-connector-id"
               @change="reloadSuggestedBusinessPerspectives"
               required
           >
@@ -28,7 +29,7 @@
               </v-list-item>
               <v-tooltip v-else bottom v-bind="attrs" v-on="on">
                 <template v-slot:activator="{ on, attrs }">
-                  <div v-bind="attrs" v-on="on">
+                  <div :name="'automatic-etl-process-dialog-connector-'+item.id" v-bind="attrs" v-on="on">
                     <v-list-item :disabled="true" class="px-0">
                       <v-list-item-content>
                         <v-list-item-title>{{ item.name }}</v-list-item-title>
@@ -93,7 +94,7 @@
           {{ $t("common.cancel") }}
         </v-btn>
 
-        <v-btn :loading="isSubmitting" color="primary" text @click.stop="createEtlProcessConfiguration">
+        <v-btn :loading="isSubmitting" color="primary" text @click.stop="createEtlProcessConfiguration" name="btn-create-etl-process-configuration">
           {{ $t("common.save") }}
         </v-btn>
       </v-card-actions>
