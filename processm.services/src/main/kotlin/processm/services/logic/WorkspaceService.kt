@@ -9,7 +9,9 @@ import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
 import processm.dbmodels.urn
+import processm.services.api.models.CustomProperty
 import processm.services.api.updateData
+import java.time.Instant
 import java.util.*
 
 class WorkspaceService(
@@ -140,12 +142,12 @@ class WorkspaceService(
         organizationId: UUID,
         name: String?,
         query: String?,
-        algorithm: String?,
         dataStore: UUID?,
         componentType: ComponentTypeDto?,
         customizationData: String? = null,
         layoutData: String? = null,
-        data: String? = null
+        data: String? = null,
+        customProperties: Array<CustomProperty>
     ): Unit = transactionMain {
         aclService.checkAccess(userId, organizationId, Workspaces, workspaceId, RoleType.Writer)
 
@@ -160,12 +162,12 @@ class WorkspaceService(
                 workspaceId,
                 name,
                 query,
-                algorithm,
                 dataStore,
                 componentType,
                 customizationData,
                 layoutData,
-                data
+                data,
+                customProperties
             )
         }
 
@@ -180,11 +182,11 @@ class WorkspaceService(
             workspaceId,
             name!!,
             query!!,
-            algorithm,
             dataStore,
             componentType,
             customizationData,
-            layoutData
+            layoutData,
+            customProperties
         )
     }
 
@@ -231,21 +233,22 @@ class WorkspaceService(
         workspaceId: UUID,
         name: String,
         query: String,
-        algorithm: String?,
         dataStore: UUID,
         componentType: ComponentTypeDto,
         customizationData: String? = null,
-        layoutData: String? = null
+        layoutData: String? = null,
+        customProperties: Array<CustomProperty> = emptyArray()
     ) {
         WorkspaceComponent.new(workspaceComponentId) {
             this.name = name
             this.query = query
-            this.algorithm = algorithm
             this.dataStoreId = dataStore
             this.componentType = ComponentTypeDto.byTypeNameInDatabase(componentType.typeName)
             this.customizationData = customizationData
             this.layoutData = layoutData
             this.workspace = Workspace[workspaceId]
+            this.algorithm = customProperties.firstOrNull { it.name == "algorithm" }?.value
+            this.userLastModified = Instant.now()
 
             afterCommit {
                 triggerEvent(producer)
@@ -258,24 +261,25 @@ class WorkspaceService(
         workspaceId: UUID?,
         name: String?,
         query: String?,
-        algorithm: String?,
         dataStore: UUID?,
         componentType: ComponentTypeDto?,
         customizationData: String? = null,
         layoutData: String? = null,
-        data: String? = null
+        data: String? = null,
+        customProperties: Array<CustomProperty> = emptyArray()
     ) {
         WorkspaceComponent[workspaceComponentId].apply {
             if (workspaceId != null) this.workspace = Workspace[workspaceId]
             if (name != null) this.name = name
             if (query != null) this.query = query
-            if (algorithm != null) this.algorithm = algorithm
             if (dataStore != null) this.dataStoreId = dataStore
             if (componentType != null) this.componentType =
                 ComponentTypeDto.byTypeNameInDatabase(componentType.typeName)
             if (customizationData != null) this.customizationData = customizationData
             if (layoutData != null) this.layoutData = layoutData
             if (data != null) this.updateData(data)
+            this.algorithm = customProperties.firstOrNull { it.name == "algorithm" }?.value
+            this.userLastModified = Instant.now()
 
             afterCommit {
                 triggerEvent(producer)

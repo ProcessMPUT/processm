@@ -17,6 +17,8 @@ import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
 import processm.dbmodels.models.load
+import processm.miners.causalnet.ALGORITHM_HEURISTIC_MINER
+import processm.miners.causalnet.ALGORITHM_INDUCTIVE_MINER
 import processm.services.api.models.*
 import java.util.*
 
@@ -27,7 +29,6 @@ fun WorkspaceComponent.toAbstractComponent(): AbstractComponent =
     AbstractComponent(
         id = id.value,
         query = query,
-        algorithm = algorithm,
         dataStore = dataStoreId,
         type = componentType.toComponentType(),
         name = name,
@@ -36,7 +37,8 @@ fun WorkspaceComponent.toAbstractComponent(): AbstractComponent =
         data = getData(),
         dataLastModified = dataLastModified?.toLocalDateTime(),
         userLastModified = userLastModified.toLocalDateTime(),
-        lastError = lastError
+        lastError = lastError,
+        customProperties = getCustomProperties()
     )
 
 /**
@@ -102,12 +104,10 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                         cnet.joins[it].orEmpty().mapToArray { join -> join.sources.mapToArray { s -> s.name } }
                     )
                 }
-                val hasDependencyMeasure = BasicMetadata.DEPENDENCY_MEASURE in cnet.availableMetadata
                 val edges = cnet.dependencies.mapToArray {
-                    val dependencyMeasure = if (hasDependencyMeasure)
-                        (cnet.getMetadata(it, BasicMetadata.DEPENDENCY_MEASURE) as SingleDoubleMetadata).value
-                    else
-                        Double.NaN
+                    val dependencyMeasure =
+                        (cnet.getAllMetadata(it)[BasicMetadata.DEPENDENCY_MEASURE] as SingleDoubleMetadata?)?.value
+                            ?: 0.0
                     CausalNetComponentDataAllOfEdges(
                         it.source.name,
                         it.target.name,
@@ -242,3 +242,31 @@ fun WorkspaceComponent.updateData(data: String) = loggedScope { logger ->
         else -> logger.error("Updating data for $componentType is currently not supported")
     }
 }
+
+/**
+ * Gets the list of custom properties for this component.
+ */
+fun WorkspaceComponent.getCustomProperties(): Array<CustomProperty> = when (componentType) {
+    ComponentTypeDto.CausalNet ->
+        arrayOf(
+            CustomProperty(
+                id = 0,
+                name = "algorithm",
+                type = "enum",
+                enum = arrayOf(
+                    EnumItem(
+                        id = ALGORITHM_HEURISTIC_MINER,
+                        name = "Online Heuristic Miner"
+                    ),
+                    EnumItem(
+                        id = ALGORITHM_INDUCTIVE_MINER,
+                        name = "Online Inductive Miner"
+                    )
+                ),
+                value = algorithm ?: ALGORITHM_HEURISTIC_MINER
+            )
+        )
+
+    else -> emptyArray()
+}
+

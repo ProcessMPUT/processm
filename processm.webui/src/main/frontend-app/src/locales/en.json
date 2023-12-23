@@ -44,7 +44,8 @@
           "datastore-empty": "The datastore cannot be empty",
           "name-empty": "The name cannot be empty",
           "query-empty": "The query cannot be empty"
-        }
+        },
+        "algorithm": "Discovery algorithm"
       },
       "flat-log-view": "Flat log view",
       "flat-log": {

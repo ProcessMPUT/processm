@@ -3,21 +3,30 @@
     <div v-if="componentDetails.type != null" class="component-name">
       <v-menu offset-y bottom min-width="0">
         <template #activator="{ on }">
-          <v-btn :ripple="false" class="component-name" depressed small tile v-on="on">{{ componentDetails.name }}<v-icon dark>expand_more</v-icon></v-btn>
+          <v-btn :ripple="false" class="component-name" depressed small tile v-on="on"
+            >{{ componentDetails.name }}
+            <v-icon dark>expand_more</v-icon>
+          </v-btn>
         </template>
 
         <v-list dense>
           <v-list-item @click="$emit('view', componentDetails.id)">
-            <v-list-item-icon><v-icon>visibility</v-icon></v-list-item-icon>
+            <v-list-item-icon>
+              <v-icon>visibility</v-icon>
+            </v-list-item-icon>
             <v-list-item-title>{{ $t("common.view") }}</v-list-item-title>
           </v-list-item>
           <v-list-item @click="$emit('edit', componentDetails.id)">
-            <v-list-item-icon><v-icon>edit</v-icon></v-list-item-icon>
+            <v-list-item-icon>
+              <v-icon>edit</v-icon>
+            </v-list-item-icon>
             <v-list-item-title>{{ $t("common.edit") }}</v-list-item-title>
           </v-list-item>
           <v-divider></v-divider>
           <v-list-item @click="$emit('remove', componentDetails.id)">
-            <v-list-item-icon><v-icon>delete</v-icon></v-list-item-icon>
+            <v-list-item-icon>
+              <v-icon>delete</v-icon>
+            </v-list-item-icon>
             <v-list-item-title>{{ $t("common.remove") }}</v-list-item-title>
           </v-list-item>
         </v-list>
@@ -29,6 +38,13 @@
       </v-btn>
     </div>
     <div v-if="isDisplayable" class="workspace-component-content-parent">
+      <v-progress-linear
+        :active="Date.parse(componentDetails?.userLastModified ?? '') > Date.parse(componentDetails?.dataLastModified ?? '')"
+        :indeterminate="true"
+        absolute
+        color="secondary accent-4"
+        top
+      ></v-progress-linear>
       <component :is="componentType" :component-mode="componentMode" :data="componentDetails" :update-data="updateData" class="workspace-component-content" />
       <div class="last-updated">
         {{ $t("common.last-updated") }}:
@@ -94,8 +110,7 @@ button.v-btn.v-btn.component-name[type="button"] {
 <script lang="ts">
 import Vue from "vue";
 import Component from "vue-class-component";
-import { Prop } from "vue-property-decorator";
-//import CausalNetComponent from "./causal-net/CausalNetComponent.vue";
+import { Prop } from "vue-property-decorator"; //import CausalNetComponent from "./causal-net/CausalNetComponent.vue";
 import PetriNetComponent from "./petri-net/PetriNetComponent.vue";
 import KpiComponent from "./KpiComponent.vue";
 import BPMNComponent from "./bpmn/BPMNComponent.vue";

@@ -1,9 +1,9 @@
 package processm.core.models.processtree
 
 /**
- * This class is responsible for make process tree model simpler and generate it without extra activities
+ * This object is responsible for simplifying process tree by dropping redundant activities
  */
-class ProcessTreeSimplifier {
+object ProcessTreeSimplifier {
     /**
      * Simplify process tree
      * WARNING: This action can modify internal structure of given process tree model!

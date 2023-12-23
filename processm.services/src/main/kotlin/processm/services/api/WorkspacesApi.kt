@@ -123,13 +123,13 @@ fun Route.WorkspacesApi() {
                     component.organizationId,
                     name,
                     query,
-                    algorithm,
                     dataStore,
                     ComponentTypeDto.byTypeNameInDatabase(type.toString()),
                     // TODO: replace the dependency on Gson with kotlinx/serialization
                     customizationData = customizationData?.let { Gson().toJson(it) },
                     layoutData = layout?.let { Gson().toJson(it) },
-                    data = data?.let { Gson().toJson(it) }
+                    data = data?.let { Gson().toJson(it) },
+                    customProperties = customProperties
                 )
             }
 
