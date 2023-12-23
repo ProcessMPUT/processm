@@ -397,10 +397,10 @@ class WorkspacesApiTest : BaseApiTest() {
                         organizationId,
                         componentName,
                         dataQuery,
-                        any(),
                         dataStore,
                         ComponentTypeDto.CausalNet,
-                        customizationData = null
+                        customizationData = null,
+                        customProperties = emptyArray()
                     )
                 } just Runs
                 with(
@@ -416,7 +416,8 @@ class WorkspacesApiTest : BaseApiTest() {
                                 dataStore = dataStore,
                                 name = "Component1",
                                 type = ComponentType.causalNet,
-                                customizationData = null
+                                customizationData = null,
+                                customProperties = emptyArray()
                             )
                         )
                     }) {
@@ -444,10 +445,10 @@ class WorkspacesApiTest : BaseApiTest() {
                     organizationId,
                     componentName,
                     dataQuery,
-                    any(),
                     dataStore,
                     ComponentTypeDto.CausalNet,
-                    customizationData = """{"layout":[{"id":"id1","x":10.0,"y":10.0}]}"""
+                    customizationData = """{"layout":[{"id":"id1","x":10.0,"y":10.0}]}""",
+                    customProperties = any()
                 )
             } just Runs
             with(
@@ -471,7 +472,8 @@ class WorkspacesApiTest : BaseApiTest() {
                                         y = 10.toBigDecimal()
                                     )
                                 )
-                            )
+                            ),
+                            customProperties = emptyArray()
                         )
                     )
                 }) {

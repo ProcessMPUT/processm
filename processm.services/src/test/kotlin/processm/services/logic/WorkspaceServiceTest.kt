@@ -184,10 +184,10 @@ class WorkspaceServiceTest : ServiceTestBase() {
             organizationId,
             newComponentName,
             newDataQuery,
-            null,
             newDataStore,
             newComponentType,
-            newComponentCustomizationData
+            newComponentCustomizationData,
+            customProperties = emptyArray()
         )
 
         assertTrue {
@@ -229,10 +229,10 @@ class WorkspaceServiceTest : ServiceTestBase() {
             organizationId,
             name = null,
             query = null,
-            algorithm = null,
             dataStore = null,
             componentType = null,
-            customizationData = null
+            customizationData = null,
+            customProperties = emptyArray()
         )
 
         assertTrue {
@@ -277,10 +277,10 @@ class WorkspaceServiceTest : ServiceTestBase() {
                     organizationId,
                     name = null,
                     query = null,
-                    algorithm = null,
                     dataStore = null,
                     componentType = null,
-                    customizationData = null
+                    customizationData = null,
+                    customProperties = emptyArray()
                 )
             }
         assertEquals(Reason.ResourceNotFound, exception.reason)
@@ -309,10 +309,10 @@ class WorkspaceServiceTest : ServiceTestBase() {
             organizationId,
             name = componentName,
             query = dataQuery,
-            algorithm = null,
             dataStore = dataStore,
             componentType = componentType,
-            customizationData = componentCustomizationData
+            customizationData = componentCustomizationData,
+            customProperties = emptyArray()
         )
 
         assertTrue {
