@@ -37,9 +37,14 @@
       },
       "edit": {
         "name": "Nazwa",
+        "name-hint": "Etykieta wyświetlana na komponencie",
         "type": "Typ",
+        "type-hint": "Typ komponentu do wyświetlenia",
         "query": "Zapytanie PQL",
+        "query-doc": "Otwórz dokumentację języka PQL w nowym oknie",
+        "query-hint": "Zapytanie do wybranego magazynu danych w celu pobrania dzienników zdarzeń dla tego komponentu",
         "datastore": "Magazyn danych",
+        "datastore-hint": "Magazyn danych, na którym wykonać zapytanie",
         "validation": {
           "datastore-empty": "Magazyn danych nie może być pusty",
           "name-empty": "Nazwa nie może być pusta",

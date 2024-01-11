@@ -37,9 +37,14 @@
       },
       "edit": {
         "name": "Name",
+        "name-hint": "The label shown on top of this component",
         "type": "Type",
+        "type-hint": "The type of component to display",
         "query": "PQL Query",
+        "query-doc": "Open PQL documentation in a new window",
+        "query-hint": "The query executed against the selected data store for retrieval of event logs for this component",
         "datastore": "Data store",
+        "datastore-hint": "The data store to execute the query against",
         "validation": {
           "datastore-empty": "The datastore cannot be empty",
           "name-empty": "The name cannot be empty",
