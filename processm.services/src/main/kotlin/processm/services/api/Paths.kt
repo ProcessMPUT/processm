@@ -123,18 +123,19 @@ object Paths {
      *
      * @param dataStoreId Data store ID
      */
-    @Location("/data-stores/{dataStoreId}/logs")
-    class Logs(val dataStoreId: UUID)
+    @Location("/organizations/{organizationId}//data-stores/{dataStoreId}/logs")
+    class Logs(val organizationId: UUID, val dataStoreId: UUID)
 
 
     /**
      * Log stored in [dataStoreId] and specified by [identityId].
      *
+     * @param organizationId Organization ID
      * @param dataStoreId Data store ID
      * @param identityId Log's identity:id attribute value
      */
-    @Location("/data-stores/{dataStoreId}/logs/{identityId}")
-    class Log(val dataStoreId: UUID, val identityId: UUID)
+    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/logs/{identityId}")
+    class Log(val organizationId: UUID, val dataStoreId: UUID, val identityId: UUID)
 
     /**
      * Data store assigned to [organizationId] and specified by [dataStoreId].

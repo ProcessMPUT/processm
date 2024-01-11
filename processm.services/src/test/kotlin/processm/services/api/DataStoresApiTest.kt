@@ -7,6 +7,7 @@ import io.mockk.just
 import org.junit.jupiter.api.TestInstance
 import org.koin.test.mock.declareMock
 import processm.core.helpers.toLocalDateTime
+import processm.dbmodels.models.RoleType
 import processm.services.api.models.*
 import processm.services.logic.DataStoreService
 import processm.services.logic.LogsService
@@ -76,25 +77,11 @@ class DataStoresApiTest : BaseApiTest() {
                 every {
                     dataStoreService.assertUserHasSufficientPermissionToDataStore(
                         userId,
-                        dataStoreId,
-                        OrganizationRole.owner
-                    )
-                } returns true
-                every {
-                    dataStoreService.assertUserHasSufficientPermissionToDataStore(
-                        userId,
-                        dataStoreId,
-                        OrganizationRole.owner,
-                        OrganizationRole.writer,
-                        OrganizationRole.reader
-                    )
-                } returns true
-                every {
-                    dataStoreService.assertDataStoreBelongsToOrganization(
                         organizationId,
-                        dataStoreId
+                        dataStoreId,
+                        any()
                     )
-                } returns true
+                } just Runs
                 with(
                     handleRequest(
                         HttpMethod.Post,
@@ -125,7 +112,7 @@ class DataStoresApiTest : BaseApiTest() {
                 with(
                     handleRequest(
                         HttpMethod.Get,
-                        "/api/data-stores/$dataStoreId/logs?query=where+log:identity:id=$logIdentityId"
+                        "/api/organizations/$organizationId/data-stores/$dataStoreId/logs?query=where+log:identity:id=$logIdentityId"
                     )
                 ) {
                     assertEquals(HttpStatusCode.OK, response.status())
@@ -136,7 +123,7 @@ class DataStoresApiTest : BaseApiTest() {
                     assertEquals(1, map.size)
                     assertEquals("bar", map["foo"])
                 }
-                with(handleRequest(HttpMethod.Delete, "/api/data-stores/$dataStoreId/logs/$logIdentityId")) {
+                with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/data-stores/$dataStoreId/logs/$logIdentityId")) {
                     assertEquals(HttpStatusCode.NoContent, response.status())
                 }
                 with(

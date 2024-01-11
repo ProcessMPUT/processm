@@ -7,10 +7,7 @@ import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.toFlatSequence
 import processm.core.persistence.connection.DatabaseChecker
 import processm.dbmodels.etl.jdbc.ETLConfiguration
-import processm.dbmodels.models.AccessControlList
-import processm.dbmodels.models.DataStores
-import processm.dbmodels.models.Groups
-import processm.dbmodels.models.Organizations
+import processm.dbmodels.models.*
 import processm.etl.jdbc.toXESInputStream
 import processm.services.api.models.JdbcEtlColumnConfiguration
 import processm.services.api.models.JdbcEtlProcessConfiguration
@@ -26,7 +23,7 @@ internal class DataStoreServiceTest : ServiceTestBase() {
     @BeforeTest
     override fun setUp() {
         super.setUp()
-        dataStoreService = DataStoreService(producer)
+        dataStoreService = DataStoreService(accountService, aclService, producer)
     }
 
     @Test
@@ -48,11 +45,12 @@ internal class DataStoreServiceTest : ServiceTestBase() {
         }
 
     @Test
-    fun `Create new data store`(): Unit = withCleanTables(AccessControlList, DataStores, Groups, Organizations) {
+    fun `Create new data store`(): Unit = withCleanTables(AccessControlList, DataStores, Users, Groups, Organizations) {
         val org = createOrganization().id.value
+        val user = createUser(organizationId = org).id.value
         assertTrue(dataStoreService.allByOrganizationId(org).isEmpty())
 
-        val data = dataStoreService.createDataStore(organizationId = org, name = "New data store")
+        val data = dataStoreService.createDataStore(userId = user, organizationId = org, name = "New data store")
 
         assertEquals("New data store", data.name)
         assertEquals(org, data.organization.id.value)
@@ -158,11 +156,12 @@ internal class DataStoreServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `getting relationship graph does not throw with Postgres`(): Unit = withCleanTables(DataStores) {
+    fun `getting relationship graph does not throw with Postgres`(): Unit = withCleanTables(AccessControlList, DataStores, Groups, Organizations, Users) {
         val org = createOrganization().id.value
+        val user = createUser(organizationId = org).id.value
         assertTrue(dataStoreService.allByOrganizationId(org).isEmpty())
 
-        val dataStore = dataStoreService.createDataStore(organizationId = org, name = "New data store")
+        val dataStore = dataStoreService.createDataStore(userId = user, organizationId = org, name = "New data store")
 
         val dataConnectorId =
             dataStoreService.createDataConnector(
@@ -207,11 +206,12 @@ internal class DataStoreServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `create sampling ETL proces`(): Unit = withCleanTables(AccessControlList, Groups, DataStores, Organizations) {
-        val service = DataStoreService(producer)
+    fun `create sampling ETL proces`(): Unit = withCleanTables(AccessControlList, Groups, DataStores, Organizations, Users) {
+        val service = DataStoreService(accountService, aclService, producer)
         val org = createOrganization().id.value
+        val user = createUser(organizationId = org).id.value
 
-        val ds = service.createDataStore(organizationId = org, name = "New data store")
+        val ds = service.createDataStore(userId = user, organizationId = org, name = "New data store")
 
         val dc = service.createDataConnector(ds.id.value, "DC name", "foo://bar")
 
@@ -226,12 +226,13 @@ internal class DataStoreServiceTest : ServiceTestBase() {
 
     @Test
     fun `create, query and delete sampling ETL proces`(): Unit =
-        withCleanTables(AccessControlList, Groups, DataStores, Organizations) {
-            val service = DataStoreService(producer)
+        withCleanTables(AccessControlList, Groups, DataStores, Organizations, Users) {
+            val service = DataStoreService(accountService, aclService, producer)
             val logsService = LogsService(producer)
             val org = createOrganization().id.value
+            val user = createUser(organizationId = org).id.value
 
-            val ds = service.createDataStore(organizationId = org, name = "New data store")
+            val ds = service.createDataStore(userId = user, organizationId = org, name = "New data store")
 
             val dc = service.createDataConnector(ds.id.value, "DC name", "foo://bar")
 

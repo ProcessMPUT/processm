@@ -1543,8 +1543,15 @@ paths:
           $ref: '#/components/responses/UnprocessableEntity'
       security:
         - bearerAuth: [ ]
-  /data-stores/{dataStoreId}/logs:
+  /organizations/{organizationId}/data-stores/{dataStoreId}/logs:
     parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
       - name: dataStoreId
         in: path
         description: Data store ID
@@ -1614,8 +1621,15 @@ paths:
           $ref: '#/components/responses/Forbidden'
       security:
         - bearerAuth: [ ]
-  /data-stores/{dataStoreId}/logs/{identityId}:
+  /organizations/{organizationId}/data-stores/{dataStoreId}/logs/{identityId}:
     parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
       - name: dataStoreId
         in: path
         description: Data store ID

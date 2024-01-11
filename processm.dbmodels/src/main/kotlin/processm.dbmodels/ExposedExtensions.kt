@@ -1,6 +1,7 @@
 package processm.dbmodels
 
 import org.jetbrains.exposed.dao.Entity
+import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.StatementInterceptor
 import org.jetbrains.exposed.sql.transactions.TransactionManager
@@ -44,4 +45,11 @@ fun <T : Comparable<T>> Entity<T>.afterCommit(action: Entity<T>.() -> Unit) {
  * Intended for the use in access control lists.
  */
 val Entity<*>.urn: URN
-    get() = URN("urn:processm:db/${this.id.table.tableName}/${id.value}")
+    get() = id.urn
+
+/**
+ * Universal Resource Name (URN) for the corresponding database row.
+ * Intended for the use in access control lists.
+ */
+val EntityID<*>.urn: URN
+    get() = URN("urn:processm:db/${this.table.tableName}/${value}")

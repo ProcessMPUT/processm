@@ -244,7 +244,7 @@ export default class DataStoreService extends BaseService {
   }
 
   public async removeLog(dataStoreId: string, logIdentityId: string): Promise<void> {
-    await this.dataStoresApi.removeLog(dataStoreId, logIdentityId, {
+    await this.dataStoresApi.removeLog(DataStoreService.currentOrganizationId, dataStoreId, logIdentityId, {
       validateStatus: (status: number) => [204, 404].indexOf(status) >= 0
     });
   }
