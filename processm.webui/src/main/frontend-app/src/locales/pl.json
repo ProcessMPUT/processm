@@ -45,7 +45,7 @@
           "name-empty": "Nazwa nie może być pusta",
           "query-empty": "Zapytanie nie może być puste"
         },
-        "algorithm": "Algorytm odkrywania modelu"
+        "algorithm": "Algorytm odkrywania"
       }
     },
     "flat-log-view": "Tabelaryczny widok logu",
