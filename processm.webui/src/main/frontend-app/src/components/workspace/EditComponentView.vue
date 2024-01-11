@@ -68,6 +68,20 @@
               />
             </v-list-item-content>
           </v-list-item>
+          <v-list-item v-for="property in component.customProperties ?? []" :key="property.name">
+            <v-list-item-content>
+              <v-text-field v-if="property.type == 'string'" v-model="property.value" :label="$t(`workspace.component.edit.${property.name}`)" required />
+              <v-select
+                v-if="property.type == 'enum'"
+                v-model="property.value"
+                :items="property.enum"
+                :label="$t(`workspace.component.edit.${property.name}`)"
+                item-text="name"
+                item-value="id"
+                required
+              />
+            </v-list-item-content>
+          </v-list-item>
         </v-list>
       </v-card-text>
     </v-card>
@@ -142,6 +156,7 @@ export default class EditComponentView extends Vue {
       await waitForRepaint(() => 0);
 
       await this.workspaceService.updateComponent(this.workspaceId, this.componentDetails.id, this.component);
+      this.component.userLastModified = new Date().toString();
 
       this.$emit("component-updated", this.component);
       this.app.success(`${this.$t("common.saving.success")}`);

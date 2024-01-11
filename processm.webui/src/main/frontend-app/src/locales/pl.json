@@ -44,7 +44,8 @@
           "datastore-empty": "Magazyn danych nie może być pusty",
           "name-empty": "Nazwa nie może być pusta",
           "query-empty": "Zapytanie nie może być puste"
-        }
+        },
+        "algorithm": "Algorytm odkrywania"
       }
     },
     "flat-log-view": "Tabelaryczny widok logu",

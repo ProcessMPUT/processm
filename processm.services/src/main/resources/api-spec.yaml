@@ -2048,7 +2048,7 @@ components:
           type: string
     Component:
       type: object
-      required: [ id, query, dataStore, type ]
+      required: [ id, query, dataStore, type, customProperties ]
       properties:
         id:
           type: string
@@ -2060,8 +2060,6 @@ components:
         dataStore:
           type: string
           format: uuid
-        algorithm:
-          type: string
         type:
           $ref: '#/components/schemas/ComponentType'
         layout:
@@ -2074,6 +2072,10 @@ components:
           format: date-time
         lastError:
           type: string
+        customProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomProperty'
       discriminator:
         propertyName: type
     LayoutElement:
@@ -2114,6 +2116,28 @@ components:
       properties:
         data:
           type: object
+    CustomProperty:
+      required: [ id, name ]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string # string, number, enum
+        enum:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnumItem'
+        value:
+          type: string
+    EnumItem:
+      required: [ id, name ]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
     ComponentData:
       type: object
       required: [ type ]

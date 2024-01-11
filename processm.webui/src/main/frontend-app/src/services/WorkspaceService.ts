@@ -101,10 +101,9 @@ export default class WorkspaceService extends BaseService {
   public observeWorkspace(workspaceId: string, callback: (componentId: string) => void) {
     const observer = new WorkspaceObserver(this.defaultApiPath, this.currentOrganizationId, workspaceId, callback);
     observer.reauthenticate = async () => {
-      await this.prolongExistingSession(undefined, this.usersApi)
-      return true
-    }
+      await this.prolongExistingSession(undefined, this.usersApi);
+      return true;
+    };
     return observer;
   }
-
 }

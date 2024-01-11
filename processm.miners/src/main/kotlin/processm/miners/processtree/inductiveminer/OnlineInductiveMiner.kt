@@ -2,6 +2,7 @@ package processm.miners.processtree.inductiveminer
 
 import processm.core.log.hierarchical.LogInputStream
 import processm.core.models.dfg.DirectlyFollowsGraph
+import processm.core.models.metadata.*
 import processm.core.models.processtree.ProcessTree
 import processm.core.models.processtree.ProcessTreeActivity
 import processm.core.models.processtree.ProcessTreeSimplifier
@@ -57,8 +58,16 @@ class OnlineInductiveMiner : InductiveMiner() {
         // Check - apply statistics?
         if (changedStatistics) propagateStatistics()
 
-        processTree = ProcessTree(assignChildrenToNode(model))
-        ProcessTreeSimplifier().simplify(processTree)
+        val metadata = HashMap<MetadataSubject, SingleDoubleMetadata>()
+        val metadataHandler = DefaultMutableMetadataHandler()
+        val metadataProvider = DefaultMetadataProvider(BasicMetadata.DEPENDENCY_MEASURE, metadata)
+        metadataHandler.addMetadataProvider(metadataProvider)
+
+        processTree = ProcessTree(
+            assignChildrenToNode(model, metadata as MutableMap<MetadataSubject, MetadataValue>),
+            metadataHandler
+        )
+        ProcessTreeSimplifier.simplify(processTree)
 
         return processTree
     }

@@ -13,6 +13,7 @@
 import { Component, Prop, Vue, Watch } from "vue-property-decorator";
 import G6, { GraphData, IGroup } from "@antv/g6";
 import { EdgeConfig, NodeConfig } from "@antv/g6-core/lib/types";
+import { waitForRepaint } from "@/utils/waitForRepaint";
 
 @Component({})
 export default class Graph extends Vue {
@@ -35,7 +36,7 @@ export default class Graph extends Vue {
   mounted() {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
-    setTimeout(() => {
+    waitForRepaint(() => {
       // get the container size
       const container = this.$refs.graph as HTMLElement;
       const graph = new G6.Graph({
@@ -250,7 +251,7 @@ export default class Graph extends Vue {
       this.graph.render(); // Render the graph
 
       this.updateEdges();
-    }, 0);
+    });
   }
 
   markSelfLoops(data: GraphData) {
