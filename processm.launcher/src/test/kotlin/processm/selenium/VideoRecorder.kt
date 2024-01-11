@@ -8,7 +8,7 @@ import java.nio.file.Files
 /**
  * A helper to take screenshots while executing a Selenium suite of tests and then to instruct the user how to create a video out of them.
  */
-internal class VideoRecorder(private val obj: TakesScreenshot) {
+class VideoRecorder(private val obj: TakesScreenshot) {
     private var ctr = 0
     private val target = Files.createTempDirectory("processm")
 
