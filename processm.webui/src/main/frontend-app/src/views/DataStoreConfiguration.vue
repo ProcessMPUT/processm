@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="value" fullscreen hide-overlay transition="dialog-bottom-transition">
+  <v-dialog v-model="value" persistent fullscreen hide-overlay transition="dialog-bottom-transition">
     <v-card>
       <v-toolbar dark color="primary">
         <v-btn icon dark @click="closeConfiguration" name="btn-close-configuration">
