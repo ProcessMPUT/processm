@@ -1,12 +1,9 @@
-package processm
+package processm.selenium
 
 import org.jgroups.util.UUID
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.*
 import org.openqa.selenium.By
-import org.openqa.selenium.OutputType
-import org.openqa.selenium.TakesScreenshot
+import org.openqa.selenium.WebElement
 import org.openqa.selenium.chrome.ChromeDriver
 import org.openqa.selenium.chrome.ChromeOptions
 import org.openqa.selenium.interactions.Actions
@@ -18,36 +15,26 @@ import processm.core.esb.EnterpriseServiceBus
 import processm.core.helpers.isUUID
 import processm.core.helpers.loadConfiguration
 import processm.core.persistence.Migrator
-import java.nio.file.FileSystems
-import java.nio.file.Files
 import java.time.Duration
 import kotlin.random.Random
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
-class VideoRecorder(val obj: TakesScreenshot) {
-    private var ctr = 0
-    private val target = Files.createTempDirectory("processm")
 
-    fun take() {
-        val f = obj.getScreenshotAs(OutputType.FILE)
-        Files.move(f.toPath(), FileSystems.getDefault().getPath(target.toString(), String.format("%04d.png", ctr)))
-        ctr++
-    }
-
-    fun finish() {
-        println()
-        println()
-        println()
-        println("Screenshots were saved to $target")
-        println("Go there and run: ffmpeg -framerate 2 -i %04d.png output.mp4")
-        println()
-        println()
-        println()
-    }
-}
-
+/**
+ * The tests in this class are, in fact, a single test case split into multiple functions for ease of debugging and maintenance.
+ * The rely on JUnit executing them in the order given by the @Order annotations.
+ * It makes no sense to execute a single test (other than the first), as it is bound to fail.
+ * [TestCaseAsAClass] ensures that if any test fails, all the remaining tests are not executed.
+ */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class SeleniumTests {
+@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
+@Tag("e2e")
+class SeleniumTests : TestCaseAsAClass() {
+
+    // region configuration
 
     /**
      * Set to true to take screenshots from time to time, and place them in a newly-created directory
@@ -61,7 +48,14 @@ class SeleniumTests {
      */
     private val useManuallyStartedServices = false
 
+    /**
+     * If true, the web browser is run in a headless mode.
+     */
+    private val headless = true
 
+    // endregion
+
+    // region auxiliary variables
     /**
      * This variable will be initialized only if [useManuallyStartedServices] is set to false
      */
@@ -87,11 +81,20 @@ class SeleniumTests {
     private lateinit var driver: ChromeDriver
     private lateinit var wait: WebDriverWait
     private var recorder: VideoRecorder? = null
+    private lateinit var logIdentityId: String
 
 
+    //endregion
+
+    // region Selenium helpers
     fun byName(name: String) = driver.findElement(By.name(name))
 
     fun byXpath(xpath: String) = driver.findElement(By.xpath(xpath))
+
+    fun byText(text: String): WebElement {
+        require('\'' !in text) { "Apostrophes are currently not supported" }
+        return driver.findElement(By.xpath("//*[text()='$text']"))
+    }
 
     fun typeIn(name: String, value: String) {
         with(byName(name)) {
@@ -138,6 +141,21 @@ class SeleniumTests {
             .perform()
         recorder?.take()
     }
+
+    fun acknowledgeSnackbar(snackbarColor: String = "success") {
+        with(driver.findElement(By.cssSelector("div.v-snack > div.$snackbarColor"))) {
+            recorder?.take()
+            wait.until { isDisplayed }
+            recorder?.take()
+            findElement(By.tagName("button")).click()
+            wait.until { !isDisplayed }
+            recorder?.take()
+        }
+    }
+
+    // endregion
+
+    // region setup
 
     private val <T : PostgreSQLContainer<T>?> PostgreSQLContainer<T>.port: Int
         get() = getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT)
@@ -198,33 +216,19 @@ class SeleniumTests {
         }
     }
 
-    @BeforeAll
-    fun bringUp() {
-        setupDB()
-        setupBackend()
-    }
-
-    @AfterAll
-    fun takeDown() {
-        if (!useManuallyStartedServices) {
-            esb.close()
-            backendThread.join()
-            mainDbContainer.close()
-        }
-        dbContainer.close()
-    }
-
-    @BeforeTest
-    fun startSelenium() {
-        driver = ChromeDriver(ChromeOptions().apply { addArguments("--window-size=1920,1080") }) //, "--headless"
+    private fun startSelenium() {
+        driver = ChromeDriver(ChromeOptions().apply {
+            addArguments("--window-size=1920,1080")
+            if (headless)
+                addArguments("--headless=new")
+        })
         driver.manage().timeouts().implicitlyWait(Duration.ofMillis(500))
         if (recordSlideshow)
             recorder = VideoRecorder(driver)
         wait = WebDriverWait(driver, Duration.ofSeconds(5))
     }
 
-    @BeforeTest
-    fun prepareDB() {
+    private fun prepareDB() {
         val dbName = "inputDB${UUID.randomUUID()}"
 
         dbContainer.createConnection("")
@@ -245,13 +249,38 @@ class SeleniumTests {
             }
     }
 
-    @AfterTest
-    fun shutdownSelenium() {
+    private fun shutdownSelenium() {
         recorder?.take()
         recorder?.finish()
         driver.close()
     }
 
+
+    @BeforeAll
+    fun bringUp() {
+        setupDB()
+        setupBackend()
+        prepareDB()
+        startSelenium()
+    }
+
+    @AfterAll
+    fun takeDown() {
+        shutdownSelenium()
+        if (!useManuallyStartedServices) {
+            esb.close()
+            backendThread.join()
+            mainDbContainer.close()
+        }
+        dbContainer.close()
+    }
+
+
+    // endregion
+
+    // region tests
+
+    @Order(10)
     @Test
     fun register() {
         driver.get("http://localhost:$httpPort/")
@@ -261,9 +290,38 @@ class SeleniumTests {
         toggleCheckbox("new-organization")
         typeIn("organization-name", organization)
         click("btn-register")
+        with(byXpath("""//div[@role='status']""")) {
+            wait.until { isDisplayed }
+            assertTrue { "registration" in text }
+            assertTrue { "successful" in text }
+            with(findElements(By.xpath("..//button"))) {
+                assertEquals(1, size)
+                first().click()
+            }
+        }
+
+    }
+
+    @Order(20)
+    @Test
+    fun login() {
         typeIn("username", email)
         typeIn("password", password)
         click("btn-login")
+        with(byXpath("//header//button")) {
+            wait.until { isDisplayed }
+            click()
+        }
+        // Possibly brittle, as it relies on the logout icon being called "logout"
+        with(byText("logout")) {
+            wait.until { isDisplayed }
+        }
+        // there's no assert in the test, but wait.until will fail if it doesn't find the appropriate element
+    }
+
+    @Order(30)
+    @Test
+    fun `configure data store`() {
         click("goto-data-stores")
         assertTrue { driver.findElements(By.name("btn-configure-data-store")).isEmpty() }
         click("btn-add-new")
@@ -280,14 +338,29 @@ class SeleniumTests {
         typeIn("postgresql-password", dbContainer.password)
         typeIn("postgresql-database", dbContainer.databaseName)
         click("btn-create-data-connector")
+        acknowledgeSnackbar()
+        assertTrue { byText(connectorName).isDisplayed }
+    }
+
+    @Order(40)
+    @Test
+    fun `add automatic etl process`() {
+        val etlProcessName = "etlProcess${UUID.randomUUID()}"
         click("btn-add-automatic-etl-process")
-        typeIn("process-name", "test")
+        typeIn("process-name", etlProcessName)
         openVuetifyDropDown("selected-data-connector-id")
         selectVuetifyDropDownItem(connectorName)
         doubleClickSvgElement("eban")
         doubleClickSvgElement("ekko")
         click("btn-create-etl-process-configuration")
-        Thread.sleep(5000)  //Wait for Debezium to kick in
+        acknowledgeSnackbar()
+        assertTrue { byText(etlProcessName).isDisplayed }
+    }
+
+    @Order(60)
+    @Test
+    fun `insert data`() {
+        Thread.sleep(1000)  //Wait for Debezium to kick in
         dbContainer.createConnection("").use { connection ->
             connection.createStatement().use { stmt ->
                 stmt.execute(
@@ -307,50 +380,61 @@ class SeleniumTests {
                     """.trimIndent()
                 )
             }
-            click("btn-show-etl-process-details")
-            wait.until { byXpath("//td[text()[contains(.,'identity:id')]]/following-sibling::td").text.isNotEmpty() }
-            val logIdentityId = byXpath("//td[text()[contains(.,'identity:id')]]/following-sibling::td").text.trim()
-            assertTrue { logIdentityId.isUUID() }
-            Thread.sleep(1000)  // Unsure if necessary
-            click("btn-process-details-dialog-cancel")
-            click("btn-close-configuration")
-            click("goto-pql-interpreter")
-            typeIn("query", "where l:identity:id=$logIdentityId")
-            click("btn-submit-query")
-            wait.until { driver.findElements(By.className("fa-plus-square-o")).isNotEmpty() }
-            recorder?.take()
-            with(driver.findElements(By.className("fa-plus-square-o")).filter { it.isDisplayed && it.isDisplayed }) {
-                assertTrue { size == 1 }
-                forEach { it.click() }
-            }
-            recorder?.take()
-            with(driver.findElements(By.className("fa-plus-square-o")).filter { it.isDisplayed && it.isDisplayed }) {
-                assertTrue { size == 3 }
-                forEach { it.click() }
-            }
-            recorder?.take()
-            val headers = driver.findElements(By.xpath("//*[@name='xes-data-table']//thead/tr/th")).withIndex()
-                .associate { it.value.text to it.index }
-            val dbTextColumn = headers["db:text"]
-            assertNotNull(dbTextColumn)
-            val rows = driver.findElements(By.xpath("//*[@name='xes-data-table']//tbody/tr"))
-                .filter { it.findElements(By.tagName("td")).size >= 2 }
-            assertEquals(12, rows.size)
-            val log = ArrayList<ArrayList<String>>()
-            for (tr in rows) {
-                val cells = tr.findElements(By.tagName("td"))
-                val dbText = if (dbTextColumn < cells.size) cells[dbTextColumn].text else ""
-                if (dbText.isEmpty()) {
-                    if (log.isEmpty() || log.last().isNotEmpty())
-                        log.add(ArrayList())
-                } else
-                    log.last().add(dbText.trim('"'))
-            }
-            assertEquals(
-                setOf(
-                    listOf("be1", "be2", "ce1"), listOf("be1", "be2", "ce2"), listOf("be3", "ce3")
-                ), log.toSet()
-            )
         }
+        // This is an auxiliary function disguised as a test to ensure it is executed in the correct moment - hence no assert of any sort
     }
+
+    @Order(70)
+    @Test
+    fun `retrieve log identity_id`() {
+        click("btn-show-etl-process-details")
+        wait.until { byXpath("//td[text()[contains(.,'identity:id')]]/following-sibling::td").text.isNotEmpty() }
+        logIdentityId = byXpath("//td[text()[contains(.,'identity:id')]]/following-sibling::td").text.trim()
+        assertTrue { logIdentityId.isUUID() }
+        click("btn-process-details-dialog-cancel")
+        click("btn-close-configuration")
+    }
+
+    @Order(80)
+    @Test
+    fun `PQL query`() {
+        click("goto-pql-interpreter")
+        typeIn("query", "where l:identity:id=$logIdentityId")
+        click("btn-submit-query")
+        wait.until { driver.findElements(By.className("fa-plus-square-o")).isNotEmpty() }
+        recorder?.take()
+        with(driver.findElements(By.className("fa-plus-square-o")).filter { it.isDisplayed && it.isDisplayed }) {
+            assertTrue { size == 1 }
+            forEach { it.click() }
+        }
+        recorder?.take()
+        with(driver.findElements(By.className("fa-plus-square-o")).filter { it.isDisplayed && it.isDisplayed }) {
+            assertTrue { size == 3 }
+            forEach { it.click() }
+        }
+        recorder?.take()
+        val headers = driver.findElements(By.xpath("//*[@name='xes-data-table']//thead/tr/th")).withIndex()
+            .associate { it.value.text to it.index }
+        val dbTextColumn = headers["db:text"]
+        assertNotNull(dbTextColumn)
+        val rows = driver.findElements(By.xpath("//*[@name='xes-data-table']//tbody/tr"))
+            .filter { it.findElements(By.tagName("td")).size >= 2 }
+        assertEquals(12, rows.size)
+        val log = ArrayList<ArrayList<String>>()
+        for (tr in rows) {
+            val cells = tr.findElements(By.tagName("td"))
+            val dbText = if (dbTextColumn < cells.size) cells[dbTextColumn].text else ""
+            if (dbText.isEmpty()) {
+                if (log.isEmpty() || log.last().isNotEmpty())
+                    log.add(ArrayList())
+            } else
+                log.last().add(dbText.trim('"'))
+        }
+        assertEquals(
+            setOf(
+                listOf("be1", "be2", "ce1"), listOf("be1", "be2", "ce2"), listOf("be3", "ce3")
+            ), log.toSet()
+        )
+    }
+    // endregion
 }
