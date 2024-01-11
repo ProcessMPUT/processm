@@ -174,7 +174,7 @@ class LogGeneratingDatabaseChangeApplierTest {
                     graph.addVertex(r.targetClass.id)
                     graph.addEdge(r.sourceClass.id, r.targetClass.id, r)
                 }
-            AutomaticEtlProcessExecutor(temporaryDB, etlProcessId, graph, identifyingClasses)
+            AutomaticEtlProcessExecutor(temporaryDB, etlProcessId, DAGBusinessPerspectiveDefinition(graph, identifyingClasses))
         }
 
         val applier = mockk<LogGeneratingDatabaseChangeApplier> {

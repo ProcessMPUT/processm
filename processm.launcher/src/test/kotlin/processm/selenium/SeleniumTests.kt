@@ -290,16 +290,7 @@ class SeleniumTests : TestCaseAsAClass() {
         toggleCheckbox("new-organization")
         typeIn("organization-name", organization)
         click("btn-register")
-        with(byXpath("""//div[@role='status']""")) {
-            wait.until { isDisplayed }
-            assertTrue { "registration" in text }
-            assertTrue { "successful" in text }
-            with(findElements(By.xpath("..//button"))) {
-                assertEquals(1, size)
-                first().click()
-            }
-        }
-
+        acknowledgeSnackbar("info")
     }
 
     @Order(20)

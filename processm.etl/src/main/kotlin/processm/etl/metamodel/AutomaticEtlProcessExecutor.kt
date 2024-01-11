@@ -8,7 +8,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
-import org.jgrapht.Graph
 import org.jgrapht.graph.DefaultDirectedGraph
 import processm.core.Brand
 import processm.core.helpers.mapToArray
@@ -40,11 +39,6 @@ import java.util.*
 class AutomaticEtlProcessExecutor(
     val dataStoreDBName: String, val logId: UUID, val descriptor: DAGBusinessPerspectiveDefinition
 ) {
-
-    @Deprecated(message = "Use the primary constructor instead")
-    constructor(
-        dataStoreDBName: String, logId: UUID, graph: Graph<EntityID<Int>, Relationship>, identifyingClasses: Set<EntityID<Int>>
-    ) : this(dataStoreDBName, logId, DAGBusinessPerspectiveDefinition(graph, identifyingClasses))
 
     private val metaModelId =
         checkNotNull(Class.findById(descriptor.graph.vertexSet().first())?.dataModel?.id) { "The DB is broken" }
@@ -95,7 +89,12 @@ class AutomaticEtlProcessExecutor(
     ): Set<RemoteObjectID> {
         val leafs = mutableListOf(start)
         descriptor.graph.outgoingEdgesOf(start.classId).mapNotNullTo(leafs) { arc ->
-            newAttributes[arc.referencingAttributesName.name]?.let { parentId -> RemoteObjectID(parentId, arc.targetClass.id) }
+            newAttributes[arc.referencingAttributesName.name]?.let { parentId ->
+                RemoteObjectID(
+                    parentId,
+                    arc.targetClass.id
+                )
+            }
         }
 
         val result = HashSet<RemoteObjectID>()
@@ -396,11 +395,15 @@ class AutomaticEtlProcessExecutor(
                         val source = remoteObjectId.toDB()
                         for (r in descriptor.graph.outgoingEdgesOf(remoteObjectId.classId)) {
                             val targetObjectId =
-                                component.attributes.getOrNull("$DB_ATTR_NS:${r.referencingAttributesName.name}")?.toString()
+                                component.attributes.getOrNull("$DB_ATTR_NS:${r.referencingAttributesName.name}")
+                                    ?.toString()
                                     ?: continue
                             val target = "${r.targetClass.id.value}${RemoteObjectID.DELIMITER}${targetObjectId}"
                             val path =
-                                connection.createArrayOf(JDBCType.VARCHAR.name, arrayOf(source, r.referencingAttributesName.name))
+                                connection.createArrayOf(
+                                    JDBCType.VARCHAR.name,
+                                    arrayOf(source, r.referencingAttributesName.name)
+                                )
                             stmt.setArray(1, path)
                             stmt.setString(2, target)
                             stmt.setArray(3, path)
