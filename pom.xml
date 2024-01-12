@@ -255,18 +255,6 @@
                     </dokkaPlugins>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>io.fabric8</groupId>
-                <artifactId>docker-maven-plugin</artifactId>
-                <version>${io.fabric8.docker-maven-plugin.version}</version>
-                <configuration>
-                    <images>
-                        <image>
-                            <name>processm</name>
-                        </image>
-                    </images>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
 

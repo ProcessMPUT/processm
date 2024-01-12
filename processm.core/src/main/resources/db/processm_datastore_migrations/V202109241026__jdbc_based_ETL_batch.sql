@@ -1,1 +1,0 @@
-ALTER TABLE etl_configurations ADD COLUMN batch BOOLEAN DEFAULT false;
