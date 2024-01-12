@@ -2,7 +2,7 @@ package processm.core.models.causalnet.converters
 
 import processm.core.helpers.mapToSet
 import processm.core.models.causalnet.*
-import processm.core.models.metadata.DefaultMutableMetadataHandler
+import processm.core.models.metadata.*
 import processm.core.models.processtree.*
 import processm.core.verifiers.CausalNetVerifier
 import java.util.*
@@ -14,6 +14,7 @@ import processm.core.models.processtree.Node as TNode
  */
 private class ProcessTree2CausalNet(private val tree: ProcessTree) {
 
+    private var instanceCounter = 1
     private val activities = IdentityHashMap<ProcessTreeActivity, Node>().apply {
         val unique = HashMap<String, Int>()
         for (activity in tree.activities) {
@@ -29,7 +30,17 @@ private class ProcessTree2CausalNet(private val tree: ProcessTree) {
         }
     }
     private val metadataHandler = DefaultMutableMetadataHandler()
-    private var instanceCounter = 1
+    private val dependencyMetadata = HashMap<MetadataSubject, SingleDoubleMetadata>()
+
+    init {
+        metadataHandler.addMetadataProvider(
+            DefaultMetadataProvider(
+                BasicMetadata.DEPENDENCY_MEASURE,
+                dependencyMetadata
+            )
+        )
+    }
+
 
     private fun convert(tnode: TNode): MutableCausalNet =
         when (tnode) {
@@ -58,6 +69,7 @@ private class ProcessTree2CausalNet(private val tree: ProcessTree) {
             val dep = cnet.addDependency(prev.end, next.start)
             cnet.addSplit(Split(setOf(dep)))
             cnet.addJoin(Join(setOf(dep)))
+            tnode.getDependencyMeasure()?.let { dependencyMetadata[dep] = it }
         }
 
         return cnet
@@ -82,6 +94,11 @@ private class ProcessTree2CausalNet(private val tree: ProcessTree) {
             val endDep = cnet.addDependency(subnet.end, cnet.end)
             cnet.addSplit(Split(setOf(endDep)))
             cnet.addJoin(Join(setOf(endDep)))
+
+            tnode.getDependencyMeasure()?.let {
+                dependencyMetadata[startDep] = it
+                dependencyMetadata[endDep] = it
+            }
         }
 
         return cnet
@@ -104,9 +121,15 @@ private class ProcessTree2CausalNet(private val tree: ProcessTree) {
             val startDep = cnet.addDependency(cnet.start, subnet.start)
             startDeps.add(startDep)
             cnet.addJoin(Join(setOf(startDep)))
+
             val endDep = cnet.addDependency(subnet.end, cnet.end)
             endDeps.add(endDep)
             cnet.addSplit(Split(setOf(endDep)))
+
+            tnode.getDependencyMeasure()?.let {
+                dependencyMetadata[startDep] = it
+                dependencyMetadata[endDep] = it
+            }
         }
 
         cnet.addSplit(Split(startDeps))
@@ -139,6 +162,11 @@ private class ProcessTree2CausalNet(private val tree: ProcessTree) {
         cnet.addSplit(Split(setOf(endDep)))
         cnet.addJoin(Join(setOf(endDep)))
 
+        tnode.getDependencyMeasure()?.let {
+            dependencyMetadata[startDep] = it
+            dependencyMetadata[endDep] = it
+        }
+
         for (subnet in remaining) {
             val startDep = cnet.addDependency(first.end, subnet.start)
             cnet.addSplit(Split(setOf(startDep)))
@@ -147,6 +175,11 @@ private class ProcessTree2CausalNet(private val tree: ProcessTree) {
             val endDep = cnet.addDependency(subnet.end, first.start)
             cnet.addSplit(Split(setOf(endDep)))
             cnet.addJoin(Join(setOf(endDep)))
+
+            tnode.getDependencyMeasure()?.let {
+                dependencyMetadata[startDep] = it
+                dependencyMetadata[endDep] = it
+            }
         }
 
         return cnet
@@ -161,9 +194,15 @@ private class ProcessTree2CausalNet(private val tree: ProcessTree) {
         subnet: CausalNet,
         cnet: MutableCausalNet
     ) {
-        cnet.copyFrom(subnet) { node ->
-            node
+        cnet.copyFrom(subnet) { node -> node }
+        for (oldDep in subnet.dependencies) {
+            assert(cnet.dependencies.any { it == oldDep }) { "Below code works only if dependencies from subnet equal depndencies added to cnet" }
+
+            subnet.getAllMetadata(oldDep)[BasicMetadata.DEPENDENCY_MEASURE]?.let {
+                dependencyMetadata[oldDep] = it as SingleDoubleMetadata
+            }
         }
+
     }
 
     private fun simplify(cnet: MutableCausalNet) {
@@ -190,6 +229,15 @@ private class ProcessTree2CausalNet(private val tree: ProcessTree) {
                         if (it == silent) null else cnet.addDependency(prevActivity, it)
                     }
                     cnet.addSplit(Split(deps))
+
+                    for (dep in deps) {
+                        silentSplit.dependencies.maxOf {
+                            val v = cnet.getAllMetadata(it)[BasicMetadata.DEPENDENCY_MEASURE] as SingleDoubleMetadata?
+                            v?.value ?: 0.0
+                        }.let {
+                            dependencyMetadata[dep] = SingleDoubleMetadata(it)
+                        }
+                    }
                 }
             }
 
@@ -197,6 +245,8 @@ private class ProcessTree2CausalNet(private val tree: ProcessTree) {
                 cnet.setEnd(prevActivity)
 
             // remove old structures
+            cnet.outgoing[silent]?.forEach { dependencyMetadata.remove(it) }
+            cnet.incoming[silent]?.forEach { dependencyMetadata.remove(it) }
             cnet.removeInstance(silent)
         }
 
@@ -223,6 +273,15 @@ private class ProcessTree2CausalNet(private val tree: ProcessTree) {
                         if (it == silent) null else cnet.addDependency(it, nextActivity)
                     }
                     cnet.addJoin(Join(deps))
+
+                    for (dep in deps) {
+                        silentSplit.dependencies.maxOf {
+                            val v = cnet.getAllMetadata(it)[BasicMetadata.DEPENDENCY_MEASURE] as SingleDoubleMetadata?
+                            v?.value ?: 0.0
+                        }.let {
+                            dependencyMetadata[dep] = SingleDoubleMetadata(it)
+                        }
+                    }
                 }
             }
 
@@ -230,6 +289,8 @@ private class ProcessTree2CausalNet(private val tree: ProcessTree) {
                 cnet.setStart(nextActivity)
 
             // remove old structures
+            cnet.outgoing[silent]?.forEach { dependencyMetadata.remove(it) }
+            cnet.incoming[silent]?.forEach { dependencyMetadata.remove(it) }
             cnet.removeInstance(silent)
         }
 
@@ -242,6 +303,7 @@ private class ProcessTree2CausalNet(private val tree: ProcessTree) {
                 cnet.incoming[startSplits.first().targets.first()]!!.size == 1
             ) {
                 val prev = cnet.setStart(startSplits.first().targets.first())
+                cnet.outgoing[prev]?.forEach { dependencyMetadata.remove(it) }
                 cnet.removeInstance(prev)
             } else break
         } while (true)
@@ -255,17 +317,23 @@ private class ProcessTree2CausalNet(private val tree: ProcessTree) {
                 cnet.outgoing[endJoins.first().sources.first()]!!.size == 1
             ) {
                 val prev = cnet.setEnd(endJoins.first().sources.first())
+                cnet.incoming[prev]?.forEach { dependencyMetadata.remove(it) }
                 cnet.removeInstance(prev)
             } else break
         } while (true)
     }
 
+    private fun TNode.getDependencyMeasure(): SingleDoubleMetadata? =
+        tree.getAllMetadata(this)[BasicMetadata.DEPENDENCY_MEASURE] as SingleDoubleMetadata?
+
     fun toCausalNet(): CausalNet {
         requireNotNull(tree.root) { "Tree root must not be null." }
 
+
         val cnet = convert(tree.root!!)
 
-        assert({
+        // verify assertion only in test code even if -ea parameter is passed to JVM
+        assert(!Thread.currentThread().stackTrace.any { it.className.startsWith("org.junit") } || {
             val verifier = CausalNetVerifier()
             val report = verifier.verify(cnet)
             report.isSound

@@ -1,6 +1,9 @@
 package processm.miners.processtree.inductiveminer
 
 import processm.core.log.hierarchical.LogInputStream
+import processm.core.models.metadata.MetadataSubject
+import processm.core.models.metadata.MetadataValue
+import processm.core.models.metadata.SingleDoubleMetadata
 import processm.core.models.processtree.*
 import processm.miners.Miner
 import java.util.*
@@ -30,17 +33,23 @@ abstract class InductiveMiner : Miner {
      * Assign children to node discovered by subGraph cut.
      * Found node can be operator (like exclusive choice) or activity.
      */
-    internal fun assignChildrenToNode(graph: DirectlyFollowsSubGraph): Node {
+    internal fun assignChildrenToNode(
+        graph: DirectlyFollowsSubGraph,
+        metadata: MutableMap<MetadataSubject, MetadataValue>
+    ): Node {
         val node = discoveredCutToNodeObject(graph)
 
         if (graph.detectedCut in nestedOperators) {
             val it = graph.children.iterator()
             while (it.hasNext()) {
-                with(assignChildrenToNode(it.next())) {
+                with(assignChildrenToNode(it.next(), metadata)) {
                     node.addChild(this)
                 }
             }
         }
+
+        // since the loop assigns node with children, node must be added to hashmap if there are no pending modifications
+        metadata[node] = SingleDoubleMetadata(graph.currentTraceSupport.toDouble())
 
         return node
     }

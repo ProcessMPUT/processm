@@ -92,7 +92,7 @@ class DirectlyFollowsSubGraph(
     /**
      * Current activities' trace support
      */
-    private var currentTraceSupport by Delegates.notNull<Int>()
+    internal var currentTraceSupport by Delegates.notNull<Int>()
 
     init {
         // Runs in O(|activities|)

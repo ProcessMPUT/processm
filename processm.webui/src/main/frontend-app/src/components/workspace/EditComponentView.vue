@@ -21,20 +21,27 @@
           @remove="$emit('remove', componentDetails.id)"
         />
         <v-alert v-if="componentDetails.lastError !== undefined" type="error">{{ componentDetails.lastError }}</v-alert>
-        <v-list subheader>
+        <v-list dense subheader>
           <v-list-item>
             <v-list-item-content>
               <v-text-field
                 v-model="component.name"
                 :label="$t('workspace.component.edit.name')"
+                :hint="$t('workspace.component.edit.name-hint')"
                 :rules="[(v) => !!v || $t('workspace.component.edit.validation.name-empty')]"
                 required
-              />
+              >
+              </v-text-field>
             </v-list-item-content>
           </v-list-item>
           <v-list-item>
             <v-list-item-content>
-              <v-select v-model="component.type" :label="$t('workspace.component.edit.type')" :items="availableComponents">
+              <v-select
+                v-model="component.type"
+                :hint="$t('workspace.component.edit.type-hint')"
+                :items="availableComponents"
+                :label="$t('workspace.component.edit.type')"
+              >
                 <template slot="item" slot-scope="componentType">
                   <v-icon>${{ componentType.item }}Component</v-icon>
                   {{ $t(`workspace.component.${kebabize(componentType.item)}`) }}
@@ -50,10 +57,22 @@
             <v-list-item-content>
               <v-text-field
                 v-model="component.query"
-                :label="$t('workspace.component.edit.query')"
+                :hint="$t('workspace.component.edit.query-hint')"
                 :rules="[(v) => !!v || $t('workspace.component.edit.validation.query-empty')]"
                 required
-              />
+              >
+                <template v-slot:label>
+                  {{ $t("workspace.component.edit.query") }}
+                  <v-tooltip bottom max-width="600px">
+                    <template v-slot:activator="{ on, attrs }">
+                      <v-btn :to="{ name: 'pql-docs' }" class="mt-n1" icon small target="_blank" v-bind="attrs" v-on="on">
+                        <v-icon>open_in_new</v-icon>
+                      </v-btn>
+                    </template>
+                    <span>{{ $t("workspace.component.edit.query-doc") }}</span>
+                  </v-tooltip>
+                </template>
+              </v-text-field>
             </v-list-item-content>
           </v-list-item>
           <v-list-item>
@@ -61,7 +80,30 @@
               <v-select
                 v-model="component.dataStore"
                 :label="$t('workspace.component.edit.datastore')"
+                :hint="$t('workspace.component.edit.datastore-hint')"
                 :items="dataStores"
+                item-text="name"
+                item-value="id"
+                required
+              />
+            </v-list-item-content>
+          </v-list-item>
+          <v-list-item v-for="property in component.customProperties ?? []" :key="property.name">
+            <v-list-item-content>
+              <v-text-field
+                v-if="property.type == 'string'"
+                v-model="property.value"
+                :hint="$te(`workspace.component.edit.${property.name}-hint`) ? $t(`workspace.component.edit.${property.name}-hint`) : ''"
+                :label="$t(`workspace.component.edit.${property.name}`)"
+                required
+              >
+              </v-text-field>
+              <v-select
+                v-if="property.type == 'enum'"
+                v-model="property.value"
+                :items="property.enum"
+                :label="$t(`workspace.component.edit.${property.name}`)"
+                :hint="$te(`workspace.component.edit.${property.name}-hint`) ? $t(`workspace.component.edit.${property.name}-hint`) : ''"
                 item-text="name"
                 item-value="id"
                 required
@@ -78,6 +120,10 @@
 .v-card,
 .v-card > div:last-child {
   height: 50%;
+}
+
+.v-text-field >>> .v-label {
+  overflow: visible;
 }
 </style>
 
@@ -142,6 +188,7 @@ export default class EditComponentView extends Vue {
       await waitForRepaint(() => 0);
 
       await this.workspaceService.updateComponent(this.workspaceId, this.componentDetails.id, this.component);
+      this.component.userLastModified = new Date().toString();
 
       this.$emit("component-updated", this.component);
       this.app.success(`${this.$t("common.saving.success")}`);

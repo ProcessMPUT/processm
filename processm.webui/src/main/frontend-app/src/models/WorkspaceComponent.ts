@@ -1,5 +1,5 @@
 // TODO add PetriNet = "petriNet" to ComponentType
-import { AbstractComponent, AlignerKpiReport, ComponentType } from "@/openapi";
+import { AbstractComponent, AlignerKpiReport, ComponentType, CustomProperty } from "@/openapi";
 import { CNetNodeConfig } from "@/components/Graph.vue";
 import { EdgeConfig } from "@antv/g6-core/lib/types";
 
@@ -148,4 +148,5 @@ export class WorkspaceComponent {
   dataLastModified?: string;
   userLastModified?: string;
   lastError?: string;
+  customProperties!: CustomProperty[];
 }

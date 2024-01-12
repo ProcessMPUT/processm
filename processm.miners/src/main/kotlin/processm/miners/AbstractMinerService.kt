@@ -37,7 +37,9 @@ abstract class CalcJob<T : ProcessModel> : ServiceJob {
                 return@transactionMain
             }
 
-            if (component.data !== null) {
+            if (component.data !== null &&
+                !component.userLastModified.isAfter(component.dataLastModified ?: Instant.MIN)
+            ) {
                 logger.debug("Component $id is already populated with data, skipping")
                 return@transactionMain
             }
