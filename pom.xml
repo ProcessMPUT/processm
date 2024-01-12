@@ -32,7 +32,7 @@
     </issueManagement>
 
     <modules>
-        <module>processm.dontmergeme</module>
+        <module>processm.core</module>
     </modules>
 
     <properties>
