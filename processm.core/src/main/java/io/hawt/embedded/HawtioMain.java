@@ -1,0 +1,331 @@
+/**
+ * Copyright (C) 2013 the original author or authors.
+ * See the notice.md file distributed with this work for additional
+ * information regarding copyright ownership.
+ * <p>
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.hawt.embedded;
+
+import org.eclipse.jetty.server.*;
+import org.eclipse.jetty.server.handler.HandlerCollection;
+import org.eclipse.jetty.util.log.Log;
+import org.eclipse.jetty.util.log.Logger;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.eclipse.jetty.webapp.WebAppContext;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.util.Arrays;
+
+/**
+ * A simple way to run hawtio embedded inside a JVM by booting up a Jetty server
+ */
+public class HawtioMain {
+    private Options options;
+    private boolean welcome = true;
+    private Server server;
+
+    public HawtioMain() {
+        options = new Options();
+        options.init();
+    }
+
+    public static void main(String[] args) {
+        HawtioMain main = new HawtioMain();
+
+        if (!main.parseArguments(args) || main.isHelp()) {
+            main.showOptions();
+            return;
+        }
+
+        doRun(main);
+    }
+
+    public boolean parseArguments(String[] args) {
+        return options.parseArguments(args);
+    }
+
+    public void showOptions() {
+        options.showOptions();
+    }
+
+    public static void doRun(HawtioMain main) {
+        try {
+            main.run();
+        } catch (Exception e) {
+            System.out.println("Error: " + e);
+            e.printStackTrace();
+        }
+    }
+
+    public void run() throws Exception {
+        run(options.isJointServerThread());
+    }
+
+    public void run(boolean join) throws Exception {
+        var log = Log.getLogger("jetty");
+
+        server = new Server(new InetSocketAddress(InetAddress.getByName(options.getHost()), options.getPort()));
+
+        HandlerCollection handlers = new HandlerCollection();
+        handlers.setServer(server);
+        server.setHandler(handlers);
+
+        String scheme = resolveScheme(server);
+        WebAppContext webapp = createHawtioWebapp(server, scheme);
+
+        // lets set a temporary directory so jetty doesn't bork if some process zaps /tmp/*
+        String homeDir = System.getProperty("user.home", ".") + "/.hawtio";
+        String tempDirPath = homeDir + "/tmp";
+        File tempDir = new File(tempDirPath);
+        tempDir.mkdirs();
+        log.info("Using temp directory for jetty: {}", tempDir.getPath());
+        webapp.setTempDirectory(tempDir);
+
+        // check for 3rd party plugins before we add hawtio, so they are initialized before hawtio
+        findThirdPartyPlugins(log, handlers, tempDir);
+
+        // add hawtio
+        handlers.addHandler(webapp);
+
+        // create server and add the handlers
+        if (welcome) {
+            System.out.println("Embedded Hawtio: You can use --help to show usage");
+            System.out.println(options.usedOptionsSummary());
+        }
+
+        System.out.println("About to start Hawtio " + webapp.getWar());
+        server.start();
+
+        if (welcome) {
+            System.out.println();
+            System.out.println("Welcome to Hawtio");
+            System.out.println("=====================================================");
+            System.out.println();
+            System.out.println(scheme + "://localhost:" + options.getPort() + options.getContextPath());
+            System.out.println();
+        }
+
+        if (join) {
+            if (welcome) {
+                System.out.println("Joining the Jetty server thread");
+            }
+            server.join();
+        }
+    }
+
+    public void stop() throws Exception {
+        server.stop();
+    }
+
+    private WebAppContext createHawtioWebapp(Server server, String scheme) throws IOException {
+        WebAppContext webapp = new WebAppContext();
+        webapp.setServer(server);
+        webapp.setContextPath(options.getContextPath());
+        String war = findWar(options.getWarLocation());
+        if (war == null) {
+            war = options.getWar();
+        }
+        if (war == null) {
+            throw new IllegalArgumentException("No war or warLocation options set!");
+        }
+        webapp.setWar(war);
+        webapp.setParentLoaderPriority(true);
+        webapp.setLogUrlOnStart(true);
+        webapp.setInitParameter("scheme", scheme);
+        webapp.setExtraClasspath(options.getExtraClassPath());
+        return webapp;
+    }
+
+    private String resolveScheme(Server server) {
+        String scheme = "http";
+        if (null != options.getKeyStore()) {
+            System.out.println("Configuring SSL");
+            var sslcontf = new SslContextFactory.Server();
+            HttpConfiguration httpconf = new HttpConfiguration();
+            sslcontf.setKeyStorePath(options.getKeyStore());
+            if (null != options.getKeyStorePass()) {
+                sslcontf.setKeyStorePassword(options.getKeyStorePass());
+            } else {
+                System.out.println("Attempting to open keystore with no password...");
+            }
+            try (ServerConnector sslconn = new ServerConnector(server, new SslConnectionFactory(sslcontf, "http/1.1"), new HttpConnectionFactory(httpconf))) {
+                sslconn.setPort(options.getPort());
+                server.setConnectors(new Connector[]{sslconn});
+
+            }
+            scheme = "https";
+        }
+        String sysScheme = System.getProperty("hawtio.redirect.scheme");
+        if (null == sysScheme) {
+            System.out.println("Implicitly setting Scheme = " + scheme);
+            System.setProperty("hawtio.redirect.scheme", scheme);
+        } else {
+            System.out.println("Scheme Was Set Explicitly To = " + scheme);
+            scheme = sysScheme;
+        }
+        return scheme;
+    }
+
+    protected void findThirdPartyPlugins(Logger log, HandlerCollection handlers, File tempDir) {
+        File dir = new File(options.getPlugins());
+        if (!dir.exists() || !dir.isDirectory()) {
+            return;
+        }
+
+        log.info("Scanning for 3rd party plugins in directory: {}", dir.getPath());
+
+        // find any .war files
+        File[] wars = dir.listFiles((d, name) -> isWarFileName(name));
+        if (wars == null) {
+            return;
+        }
+        Arrays.stream(wars).forEach(
+                war -> deployPlugin(war, log, handlers, tempDir));
+    }
+
+    private void deployPlugin(File war, Logger log, HandlerCollection handlers, File tempDir) {
+        String contextPath = resolveContextPath(war);
+
+        WebAppContext plugin = new WebAppContext();
+        plugin.setServer(handlers.getServer());
+        plugin.setContextPath(contextPath);
+        plugin.setWar(war.getAbsolutePath());
+        // plugin.setParentLoaderPriority(true);
+        plugin.setLogUrlOnStart(true);
+
+        // need to have private sub directory for each plugin
+        File pluginTempDir = new File(tempDir, war.getName());
+        pluginTempDir.mkdirs();
+
+        plugin.setTempDirectory(pluginTempDir);
+        plugin.setThrowUnavailableOnStartupException(true);
+
+        handlers.addHandler(plugin);
+        log.info("Added 3rd party plugin with context-path: {}", contextPath);
+        System.out.println("Added 3rd party plugin with context-path: " + contextPath);
+    }
+
+    private String resolveContextPath(File war) {
+        String contextPath = "/" + war.getName();
+        if (contextPath.endsWith(".war")) {
+            contextPath = contextPath.substring(0, contextPath.length() - 4);
+        }
+        // custom plugins must not use same context-path as Hawtio
+        if (contextPath.equals(options.getContextPath())) {
+            throw new IllegalArgumentException("3rd party plugin " + war.getName() + " cannot have same name as Hawtio context path. Rename the plugin file to avoid the clash.");
+        }
+        return contextPath;
+    }
+
+    /**
+     * Strategy method where we could use some smarts to find the war
+     * using known paths or maybe the local maven repository?
+     */
+    protected String findWar(String... paths) {
+        if (paths != null) {
+            for (String path : paths) {
+                if (path != null) {
+                    File file = new File(path);
+                    if (file.exists()) {
+                        if (file.isFile()) {
+                            String name = file.getName();
+                            if (isWarFileName(name)) {
+                                return file.getPath();
+                            }
+                        }
+                        if (file.isDirectory()) {
+                            // lets look for a war in this directory
+                            File[] wars = file.listFiles((dir, name) -> isWarFileName(name));
+                            if (wars != null && wars.length > 0) {
+                                return wars[0].getPath();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    protected boolean isWarFileName(String name) {
+        return name.toLowerCase().endsWith(".war");
+    }
+
+    public String getWarLocation() {
+        return options.getWarLocation();
+    }
+
+    public void setWarLocation(String warLocation) {
+        options.setWarLocation(warLocation);
+    }
+
+    public String getWar() {
+        return options.getWar();
+    }
+
+    public void setWar(String war) {
+        options.setWar(war);
+    }
+
+    public String getContextPath() {
+        return options.getContextPath();
+    }
+
+    public void setContextPath(String contextPath) {
+        options.setContextPath(contextPath);
+    }
+
+    public Integer getPort() {
+        return options.getPort();
+    }
+
+    public void setPort(Integer port) {
+        options.setPort(port);
+    }
+
+    public String getExtraClassPath() {
+        return options.getExtraClassPath();
+    }
+
+    public void setExtraClassPath(String extraClassPath) {
+        options.setExtraClassPath(extraClassPath);
+    }
+
+    public boolean isJoinServerThread() {
+        return options.isJointServerThread();
+    }
+
+    public void setJoinServerThread(boolean joinServerThread) {
+        options.setJointServerThread(joinServerThread);
+    }
+
+    public boolean isOpenUrl() {
+        return options.isOpenUrl();
+    }
+
+    public void setOpenUrl(boolean openUrl) {
+        options.setOpenUrl(openUrl);
+    }
+
+    public boolean isHelp() {
+        return options.isHelp();
+    }
+
+    public void showWelcome(boolean welcome) {
+        this.welcome = welcome;
+    }
+}

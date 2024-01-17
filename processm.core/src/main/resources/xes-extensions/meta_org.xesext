@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xesextension name="MetaData_Organization" prefix="meta_org" uri="http://www.xes-standard.org/meta_org.xesext">
+	<log>
+		<int key="different_groups_total"><!--Total number of different groups in the log-->
+			<alias mapping="EN" name="Total number of different groups"/>
+		</int>
+		<float key="different_groups_average"><!--Average number of different groups per trace-->
+			<alias mapping="EN" name="Average number of different groups"/>
+		</float>
+		<float key="different_groups_standard_deviation"><!--Standard deviation of different groups per trace-->
+			<alias mapping="EN" name="Standard deviation of different groups"/>
+		</float> 
+		<int key="different_groups_min"><!--Minimum number of different groups in a trace-->
+			<alias mapping="EN" name="Minimum number of different groups"/>
+		</int>
+		<int key="different_groups_max"><!--Maximum number of different groups in a trace-->
+			<alias mapping="EN" name="Maximum number of different groups"/>
+		</int>
+		<int key="group_events_total"><!--Total number of events with an associated group in the log-->
+			<alias mapping="EN" name="Total number of groups"/>
+		</int>
+		<float key="group_events_average"><!--Average number of events with an associated group per trace-->
+			<alias mapping="EN" name="Average number of groups"/>
+		</float>
+		<float key="group_events_standard_deviation"><!--Standard deviation of events with an associated group per trace-->
+			<alias mapping="EN" name="Standard deviation of groups"/>
+		</float>
+		<int key="group_events_min"><!--Minimum number of events with an associated group in a trace-->
+			<alias mapping="EN" name="Minimum number of groups"/>
+		</int>
+		<int key="group_events_max"><!--Maximum number of events with an associated group in a trace-->
+			<alias mapping="EN" name="Maximum number of groups"/>
+		</int>
+		
+		<int key="different_roles_total"><!--Total number of different roles in the log-->
+			<alias mapping="EN" name="Total number of different roles"/>
+		</int>
+		<float key="different_roles_average"><!--Average number of different roles per trace-->
+			<alias mapping="EN" name="Average number of different roles"/>
+		</float>
+		<float key="different_roles_standard_deviation"><!--Standard deviation of different roles per trace-->
+			<alias mapping="EN" name="Standard deviation of different roles"/>
+		</float>
+		<int key="different_roles_min"><!--Minimum number of different roles in a trace-->
+			<alias mapping="EN" name="Minimum number of different roles"/>
+		</int>
+		<int key="different_roles_max"><!--Maximum number of different roles in a trace-->
+			<alias mapping="EN" name="Maximum number of different roles"/>
+		</int>
+		<int key="role_events_total"><!--Total number of events with an associated role in the log-->
+			<alias mapping="EN" name="Total number of events with a role"/>
+		</int>
+		<float key="role_events_average"><!--Average number of events with an associated role per trace-->
+			<alias mapping="EN" name="Average number of events with a role"/>
+		</float>
+		<float key="role_events_standard_deviation"><!--Standard deviation of events with an associated role per trace-->
+			<alias mapping="EN" name="Standard deviation of events with a role"/>
+		</float>
+		<int key="role_events_min"><!--Minimum number of events with an associated role in a trace-->
+			<alias mapping="EN" name="Minimum number of events with a role"/>
+		</int>
+		<int key="role_events_max"><!--Maximum number of events with an associated role in a trace-->
+			<alias mapping="EN" name="Maximum number of events with a role"/>
+		</int>
+		
+		<int key="different_resources_total"><!--Total number of different resources in the log-->
+			<alias mapping="EN" name="Total number of different resources"/>
+		</int>
+		<float key="different_resources_average"><!--Average number of different resources per trace-->
+			<alias mapping="EN" name="Average number of different resources"/>
+		</float>
+		<float key="different_resources_standard_deviation"><!--Standard deviation of different resources per trace-->
+			<alias mapping="EN" name="Standard deviation of different resources"/>
+		</float>
+		<int key="different_resources_min"><!--Minimum number of different resources in a trace-->
+			<alias mapping="EN" name="Minimum number of different resources"/>
+		</int>
+		<int key="different_resources_max"><!--Maximum number of different resources in a trace-->
+			<alias mapping="EN" name="Maximum number of different resources"/>
+		</int>
+		<int key="resource_events_total"><!--Total number of events with an associated resource in the log-->
+			<alias mapping="EN" name="Total number of events with a resource"/>
+		</int>
+		<float key="resource_events_average"><!--Average number of events with an associated resource per trace-->
+			<alias mapping="EN" name="Average number of events with a resource"/>
+		</float>
+		<float key="resource_events_standard_deviation"><!--Standard deviation of events with an associated resource per trace-->
+			<alias mapping="EN" name="Standard deviation of events with a resource"/>
+		</float>
+		<int key="resource_events_min"><!--Minimum number of events with an associated resource in a trace-->
+			<alias mapping="EN" name="Minimum number of events with a resource"/>
+		</int>
+		<int key="resource_events_max"><!--Maximum number of events with an associated resource in a trace-->
+			<alias mapping="EN" name="Maximum number of events with a resource"/>
+		</int>
+	</log>
+</xesextension>

@@ -1,0 +1,3 @@
+processm.core.esb.Artemis
+processm.core.esb.Hawtio
+processm.core.communication.email.EmailService

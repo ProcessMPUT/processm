@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xesextension
+        name="ArtifactLifecycle"
+        prefix="artifactlifecycle"
+        uri="http://www.xes-standard.org/artifactlifecycle.xesext">
+    <event>
+        <list key="moves">
+            <alias mapping="EN" name="Lifecycle Moves"/>
+        </list>
+    </event>
+    <meta>
+        <string key="model">
+            <alias mapping="EN" name="Lifecycle Model"/>
+        </string>
+        <string key="instance">
+            <alias mapping="EN" name="Artifact Instance"/>
+        </string>
+        <string key="transition">
+            <alias mapping="EN" name="Lifecycle Transition"/>
+        </string>
+    </meta>
+</xesextension>
