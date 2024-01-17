@@ -20,7 +20,7 @@ import kotlin.test.assertTrue
  * [TestCaseAsAClass] (via [SeleniumBase]) ensures that if any test fails, all the remaining tests are not executed.
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class AutomaticEtlTest : SeleniumBase(recordSlideshow = true) {
+class AutomaticEtlTest : SeleniumBase() {
 
     // region auxiliary variables
 
