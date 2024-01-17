@@ -1,4 +1,4 @@
-package processm.core
+package processm.dontmergeme
 
 import org.openqa.selenium.chrome.ChromeDriver
 import org.openqa.selenium.chrome.ChromeOptions
