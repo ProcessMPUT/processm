@@ -95,6 +95,7 @@ class AutomaticEtlTest : SeleniumBase() {
         typeIn("username", email)
         typeIn("password", password)
         click("btn-login")
+        wait.until { driver.findElements(By.xpath("//header//button")).isNotEmpty() }
         with(byXpath("//header//button")) {
             wait.until { isDisplayed }
             click()
