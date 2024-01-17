@@ -14,7 +14,7 @@ class DoSomething {
             addArguments("--headless=new")
         })
         driver.manage().timeouts().implicitlyWait(Duration.ofMillis(500))
-        driver.get("http://www.google.com/")
+        driver.get("http://www.cs.put.poznan.pl/")
         driver.close()
     }
 }
