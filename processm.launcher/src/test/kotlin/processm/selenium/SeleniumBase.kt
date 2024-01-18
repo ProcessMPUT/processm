@@ -83,14 +83,25 @@ abstract class SeleniumBase(
         }
     }
 
-    fun click(name: String) {
-        with(byName(name)) {
+    fun click(by: By) {
+        val element = checkNotNull(wait.until { driver.findElements(by).singleOrNull() })
+        with(element) {
             wait.until { isDisplayed }
             wait.until { isEnabled }
             driver.executeScript("arguments[0].scrollIntoView();", this)
             click()
             recorder?.take()
         }
+    }
+
+    fun click(name: String) = click(By.name(name))
+
+    /**
+     * To open a v-expansion-panel
+     */
+    fun expand(name: String) {
+        require('\'' !in name) { "Apostrophes are currently not supported" }
+        click(By.xpath("//*[@name='$name']/.."))
     }
 
     fun toggleCheckbox(name: String) {

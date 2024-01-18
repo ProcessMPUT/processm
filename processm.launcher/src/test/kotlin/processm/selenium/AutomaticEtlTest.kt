@@ -118,7 +118,7 @@ class AutomaticEtlTest : SeleniumBase() {
         wait.until { driver.findElements(By.name("btn-configure-data-store")).isNotEmpty() }
         click("btn-configure-data-store")
         click("btn-add-data-connector")
-        click("header-specify-connection-properties")
+        expand("header-specify-connection-properties")
         typeIn("connection-name", connectorName)
         typeIn("postgresql-server", dbContainer.host)
         typeIn("postgresql-port", dbContainer.port.toString())
