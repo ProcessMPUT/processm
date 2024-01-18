@@ -32,6 +32,7 @@ import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.ForkJoinPool
 import java.util.zip.ZipInputStream
+import kotlin.random.Random
 import kotlin.reflect.full.findAnnotation
 import kotlin.test.assertEquals
 
@@ -102,6 +103,7 @@ class ProcessMTestingEnvironment {
 
     private val sakilaEnv = lazy { PostgreSQLEnvironment.getSakila() }
     private var temporaryDebeziumDirectory: File? = null
+    private var httpPort: Int = -1
 
     val sakilaJdbcUrl: String
         get() = with(sakilaEnv.value) {
@@ -140,6 +142,8 @@ class ProcessMTestingEnvironment {
                 System.setProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL", jdbcUrl)
                 Migrator.reloadConfiguration()
             }
+            httpPort = Random.Default.nextInt(1025, 65535)
+            System.setProperty("ktor.deployment.port", httpPort.toString())
             EnterpriseServiceBus().use { esb ->
                 esb.autoRegister()
                 esb.startAll()
@@ -158,8 +162,7 @@ class ProcessMTestingEnvironment {
 
     // region HTTP
 
-    //TODO at the very least port should not be hardcoded
-    fun apiUrl(endpoint: String): String = "http://localhost:2080/api/${endpoint}"
+    fun apiUrl(endpoint: String): String = "http://localhost:$httpPort/api/${endpoint}"
 
     inline fun <reified Endpoint> format(vararg args: Pair<String, String?>): String = format<Endpoint>(args.toMap())
 
