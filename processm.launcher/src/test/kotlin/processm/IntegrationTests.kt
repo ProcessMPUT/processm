@@ -11,7 +11,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assumptions
 import org.testcontainers.lifecycle.Startables
 import processm.core.Brand
-import processm.core.helpers.inverse
+import processm.core.helpers.mapToSet
 import processm.core.log.Event
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
@@ -48,6 +48,13 @@ object ducktyping {
         assertIs<List<*>>(this)
         return this[key]
     }
+}
+
+fun <T, K, V> Array<T>.associateNotNull(transform: (T) -> Pair<K, V>?): Map<K, V> {
+    val result = HashMap<K, V>()
+    for (item in this)
+        transform(item)?.let { result[it.first] = it.second }
+    return result
 }
 
 private fun <T, R> Iterable<T>.parallelMap(transform: suspend (T) -> R): List<R> {
@@ -317,9 +324,9 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                     assertEquals(HttpStatusCode.NoContent, status)
                 }
                 currentDataConnector = createDataConnector("dc1", sakila.connectionProperties)
-                val relationshipGraph = get<Paths.RelationshipGraph, CaseNotion> {
+                val relationshipGraph = get<Paths.RelationshipGraph, RelationshipGraph> {
                     assertEquals(HttpStatusCode.OK, status)
-                    return@get body<CaseNotion>()
+                    return@get body<RelationshipGraph>()
                 }
                 // Originally, the test was supposed to verify the number of items to detect unexpected changes.
                 // Turns out, the numbers differ from DB to DB, i.e., they are not very meaningful
@@ -333,20 +340,27 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 }
                 assertTrue { caseNotions.isNotEmpty() }
 
+                val classes = relationshipGraph.classes.associateNotNull {
+                    if (it.name in setOf("city", "country", "address", "store")) it.name to it.id
+                    else null
+                }
+                val storeId = classes["store"]!!
+                val addressId = classes["address"]!!
+                val cityId = classes["city"]!!
+                val countryId = classes["country"]!!
+                val expectedEdges = relationshipGraph.edges.mapNotNullTo(HashSet()) { edge ->
+                    if ((edge.sourceClassId == storeId && edge.targetClassId == addressId) ||
+                        (edge.sourceClassId == addressId && edge.targetClassId == cityId) ||
+                        (edge.sourceClassId == cityId && edge.targetClassId == countryId)
+                    ) edge.id
+                    else null
+                }
+                val expectedClassIds = classes.values.toSet()
+
                 //Find the following CaseNotion to ensure the rest of the test works correctly
                 //CaseNotion(classes={11=city, 5=country, 4=address, 21=store}, edges=[CaseNotionEdgesInner(sourceClassId=11, targetClassId=5), CaseNotionEdgesInner(sourceClassId=4, targetClassId=11), CaseNotionEdgesInner(sourceClassId=21, targetClassId=4)])
                 val caseNotion = caseNotions.single { caseNotion ->
-                    if (caseNotion.classes.values.toSet() != setOf("city", "country", "address", "store"))
-                        return@single false
-                    val nameToId = caseNotion.classes.inverse()
-                    val storeId = nameToId["store"]
-                    val addressId = nameToId["address"]
-                    val cityId = nameToId["city"]
-                    val countryId = nameToId["country"]
-                    return@single caseNotion.edges.size == 3 &&
-                            caseNotion.edges.any { edge -> edge.sourceClassId == storeId && edge.targetClassId == addressId } &&
-                            caseNotion.edges.any { edge -> edge.sourceClassId == addressId && edge.targetClassId == cityId } &&
-                            caseNotion.edges.any { edge -> edge.sourceClassId == cityId && edge.targetClassId == countryId }
+                    (caseNotion.classes.toSet() == expectedClassIds) && (caseNotion.edges.toSet() == expectedEdges)
                 }
 
                 currentEtlProcess = post<Paths.EtlProcesses, AbstractEtlProcess, AbstractEtlProcess>(
@@ -484,12 +498,15 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                     assertEquals(HttpStatusCode.NoContent, status)
                 }
                 currentDataConnector = createDataConnector("dc1", sakila.connectionProperties)
-                val relationshipGraph = get<Paths.RelationshipGraph, CaseNotion> {
+                val relationshipGraph = get<Paths.RelationshipGraph, RelationshipGraph> {
                     assertEquals(HttpStatusCode.OK, status)
-                    return@get body<CaseNotion>()
+                    return@get body<RelationshipGraph>()
                 }
                 assertTrue { relationshipGraph.classes.isNotEmpty() }
                 assertTrue { relationshipGraph.edges.isNotEmpty() }
+                val classNameToId = relationshipGraph.classes.associate { it.name to it.id }
+                val classesToRelationships =
+                    relationshipGraph.edges.associate { (it.sourceClassId to it.targetClassId) to it.id }
                 val caseNotions = get<Paths.CaseNotionSuggestions, Array<CaseNotion>> {
                     assertEquals(HttpStatusCode.OK, status)
                     return@get body<Array<CaseNotion>>()
@@ -513,22 +530,20 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                         setOf("staff" to "store", "customer" to "store"),
                         599
                     ),
-                )
+                ).map {
+                    Triple(
+                        it.first.mapToSet { classNameToId[it]!! },
+                        it.second.mapToSet { classesToRelationships[classNameToId[it.first]!! to classNameToId[it.second]!!]!! },
+                        it.third
+                    )
+                }
 
                 val relevantCaseNotions = expectedCaseNotions.map { (expectedClasses, expectedEdges, _) ->
                     caseNotions.single { caseNotion ->
-                        if (caseNotion.classes.values.toSet() != expectedClasses)
-                            return@single false
-                        if (caseNotion.edges.size != expectedEdges.size)
-                            return@single false
-                        return@single caseNotion.edges.all { edge ->
-                            val namedEdge1 =
-                                caseNotion.classes[edge.sourceClassId] to caseNotion.classes[edge.targetClassId]
-                            val namedEdge2 = namedEdge1.second to namedEdge1.first
-                            return@all namedEdge1 in expectedEdges || namedEdge2 in expectedEdges
-                        }
+                        return@single caseNotion.classes.toSet() == expectedClasses && caseNotion.edges.toSet() == expectedEdges
                     }
                 }
+                assertEquals(relevantCaseNotions.size, expectedCaseNotions.size)
 
                 val etlProcesses = relevantCaseNotions.map { caseNotion ->
                     post<Paths.EtlProcesses, AbstractEtlProcess, AbstractEtlProcess>(
@@ -638,21 +653,33 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                         val mysqlDC = createDataConnector("dc1", mysqlSakila.connectionProperties)
                         fun prepare(dc: DataConnector): AbstractEtlProcess {
                             currentDataConnector = dc
+
+                            val relationshipGraph = get<Paths.RelationshipGraph, RelationshipGraph> {
+                                assertEquals(HttpStatusCode.OK, status)
+                                return@get body<RelationshipGraph>()
+                            }
+                            val classes = relationshipGraph.classes.associateNotNull {
+                                if (it.name in setOf("city", "country", "address", "store")) it.name to it.id
+                                else null
+                            }
+                            val storeId = classes["store"]!!
+                            val addressId = classes["address"]!!
+                            val cityId = classes["city"]!!
+                            val countryId = classes["country"]!!
+                            val expectedEdges = relationshipGraph.edges.mapNotNullTo(HashSet()) { edge ->
+                                if ((edge.sourceClassId == storeId && edge.targetClassId == addressId) ||
+                                    (edge.sourceClassId == addressId && edge.targetClassId == cityId) ||
+                                    (edge.sourceClassId == cityId && edge.targetClassId == countryId)
+                                ) edge.id
+                                else null
+                            }
+                            val expectedClassIds = classes.values.toSet()
+
                             val caseNotion = get<Paths.CaseNotionSuggestions, Array<CaseNotion>> {
                                 assertEquals(HttpStatusCode.OK, status)
                                 return@get body<Array<CaseNotion>>()
                             }.single { caseNotion ->
-                                if (caseNotion.classes.values.toSet() != setOf("city", "country", "address", "store"))
-                                    return@single false
-                                val nameToId = caseNotion.classes.inverse()
-                                val storeId = nameToId["store"]
-                                val addressId = nameToId["address"]
-                                val cityId = nameToId["city"]
-                                val countryId = nameToId["country"]
-                                return@single caseNotion.edges.size == 3 &&
-                                        caseNotion.edges.any { edge -> edge.sourceClassId == storeId && edge.targetClassId == addressId } &&
-                                        caseNotion.edges.any { edge -> edge.sourceClassId == addressId && edge.targetClassId == cityId } &&
-                                        caseNotion.edges.any { edge -> edge.sourceClassId == cityId && edge.targetClassId == countryId }
+                                caseNotion.classes.toSet() == expectedClassIds && caseNotion.edges.toSet() == expectedEdges
                             }
 
                             return post<Paths.EtlProcesses, AbstractEtlProcess, AbstractEtlProcess>(

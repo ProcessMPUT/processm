@@ -596,7 +596,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/CaseNotion'
+                $ref: '#/components/schemas/RelationshipGraph'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -752,43 +752,6 @@ paths:
         - dataStores
       summary: Remove the specified ETL process
       operationId: deleteEtlProcess
-      responses:
-        '204':
-          description: Successful operation
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-      security:
-        - bearerAuth: [ ]
-  /organizations/{organizationId}/data-stores/{dataStoreId}/etl-processes/{etlProcessId}/logs:
-    parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: dataStoreId
-        in: path
-        description: Data store ID
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: etlProcessId
-        in: path
-        description: ETL process ID
-        required: true
-        schema:
-          type: string
-          format: uuid
-    post:
-      tags:
-        - dataStores
-      summary: Recreate XES log based on data acquired using the ETL process
-      operationId: RecreateLogFromEtlProcess
       responses:
         '204':
           description: Successful operation
@@ -2451,24 +2414,46 @@ components:
         isPrivate:
           type: boolean
           description: Indicates whether the organization can be accessed by ancestral organizations members
+    RelationshipGraph:
+      type: object
+      required: [ classes, edges ]
+      properties:
+        classes:
+          type: array
+          items:
+            type: object
+            required: [ id, name ]
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+        edges:
+          type: array
+          items:
+            type: object
+            required: [ id, attributeName, sourceClassId, targetClassId ]
+            properties:
+              id:
+                type: integer
+              attributeName:
+                type: string
+              sourceClassId:
+                type: integer
+              targetClassId:
+                type: integer
     CaseNotion:
       type: object
       required: [ classes, edges ]
       properties:
         classes:
-          type: object
-          additionalProperties:
-            type: string
+          type: array
+          items:
+            type: integer
         edges:
           type: array
           items:
-            type: object
-            required: [ sourceClassId, targetClassId ]
-            properties:
-              sourceClassId:
-                type: string
-              targetClassId:
-                type: string
+            type: integer
     JdbcEtlProcessConfiguration:
       type: object
       required: [ query, enabled, batch, traceId, eventId, attributes ]

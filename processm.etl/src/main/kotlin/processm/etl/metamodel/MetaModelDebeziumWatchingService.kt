@@ -158,13 +158,14 @@ class MetaModelDebeziumWatchingService : Service {
         return EtlProcessesMetadata
             .innerJoin(AutomaticEtlProcesses)
             .innerJoin(AutomaticEtlProcessRelations)
+            .innerJoin(Relationships)
             .innerJoin(
                 sourceClassAlias,
-                { AutomaticEtlProcessRelations.sourceClassId },
+                { Relationships.sourceClassId },
                 { sourceClassAlias[Classes.id] })
             .innerJoin(
                 targetClassAlias,
-                { AutomaticEtlProcessRelations.targetClassId },
+                { Relationships.targetClassId },
                 { targetClassAlias[Classes.id] })
             .slice(sourceClassAlias[Classes.name], targetClassAlias[Classes.name])
             .select { EtlProcessesMetadata.dataConnectorId eq dataConnectorId and (EtlProcessesMetadata.isActive) }

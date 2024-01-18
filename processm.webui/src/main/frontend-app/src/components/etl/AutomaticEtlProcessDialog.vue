@@ -6,18 +6,20 @@
       </v-card-title>
       <v-card-text>
         <v-form ref="etlProcessConfiguration" lazy-validation>
-          <v-text-field v-model="processName" :label="$t('data-stores.etl.process-name')" :rules="notEmptyRule" required></v-text-field>
+          <v-text-field v-model="processName" :label="$t('data-stores.etl.process-name')" :rules="notEmptyRule"
+                        required name="process-name"></v-text-field>
 
           <v-select
-            v-model="selectedDataConnectorId"
-            item-text="name"
-            item-value="id"
-            item-disabled="disabled"
-            :items="availableDataConnectors"
-            :label="$t('data-stores.etl.data-connector')"
-            :rules="notEmptyRule"
-            @change="reloadSuggestedBusinessPerspectives"
-            required
+              v-model="selectedDataConnectorId"
+              item-text="name"
+              item-value="id"
+              item-disabled="disabled"
+              :items="availableDataConnectors"
+              :label="$t('data-stores.etl.data-connector')"
+              :rules="notEmptyRule"
+              name="selected-data-connector-id"
+              @change="reloadSuggestedBusinessPerspectives"
+              required
           >
             <template v-slot:item="{ item, on, attrs }">
               <v-list-item v-if="!item.disabled" v-bind="attrs" v-on="on">
@@ -27,7 +29,7 @@
               </v-list-item>
               <v-tooltip v-else bottom v-bind="attrs" v-on="on">
                 <template v-slot:activator="{ on, attrs }">
-                  <div v-bind="attrs" v-on="on">
+                  <div :name="'automatic-etl-process-dialog-connector-'+item.id" v-bind="attrs" v-on="on">
                     <v-list-item :disabled="true" class="px-0">
                       <v-list-item-content>
                         <v-list-item-title>{{ item.name }}</v-list-item-title>
@@ -44,24 +46,26 @@
             <template v-slot:activator="{ on, attrs }">
               <div v-bind="attrs" v-on="on">
                 <v-select
-                  v-model="selectedCaseNotion"
-                  :items="availableCaseNotions"
-                  :rules="notEmptyRule"
-                  :label="$t('data-stores.automatic-etl-process.case-notion')"
-                  :disabled="selectedDataConnectorId == null"
-                  :loading="isLoadingCaseNotions"
-                  @input="caseNotionSelected"
-                  required
+                    v-model="selectedCaseNotion"
+                    :items="availableCaseNotions"
+                    :label="$t('data-stores.automatic-etl-process.case-notion')"
+                    :disabled="selectedDataConnectorId == null"
+                    :loading="isLoadingCaseNotions"
+                    @input="caseNotionSelected"
+                    required
                 >
                   <template v-slot:item="{ item }">
                     <v-list-item-content>
-                      <v-list-item-title>{{ Object.values(item.classes).join(", ") }}</v-list-item-title>
-                      <v-list-item-subtitle class="case-notion-description">{{ getCaseNotionDescription(item) }} </v-list-item-subtitle>
+                      <v-list-item-title>{{ getCaseNotionName(item) }}</v-list-item-title>
+                      <v-list-item-subtitle class="case-notion-description">{{
+                          getCaseNotionDescription(item)
+                        }}
+                      </v-list-item-subtitle>
                     </v-list-item-content>
                   </template>
                   <template v-slot:selection="{ item }">
                     <span v-if="!isCaseNotionManuallyModified">
-                      {{ Object.values(item.classes).join(", ") }}
+                      {{ getCaseNotionName(item) }}
                     </span>
                     <span v-else> {{ $t("data-stores.etl.custom-case-notion") }} item </span>
                   </template>
@@ -75,22 +79,22 @@
 
         <div class="case-notion-editor-container">
           <case-notion-editor
-            v-model="displayCaseNotionEditor"
-            :relationship-graph="relationshipGraph"
-            :selected-nodes="selectedClasses"
-            :selected-links="selectedLinks"
-            @node-selected="nodeSelected"
+              v-model="displayCaseNotionEditor"
+              :relationship-graph="relationshipGraph"
+              :selected-nodes="selectedClasses"
+              :selected-links="selectedLinks"
+              @node-selected="nodeSelected"
           />
         </div>
       </v-card-text>
 
       <v-card-actions>
-        <v-spacer />
+        <v-spacer/>
         <v-btn color="secondary" text @click.stop="cancel">
           {{ $t("common.cancel") }}
         </v-btn>
 
-        <v-btn :loading="isSubmitting" color="primary" text @click.stop="createEtlProcessConfiguration">
+        <v-btn :loading="isSubmitting" color="primary" text @click.stop="createEtlProcessConfiguration" name="btn-create-etl-process-configuration">
           {{ $t("common.save") }}
         </v-btn>
       </v-card-actions>
@@ -115,15 +119,15 @@
 </style>
 
 <script lang="ts">
-import { DataConnector } from "@/models/DataStore";
+import {DataConnector} from "@/models/DataStore";
 import Vue from "vue";
-import { Component, Inject, Prop, Watch } from "vue-property-decorator";
+import {Component, Inject, Prop, Watch} from "vue-property-decorator";
 import DataStoreService from "@/services/DataStoreService";
 import App from "@/App.vue";
-import { capitalize } from "@/utils/StringCaseConverter";
-import { notEmptyRule } from "@/utils/FormValidationRules";
+import {capitalize} from "@/utils/StringCaseConverter";
+import {notEmptyRule} from "@/utils/FormValidationRules";
 import CaseNotionEditor from "./CaseNotionEditor.vue";
-import { AutomaticEtlProcess, CaseNotion, CaseNotionEdges, EtlProcessType } from "@/openapi";
+import {AutomaticEtlProcess, CaseNotion, EtlProcessType, RelationshipGraph, RelationshipGraphEdges} from "@/openapi";
 
 @Component({
   components: {
@@ -133,7 +137,7 @@ import { AutomaticEtlProcess, CaseNotion, CaseNotionEdges, EtlProcessType } from
 export default class AutomaticEtlProcessDialog extends Vue {
   @Inject() app!: App;
   @Inject() dataStoreService!: DataStoreService;
-  @Prop({ default: false })
+  @Prop({default: false})
   readonly value!: boolean;
   @Prop()
   readonly dataStoreId?: string;
@@ -147,35 +151,46 @@ export default class AutomaticEtlProcessDialog extends Vue {
   readonly initialConfig: AutomaticEtlProcess | null = null;
 
   processName = "";
-  availableDataConnectors: Array<{name: string, id: string, disabled: boolean}> = [];
+  availableDataConnectors: Array<{ name: string, id: string, disabled: boolean }> = [];
   selectedDataConnectorId: string | null = null;
   selectedCaseNotion: CaseNotion | null = null;
   availableCaseNotions: CaseNotion[] = [];
   isSubmitting = false;
   isLoadingCaseNotions = false;
   isCaseNotionManuallyModified = false;
-  selectedClasses: string[] = [];
-  selectedLinks: Array<{
-    sourceNodeId: string;
-    targetNodeId: string;
-  }> = [];
-  relationshipGraph: CaseNotion | null = null;
+  selectedClasses: number[] = [];
+  selectedLinks: Array<number> = [];
+  relationshipGraph: RelationshipGraph | null = null;
+  classIdToName: Record<number, string> = {}
+  relationIdToDefinition: Record<number, RelationshipGraphEdges> = {};
   notEmptyRule = [(v: string) => notEmptyRule(v, this.$t("add-data-connector-dialog.validation.non-empty-field").toString())];
 
   @Watch("dataConnectors")
   updateAvailableDataConnectors() {
-    this.availableDataConnectors =  this.dataConnectors?.map((item:DataConnector) => {
-      return {name: item.name, id: item.id, disabled: Object.keys(item.properties).length ==0}
+    this.availableDataConnectors = this.dataConnectors?.map((item: DataConnector) => {
+      return {name: item.name, id: item.id, disabled: Object.keys(item.properties).length == 0}
     }) ?? [];
   }
 
   @Watch("initialConfig")
-  setInitialConfig() {
+  async setInitialConfig() {
     const etl = this.initialConfig;
 
     this.processName = etl?.name || "";
     this.selectedDataConnectorId = etl?.dataConnectorId || "";
+    if (this.selectedDataConnectorId != "") {
+      await this.reloadSuggestedBusinessPerspectives();
+    }
     this.selectedCaseNotion = etl?.caseNotion || null;
+    if (this.selectedCaseNotion !== null) {
+      this.isCaseNotionManuallyModified = true;
+      this.caseNotionSelected();
+    } else {
+      this.isCaseNotionManuallyModified = false;
+      this.selectedCaseNotion = null;
+      this.selectedClasses = [];
+      this.selectedLinks = [];
+    }
   }
 
   async reloadSuggestedBusinessPerspectives() {
@@ -184,9 +199,14 @@ export default class AutomaticEtlProcessDialog extends Vue {
     }
 
     this.relationshipGraph = await this.dataStoreService.getRelationshipGraph(this.dataStoreId, this.selectedDataConnectorId);
-    this.selectedCaseNotion = null;
-    this.selectedClasses = [];
-    this.selectedLinks = [];
+    this.classIdToName = {};
+    this.relationshipGraph.classes.forEach((item) => {
+      this.classIdToName[item.id] = item.name;
+    });
+    this.relationIdToDefinition = {};
+    this.relationshipGraph.edges.forEach((item) => {
+      this.relationIdToDefinition[item.id] = item;
+    });
 
     try {
       this.isLoadingCaseNotions = true;
@@ -207,30 +227,18 @@ export default class AutomaticEtlProcessDialog extends Vue {
     }
 
     try {
-      const caseNotion =
-        this.selectedCaseNotion != null && !this.isCaseNotionManuallyModified
-          ? this.selectedCaseNotion
-          : {
-              classes: this.selectedClasses.reduce(
-                (obj, classId) => ({
-                  ...obj,
-                  [classId]: this.relationshipGraph?.classes[classId] || ""
-                }),
-                {}
-              ),
-              edges: this.selectedLinks.map(({ sourceNodeId, targetNodeId }) => ({
-                sourceClassId: sourceNodeId,
-                targetClassId: targetNodeId
-              }))
-            };
+      const caseNotion = {
+        classes: this.selectedClasses,
+        edges: this.selectedLinks
+      };
       this.isSubmitting = true;
       const etlProcess = await this.dataStoreService.saveEtlProcess(
-        this.dataStoreId,
-        this.processName,
-        EtlProcessType.Automatic,
-        this.selectedDataConnectorId,
-        caseNotion,
-        this.initialConfig?.id
+          this.dataStoreId,
+          this.processName,
+          EtlProcessType.Automatic,
+          this.selectedDataConnectorId,
+          caseNotion,
+          this.initialConfig?.id
       );
       this.app.success(`${this.$t("common.saving.success")}`);
       this.$emit("submitted", etlProcess);
@@ -247,26 +255,31 @@ export default class AutomaticEtlProcessDialog extends Vue {
     this.resetForm();
   }
 
+  getCaseNotionName(caseNotion: CaseNotion): string {
+    return caseNotion.classes.map((classId) => this.classIdToName[classId]).join(", ");
+  }
+
   getCaseNotionDescription(caseNotion: CaseNotion): string {
     return capitalize(
-      caseNotion.edges
-        .map((relation) =>
-          this.$t("data-stores.automatic-etl-process.case-notion-description", {
-            source: caseNotion.classes[relation.sourceClassId],
-            target: caseNotion.classes[relation.targetClassId]
-          })
-        )
-        .join(", ") + "."
+        caseNotion.edges
+            .map((relationId) => {
+              const relation = this.relationIdToDefinition[relationId];
+              return this.$t("data-stores.automatic-etl-process.case-notion-description", {
+                source: this.classIdToName[relation.sourceClassId],
+                target: this.classIdToName[relation.targetClassId]
+              })
+            })
+            .join(", ") + "."
     );
   }
 
   caseNotionSelected() {
-    this.selectedClasses = Array.from(Object.keys(this.selectedCaseNotion?.classes ?? {}));
+    this.selectedClasses = this.selectedCaseNotion?.classes ?? [];
     this.selectedLinks = this.getSelectedLinks(this.selectedClasses);
     this.isCaseNotionManuallyModified = false;
   }
 
-  nodeSelected(nodeId: string) {
+  nodeSelected(nodeId: number) {
     if (this.relationshipGraph == null) return;
 
     const nodeIndex = this.selectedClasses.findIndex((id) => id == nodeId);
@@ -296,17 +309,16 @@ export default class AutomaticEtlProcessDialog extends Vue {
     (this.$refs.etlProcessConfiguration as HTMLFormElement)?.reset();
   }
 
-  private getSelectedLinks(selectedClasses: string[]) {
+  private getSelectedLinks(selectedClasses: number[]) {
     if (this.relationshipGraph == null) return [];
 
     const selectedClassesSet = new Set(selectedClasses);
 
-    return this.relationshipGraph.edges.reduce((selectedRelations: Array<{ sourceNodeId: string; targetNodeId: string }>, relation: CaseNotionEdges) => {
-      if (selectedClassesSet.has(relation.sourceClassId) && selectedClassesSet.has(relation.targetClassId)) {
-        selectedRelations.push({
-          sourceNodeId: relation.sourceClassId,
-          targetNodeId: relation.targetClassId
-        });
+    return this.relationshipGraph.edges.reduce((selectedRelations: Array<number>, relation: RelationshipGraphEdges) => {
+      const sourceClassId = relation.sourceClassId;
+      const targetClassId = relation.targetClassId;
+      if (sourceClassId !== undefined && targetClassId !== undefined && selectedClassesSet.has(sourceClassId) && selectedClassesSet.has(targetClassId)) {
+        selectedRelations.push(relation.id);
       }
       return selectedRelations;
     }, []);

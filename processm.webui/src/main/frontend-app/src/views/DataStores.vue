@@ -36,7 +36,7 @@
           <v-spacer></v-spacer>
           <v-dialog v-model="newDialog" max-width="600px">
             <template v-slot:activator="{ on, attrs }">
-              <v-btn v-bind="attrs" v-on="on" color="primary">
+              <v-btn v-bind="attrs" v-on="on" color="primary" name="btn-add-new">
                 {{ $t("common.add-new") }}
               </v-btn>
             </template>
@@ -44,7 +44,7 @@
               <v-card-title>{{ $t("common.add-new") }}</v-card-title>
               <v-card-text>
                 <v-form>
-                  <v-text-field v-model="newName" :hint="$t('data-stores.name-hint')" :label="$t('common.name')" type="text"></v-text-field>
+                  <v-text-field v-model="newName" name="new-name" :hint="$t('data-stores.name-hint')" :label="$t('common.name')" type="text"></v-text-field>
                 </v-form>
               </v-card-text>
               <v-card-actions>
@@ -52,7 +52,7 @@
                 <v-btn color="secondary" text @click="newDialog = false">
                   {{ $t("common.cancel") }}
                 </v-btn>
-                <v-btn color="primary" text @click="addNew">
+                <v-btn color="primary" text name="btn-add-new-confirm" @click="addNew">
                   {{ $t("common.submit") }}
                 </v-btn>
               </v-card-actions>
@@ -71,7 +71,7 @@
         </v-tooltip>
         <v-tooltip bottom>
           <template v-slot:activator="{ on, attrs }">
-            <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+            <v-btn icon color="primary" dark v-bind="attrs" v-on="on" name="btn-configure-data-store">
               <v-icon small @click="configureDataStore(item.id)">settings</v-icon>
             </v-btn>
           </template>

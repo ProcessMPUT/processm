@@ -100,8 +100,6 @@
       "removal-confirmation": "Do you want to permanently remove {etlProcessName} ETL process with all associated data?",
       "custom-case-notion": "Custom selection",
       "deactivation-confirmation": "Do you want to stop tracking changes in {etlProcessName} ETL process?",
-      "recreate-log": "Recreate XES log",
-      "log-recreation-confirmation": "Do you want to recreate the XES log of {etlProcessName} ETL process? The operation overrides existing XES log.",
       "last-execution-time": "Last execution time"
     }
   },

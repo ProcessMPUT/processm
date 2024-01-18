@@ -14,6 +14,7 @@
               <v-text-field
                 :label="$t('common.email')"
                 v-model="username"
+                name="username"
                 prepend-icon="person"
                 type="text"
                 :rules="[(v) => /.+@.+\..+/.test(v) || $t('login-form.validation.email-format')]"
@@ -23,20 +24,21 @@
                 id="password"
                 :label="$t('login-form.password')"
                 v-model="password"
+                name="password"
                 prepend-icon="lock"
                 type="password"
                 :rules="[(v) => !!v || $t('login-form.validation.password-empty')]"
                 @keypress.enter="authenticate"
               ></v-text-field>
               <v-layout>
-                <v-btn v-if="!config.demoMode" color="primary" text to="register">
+                <v-btn v-if="!config.demoMode" name="btn-register" color="primary" text to="register">
                   {{ $t("login-form.register-account") }}
                 </v-btn>
                 <v-btn v-if="!config.demoMode" color="primary" text to="reset-password">
                   {{ $t("login-form.reset-password") }}
                 </v-btn>
                 <v-spacer></v-spacer>
-                <v-btn color="primary" form="loginForm" type="submit">
+                <v-btn color="primary" name="btn-login" form="loginForm" type="submit">
                   {{ $t("login-form.login") }}
                 </v-btn>
               </v-layout>

@@ -14,7 +14,6 @@ import org.antlr.v4.runtime.RecognitionException
 import org.koin.ktor.ext.inject
 import processm.core.helpers.mapToArray
 import processm.core.helpers.toLocalDateTime
-import processm.dbmodels.models.ProcessTypeDto
 import processm.services.api.models.*
 import processm.services.logic.DataStoreService
 import processm.services.logic.LogsService
@@ -275,13 +274,7 @@ fun Route.DataStoresApi() {
             dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
             val caseNotionSuggestions =
                 dataStoreService.getCaseNotionSuggestions(pathParams.dataStoreId, pathParams.dataConnectorId)
-                    .mapToArray { (classes, relations) ->
-                        CaseNotion(
-                            classes.toMap(),
-                            relations.mapToArray { (sourceClass, targetClass) ->
-                                CaseNotionEdgesInner("$sourceClass", "$targetClass")
-                            })
-                    }
+                    .toTypedArray()
 
             call.respond(
                 HttpStatusCode.OK,
@@ -293,19 +286,12 @@ fun Route.DataStoresApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
-            val (classes, relations) = dataStoreService.getRelationshipGraph(
-                pathParams.dataStoreId,
-                pathParams.dataConnectorId
-            )
-            val caseNotionWithAllClasses = CaseNotion(
-                classes.toMap(),
-                relations.mapToArray { (sourceClass, targetClass) ->
-                    CaseNotionEdgesInner("$sourceClass", "$targetClass")
-                })
+            val relationshipGraph =
+                dataStoreService.getRelationshipGraph(pathParams.dataStoreId, pathParams.dataConnectorId)
 
             call.respond(
                 HttpStatusCode.OK,
-                caseNotionWithAllClasses
+                relationshipGraph
             )
         }
 
@@ -315,19 +301,6 @@ fun Route.DataStoresApi() {
             dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
 
             val etlProcesses = dataStoreService.getEtlProcesses(pathParams.dataStoreId)
-                .mapToArray {
-                    AbstractEtlProcess(
-                        it.id,
-                        it.name,
-                        it.dataConnectorId,
-                        it.isActive,
-                        it.lastExecutionTime?.toLocalDateTime(),
-                        EtlProcessType.valueOf(it.processType.processTypeName),
-                        configuration = if (it.processType == ProcessTypeDto.JDBC)
-                            dataStoreService.getJdbcEtlProcessConfiguration(pathParams.dataStoreId, it.id)
-                        else null
-                    )
-                }
 
             call.respond(
                 HttpStatusCode.OK,
@@ -352,9 +325,7 @@ fun Route.DataStoresApi() {
 
             val etlProcessId = when (etlProcessData.type) {
                 EtlProcessType.automatic -> {
-                    val relations = etlProcessData.caseNotion?.edges.orEmpty().map { edge ->
-                        edge.sourceClassId to edge.targetClassId
-                    }
+                    val relations = etlProcessData.caseNotion?.edges.orEmpty().toList()
                     dataStoreService.saveAutomaticEtlProcess(
                         null,
                         pathParams.dataStoreId,
@@ -430,9 +401,7 @@ fun Route.DataStoresApi() {
 
             val etlProcessId = when (etlProcessData.type) {
                 EtlProcessType.automatic -> {
-                    val relations = etlProcessData.caseNotion?.edges.orEmpty().map { edge ->
-                        edge.sourceClassId to edge.targetClassId
-                    }
+                    val relations = etlProcessData.caseNotion?.edges.orEmpty().toList()
                     dataStoreService.saveAutomaticEtlProcess(
                         etlProcessData.id,
                         pathParams.dataStoreId,
@@ -494,21 +463,6 @@ fun Route.DataStoresApi() {
             )
             dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
             dataStoreService.removeEtlProcess(pathParams.dataStoreId, pathParams.etlProcessId)
-
-            call.respond(HttpStatusCode.NoContent)
-        }
-
-        post<Paths.EtlProcessLog> { pathParams ->
-            val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
-            dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
-            dataStoreService.assertUserHasSufficientPermissionToDataStore(
-                principal.userId,
-                pathParams.dataStoreId,
-                OrganizationRole.owner,
-                OrganizationRole.writer
-            )
-            logsService.enqueueXesExtractionFromMetaModel(pathParams.dataStoreId, pathParams.etlProcessId)
 
             call.respond(HttpStatusCode.NoContent)
         }

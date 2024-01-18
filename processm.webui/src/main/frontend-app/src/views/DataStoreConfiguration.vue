@@ -1,8 +1,8 @@
 <template>
-  <v-dialog v-model="value" fullscreen hide-overlay transition="dialog-bottom-transition">
+  <v-dialog v-model="value" persistent fullscreen hide-overlay transition="dialog-bottom-transition">
     <v-card>
       <v-toolbar dark color="primary">
-        <v-btn icon dark @click="closeConfiguration">
+        <v-btn icon dark @click="closeConfiguration" name="btn-close-configuration">
           <v-icon>arrow_back</v-icon>
         </v-btn>
         <v-spacer />
@@ -112,7 +112,7 @@
                 </v-tooltip>
                 <v-fade-transition leave-absolute>
                   <div v-if="open" class="add-button-group">
-                    <v-btn class="mx-2" color="primary" @click.stop="addDataConnectorDialog = true">
+                    <v-btn class="mx-2" color="primary" @click.stop="addDataConnectorDialog = true" name="btn-add-data-connector">
                       {{ $t("data-stores.add-data-connector") }}
                     </v-btn>
                   </div>
@@ -212,6 +212,7 @@
                             :disabled="dataConnectors.length == 0"
                             @click.stop="automaticEtlProcessDialogVisible = true"
                             v-bind="attrs"
+                            name="btn-add-automatic-etl-process"
                           >
                             {{ $t("data-stores.automatic-etl-process.title") }}
                           </v-btn>
@@ -280,14 +281,6 @@
                 <v-tooltip bottom>
                   <template v-slot:activator="{ on, attrs }">
                     <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
-                      <v-icon small @click="recreateLog(item)">refresh</v-icon>
-                    </v-btn>
-                  </template>
-                  <span>{{ $t("data-stores.etl.recreate-log") }}</span>
-                </v-tooltip>
-                <v-tooltip bottom>
-                  <template v-slot:activator="{ on, attrs }">
-                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
                       <v-icon small @click="changeEtlActivationStatus(item)">
                         {{ item.isActive ? "pause_circle_outline" : "play_circle_outline" }}
                       </v-icon>
@@ -313,7 +306,7 @@
                 </v-tooltip>
                 <v-tooltip bottom>
                   <template v-slot:activator="{ on, attrs }">
-                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on" name="btn-show-etl-process-details">
                       <v-icon small @click="showEtlProcessDetails(item)">info</v-icon>
                     </v-btn>
                   </template>
@@ -699,28 +692,6 @@ export default class DataStoreConfiguration extends Vue {
 
   get dataStoreName() {
     return this.dataStore?.name ?? "";
-  }
-
-  async recreateLog(etlProcess: EtlProcess) {
-    if (this.dataStoreId == null) return;
-
-    const isConfirmed = await this.$confirm(
-      `${this.$t("data-stores.etl.log-recreation-confirmation", {
-        etlProcessName: etlProcess.name
-      })}`,
-      {
-        title: `${this.$t("common.warning")}`
-      }
-    );
-
-    if (!isConfirmed) return;
-
-    try {
-      await this.dataStoreService.recreateXesLogFromEtlProcess(this.dataStoreId, etlProcess.id!);
-      this.app.success(`${this.$t("common.operation-successful")}`);
-    } catch (error) {
-      this.app.error(`${this.$t("common.operation-error")}`);
-    }
   }
 
   getDataConnectorName(dataConnectorId: string) {

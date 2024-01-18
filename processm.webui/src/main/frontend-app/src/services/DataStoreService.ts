@@ -1,5 +1,5 @@
 import Vue from "vue";
-import DataStore, { DataConnector } from "@/models/DataStore";
+import DataStore, {DataConnector} from "@/models/DataStore";
 import BaseService from "./BaseService";
 import {
   AbstractEtlProcess,
@@ -11,7 +11,8 @@ import {
   EtlProcess as ApiEtlProcess,
   EtlProcessInfo,
   EtlProcessType,
-  EtlProcessType as ApiEtlProcessType
+  EtlProcessType as ApiEtlProcessType,
+  RelationshipGraph
 } from "@/openapi";
 import JdbcEtlProcessConfiguration from "@/models/JdbcEtlProcessConfiguration";
 
@@ -149,12 +150,10 @@ export default class DataStoreService extends BaseService {
     }, []);
   }
 
-  public async getRelationshipGraph(dataStoreId: string, dataConnectorId: string): Promise<CaseNotion> {
+  public async getRelationshipGraph(dataStoreId: string, dataConnectorId: string): Promise<RelationshipGraph> {
     const response = await this.dataStoresApi.getRelationshipGraph(DataStoreService.currentOrganizationId, dataStoreId, dataConnectorId);
 
-    const caseNotion = response.data;
-
-    return caseNotion;
+    return response.data;
   }
 
   public async getEtlProcesses(dataStoreId: string): Promise<EtlProcess[]> {
@@ -242,10 +241,6 @@ export default class DataStoreService extends BaseService {
     await this.dataStoresApi.deleteEtlProcess(DataStoreService.currentOrganizationId, dataStoreId, etlProcessId, {
       validateStatus: (status: number) => [204, 404].indexOf(status) >= 0
     });
-  }
-
-  public async recreateXesLogFromEtlProcess(dataStoreId: string, etlProcessId: string): Promise<void> {
-    await this.dataStoresApi.recreateLogFromEtlProcess(DataStoreService.currentOrganizationId, dataStoreId, etlProcessId);
   }
 
   public async removeLog(dataStoreId: string, logIdentityId: string): Promise<void> {

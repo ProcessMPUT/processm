@@ -4,8 +4,6 @@ import de.odysseus.staxon.json.JsonXMLConfig
 import de.odysseus.staxon.json.JsonXMLConfigBuilder
 import de.odysseus.staxon.json.JsonXMLOutputFactory
 import org.apache.commons.io.input.BoundedInputStream
-import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.Brand
 import processm.core.communication.Producer
 import processm.core.helpers.getPropertyIgnoreCase
@@ -17,7 +15,6 @@ import processm.core.log.hierarchical.toFlatSequence
 import processm.core.logging.loggedScope
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
-import processm.dbmodels.models.*
 import java.io.BufferedInputStream
 import java.io.InputStream
 import java.io.OutputStream
@@ -64,7 +61,7 @@ class LogsService(private val producer: Producer) {
                             val log = it as? Log ?: return@map it
                             val logAttributes = log.attributes.toMutableAttributeMap()
 
-                            logAttributes.computeIfAbsent(identityIdAttributeName) {  UUID.randomUUID() }
+                            logAttributes.computeIfAbsent(identityIdAttributeName) { UUID.randomUUID() }
 
                             return@map Log(
                                 logAttributes,
@@ -146,35 +143,6 @@ class LogsService(private val producer: Producer) {
                     }
                     zip.closeEntry()
                 }
-            }
-        }
-    }
-
-    /**
-     * Enqueues recreation of XES log based on data collected by [etlProcessId], stored in [dataStoreId].
-     */
-    fun enqueueXesExtractionFromMetaModel(dataStoreId: UUID, etlProcessId: UUID) {
-        val dataStoreName = dataStoreId.toString()
-        transaction(DBCache.get(dataStoreName).database) {
-            val etlProcessDetails = EtlProcessesMetadata
-                .innerJoin(DataConnectors)
-                .slice(EtlProcessesMetadata.name, DataConnectors.dataModelId)
-                .select { EtlProcessesMetadata.id eq etlProcessId }
-                .firstOrNull() ?: throw ValidationException(
-                Reason.ResourceNotFound,
-                "The specified ETL process and/or data store does not exist"
-            )
-            val dataModelId = etlProcessDetails[DataConnectors.dataModelId]?.value ?: throw ValidationException(
-                Reason.ResourceNotFound,
-                "The specified ETL process and/or data store has no data model"
-            )
-            val etlProcessName = etlProcessDetails[EtlProcessesMetadata.name]
-
-            producer.produce(ETL_PROCESS_CONVERSION_TOPIC) {
-                setString(DATA_STORE_ID, "$dataStoreId")
-                setString(ETL_PROCESS_ID, "$etlProcessId")
-                setString(DATA_MODEL_ID, "$dataModelId")
-                setString(ETL_PROCESS_NAME, etlProcessName)
             }
         }
     }

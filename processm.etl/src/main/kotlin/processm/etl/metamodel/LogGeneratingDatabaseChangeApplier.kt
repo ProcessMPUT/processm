@@ -6,10 +6,7 @@ import processm.core.helpers.mapToSet
 import processm.core.logging.loggedScope
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
-import processm.dbmodels.models.AutomaticEtlProcessRelations
-import processm.dbmodels.models.AutomaticEtlProcesses
-import processm.dbmodels.models.Classes
-import processm.dbmodels.models.EtlProcessesMetadata
+import processm.dbmodels.models.*
 import processm.etl.tracker.DatabaseChangeApplier
 import processm.etl.tracker.DatabaseChangeApplier.DatabaseChangeEvent
 import java.time.Instant
@@ -25,10 +22,11 @@ class LogGeneratingDatabaseChangeApplier(
             Classes.slice(Classes.id).select { (Classes.name eq className) and (Classes.dataModelId eq metaModelId) }
         return AutomaticEtlProcessRelations
             .join(AutomaticEtlProcesses, JoinType.INNER)
+            .join(Relationships, JoinType.INNER, Relationships.id, AutomaticEtlProcessRelations.relationship)
             .join(EtlProcessesMetadata, JoinType.INNER, AutomaticEtlProcesses.id, EtlProcessesMetadata.id)
             .slice(AutomaticEtlProcessRelations.automaticEtlProcessId, EtlProcessesMetadata.lastUpdatedDate)
             .select {
-                (AutomaticEtlProcessRelations.sourceClassId inSubQuery classId) or (AutomaticEtlProcessRelations.targetClassId inSubQuery classId)
+                (Relationships.sourceClassId inSubQuery classId) or (Relationships.targetClassId inSubQuery classId)
             }
             .withDistinct()
             .map { it[AutomaticEtlProcessRelations.automaticEtlProcessId].value to it[EtlProcessesMetadata.lastUpdatedDate] }

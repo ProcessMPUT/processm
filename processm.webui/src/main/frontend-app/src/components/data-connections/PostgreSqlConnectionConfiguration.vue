@@ -6,6 +6,7 @@
         :label="$t('add-data-connector-dialog.server')"
         required
         :rules="hostnameRules"
+        name="postgresql-server"
       ></v-text-field>
       <v-text-field
         v-model="value['port']"
@@ -13,12 +14,14 @@
         :label="$t('add-data-connector-dialog.port')"
         required
         :rules="portRules"
+        name="postgresql-port"
       ></v-text-field>
       <v-text-field
         v-model="value['username']"
         :label="$t('add-data-connector-dialog.username')"
         required
         :rules="notEmptyRules"
+        name="postgresql-username"
       ></v-text-field>
       <v-text-field
         v-model="value['password']"
@@ -26,11 +29,13 @@
         required
         type="password"
         :rules="notEmptyRules"
+        name="postgresql-password"
       ></v-text-field>
       <v-text-field
         v-model="value['database']"
         :label="$t('add-data-connector-dialog.database')"
         required
+        name="postgresql-database"
       ></v-text-field>
     </template>
   </sql-connection-configuration>

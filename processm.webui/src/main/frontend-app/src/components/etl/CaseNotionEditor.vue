@@ -41,32 +41,29 @@ svg > defs > marker > path[selected="true"] {
 
 <script lang="ts">
 import Vue from "vue";
-import { Component, Prop, Watch } from "vue-property-decorator";
-import { dia, layout, shapes, util } from "jointjs";
+import {Component, Prop, Watch} from "vue-property-decorator";
+import {dia, layout, shapes, util} from "jointjs";
 import dagre from "dagre";
 import graphlib from "graphlib";
-import { CaseNotion } from "@/openapi";
+import {RelationshipGraph} from "@/openapi";
 
 @Component
 export default class CaseNotionEditor extends Vue {
-  @Prop({ default: false })
+  @Prop({default: false})
   readonly value!: boolean;
-  @Prop({ default: null })
-  readonly selectedNodes?: string[] | null;
-  @Prop({ default: null })
-  readonly selectedLinks?: Array<{
-    sourceNodeId: string;
-    targetNodeId: string;
-  }> | null;
-  @Prop({ default: null })
-  readonly relationshipGraph?: CaseNotion | null;
-  @Prop({ default: "network-simplex" })
+  @Prop({default: null})
+  readonly selectedNodes?: number[] | null;
+  @Prop({default: null})
+  readonly selectedLinks?: Array<number> | null;
+  @Prop({default: null})
+  readonly relationshipGraph?: RelationshipGraph | null;
+  @Prop({default: "network-simplex"})
   readonly layoutAlgorithm?: "network-simplex" | "tight-tree" | "longest-path";
 
   private graph = new dia.Graph();
   private paper = new dia.Paper({});
-  private nodes = new Map<string, shapes.standard.Rectangle>();
-  private links = new Map<[shapes.standard.Rectangle, shapes.standard.Rectangle], shapes.standard.Link>();
+  private nodes = new Map<number, shapes.standard.Rectangle>();
+  private links = new Array<shapes.standard.Link>();
 
   @Watch("selectedNodes")
   selectedNodesChanged() {
@@ -82,21 +79,24 @@ export default class CaseNotionEditor extends Vue {
   }
 
   @Watch("relationshipGraph")
-  relationshipGraphChanged(relationshipGraph: CaseNotion | null) {
+  relationshipGraphChanged(relationshipGraph: RelationshipGraph | null) {
     if (relationshipGraph == null) return;
 
     this.graph = new dia.Graph();
-    this.nodes = new Map<string, shapes.standard.Rectangle>();
-    this.links = new Map<[shapes.standard.Rectangle, shapes.standard.Rectangle], shapes.standard.Link>();
+    this.nodes = new Map<number, shapes.standard.Rectangle>();
+    this.links = new Array<shapes.standard.Link>();
 
-    for (let classId in relationshipGraph.classes) {
-      const className = relationshipGraph.classes[classId];
+    for (let classDescriptor of relationshipGraph.classes) {
+      const classId = classDescriptor.id;
+      const className = classDescriptor.name;
       const nodeWidth = 100 + className.length;
       const nodeHeight = 50;
       const rect = new shapes.standard.Rectangle();
       rect.resize(nodeWidth, nodeHeight);
-      rect.id = classId;
+      // FIXME Documentation for JointJS is poor and I am not sure whether annotations has some special meaning or not.
+      // FIXME By the name and the fact it accepts any object, I infer it is intended to store user-defined data, but I may be misguided.
       rect.attr({
+        annotations: {classId: classId},
         label: {
           text: util.breakText(className, {
             width: nodeWidth,
@@ -111,18 +111,22 @@ export default class CaseNotionEditor extends Vue {
       node.addTo(this.graph);
     });
 
-    relationshipGraph.edges.forEach(({ sourceClassId, targetClassId }) => {
+    relationshipGraph.edges.forEach(edge => {
+      const sourceClassId = edge.sourceClassId;
+      const targetClassId = edge.targetClassId;
       const sourceNode = this.nodes.get(sourceClassId);
       const targetNode = this.nodes.get(targetClassId);
 
-      if (sourceNode == null || targetNode == null) return;
+      if (sourceNode == undefined || targetNode == undefined) return;
 
       const link = new shapes.standard.Link();
       link.source(sourceNode);
       link.target(targetNode);
-      link.router("orthogonal");
       link.connector("rounded");
-      this.links.set([sourceNode, targetNode], link);
+      link.attr({
+        annotations: {relationship: edge}
+      });
+      this.links.push(link);
     });
 
     this.links.forEach((link: shapes.standard.Link) => {
@@ -147,17 +151,15 @@ export default class CaseNotionEditor extends Vue {
     });
 
     this.paper.on("element:pointerdblclick", this.nodeSelected);
-    this.paper.on("link:pointerdblclick", this.linkSelected);
     this.selectedNodesChanged();
     this.selectedLinksChanged();
   }
 
   nodeSelected(node: dia.ElementView) {
-    this.$emit("node-selected", node.model.idAttribute);
-  }
-
-  linkSelected(link: dia.LinkView) {
-    this.$emit("link-selected", link.model.idAttribute);
+    const classId = node.model.attr('annotations')?.classId;
+    if (classId !== undefined) {
+      this.$emit("node-selected", classId);
+    }
   }
 
   updateNodesSelection() {
@@ -170,15 +172,16 @@ export default class CaseNotionEditor extends Vue {
   updateLinksSelection() {
     if (this.selectedLinks == null) return;
 
-    const selectedLinks = new Set(this.selectedLinks.map((link) => `${link.sourceNodeId}_${link.targetNodeId}`));
+    const selectedLinks = new Set(this.selectedLinks);
 
-    this.links.forEach((link, [sourceNode, targetNode]) => {
-      const areBothNodesSelected = selectedLinks.has(`${sourceNode.idAttribute}_${targetNode.idAttribute}`);
+    this.links.forEach(link => {
+      const relationshipId = link.attr('annotations')?.relationship?.id;
+      const isSelected = selectedLinks.has(relationshipId);
       link.attr({
         line: {
-          selected: areBothNodesSelected,
+          selected: isSelected,
           targetMarker: {
-            selected: areBothNodesSelected
+            selected: isSelected
           }
         }
       });

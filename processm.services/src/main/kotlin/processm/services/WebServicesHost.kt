@@ -37,7 +37,10 @@ class WebServicesHost : Service {
         logger().enter()
 
         logger().debug("Starting HTTP server")
-        val args = emptyArray<String>()
+        // A work-around, because it seems ktor reads properties once into a its own static cache
+        val args = System.getProperty("ktor.deployment.port")?.let { port ->
+            arrayOf("-port=$port")
+        } ?: emptyArray<String>()
         try {
             env = commandLineEnvironment(args)
         } catch (e: IllegalArgumentException) {

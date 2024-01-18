@@ -8,7 +8,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
-import org.jgrapht.Graph
 import org.jgrapht.graph.DefaultDirectedGraph
 import processm.core.Brand
 import processm.core.helpers.mapToArray
@@ -20,7 +19,10 @@ import processm.core.log.attribute.MutableAttributeMap
 import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
-import processm.dbmodels.models.*
+import processm.dbmodels.models.AutomaticEtlProcess
+import processm.dbmodels.models.Class
+import processm.dbmodels.models.Classes
+import processm.dbmodels.models.Relationship
 import processm.etl.tracker.DatabaseChangeApplier
 import java.sql.Connection
 import java.sql.JDBCType
@@ -35,13 +37,8 @@ import java.util.*
  * @param descriptor A mapping from the remote DB to the log
  */
 class AutomaticEtlProcessExecutor(
-    val dataStoreDBName: String, val logId: UUID, val descriptor: AutomaticEtlProcessDescriptor
+    val dataStoreDBName: String, val logId: UUID, val descriptor: DAGBusinessPerspectiveDefinition
 ) {
-
-    @Deprecated(message = "Use the primary constructor instead")
-    constructor(
-        dataStoreDBName: String, logId: UUID, graph: Graph<EntityID<Int>, Arc>, identifyingClasses: Set<EntityID<Int>>
-    ) : this(dataStoreDBName, logId, AutomaticEtlProcessDescriptor(graph, identifyingClasses))
 
     private val metaModelId =
         checkNotNull(Class.findById(descriptor.graph.vertexSet().first())?.dataModel?.id) { "The DB is broken" }
@@ -92,7 +89,12 @@ class AutomaticEtlProcessExecutor(
     ): Set<RemoteObjectID> {
         val leafs = mutableListOf(start)
         descriptor.graph.outgoingEdgesOf(start.classId).mapNotNullTo(leafs) { arc ->
-            newAttributes[arc.attributeName]?.let { parentId -> RemoteObjectID(parentId, arc.targetClass) }
+            newAttributes[arc.referencingAttributesName.name]?.let { parentId ->
+                RemoteObjectID(
+                    parentId,
+                    arc.targetClass.id
+                )
+            }
         }
 
         val result = HashSet<RemoteObjectID>()
@@ -393,16 +395,20 @@ class AutomaticEtlProcessExecutor(
                         val source = remoteObjectId.toDB()
                         for (r in descriptor.graph.outgoingEdgesOf(remoteObjectId.classId)) {
                             val targetObjectId =
-                                component.attributes.getOrNull("$DB_ATTR_NS:${r.attributeName}")?.toString()
+                                component.attributes.getOrNull("$DB_ATTR_NS:${r.referencingAttributesName.name}")
+                                    ?.toString()
                                     ?: continue
-                            val target = "${r.targetClass.value}${RemoteObjectID.DELIMITER}${targetObjectId}"
+                            val target = "${r.targetClass.id.value}${RemoteObjectID.DELIMITER}${targetObjectId}"
                             val path =
-                                connection.createArrayOf(JDBCType.VARCHAR.name, arrayOf(source, r.attributeName))
+                                connection.createArrayOf(
+                                    JDBCType.VARCHAR.name,
+                                    arrayOf(source, r.referencingAttributesName.name)
+                                )
                             stmt.setArray(1, path)
                             stmt.setString(2, target)
                             stmt.setArray(3, path)
                             stmt.setString(4, source)
-                            stmt.setString(5, r.attributeName)
+                            stmt.setString(5, r.referencingAttributesName.name)
                             stmt.setString(6, target)
                             stmt.setString(7, checkNotNull(currentTraceIdentityId))
                             stmt.executeUpdate()
@@ -488,22 +494,17 @@ class AutomaticEtlProcessExecutor(
         fun fromDB(
             dataStoreDBName: String, automaticEtlProcessId: UUID
         ): AutomaticEtlProcessExecutor {
-            val relations =
-                AutomaticEtlProcessRelation.wrapRows(AutomaticEtlProcessRelations.select { AutomaticEtlProcessRelations.automaticEtlProcessId eq automaticEtlProcessId })
+            val relations = AutomaticEtlProcess.findById(automaticEtlProcessId)?.relations ?: error("Process not found")
             check(!relations.empty()) { "An automatic ETL process must refer to some relations " }
-            val graph = DefaultDirectedGraph<EntityID<Int>, Arc>(Arc::class.java)
+            val graph = DefaultDirectedGraph<EntityID<Int>, Relationship>(Relationship::class.java)
             for (relation in relations) {
-                //FIXME This is potentially buggy, as there may be more than one attribute with the same source and target class.
-                val attributeName = (Relationships innerJoin AttributesNames).slice(AttributesNames.name).select {
-                    (Relationships.sourceClassId eq relation.sourceClassId) and (Relationships.targetClassId eq relation.targetClassId)
-                }.single().let { it[AttributesNames.name] }
-                val arc = Arc(relation.sourceClassId, attributeName, relation.targetClassId)
-                graph.addVertex(relation.sourceClassId)
-                graph.addVertex(relation.targetClassId)
-                graph.addEdge(relation.sourceClassId, relation.targetClassId, arc)
+                graph.addVertex(relation.sourceClass.id)
+                graph.addVertex(relation.targetClass.id)
+                graph.addEdge(relation.sourceClass.id, relation.targetClass.id, relation)
             }
             return AutomaticEtlProcessExecutor(
-                dataStoreDBName, automaticEtlProcessId, AutomaticEtlProcessDescriptor(graph, graph.vertexSet())
+                dataStoreDBName, automaticEtlProcessId,
+                DAGBusinessPerspectiveDefinition(graph, graph.vertexSet())
             )
 
         }
