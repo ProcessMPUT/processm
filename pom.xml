@@ -39,7 +39,6 @@
         <module>processm.miners</module>
         <module>processm.conformance</module>
         <module>processm.enhancement</module>
-        <module>processm.webui</module>
         <module>processm.launcher</module>
         <module>processm.experimental</module>
         <module>processm.tools</module>
@@ -269,13 +268,6 @@
                 <groupId>io.fabric8</groupId>
                 <artifactId>docker-maven-plugin</artifactId>
                 <version>${io.fabric8.docker-maven-plugin.version}</version>
-                <configuration>
-                    <images>
-                        <image>
-                            <name>processm</name>
-                        </image>
-                    </images>
-                </configuration>
             </plugin>
         </plugins>
     </build>
