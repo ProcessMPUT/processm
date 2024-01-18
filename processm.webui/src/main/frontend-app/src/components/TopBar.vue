@@ -3,7 +3,7 @@
     <v-spacer></v-spacer>
     <v-menu left bottom offset-y>
       <template #activator="{ on }">
-        <v-btn icon v-on="on">
+        <v-btn icon v-on="on" name="btn-profile">
           <v-icon>person</v-icon>
         </v-btn>
       </template>
@@ -16,7 +16,7 @@
             $t("topbar.user-profile")
           }}</v-list-item-content>
         </v-list-item>
-        <v-list-item @click.stop="signOut">
+        <v-list-item @click.stop="signOut" name="btn-logout">
           <v-list-item-icon><v-icon>logout</v-icon></v-list-item-icon>
           <v-list-item-content>{{ $t("topbar.sign-out") }}</v-list-item-content>
         </v-list-item>

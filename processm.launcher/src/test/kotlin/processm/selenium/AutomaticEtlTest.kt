@@ -80,31 +80,13 @@ class AutomaticEtlTest : SeleniumBase() {
     @Order(10)
     @Test
     fun register() {
-        click("btn-register")
-        typeIn("user-email", email)
-        typeIn("user-password", password)
-        toggleCheckbox("new-organization")
-        typeIn("organization-name", organization)
-        click("btn-register")
-        acknowledgeSnackbar("info")
+        register(email, password, organization)
     }
 
     @Order(20)
     @Test
     fun login() {
-        typeIn("username", email)
-        typeIn("password", password)
-        click("btn-login")
-        wait.until { driver.findElements(By.xpath("//header//button")).isNotEmpty() }
-        with(byXpath("//header//button")) {
-            wait.until { isDisplayed }
-            click()
-        }
-        // Possibly brittle, as it relies on the logout icon being called "logout"
-        with(byText("logout")) {
-            wait.until { isDisplayed }
-        }
-        // there's no assert in the test, but wait.until will fail if it doesn't find the appropriate element
+        login(email, password)
     }
 
     @Order(30)

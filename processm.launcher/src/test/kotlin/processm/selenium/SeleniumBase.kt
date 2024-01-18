@@ -222,4 +222,40 @@ abstract class SeleniumBase(
     }
 
     // endregion
+
+    // region ProcessM-specific helpers
+
+    protected fun register(email: String, password: String, organization: String? = null) {
+        click("btn-register")
+        typeIn("user-email", email)
+        typeIn("user-password", password)
+        if (organization !== null) {
+            toggleCheckbox("new-organization")
+            typeIn("organization-name", organization)
+        }
+        click("btn-register")
+        acknowledgeSnackbar("info")
+    }
+
+    protected fun login(email: String, password: String) {
+        typeIn("username", email)
+        typeIn("password", password)
+        click("btn-login")
+        wait.until { driver.findElements(By.name("btn-profile")).isNotEmpty() }
+        with(byName("btn-profile")) {
+            wait.until { isDisplayed }
+            click()
+        }
+        with(byName("btn-logout")) {
+            wait.until { isDisplayed }
+        }
+    }
+
+    protected fun logout() {
+        click("btn-profile")
+        click("btn-logout")
+        wait.until { byName("btn-login").isDisplayed }
+    }
+
+    // endregion
 }
