@@ -387,18 +387,23 @@ class DebeziumChangeTrackerTest {
                         stmt.executeUpdate(query)
                     }
                     connection.commit()
-                    Thread.sleep(1_000)
-                    val xes = DBHierarchicalXESInputStream(
-                        dataStoreDBName,
-                        Query("where l:identity:id = $etlProcessId")
-                    )
                     val actual = HashMap<UUID, HashMap<UUID, HashSet<String>>>()
-                    for (log in xes) {
-                        val logMap = actual.computeIfAbsent(log.identityId!!) { HashMap() }
-                        for (trace in log.traces) {
-                            val traceSet = logMap.computeIfAbsent(trace.identityId!!) { HashSet() }
-                            trace.events.mapTo(traceSet) { it["db:text"].toString().trim('"') }
+                    for (i in 0..10) {
+                        actual.clear()
+                        val xes = DBHierarchicalXESInputStream(
+                            dataStoreDBName,
+                            Query("where l:identity:id = $etlProcessId")
+                        )
+                        for (log in xes) {
+                            val logMap = actual.computeIfAbsent(log.identityId!!) { HashMap() }
+                            for (trace in log.traces) {
+                                val traceSet = logMap.computeIfAbsent(trace.identityId!!) { HashSet() }
+                                trace.events.mapTo(traceSet) { it["db:text"].toString().trim('"') }
+                            }
                         }
+                        if (actual.isNotEmpty() && actual.values.sumOf { it.size } >= expected.size && actual.values.sumOf { it.values.sumOf { it.size } } == expected.sumOf { it.size })
+                            break
+                        Thread.sleep(1000)
                     }
                     assertEquals(1, actual.size)
                     val traces = actual.values.single()
