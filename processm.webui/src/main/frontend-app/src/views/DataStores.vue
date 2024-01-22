@@ -64,7 +64,7 @@
       <template v-slot:item.actions="{ item }">
         <v-tooltip bottom>
           <template v-slot:activator="{ on, attrs }">
-            <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+            <v-btn icon color="primary" dark v-bind="attrs" v-on="on" name="btn-rename-data-store">
               <v-icon small @click="dataStoreIdToRename = item.id">edit</v-icon>
             </v-btn>
           </template>
@@ -80,7 +80,7 @@
         </v-tooltip>
         <v-tooltip bottom>
           <template v-slot:activator="{ on, attrs }">
-            <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+            <v-btn icon color="primary" dark v-bind="attrs" v-on="on" name="btn-delete-data-store">
               <v-icon small @click="removeDataStore(item)">delete_forever</v-icon>
             </v-btn>
           </template>
@@ -88,7 +88,7 @@
         </v-tooltip>
         <v-tooltip bottom>
           <template v-slot:activator="{ on, attrs }">
-            <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+            <v-btn icon color="primary" dark v-bind="attrs" v-on="on" name="btn-data-store-security">
               <v-icon small @click="configureACL(item.id)">security</v-icon>
             </v-btn>
           </template>
@@ -163,18 +163,22 @@ export default class DataStores extends Vue {
   }
 
   async renameDataStore(newName: string) {
-    if (
-        this.dataStoreIdToRename != null &&
-        (await this.dataStoreService.updateDataStore(this.dataStoreIdToRename, {
-          id: this.dataStoreIdToRename,
-          name: newName
-        }))
-    ) {
-      const dataStore = this.dataStores.find((dataStore) => dataStore.id == this.dataStoreIdToRename);
+    try {
+      if (
+          this.dataStoreIdToRename != null &&
+          (await this.dataStoreService.updateDataStore(this.dataStoreIdToRename, {
+            id: this.dataStoreIdToRename,
+            name: newName
+          }))
+      ) {
+        const dataStore = this.dataStores.find((dataStore) => dataStore.id == this.dataStoreIdToRename);
 
-      if (dataStore != null) dataStore.name = newName;
-      this.dataStoreIdToRename = null;
+        if (dataStore != null) dataStore.name = newName;
+      }
+    } catch (error) {
+      this.app.error(`${this.$t("common.saving.failure")}`);
     }
+    this.dataStoreIdToRename = null;
   }
 
   async removeDataStore(dataStore: DataStore) {

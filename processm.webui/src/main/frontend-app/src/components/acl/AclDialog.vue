@@ -15,7 +15,7 @@
             <template v-slot:item.actions="{ item }" v-if="!viewOnly">
               <v-tooltip bottom>
                 <template v-slot:activator="{ on, attrs }">
-                  <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+                  <v-btn icon color="primary" dark v-bind="attrs" v-on="on" name="btn-edit-ace">
                     <v-icon small @click="aceToEdit = item">edit</v-icon>
                   </v-btn>
                 </template>
@@ -23,7 +23,7 @@
               </v-tooltip>
               <v-tooltip bottom>
                 <template v-slot:activator="{ on, attrs }">
-                  <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+                  <v-btn icon color="primary" dark v-bind="attrs" v-on="on" name="btn-remove-ace">
                     <v-icon small @click="removeACE(item)">delete_forever</v-icon>
                   </v-btn>
                 </template>
@@ -36,13 +36,13 @@
       </v-card-text>
 
       <v-card-actions>
-        <v-btn color="primary darken-1" text @click.stop="createNew = true" v-if="!viewOnly">
+        <v-btn color="primary darken-1" text @click.stop="createNew = true" v-if="!viewOnly" name="btn-acl-dialog-add-new">
           {{ $t("common.add-new") }}
         </v-btn>
 
         <v-spacer></v-spacer>
 
-        <v-btn color="primary darken-1" text @click.stop="close">
+        <v-btn color="primary darken-1" text @click.stop="close" name="btn-acl-dialog-close">
           {{ $t("common.close") }}
         </v-btn>
 

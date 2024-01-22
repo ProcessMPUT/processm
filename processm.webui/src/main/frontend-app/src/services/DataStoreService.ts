@@ -82,7 +82,7 @@ export default class DataStoreService extends BaseService {
 
   public async removeDataStore(dataStoreId: string): Promise<void> {
     await this.dataStoresApi.deleteDataStore(DataStoreService.currentOrganizationId, dataStoreId, {
-      validateStatus: (status: number) => [204, 404].indexOf(status) >= 0
+      validateStatus: (status: number) => status == 204
     });
   }
 

@@ -15,6 +15,7 @@
                   :label="$t('add-data-connector-dialog.connector-name')"
                   required
                   :rules="connectionNameRules"
+                  name="connection-string-connection-name"
                 ></v-text-field>
                 <v-text-field
                   v-model="connectionString['connection-string']"
@@ -24,6 +25,7 @@
                   :rules="connectionStringRules"
                   :hint="$t('add-data-connector-dialog.connection-string-hint')"
                   placeholder="jdbc:driver://host:port/database?user=login&password=password"
+                  name="connection-string"
                 ></v-text-field>
               </v-form>
             </v-expansion-panel-content>
@@ -58,7 +60,7 @@
       <v-card-actions>
         <v-spacer></v-spacer>
 
-        <v-btn color="secondary" text @click.stop="cancel">
+        <v-btn color="secondary" text @click.stop="cancel" name="btn-add-data-connector-cancel">
           {{ $t("common.cancel") }}
         </v-btn>
 

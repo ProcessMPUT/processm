@@ -64,7 +64,12 @@ fun Route.DataStoresApi() {
 
         get<Paths.DataStore> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
+            dataStoreService.assertUserHasSufficientPermissionToDataStore(
+                principal.userId,
+                pathParams.organizationId,
+                pathParams.dataStoreId,
+                RoleType.Reader
+            )
             val dataStoreSize = dataStoreService.getDatabaseSize(pathParams.dataStoreId.toString())
             val dataStore = dataStoreService.getDataStore(pathParams.dataStoreId)
 
@@ -267,7 +272,7 @@ fun Route.DataStoresApi() {
                 principal.userId,
                 pathParams.organizationId,
                 pathParams.dataStoreId,
-                RoleType.Owner
+                RoleType.Writer
             )
             val dataConnector = call.receiveOrNull<DataConnector>()
                 ?: throw ApiException("The provided data connector data cannot be parsed")
