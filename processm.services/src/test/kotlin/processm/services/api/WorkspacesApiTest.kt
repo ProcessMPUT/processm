@@ -322,7 +322,6 @@ class WorkspacesApiTest : BaseApiTest() {
         }
     }
 
-    @Ignore("See #148")
     @Test
     fun `responds to workspace components request with 200 and component details`() = withConfiguredTestApplication {
         val workspaceService = declareMock<WorkspaceService>()
@@ -349,11 +348,12 @@ class WorkspacesApiTest : BaseApiTest() {
                     every { dataStoreId } returns dataStore
                     every { componentType } returns ComponentTypeDto.CausalNet
                     every { data } returns cnet1.toString()
-                    every { customizationData } returns "{\"layout\":[{\"id\":\"node_id\",\"x\":15,\"y\":30}]}"
-                    every { layoutData } returns null
+                    every { customizationData } returns null
+                    every { layoutData } returns "{\"x\":15,\"y\":30,\"width\":150,\"height\":300}"
                     every { dataLastModified } returns null
                     every { userLastModified } returns Instant.now()
                     every { lastError } returns null
+                    every { algorithm } returns null
                 }
             )
             every {
@@ -366,13 +366,12 @@ class WorkspacesApiTest : BaseApiTest() {
                 )
             ) {
                 assertEquals(HttpStatusCode.OK, response.status())
-                TODO("Fix the following commented-out lines so that they compile and the test passes")
-//                val componentCustomizationData =
-//                    assertNotNull(response.deserializeContent<ComponentCollectionMessageBody>().data.firstOrNull()?.customizationData?.layout)
-//
-//                assertEquals("node_id", componentCustomizationData.firstOrNull()?.id)
-//                assertEquals(15.toBigDecimal(), componentCustomizationData.firstOrNull()?.x)
-//                assertEquals(30.toBigDecimal(), componentCustomizationData.firstOrNull()?.y)
+                val layout = assertNotNull(response.deserializeContent<List<AbstractComponent>>().firstOrNull()?.layout)
+
+                assertEquals(15.toBigDecimal(), layout.x)
+                assertEquals(30.toBigDecimal(), layout.y)
+                assertEquals(150.toBigDecimal(), layout.width)
+                assertEquals(300.toBigDecimal(), layout.height)
             }
         }
     }
