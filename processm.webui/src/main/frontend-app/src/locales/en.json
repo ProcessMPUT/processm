@@ -192,6 +192,7 @@
     "users": "Users",
     "user": "User",
     "you": "You",
+    "unknown-email": "The specified e-mail address does not correspond to a known user",
     "roles": {
       "owner": "Owner",
       "reader": "Reader",
