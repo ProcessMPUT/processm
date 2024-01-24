@@ -45,7 +45,7 @@
             <v-card>
               <v-card-title>{{ $t("common.add-new") }}</v-card-title>
               <v-card-text>
-                <v-form id="newForm" ref="newForm" v-model="isNewValid" @submit.prevent="addGroup">
+                <v-form id="newGroupForm" ref="newGroupForm" v-model="isNewValid" @submit.prevent="addGroup">
                   <v-text-field v-model="newName" :rules="[(v) => !!v || $t('users.group-empty')]"></v-text-field>
                 </v-form>
               </v-card-text>
@@ -55,7 +55,7 @@
                   {{ $t("common.cancel") }}
                 </v-btn>
 
-                <v-btn :disabled="!isNewValid" color="primary darken-1" form="newForm" type="submit">
+                <v-btn :disabled="!isNewValid" color="primary darken-1" form="newGroupForm" type="submit">
                   {{ $t("common.save") }}
                 </v-btn>
               </v-card-actions>
