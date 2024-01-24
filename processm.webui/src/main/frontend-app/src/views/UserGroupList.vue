@@ -1,6 +1,8 @@
 <template>
   <v-container :fluid="true">
     <v-data-table
+        show-expand
+        @update:expanded="expanded"
         :headers="[
       {
         text: $t('users.group'),
@@ -96,6 +98,59 @@
         </v-text-field>
       </template>
 
+      <template v-slot:expanded-item="{ headers, item }">
+        <td :colspan="headers.length">
+          <v-data-table
+              v-if="!item.isImplicit"
+              :loading="item.members === undefined"
+              dense
+              :headers="[
+                {
+                text: $t('common.name'),
+                value: 'name',
+                filterable: true,
+                sortable: true,
+                focus: false
+                },
+                {
+                text: $t('common.email'),
+                value: 'email',
+                filterable: true,
+                sortable: true,
+                focus: false
+                },
+                {
+                text: $t('common.actions'),
+                value: 'actions',
+                align: 'center',
+                sortable: false
+                }
+              ]
+              "
+              :items="item.members"
+          >
+            <template v-slot:item.name="{ item }">
+              <span>{{ item.username }}</span>
+            </template>
+            <template v-slot:item.email="{ item }">
+              <span>{{ item.userEmail }}</span>
+            </template>
+            <template v-slot:item.actions="props">
+              <v-tooltip bottom>
+                <template v-slot:activator="{ on, attrs }">
+                  <v-btn color="primary" dark icon
+                         v-bind="attrs"
+                         v-on="on" v-if="!item.isShared && !item.isImplicit">
+                    <v-icon small @click="removeMember(props.item, item)">delete_forever</v-icon>
+                  </v-btn>
+                </template>
+                <span>{{ $t("common.remove") }}</span>
+              </v-tooltip>
+            </template>
+          </v-data-table>
+        </td>
+      </template>
+
       <template v-slot:item.isImplicit="{ item }">
         <v-chip v-if="item.isImplicit" color="primary" small>
           {{ $t("users.implicit") }}
@@ -174,11 +229,18 @@
 import Vue from "vue";
 import {Component, Inject} from "vue-property-decorator";
 import OrganizationService from "@/services/OrganizationService";
-import {Group, Organization} from "@/openapi";
+import {Group, Organization, UserInfo} from "@/openapi";
 import ComboBoxWithSearch from "@/components/ComboBoxWithSearch.vue";
 import App from "@/App.vue";
 import GroupService from "@/services/GroupService";
 import AccountService from "@/services/AccountService";
+
+
+interface EnhancedGroup extends Group {
+  focus: boolean;
+  dirty: boolean;
+  members: Array<UserInfo> | undefined;
+}
 
 @Component({
   components: {ComboBoxWithSearch}
@@ -191,7 +253,7 @@ export default class UserGroupList extends Vue {
 
   loading = true;
 
-  groups: Array<{ focus: boolean; dirty: boolean } & Group> = [];
+  groups: Array<EnhancedGroup> = [];
   organizations: Array<Organization> = [];
   organization = this.$sessionStorage.currentOrganization;
 
@@ -199,7 +261,7 @@ export default class UserGroupList extends Vue {
   newName = "";
   isNewValid = false;
 
-  addNewMemberTo: Group | undefined = undefined;
+  addNewMemberTo: EnhancedGroup | undefined = undefined;
   addMemberDialog = false;
   newMember = "";
   isNewMemberValid = false;
@@ -213,7 +275,7 @@ export default class UserGroupList extends Vue {
     try {
       this.loading = true;
       const groups = await this.groupService.getUserGroups(this.organization.id!);
-      this.groups = groups.map((g) => Object.assign({focus: false, dirty: false}, g));
+      this.groups = groups.map((g) => Object.assign({focus: false, dirty: false, members: undefined}, g));
     } catch (e) {
       this.app.error(e);
     } finally {
@@ -238,7 +300,7 @@ export default class UserGroupList extends Vue {
     }
   }
 
-  async editGroup(group: Group & { dirty: boolean }) {
+  async editGroup(group: EnhancedGroup) {
     try {
       console.assert(group.organizationId !== undefined);
       console.assert(group.id !== undefined);
@@ -261,7 +323,7 @@ export default class UserGroupList extends Vue {
     }
   }
 
-  async addMemberToGroup(group: Group) {
+  async addMemberToGroup(group: EnhancedGroup) {
     this.newMember = "";
     this.addMemberDialog = true;
     this.addNewMemberTo = group;
@@ -288,6 +350,43 @@ export default class UserGroupList extends Vue {
       }
       if (await this.groupService.addMember(group.organizationId, group.id, users[0].id)) {
         this.app.success(this.$t("users.group-updated").toString());
+        group.members = undefined;
+        group.members = await this.getMembers(group);
+      } else {
+        this.app.error(this.$t("common.saving.failure").toString());
+      }
+    } catch (e) {
+      this.app.error(e);
+    }
+  }
+
+  async getMembers(group: Group): Promise<UserInfo[] | undefined> {
+    const organizationId = group.organizationId;
+    const groupId = group.id;
+    if (organizationId !== undefined && groupId !== undefined) {
+      return await this.groupService.getMembers(organizationId, groupId);
+    } else {
+      this.app.error(this.$t("common.operation-error").toString());
+    }
+  }
+
+  async expanded(expandedGroups: Array<EnhancedGroup>) {
+    for (const group of expandedGroups) {
+      if (group.members === undefined && !group.isImplicit)
+        group.members = await this.getMembers(group);
+    }
+  }
+
+  async removeMember(member: UserInfo, group: EnhancedGroup) {
+    try {
+      if (group.isImplicit || group.isShared || group.organizationId === undefined || group.id === undefined || member.id === undefined) {
+        this.app.error(this.$t("common.operation-error").toString());
+        return;
+      }
+      if (await this.groupService.removeMember(group.organizationId, group.id, member.id)) {
+        this.app.success(this.$t("users.group-updated").toString());
+        group.members = undefined;
+        group.members = await this.getMembers(group);
       } else {
         this.app.error(this.$t("common.saving.failure").toString());
       }
