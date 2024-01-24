@@ -40,12 +40,37 @@ class WorkspaceServiceTest : ServiceTestBase() {
         // use ACL service to set permission to workspace3
         aclService.addEntry(Workspaces, workspace3, otherGroupId, RoleType.Reader)
 
+        // see #198
+        commit()
+
         val userWorkspaces = workspaceService.getUserWorkspaces(userId, organization.id.value)
 
         assertEquals(3, userWorkspaces.size)
         assertTrue { userWorkspaces.any { it.name == "Workspace1" } }
         assertTrue { userWorkspaces.any { it.name == "Workspace2" } }
         assertTrue { userWorkspaces.any { it.name == "Workspace3" } }
+    }
+
+    @Test
+    fun `multiple ACLs to a single workspace do not lead to listing it multiple time`(): Unit = withCleanTables(
+        AccessControlList, UsersInGroups, Users, Groups, Organizations,
+        WorkspaceComponents, Workspaces
+    ) {
+        val organization = createOrganization(name = "Org1")
+        val userId = createUser(organizationId = organization.id.value).id.value
+        val otherGroupId = createGroup("some group", organizationId = organization.id.value).value
+        groupService.attachUserToGroup(userId, otherGroupId)
+        // owner
+        val workspace = createWorkspace("Workspace1", userId = userId, organizationId = organization.id.value)
+        // ACL-based access through shared group
+        aclService.updateEntry(Workspaces, workspace, organization.sharedGroup.id.value, RoleType.Reader)
+        // ACL-based access through other group
+        aclService.addEntry(Workspaces, workspace, otherGroupId, RoleType.Reader)
+
+        val userWorkspaces = workspaceService.getUserWorkspaces(userId, organization.id.value)
+
+        assertEquals(1, userWorkspaces.size)
+        assertEquals("Workspace1", userWorkspaces[0].name)
     }
 
     @Test
@@ -56,6 +81,9 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val user = accountService.create("user@example.com", pass = "P@ssw0rd!")
         val org = organizationService.create("Org1", false)
         val workspaceId = workspaceService.create("Workspace1", user.id.value, org.id.value)
+
+        // see #198
+        commit()
 
         val workspaces = workspaceService.getUserWorkspaces(user.id.value, org.id.value)
         assertEquals(1, workspaces.size)

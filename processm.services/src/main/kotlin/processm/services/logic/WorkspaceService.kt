@@ -25,21 +25,23 @@ class WorkspaceService(
     fun getUserWorkspaces(userId: UUID, organizationId: UUID): List<Workspace> =
         transactionMain {
             Workspace.wrapRows(
-                Groups
-                    .innerJoin(UsersInGroups)
-                    .crossJoin(Workspaces)
-                    .join(AccessControlList, JoinType.INNER, AccessControlList.group_id, Groups.id)
-                    .select {
-                        (UsersInGroups.userId eq userId) and
-                                ((Groups.isImplicit eq true) or (Groups.organizationId eq organizationId)) and
-                                (AccessControlList.urn.column eq concat(
-                                    stringLiteral("urn:processm:db/${Workspaces.tableName}/"),
-                                    Workspaces.id
-                                )) and
-                                (AccessControlList.role_id neq RoleType.None.role.id) and
-                                (Workspaces.deleted eq false)
-
-                    }
+                Workspaces.select {
+                    Workspaces.id inSubQuery Groups
+                        .innerJoin(UsersInGroups)
+                        .crossJoin(Workspaces)
+                        .join(AccessControlList, JoinType.INNER, AccessControlList.group_id, Groups.id)
+                        .slice(Workspaces.id)
+                        .select {
+                            (UsersInGroups.userId eq userId) and
+                                    ((Groups.isImplicit eq true) or (Groups.organizationId eq organizationId)) and
+                                    (AccessControlList.urn.column eq concat(
+                                        stringLiteral("urn:processm:db/${Workspaces.tableName}/"),
+                                        Workspaces.id
+                                    )) and
+                                    (AccessControlList.role_id neq RoleType.None.role.id) and
+                                    (Workspaces.deleted eq false)
+                        }
+                }.withDistinct(true)
             ).toList()
         }
 
