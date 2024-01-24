@@ -1,6 +1,7 @@
 package processm.services.logic
 
 import org.jetbrains.exposed.dao.id.EntityID
+import org.jetbrains.exposed.dao.load
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -92,6 +93,7 @@ class GroupService {
      */
     fun getGroup(groupId: UUID): Group = transactionMain {
         Group.findById(groupId).validateNotNull(Reason.ResourceNotFound) { "The specified group does not exist." }
+            .load(Group::members)
     }
 
     /**
