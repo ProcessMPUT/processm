@@ -3,10 +3,8 @@ package processm.services.logic
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.junit.jupiter.api.assertDoesNotThrow
-import processm.dbmodels.models.AccessControlList
-import processm.dbmodels.models.Groups
-import processm.dbmodels.models.Users
-import processm.dbmodels.models.UsersInGroups
+import org.junit.jupiter.api.assertThrows
+import processm.dbmodels.models.*
 import java.util.*
 import kotlin.test.*
 
@@ -139,4 +137,23 @@ class GroupServiceTest : ServiceTestBase() {
 
         assertEquals(groupId1.value, rootGroupId)
     }
+
+    @Test
+    fun `cannot deatch user from their implicit group`(): Unit =
+        withCleanTables(AccessControlList, UsersInGroups, Users, Groups) {
+            val user = createUser()
+            assertThrows<ValidationException> {
+                groupService.detachUserFromGroup(user.id.value, user.privateGroup.id.value)
+            }
+        }
+
+    @Test
+    fun `cannot detach user from a shared group`(): Unit =
+        withCleanTables(AccessControlList, UsersInGroups, Users, Groups, Organizations) {
+            val org = createOrganization()
+            val user = createUser(organizationId = org.id.value)
+            assertThrows<ValidationException> {
+                groupService.detachUserFromGroup(user.id.value, org.sharedGroup.id.value)
+            }
+        }
 }

@@ -45,6 +45,9 @@ class GroupService {
 
     fun detachUserFromGroup(userId: UUID, groupId: UUID): Unit = loggedScope { logger ->
         transactionMain {
+            val group = Group.findById(groupId).validateNotNull(Reason.ResourceNotFound)
+            group.isShared.validateNot { "Cannot detach a user from a shared group" }
+            group.isImplicit.validateNot { "Cannot detach a user from their implicit group" }
             UsersInGroups.deleteWhere {
                 (UsersInGroups.userId eq userId) and (UsersInGroups.groupId eq groupId)
             }.validate(1, Reason.ResourceNotFound) { "The specified user or group is not found." }
