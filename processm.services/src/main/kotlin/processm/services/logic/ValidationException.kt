@@ -136,3 +136,22 @@ inline fun <T : CharSequence> T?.validatePattern(
     reason: Reason = Reason.ResourceFormatInvalid,
     message: String = reason.message
 ): T = this.validatePattern(pattern, reason) { message }
+
+/**
+ * Throws [ValidationException] if `this !== null`.
+ */
+@OptIn(ExperimentalContracts::class)
+inline fun <T : Any> T?.validateNull(
+    reason: Reason = Reason.ResourceAlreadyExists,
+    lazyMessage: () -> Any
+) {
+    contract {
+        callsInPlace(lazyMessage, InvocationKind.AT_MOST_ONCE)
+        returns() implies (this@validateNull == null)
+    }
+
+    if (this === null)
+        return
+
+    throw ValidationException(reason, lazyMessage().toString())
+}

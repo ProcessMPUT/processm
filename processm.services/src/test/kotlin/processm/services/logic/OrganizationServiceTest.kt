@@ -1,11 +1,9 @@
 package processm.services.logic
 
+import org.junit.jupiter.api.assertThrows
 import processm.dbmodels.models.*
 import java.util.*
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class OrganizationServiceTest : ServiceTestBase() {
     @Test
@@ -121,4 +119,76 @@ class OrganizationServiceTest : ServiceTestBase() {
         assertEquals("private", response[1].name)
         assertEquals(true, response[1].isPrivate)
     }
+
+    @Test
+    fun `attach a subOrganization`() {
+        val grandparent = createOrganization(name = "grandparent", isPrivate = false).id.value
+        val parent = createOrganization(name = "parent", isPrivate = false).id.value
+        val child = createOrganization(name = "child", isPrivate = true).id.value
+        organizationService.attachSubOrganization(parent, child)
+        organizationService.attachSubOrganization(grandparent, parent)
+        assertNull(organizationService.get(grandparent).parentOrganization)
+        assertEquals(grandparent, organizationService.get(parent).parentOrganization?.id?.value)
+        assertEquals(parent, organizationService.get(child).parentOrganization?.id?.value)
+    }
+
+    @Test
+    fun `organizations hierarchy is acyclic`() {
+        val grandparent = createOrganization(name = "grandparent", isPrivate = false).id.value
+        val parent = createOrganization(name = "parent", isPrivate = false).id.value
+        val child = createOrganization(name = "child", isPrivate = true).id.value
+        organizationService.attachSubOrganization(parent, child)
+        organizationService.attachSubOrganization(grandparent, parent)
+        assertThrows<ValidationException> { organizationService.attachSubOrganization(child, grandparent) }
+    }
+
+    @Test
+    fun `cannot reattach`() {
+        val grandparent = createOrganization(name = "grandparent", isPrivate = false).id.value
+        val parent = createOrganization(name = "parent", isPrivate = false).id.value
+        val child = createOrganization(name = "child", isPrivate = true).id.value
+        organizationService.attachSubOrganization(grandparent, parent)
+        organizationService.attachSubOrganization(parent, child)
+        assertThrows<ValidationException> { organizationService.attachSubOrganization(grandparent, child) }
+    }
+
+    @Test
+    fun `move the child to the top`() {
+        val grandparent = createOrganization(name = "grandparent", isPrivate = false).id.value
+        val parent = createOrganization(name = "parent", isPrivate = false).id.value
+        val child = createOrganization(name = "child", isPrivate = true).id.value
+        organizationService.attachSubOrganization(parent, child)
+        organizationService.detachSubOrganization(child)
+        assertNull(organizationService.get(child).parentOrganization)
+        organizationService.attachSubOrganization(grandparent, parent)
+        organizationService.attachSubOrganization(child, grandparent)
+        assertEquals(child, organizationService.get(grandparent).parentOrganization?.id?.value)
+        assertEquals(grandparent, organizationService.get(parent).parentOrganization?.id?.value)
+    }
+
+    @Test
+    fun `cannot detach a solitary organization`() {
+        val org = createOrganization(name = "org", isPrivate = false).id.value
+        assertThrows<ValidationException> { organizationService.detachSubOrganization(org) }
+    }
+
+    @Test
+    fun `get subOrganizations`() {
+        val grandparent = createOrganization(name = "grandparent", isPrivate = false).id.value
+        val parent = createOrganization(name = "parent", isPrivate = false, parentOrganizationId = grandparent).id.value
+        val child = createOrganization(name = "child", isPrivate = true, parentOrganizationId = parent).id.value
+        with(organizationService.getSubOrganizations(grandparent)) {
+            assertEquals(2, size)
+            assertTrue { any { it.id.value == parent } }
+            assertTrue { any { it.id.value == child } }
+        }
+        with(organizationService.getSubOrganizations(parent)) {
+            assertEquals(1, size)
+            assertTrue { any { it.id.value == child } }
+        }
+        with(organizationService.getSubOrganizations(child)) {
+            assertTrue { isEmpty() }
+        }
+    }
+
 }

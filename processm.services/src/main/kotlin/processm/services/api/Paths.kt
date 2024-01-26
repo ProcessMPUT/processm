@@ -79,6 +79,12 @@ object Paths {
     @Location("/organizations/{organizationId}")
     class Organization(val organizationId: UUID)
 
+    @Location("/organizations/{organizationId}/suborganizations/{subOrganizationId}")
+    class SubOrganization(val organizationId: UUID, val subOrganizationId: UUID)
+
+    @Location("/organizations/{organizationId}/suborganizations")
+    class SubOrganizations(val organizationId: UUID)
+
     /**
      * Groups associated with the specified organization.
      *

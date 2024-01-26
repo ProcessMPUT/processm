@@ -89,6 +89,46 @@ fun Route.OrganizationsApi() {
 
             call.respond(HttpStatusCode.NoContent)
         }
+
+        get<Paths.SubOrganizations> { path ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(path.organizationId, OrganizationRole.reader)
+            val organizations = organizationService.getSubOrganizations(path.organizationId)
+            call.respond(organizations.map { it.toApi() })
+        }
+
+        post<Paths.SubOrganization> { path ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(path.organizationId, OrganizationRole.writer)
+            principal.ensureUserBelongsToOrganization(path.subOrganizationId, OrganizationRole.owner)
+
+            organizationService.attachSubOrganization(path.organizationId, path.subOrganizationId)
+
+            call.respond(HttpStatusCode.NoContent)
+        }
+
+        delete<Paths.SubOrganization> { path ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            // One of the two permissions is sufficient - hence the try-catch
+            try {
+                principal.ensureUserBelongsToOrganization(path.organizationId, OrganizationRole.writer)
+            } catch (e: ApiException) {
+                principal.ensureUserBelongsToOrganization(path.subOrganizationId, OrganizationRole.owner)
+            }
+
+            transactionMain {
+
+                organizationService.get(path.subOrganizationId).parentOrganization?.id?.value?.validate(
+                    path.organizationId,
+                    message = "The organization ${path.subOrganizationId} is not a direct sub-organization of the organization ${path.organizationId}"
+                )
+
+                organizationService.detachSubOrganization(path.subOrganizationId)
+            }
+
+            call.respond(HttpStatusCode.NoContent)
+        }
+
         // end region
 
         // region Organization members

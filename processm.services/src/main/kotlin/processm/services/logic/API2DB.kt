@@ -30,7 +30,8 @@ fun ApiRole.toRoleType(): RoleType = when (this) {
 fun Organization.toApi(): ApiOrganization = ApiOrganization(
     id = id.value, // the order of constructor arguments tends to change in the generated classes, thus we pass arguments by name
     name = name,
-    isPrivate = isPrivate
+    isPrivate = isPrivate,
+    parentOrganizationId = parentOrganization?.id?.value
 )
 
 fun Workspace.toApi(): ApiWorkspace = ApiWorkspace(

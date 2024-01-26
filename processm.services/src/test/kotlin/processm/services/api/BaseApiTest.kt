@@ -23,6 +23,7 @@ import org.koin.test.mock.MockProvider
 import org.koin.test.mock.declareMock
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.Organizations
+import processm.dbmodels.models.UserRoleInOrganization
 import processm.dbmodels.models.Users
 import processm.services.LocalDateTimeTypeAdapter
 import processm.services.NonNullableTypeAdapterFactory
@@ -119,19 +120,36 @@ abstract class BaseApiTest : KoinTest {
         password: String = "pass",
         role: Pair<OrganizationRole, UUID>? = OrganizationRole.owner to UUID.randomUUID(),
         callback: JwtAuthenticationTrackingEngine.() -> Unit
+    ): Unit = withAuthentication(
+        userId,
+        login,
+        password,
+        roles = if (role !== null) arrayOf(role) else emptyArray(),
+        callback
+    )
+
+    protected fun TestApplicationEngine.withAuthentication(
+        userId: UUID = UUID.randomUUID(),
+        login: String = "user@example.com",
+        password: String = "pass",
+        vararg roles: Pair<OrganizationRole, UUID> = arrayOf(OrganizationRole.owner to UUID.randomUUID()),
+        callback: JwtAuthenticationTrackingEngine.() -> Unit
     ) {
         val accountService = declareMock<AccountService>()
         every { accountService.verifyUsersCredentials(login, password) } returns mockk {
             every { id } returns EntityID(userId, Users)
             every { email } returns login
         }
-        if (role !== null)
-            every { accountService.getRolesAssignedToUser(userId) } returns
-                    listOf(mockk {
-                        every { user.id } returns EntityID(userId, Users)
-                        every { organization.id } returns EntityID(role.second, Organizations)
-                        every { this@mockk.role } returns transactionMain { role.first.toDB() }
-                    })
+        if (roles.isNotEmpty()) {
+            val rolesList: List<UserRoleInOrganization> = roles.map { role ->
+                mockk {
+                    every { user.id } returns EntityID(userId, Users)
+                    every { organization.id } returns EntityID(role.second, Organizations)
+                    every { this@mockk.role } returns transactionMain { role.first.toDB() }
+                }
+            }
+            every { accountService.getRolesAssignedToUser(userId) } returns rolesList
+        }
 
         callback(JwtAuthenticationTrackingEngine(this, login, password))
     }

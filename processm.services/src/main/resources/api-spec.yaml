@@ -2414,6 +2414,9 @@ components:
         isPrivate:
           type: boolean
           description: Indicates whether the organization can be accessed by ancestral organizations members
+        parentOrganizationId:
+          type: string
+          format: uuid
     RelationshipGraph:
       type: object
       required: [ classes, edges ]

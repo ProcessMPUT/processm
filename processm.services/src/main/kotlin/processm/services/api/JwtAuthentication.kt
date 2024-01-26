@@ -13,6 +13,8 @@ import java.util.*
 
 object JwtAuthentication {
 
+    const val MULTIVALUE_CLAIM_SEPARATOR: String = ","
+
     private fun createProlongingTokenVerifier(
         issuer: String, secret: String, acceptableExpiration: Duration
     ): JWTVerifier =
@@ -44,12 +46,22 @@ object JwtAuthentication {
     fun createVerifier(issuer: String, secret: String): JWTVerifier =
         JWT.require(Algorithm.HMAC512(secret)).withIssuer(issuer).acceptLeeway(0).build()
 
-    fun createToken(userId: UUID, username: String, organizations: Map<UUID, OrganizationRole>, expiration: Instant, issuer: String, secret: String): String = JWT.create()
+    fun createToken(
+        userId: UUID,
+        username: String,
+        organizations: Map<UUID, OrganizationRole>,
+        expiration: Instant,
+        issuer: String,
+        secret: String
+    ): String = JWT.create()
         .withSubject("Authentication")
         .withIssuer(issuer)
         .withClaim("userId", userId.toString())
         .withClaim("username", username)
-        .withClaim("organizations", organizations.map {"${it.key}:${it.value}"}.joinToString())
+        .withClaim(
+            "organizations",
+            organizations.map { "${it.key}:${it.value}" }.joinToString(separator = MULTIVALUE_CLAIM_SEPARATOR)
+        )
         .withExpiresAt(Date(expiration.toEpochMilli()))
         .withIssuedAt(Date())
         .withNotBefore(Date())
@@ -57,7 +69,8 @@ object JwtAuthentication {
 
     internal fun generateSecretKey(): String = ('A'..'z').shuffled(SecureRandom()).subList(0, 20).joinToString("")
 
-    fun getSecretKey(config: ApplicationConfig): String = config.propertyOrNull("secret")?.getString() ?: randomSecretKey
+    fun getSecretKey(config: ApplicationConfig): String =
+        config.propertyOrNull("secret")?.getString() ?: randomSecretKey
 
     private val randomSecretKey = generateSecretKey()
 }

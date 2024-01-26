@@ -1,5 +1,6 @@
 package processm.services.logic
 
+import org.jetbrains.exposed.dao.load
 import org.jetbrains.exposed.dao.with
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -207,4 +208,38 @@ class OrganizationService(
         Organization
             .findById(organizationId)
             .validateNotNull(Reason.ResourceNotFound, "The organization $organizationId does not exist.")
+            .load(Organization::parentOrganization)
+
+    fun attachSubOrganization(organizationId: UUID, subOrganizationId: UUID) {
+        transactionMain {
+            val organization = Organization.findById(organizationId)
+                .validateNotNull(Reason.ResourceNotFound, "The organization $organizationId does not exist.")
+            val subOrganization = Organization.findById(subOrganizationId)
+                .validateNotNull(Reason.ResourceNotFound, "The organization $subOrganizationId does not exist.")
+            subOrganization.parentOrganization.validateNull { "The organization $subOrganizationId already has a parent organization" }
+            val expr = OrganizationsDescendants.subOrganizationId.count()
+            OrganizationsDescendants
+                .slice(expr)
+                .select {
+                    (OrganizationsDescendants.subOrganizationId eq organizationId) and (OrganizationsDescendants.superOrganizationId eq subOrganizationId)
+                }.firstNotNullOf { row -> row[expr] }
+                .validate(0) { "The organization $organizationId is already a descendant of $subOrganizationId" }
+            subOrganization.parentOrganization = organization
+        }
+    }
+
+    fun detachSubOrganization(organizationId: UUID) {
+        transactionMain {
+            val organization = Organization.findById(organizationId)
+                .validateNotNull(Reason.ResourceNotFound, "The organization $organizationId does not exist.")
+            organization.parentOrganization.validateNotNull { "The organization $organizationId is already a top-level organization" }
+            organization.parentOrganization = null
+        }
+    }
+
+    fun getSubOrganizations(organizationId: UUID): List<Organization> = transactionMain {
+        return@transactionMain Organization.wrapRows(OrganizationsDescendants
+            .join(Organizations, JoinType.INNER, OrganizationsDescendants.subOrganizationId, Organizations.id)
+            .select { OrganizationsDescendants.superOrganizationId eq organizationId }).toList()
+    }
 }
