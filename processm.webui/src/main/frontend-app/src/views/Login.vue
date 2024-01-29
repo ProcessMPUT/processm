@@ -12,23 +12,23 @@
             </v-alert>
             <v-form id="loginForm" ref="loginForm" v-model="isValidForm" @submit.prevent="authenticate">
               <v-text-field
-                :label="$t('common.email')"
-                v-model="username"
-                name="username"
-                prepend-icon="person"
-                type="text"
-                :rules="[(v) => /.+@.+\..+/.test(v) || $t('login-form.validation.email-format')]"
+                  :label="$t('common.email')"
+                  v-model="username"
+                  name="username"
+                  prepend-icon="person"
+                  type="text"
+                  :rules="[(v) => /.+@.+\..+/.test(v) || $t('login-form.validation.email-format')]"
               ></v-text-field>
 
               <v-text-field
-                id="password"
-                :label="$t('login-form.password')"
-                v-model="password"
-                name="password"
-                prepend-icon="lock"
-                type="password"
-                :rules="[(v) => !!v || $t('login-form.validation.password-empty')]"
-                @keypress.enter="authenticate"
+                  id="password"
+                  :label="$t('login-form.password')"
+                  v-model="password"
+                  name="password"
+                  prepend-icon="lock"
+                  type="password"
+                  :rules="[(v) => !!v || $t('login-form.validation.password-empty')]"
+                  @keypress.enter="authenticate"
               ></v-text-field>
               <v-layout>
                 <v-btn v-if="!config.demoMode" name="btn-register" color="primary" text to="register">
@@ -51,18 +51,40 @@
         </v-snackbar>
       </v-flex>
     </v-layout>
+    <v-dialog v-model="selectOrganizationDialog" max-width="500px">
+      <template>
+        <v-card title="Dialog">
+          <v-toolbar color="primary" dark flat>
+            <v-toolbar-title>{{ this.$t("users.organizations") }}</v-toolbar-title>
+          </v-toolbar>
+          <v-card-text>
+            {{ this.$t("users.select-organization") }}:
+            <v-select v-model="selectedOrganizationId" item-value="id" :items="organizations"
+                      item-text="name"></v-select>
+          </v-card-text>
+
+          <v-card-actions>
+            <v-spacer></v-spacer>
+
+            <v-btn color="primary" @click="organizationSelected">{{ this.$t("common.submit") }}</v-btn>
+          </v-card-actions>
+        </v-card>
+      </template>
+    </v-dialog>
   </v-container>
 </template>
 
 <script lang="ts">
 import Vue from "vue";
-import { Component, Inject } from "vue-property-decorator";
+import {Component, Inject} from "vue-property-decorator";
 import AccountService from "@/services/AccountService";
 import ConfigService from "@/services/ConfigService";
-import { Config, Organization } from "@/openapi";
+import {Config, Organization} from "@/openapi";
+import App from "@/App.vue";
 
 @Component
 export default class Login extends Vue {
+  @Inject() app!: App;
   @Inject() accountService!: AccountService;
   @Inject() configService!: ConfigService;
   readonly errorTimeout = 3000;
@@ -74,6 +96,9 @@ export default class Login extends Vue {
     loginMessage: "",
     demoMode: false
   };
+  selectOrganizationDialog: boolean = false;
+  organizations: Organization[] = [];
+  selectedOrganizationId: string | null = null;
 
   async mounted() {
     const c = await this.configService.getConfig();
@@ -89,11 +114,10 @@ export default class Login extends Vue {
 
     try {
       await this.accountService.signIn(this.username, this.password);
-      const { language } = await this.accountService.getAccountDetails();
+      const {language} = await this.accountService.getAccountDetails();
       this.setLanguage(language);
       const organizations = await this.accountService.getUserOrganizations();
       this.setCurrentOrganization(organizations);
-      this.$router.push({ name: "home" });
     } catch (error) {
       console.error(error);
       this.errorMessage = true;
@@ -106,20 +130,31 @@ export default class Login extends Vue {
     }
   }
 
+  private goHome() {
+    this.$router.push({name: "home"});
+  }
+
   setCurrentOrganization(userOrganizations: Organization[]) {
     if (userOrganizations.length > 1) {
-      //TODO: the current user is associated with more than one organization,
-      //display a modal which allows the user to choose the organization context
-      this.$sessionStorage.currentOrganizationIndex = 0; // FIXME: temporary: always choose the first organization
-      console.error(
-        `Not implemented: the current user is associated with ${userOrganizations.length} organizations; the first one was automatically selected.`
-      );
+      this.organizations = userOrganizations;
+      this.selectedOrganizationId = userOrganizations[0].id ?? null;
+      this.selectOrganizationDialog = true;
     } else if (userOrganizations.length == 1) {
       this.$sessionStorage.currentOrganizationIndex = 0;
+      this.goHome();
     } else {
-      //TODO: user is not assigned to any organization
-      //display the error on the global snackbar
-      console.error("Not implemented: the user is not associated with any organization.");
+      this.app.error(this.$t("users.no-organization-error").toString());
+      this.goHome();
+    }
+  }
+
+  organizationSelected() {
+    if (this.selectedOrganizationId !== null) {
+      this.selectOrganizationDialog = false;
+
+      this.$sessionStorage.currentOrganizationIndex = this.organizations.findIndex((org) => org.id == this.selectedOrganizationId);
+      this.selectedOrganizationId = null;
+      this.goHome();
     }
   }
 }
