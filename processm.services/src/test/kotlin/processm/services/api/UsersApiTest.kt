@@ -526,16 +526,20 @@ class UsersApiTest : BaseApiTest() {
                             every { organization.id } returns EntityID(UUID.randomUUID(), Organizations)
                             every { organization.name } returns "Org1"
                             every { organization.isPrivate } returns false
+                            every { organization.parentOrganization } returns null
                             every { role } returns RoleType.Writer.role
                         })
 
                 with(handleRequest(HttpMethod.Get, "/api/users/me/organizations")) {
                     assertEquals(HttpStatusCode.OK, response.status())
                     val deserializedContent =
-                        response.deserializeContent<List<ApiOrganization>>()
+                        response.deserializeContent<List<ApiUserRoleInOrganization>>()
                     assertEquals(1, deserializedContent.count())
                     assertTrue {
-                        deserializedContent.any { it.name == "Org1" }
+                        deserializedContent.any { it.organization.name == "Org1" }
+                    }
+                    assertTrue {
+                        deserializedContent.any { it.role == OrganizationRole.writer }
                     }
                 }
 

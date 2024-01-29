@@ -1,18 +1,20 @@
 <template>
   <v-treeview :items="organizations" item-children="children" item-key="organization.id" item-text="organization.name">
     <template v-slot:append="{item}">
-      <v-btn icon v-if="item.organization.parentOrganizationId !== undefined" @click.stop="detach(item)">
+      <v-btn icon v-if="item.organization.parentOrganizationId !== undefined && item.canDetach"
+             @click.stop="detach(item)">
         <v-icon>arrow_upward</v-icon>
       </v-btn>
-      <v-btn icon @click.stop="beginAttach(item)">
+      <v-btn icon @click.stop="beginAttach(item)" v-if="item.canAttach">
         <v-icon>arrow_downward</v-icon>
       </v-btn>
-      <v-btn icon>
+      <v-btn icon v-if="item.canRemove">
         <v-icon small @click="remove(item)">delete_forever</v-icon>
       </v-btn>
     </template>
     <template v-slot:label="{item}">
-      <v-btn v-if="orgToAttach!==null" @click.stop="endAttach(item)">
+      <v-btn v-if="orgToAttach!==null && item.organization.id != orgToAttach.id && item.canAttachTo"
+             @click.stop="endAttach(item)">
         {{ item.organization.name }}
       </v-btn>
       <span v-else>
@@ -28,11 +30,15 @@ import {Component, Inject} from "vue-property-decorator";
 import OrganizationService from "@/services/OrganizationService";
 import AccountService from "@/services/AccountService";
 import App from "@/App.vue";
-import {Organization} from "@/openapi";
+import {Organization, OrganizationRole} from "@/openapi";
 
 class OrganizationTreeItem {
   organization: Organization | undefined;
   children: OrganizationTreeItem[] = [];
+  canAttachTo: boolean = false;
+  canAttach: boolean = false;
+  canDetach: boolean = false;
+  canRemove: boolean = false;
 }
 
 @Component
@@ -48,12 +54,38 @@ export default class OrganizationList extends Vue {
     await this.load();
   }
 
+  /**
+   * Returns true if actual >= minimal in the business order of roles. Partially written by ChatGPT.
+   */
+  private atLeast(actual: OrganizationRole | undefined, minimal: OrganizationRole): boolean {
+    if (actual === undefined) return false;
+    const roles = Object.values(OrganizationRole);
+    const actualIndex = roles.indexOf(actual);
+    const minimalIndex = roles.indexOf(minimal);
+
+    return actualIndex <= minimalIndex;
+  }
+
   async load() {
+    const perm: { [id: string]: OrganizationRole } = {};
+    for (const item of this.$sessionStorage.userOrganizations) {
+      if (item.organization.id !== undefined)
+        perm[item.organization.id] = item.role;
+    }
     const organizations = await this.organizationService.getOrganizations();
     const items: { [id: string]: OrganizationTreeItem } = {};
     for (const org of organizations) {
       if (org.id !== undefined) {
-        items[org.id] = {organization: org, children: []};
+        const orgPerm = perm[org.id];
+        const parentPerm = org.parentOrganizationId !== undefined ? perm[org.parentOrganizationId] : undefined;
+        items[org.id] = {
+          organization: org,
+          canAttachTo: this.atLeast(orgPerm, OrganizationRole.Writer),
+          canAttach: this.atLeast(orgPerm, OrganizationRole.Owner),
+          canRemove: this.atLeast(orgPerm, OrganizationRole.Owner),
+          canDetach: this.atLeast(orgPerm, OrganizationRole.Owner) || this.atLeast(parentPerm, OrganizationRole.Writer),
+          children: []
+        };
       }
     }
     for (const org of organizations) {

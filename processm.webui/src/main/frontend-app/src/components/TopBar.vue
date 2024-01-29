@@ -33,12 +33,13 @@
           </template>
           <v-list-item-group v-model="currentOrganization" mandatory>
             <v-list-item
-                v-for="(organization, i) in this.$sessionStorage.userOrganizations"
+                v-for="(roleInOrganization, i) in this.$sessionStorage.userOrganizations"
                 :key="i"
                 :value="i"
             >
               <v-list-item-icon></v-list-item-icon>
-              <v-list-item-content v-text="organization.name" @click="changeOrganization(i)"></v-list-item-content>
+              <v-list-item-content v-text="roleInOrganization.organization.name"
+                                   @click="changeOrganization(i)"></v-list-item-content>
             </v-list-item>
           </v-list-item-group>
         </v-list-group>

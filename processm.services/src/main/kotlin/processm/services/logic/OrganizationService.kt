@@ -213,6 +213,7 @@ class OrganizationService(
 
     fun attachSubOrganization(organizationId: UUID, subOrganizationId: UUID) {
         transactionMain {
+            organizationId.validateNot(subOrganizationId) { "The organization cannot be attached as its own child." }
             val organization = Organization.findById(organizationId)
                 .validateNotNull(Reason.ResourceNotFound, "The organization $organizationId does not exist.")
             val subOrganization = Organization.findById(subOrganizationId)

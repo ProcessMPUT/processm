@@ -79,7 +79,7 @@ import Vue from "vue";
 import {Component, Inject} from "vue-property-decorator";
 import AccountService from "@/services/AccountService";
 import ConfigService from "@/services/ConfigService";
-import {Config, Organization} from "@/openapi";
+import {Config, Organization, UserRoleInOrganization} from "@/openapi";
 import App from "@/App.vue";
 
 @Component
@@ -134,10 +134,10 @@ export default class Login extends Vue {
     this.$router.push({name: "home"});
   }
 
-  setCurrentOrganization(userOrganizations: Organization[]) {
+  setCurrentOrganization(userOrganizations: UserRoleInOrganization[]) {
     if (userOrganizations.length > 1) {
-      this.organizations = userOrganizations;
-      this.selectedOrganizationId = userOrganizations[0].id ?? null;
+      this.organizations = userOrganizations.map((it) => it.organization);
+      this.selectedOrganizationId = userOrganizations[0].organization.id ?? null;
       this.selectOrganizationDialog = true;
     } else if (userOrganizations.length == 1) {
       this.$sessionStorage.currentOrganizationIndex = 0;

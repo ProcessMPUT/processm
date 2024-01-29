@@ -333,11 +333,13 @@ class OrganizationsApiTest : BaseApiTest() {
                     every { id } returns EntityID(orgIds[0], Organizations)
                     every { name } returns "OrgA"
                     every { isPrivate } returns false
+                    every { parentOrganization } returns null
                 },
                 mockk<Organization> {
                     every { id } returns EntityID(orgIds[1], Organizations)
                     every { name } returns "OrgB"
                     every { isPrivate } returns false
+                    every { parentOrganization } returns null
                 }
             )
 
@@ -345,6 +347,7 @@ class OrganizationsApiTest : BaseApiTest() {
                 every { id } returns EntityID(orgIds[0], Organizations)
                 every { name } returns "OrgA"
                 every { isPrivate } returns false
+                every { parentOrganization } returns null
             }
         }
         withAuthentication(role = OrganizationRole.owner to orgIds[0]) {

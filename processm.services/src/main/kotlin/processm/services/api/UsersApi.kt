@@ -35,8 +35,7 @@ fun Route.UsersApi() {
                         val user = accountService.verifyUsersCredentials(credentials.login, credentials.password)
                             ?: throw ApiException("Invalid username or password", HttpStatusCode.Unauthorized)
                         val userRolesInOrganizations = accountService.getRolesAssignedToUser(user.id.value)
-                            .map { it.organization.id.value to it.role.toApi() }
-                            .toMap()
+                            .associate { it.organization.id.value to it.role.toApi() }
                         val token = JwtAuthentication.createToken(
                             user.id.value,
                             user.email,
@@ -46,7 +45,7 @@ fun Route.UsersApi() {
                             jwtSecret
                         )
 
-                        logger.debug("The user ${user.id.value} has successfully logged in")
+                        logger.debug("The user {} has successfully logged in", user.id.value)
 
                         token
                     }
@@ -178,7 +177,7 @@ fun Route.UsersApi() {
         get<Paths.UserOrganizations> { _ ->
             val principal = call.authentication.principal<ApiUser>()!!
             val userOrganizations = transactionMain {
-                accountService.getRolesAssignedToUser(principal.userId).mapToArray { it.organization.toApi() }
+                accountService.getRolesAssignedToUser(principal.userId).mapToArray { it.toApi() }
             }
 
             call.respond(HttpStatusCode.OK, userOrganizations)

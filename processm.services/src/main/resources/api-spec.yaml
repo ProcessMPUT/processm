@@ -237,7 +237,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Organization'
+                  $ref: '#/components/schemas/UserRoleInOrganization'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
@@ -2453,6 +2453,14 @@ components:
         parentOrganizationId:
           type: string
           format: uuid
+    UserRoleInOrganization:
+      type: object
+      required: [ organization, role ]
+      properties:
+        organization:
+          $ref: '#/components/schemas/Organization'
+        role:
+          $ref: '#/components/schemas/OrganizationRole'
     RelationshipGraph:
       type: object
       required: [ classes, edges ]

@@ -9,6 +9,7 @@ typealias ApiRole = processm.services.api.models.OrganizationRole
 typealias ApiOrganizationMember = processm.services.api.models.OrganizationMember
 typealias ApiWorkspace = processm.services.api.models.Workspace
 typealias ApiGroup = processm.services.api.models.Group
+typealias ApiUserRoleInOrganization = processm.services.api.models.UserRoleInOrganization
 
 fun Role.toApi(): ApiRole = when (this.name) {
     RoleType.Owner -> ApiRole.owner
@@ -47,3 +48,7 @@ fun Group.toApi() = ApiGroup(
     isShared = isShared
 )
 
+fun UserRoleInOrganization.toApi() = ApiUserRoleInOrganization(
+    organization = organization.toApi(),
+    role = role.toApi()
+)

@@ -1,7 +1,7 @@
 import _Vue from "vue";
 import VueSession from "vue-session";
 import UserAccount from "@/models/UserAccount";
-import { Organization } from "@/openapi";
+import {Organization, UserRoleInOrganization} from "@/openapi";
 
 class SessionStorage {
   static install(Vue: typeof _Vue, options = {}) {
@@ -38,11 +38,11 @@ class SessionStorage {
     this.session.set(this.UserInfoKey, userInfo);
   }
 
-  static get userOrganizations(): Organization[] {
+  static get userOrganizations(): UserRoleInOrganization[] {
     return this.session.get(this.UserOrganizationsKey);
   }
 
-  static set userOrganizations(userOrganizations: Organization[]) {
+  static set userOrganizations(userOrganizations: UserRoleInOrganization[]) {
     this.session.set(this.UserOrganizationsKey, userOrganizations);
   }
 
@@ -55,7 +55,7 @@ class SessionStorage {
   }
 
   static get currentOrganization(): Organization {
-    return this.userOrganizations[this.currentOrganizationIndex];
+    return this.userOrganizations[this.currentOrganizationIndex].organization;
   }
 
   static set defaultDataStoreId(dataStoreId: string) {

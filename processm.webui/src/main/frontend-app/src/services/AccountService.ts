@@ -1,7 +1,7 @@
 import Vue from "vue";
 import UserAccount from "@/models/UserAccount";
 import BaseService from "./BaseService";
-import {Organization, ResetPasswordRequest, UserAccountInfo} from "@/openapi";
+import {Organization, ResetPasswordRequest, UserAccountInfo, UserRoleInOrganization} from "@/openapi";
 
 export default class AccountService extends BaseService {
   public async signIn(login: string, password: string) {
@@ -69,7 +69,7 @@ export default class AccountService extends BaseService {
     console.assert(response.status == 204, response.statusText);
   }
 
-  public async getUserOrganizations(): Promise<Organization[]> {
+  public async getUserOrganizations(): Promise<UserRoleInOrganization[]> {
     const response = await this.usersApi.getUserOrganizations();
 
     console.assert(response.status == 200, response.statusText);
