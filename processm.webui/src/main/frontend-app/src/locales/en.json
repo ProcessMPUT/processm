@@ -358,6 +358,10 @@
       "success": "Successfully saved",
       "failure": "Failed to save"
     },
+    "creating": {
+      "success": "Successfully created",
+      "failure": "Failed to create"
+    },
     "activate": "Activate",
     "deactivate": "Deactivate",
     "operation-successful": "Successfully completed the operation",

@@ -1,5 +1,6 @@
 import BaseService from "./BaseService";
 import {Organization, OrganizationMember, OrganizationRole} from "@/openapi/api";
+import Vue from "vue";
 
 export default class OrganizationService extends BaseService {
     public async getOrganizationMembers(organizationId: string): Promise<OrganizationMember[]> {
@@ -28,16 +29,36 @@ export default class OrganizationService extends BaseService {
 
     public async attach(organizationId: string, subOrganizationId: string) {
         const response = await this.organizationsApi.attachSubOrganization(organizationId, subOrganizationId);
-        return response.status == 201;
+        return response.status == 204
     }
 
     public async detach(organizationId: string, subOrganizationId: string) {
         const response = await this.organizationsApi.detachSubOrganization(organizationId, subOrganizationId);
-        return response.status == 201;
+        return response.status == 204
     }
 
     public async removeOrganization(organizationId: string) {
         const response = await this.organizationsApi.removeOrganization(organizationId);
-        return response.status == 201;
+        return response.status == 204
+    }
+
+    protected async updateClaims() {
+        // refresh token to get new permissions
+        await this.prolongExistingSession(undefined, this.usersApi)
+
+        const response = await this.usersApi.getUserOrganizations()
+
+        if (response.status == 200) {
+            Vue.prototype.$sessionStorage.userOrganizations = response.data
+        }
+    }
+
+    public async createOrganization(name: string, isPrivate: boolean) {
+        const response = await this.organizationsApi.createOrganization({name: name, isPrivate: isPrivate})
+        if (response.status == 201) {
+            await this.updateClaims()
+            return response.data
+        } else
+            return undefined
     }
 }

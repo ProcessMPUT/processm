@@ -1,27 +1,47 @@
 <template>
-  <v-treeview :items="organizations" item-children="children" item-key="organization.id" item-text="organization.name">
-    <template v-slot:append="{item}">
-      <v-btn icon v-if="item.organization.parentOrganizationId !== undefined && item.canDetach"
-             @click.stop="detach(item)">
-        <v-icon>arrow_upward</v-icon>
-      </v-btn>
-      <v-btn icon @click.stop="beginAttach(item)" v-if="item.canAttach">
-        <v-icon>arrow_downward</v-icon>
-      </v-btn>
-      <v-btn icon v-if="item.canRemove">
-        <v-icon small @click="remove(item)">delete_forever</v-icon>
-      </v-btn>
-    </template>
-    <template v-slot:label="{item}">
-      <v-btn v-if="orgToAttach!==null && item.organization.id != orgToAttach.id && item.canAttachTo"
-             @click.stop="endAttach(item)">
-        {{ item.organization.name }}
-      </v-btn>
-      <span v-else>
+
+  <v-card>
+    <v-card-title>
+      <v-toolbar flat>
+        <v-toolbar-title> {{ $t("users.organizations") }}</v-toolbar-title>
+        <v-spacer></v-spacer>
+        <v-btn color="primary" @click.stop="createNewDialog=true;">
+          {{ $t("common.add-new") }}
+        </v-btn>
+      </v-toolbar>
+    </v-card-title>
+    <v-card-text>
+      <v-treeview :items="organizations" item-children="children" item-key="organization.id"
+                  item-text="organization.name">
+        <template v-slot:append="{item}">
+          <v-btn icon v-if="item.organization.parentOrganizationId !== undefined && item.canDetach"
+                 @click.stop="detach(item)">
+            <v-icon>arrow_upward</v-icon>
+          </v-btn>
+          <v-btn icon @click.stop="beginAttach(item)" v-if="item.canAttach">
+            <v-icon>arrow_downward</v-icon>
+          </v-btn>
+          <v-btn icon v-if="item.canRemove">
+            <v-icon small @click="remove(item)">delete_forever</v-icon>
+          </v-btn>
+          <v-btn icon v-if="item.canAttachTo">
+            <v-icon small @click="beginCreate(item)">add</v-icon>
+          </v-btn>
+        </template>
+        <template v-slot:label="{item}">
+          <v-btn v-if="orgToAttach!==null && item.organization.id != orgToAttach.id && item.canAttachTo"
+                 @click.stop="endAttach(item)">
+            {{ item.organization.name }}
+          </v-btn>
+          <span v-else>
         {{ item.organization.name }}
       </span>
-    </template>
-  </v-treeview>
+        </template>
+      </v-treeview>
+      <new-dialog :value="createNewDialog" @submitted="endCreate"
+                  @cancelled="createNewDialog=false; orgToAttach=null;"/>
+    </v-card-text>
+  </v-card>
 </template>
 
 <script lang="ts">
@@ -31,6 +51,7 @@ import OrganizationService from "@/services/OrganizationService";
 import AccountService from "@/services/AccountService";
 import App from "@/App.vue";
 import {Organization, OrganizationRole} from "@/openapi";
+import NewDialog from "@/components/NewDialog.vue";
 
 class OrganizationTreeItem {
   organization: Organization | undefined;
@@ -41,7 +62,9 @@ class OrganizationTreeItem {
   canRemove: boolean = false;
 }
 
-@Component
+@Component({
+  components: {NewDialog}
+})
 export default class OrganizationList extends Vue {
   @Inject() app!: App;
   @Inject() accountService!: AccountService;
@@ -49,6 +72,7 @@ export default class OrganizationList extends Vue {
 
   organizations: OrganizationTreeItem[] = [];
   orgToAttach: Organization | null = null;
+  createNewDialog: boolean = false;
 
   async mounted() {
     await this.load();
@@ -140,5 +164,25 @@ export default class OrganizationList extends Vue {
     }
   }
 
+  async beginCreate(item: OrganizationTreeItem) {
+    this.orgToAttach = item.organization ?? null;
+    this.createNewDialog = true;
+  }
+
+  async endCreate(name: string) {
+    try {
+      const newOrg = (await this.organizationService.createOrganization(name, false))?.id!
+      const parentOrgId = this.orgToAttach?.id
+      if (parentOrgId !== undefined)
+        await this.organizationService.attach(parentOrgId, newOrg)
+      await this.load()
+      this.app.success(this.$t("common.creating.success").toString())
+    } catch (e) {
+      this.app.success(this.$t("common.creating.error").toString())
+    } finally {
+      this.createNewDialog = false;
+      this.orgToAttach = null;
+    }
+  }
 }
 </script>

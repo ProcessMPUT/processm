@@ -356,6 +356,10 @@
       "success": "Pomyślnie zapisano",
       "failure": "Zapisywanie nie powiodło się"
     },
+    "creating": {
+      "success": "Pomyślnie utworzono",
+      "failure": "Tworzenie nie powiodło się"
+    },
     "activate": "Aktywuj",
     "deactivate": "Dezaktywuj",
     "operation-successful": "Operacja wykonana pomyślnie",
