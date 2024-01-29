@@ -59,7 +59,25 @@ fun Route.UsersApi() {
                         )
                     val prolongedToken = JwtAuthentication.verifyAndProlongToken(
                         authorizationHeader.blob, jwtIssuer, jwtSecret, jwtTokenTtl
-                    )
+                    ) { userId,
+                        username,
+                        _,
+                        expiration,
+                        issuer,
+                        secret ->
+                        transactionMain {
+                            val userRolesInOrganizations = accountService.getRolesAssignedToUser(userId)
+                                .associate { it.organization.id.value to it.role.toApi() }
+                            JwtAuthentication.createToken(
+                                userId,
+                                username,
+                                userRolesInOrganizations,
+                                expiration,
+                                issuer,
+                                secret
+                            )
+                        }
+                    }
 
                     logger.debug("A session token ${authorizationHeader.blob} has been successfully prolonged to $prolongedToken")
                     call.respond(HttpStatusCode.Created, AuthenticationResult(prolongedToken))

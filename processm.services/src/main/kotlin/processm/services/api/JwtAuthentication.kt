@@ -20,8 +20,12 @@ object JwtAuthentication {
     ): JWTVerifier =
         JWT.require(Algorithm.HMAC512(secret)).acceptExpiresAt(acceptableExpiration.seconds).withIssuer(issuer).build()
 
+    /**
+     * @param createToken Exposed to provide an opportunity to update the claims inside the token
+     */
     fun verifyAndProlongToken(
-        encodedToken: String, issuer: String, secret: String, acceptableExpiration: Duration
+        encodedToken: String, issuer: String, secret: String, acceptableExpiration: Duration,
+        createToken: (UUID, String, Map<UUID, OrganizationRole>, Instant, String, String) -> String = JwtAuthentication::createToken
     ): String {
         var expiredToken = createProlongingTokenVerifier(issuer, secret, acceptableExpiration).verify(encodedToken)
 
