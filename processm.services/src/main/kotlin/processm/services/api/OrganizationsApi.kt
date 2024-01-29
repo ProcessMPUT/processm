@@ -34,11 +34,7 @@ fun Route.OrganizationsApi() {
                     principal!!.organizations.keys.map { organizationService.get(it) }
             val organizations = rawOrganizations.mapTo(HashSet()) { org ->
                 assert(!org.isPrivate)
-                ApiOrganization(
-                    id = org.id.value,
-                    name = org.name,
-                    isPrivate = org.isPrivate
-                )
+                org.toApi()
             }
 
             call.respond(organizations)

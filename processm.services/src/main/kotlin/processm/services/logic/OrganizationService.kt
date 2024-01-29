@@ -201,6 +201,7 @@ class OrganizationService(
     fun getAll(publicOnly: Boolean): List<Organization> = transactionMain {
         val result = if (!publicOnly) Organization.all()
         else Organization.find { Organizations.isPrivate eq false }
+        result.forEach { it.load(Organization::parentOrganization) }
         result.toList()
     }
 
