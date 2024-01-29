@@ -206,6 +206,13 @@
   "xes-data-table": {
     "logs-removal-confirmation": "Do you want to permanently remove {count} logs?"
   },
+  "new-dialog": {
+    "dialog-title": "@:common.add-new",
+    "new-name-placeholder": "@:rename-dialog.new-name-placeholder",
+    "validation": {
+      "name-empty": "@:rename-dialog.validation.name-empty"
+    }
+  },
   "rename-dialog": {
     "dialog-title": "Rename",
     "new-name-placeholder": "New name",
