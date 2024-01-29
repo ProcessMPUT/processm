@@ -48,9 +48,9 @@ fun Route.OrganizationsApi() {
                 name = newOrganization.name,
                 isPrivate = newOrganization.isPrivate,
                 ownerUserId = principal.userId
-            )
+            ).toApi()
 
-            call.respondCreated(Paths.Organization(newOrg.id.value))
+            call.respond(HttpStatusCode.Created, newOrg)
         }
 
         get<Paths.Organization> { path ->
