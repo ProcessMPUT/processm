@@ -13,6 +13,18 @@
     <v-card-text>
       <v-treeview :items="organizations" item-children="children" item-key="organization.id"
                   item-text="organization.name">
+        <template v-slot:prepend="{item}">
+          <v-tooltip bottom>
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn icon @click.stop="togglePrivate(item)" v-bind="attrs" v-on="on">
+                <v-icon v-if="item.organization.isPrivate">lock</v-icon>
+                <v-icon v-else>lock_open</v-icon>
+              </v-btn>
+            </template>
+            <span v-if="item.organization.isPrivate">{{ $t("users.switch-to-public") }}</span>
+            <span v-else>{{ $t("users.switch-to-private") }}</span>
+          </v-tooltip>
+        </template>
         <template v-slot:append="{item}">
           <v-btn icon v-if="item.organization.parentOrganizationId !== undefined && item.canDetach"
                  @click.stop="detach(item)">
@@ -33,9 +45,37 @@
                  @click.stop="endAttach(item)">
             {{ item.organization.name }}
           </v-btn>
-          <span v-else>
-        {{ item.organization.name }}
-      </span>
+          <v-text-field
+              v-model="item.organization.name"
+              background-color="transparent"
+              flat
+              hide-details
+              solo
+              @blur="item.focus = false"
+              @change="item.dirty = true"
+              @focus="item.focus = true"
+              v-else
+          >
+            <template v-slot:append>
+              <v-tooltip bottom>
+                <template v-slot:activator="{ on, attrs }">
+                  <v-btn
+                      :disabled="!((item.dirty || item.focus) && item.canEdit)"
+                      color="primary"
+                      dark
+                      icon
+                      v-bind="attrs"
+                      @click="editName(item)"
+                      v-on="on"
+                      @keyup.enter.native="editName(item)"
+                  >
+                    <v-icon v-show="(item.dirty || item.focus) && item.canEdit" small>edit</v-icon>
+                  </v-btn>
+                </template>
+                {{ $t("common.edit") }}
+              </v-tooltip>
+            </template>
+          </v-text-field>
         </template>
       </v-treeview>
       <new-dialog :value="createNewDialog" @submitted="endCreate"
@@ -60,6 +100,9 @@ class OrganizationTreeItem {
   canAttach: boolean = false;
   canDetach: boolean = false;
   canRemove: boolean = false;
+  canEdit: boolean = false;
+  dirty: boolean = false;
+  focus: boolean = false;
 }
 
 @Component({
@@ -108,6 +151,9 @@ export default class OrganizationList extends Vue {
           canAttach: this.atLeast(orgPerm, OrganizationRole.Owner),
           canRemove: this.atLeast(orgPerm, OrganizationRole.Owner),
           canDetach: this.atLeast(orgPerm, OrganizationRole.Owner) || this.atLeast(parentPerm, OrganizationRole.Writer),
+          canEdit: this.atLeast(orgPerm, OrganizationRole.Writer),
+          dirty: false,
+          focus: false,
           children: []
         };
       }
@@ -117,7 +163,10 @@ export default class OrganizationList extends Vue {
         items[org.parentOrganizationId].children.push(items[org.id]);
       }
     }
-    this.organizations = Object.values(items).filter((org) => org.organization?.parentOrganizationId === undefined);
+    this.organizations = Object
+        .values(items)
+        .filter((org) => org.organization?.parentOrganizationId === undefined)
+        .sort((a, b) => (a.organization?.name ?? "").localeCompare(b.organization?.name ?? ""))
   }
 
   async beginAttach(item: OrganizationTreeItem) {
@@ -178,10 +227,33 @@ export default class OrganizationList extends Vue {
       await this.load()
       this.app.success(this.$t("common.creating.success").toString())
     } catch (e) {
-      this.app.success(this.$t("common.creating.error").toString())
+      this.app.error(this.$t("common.creating.error").toString())
     } finally {
       this.createNewDialog = false;
       this.orgToAttach = null;
+    }
+  }
+
+  async togglePrivate(item: OrganizationTreeItem) {
+    try {
+      const org = item.organization!
+      await this.organizationService.updateOrganization(org.id!, org.name, !org.isPrivate)
+      await this.load()
+      this.app.success(this.$t("common.saving.success").toString())
+    } catch (e) {
+      this.app.error(this.$t("common.saving.error").toString())
+    }
+  }
+
+  async editName(item: OrganizationTreeItem) {
+    try {
+      const org = item.organization!
+      //org.name contains the new name
+      await this.organizationService.updateOrganization(org.id!, org.name, org.isPrivate)
+      await this.load()
+      this.app.success(this.$t("common.saving.success").toString())
+    } catch (e) {
+      this.app.error(this.$t("common.saving.error").toString())
     }
   }
 }

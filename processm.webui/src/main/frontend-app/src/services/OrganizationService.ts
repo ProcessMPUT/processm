@@ -61,4 +61,8 @@ export default class OrganizationService extends BaseService {
         } else
             return undefined
     }
+
+    public async updateOrganization(organizationId: string, name: string, isPrivate: boolean) {
+        await this.organizationsApi.updateOrganization(organizationId, {name: name, isPrivate: isPrivate})
+    }
 }

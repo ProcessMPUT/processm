@@ -192,6 +192,8 @@
     "role": "Role",
     "select-organization": "Select organization",
     "shared": "Shared",
+    "switch-to-private": "Public organization. Switch to private.",
+    "switch-to-public": "Private organization. Switch to public.",
     "users": "Users",
     "user": "User",
     "you": "You",

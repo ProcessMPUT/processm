@@ -192,6 +192,8 @@
     "role": "Rola",
     "select-organization": "Wybierz organizację",
     "shared": "Współdzielona",
+    "switch-to-private": "Organizacja publiczna. Przełącz na prywatną.",
+    "switch-to-public": "Organizacja prywatna. Przełącz na publiczną.",
     "users": "Użytkownicy",
     "user": "Użytkownik",
     "you": "Ty",
