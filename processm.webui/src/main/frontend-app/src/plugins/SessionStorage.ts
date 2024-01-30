@@ -4,71 +4,72 @@ import UserAccount from "@/models/UserAccount";
 import {Organization, UserRoleInOrganization} from "@/openapi";
 
 class SessionStorage {
-  static install(Vue: typeof _Vue, options = {}) {
-    Vue.use(VueSession, options);
-    Vue.prototype.$sessionStorage = this;
-  }
+    static install(Vue: typeof _Vue, options = {}) {
+        Vue.use(VueSession, options);
+        Vue.prototype.$sessionStorage = this;
+    }
 
-  private static readonly TokenKey = "session_token";
-  private static readonly UserInfoKey = "user_info";
-  private static readonly UserOrganizationsKey = "user_organizations";
-  private static readonly CurrentOrganizationIndexKey = "current_organization";
-  private static readonly DefaultDataStoreKey = "default_data_source";
-  private static get session() {
-    return _Vue.prototype.$session;
-  }
+    private static readonly TokenKey = "session_token";
+    private static readonly UserInfoKey = "user_info";
+    private static readonly UserOrganizationsKey = "user_organizations";
+    private static readonly CurrentOrganizationIndexKey = "current_organization";
+    private static readonly DefaultDataStoreKey = "default_data_source";
 
-  static get sessionToken(): string {
-    return this.session.get(this.TokenKey);
-  }
+    private static get session() {
+        return _Vue.prototype.$session;
+    }
 
-  static set sessionToken(token: string) {
-    this.session.set(this.TokenKey, token);
-  }
+    static get sessionToken(): string {
+        return this.session.get(this.TokenKey);
+    }
 
-  static get sessionExists(): boolean {
-    return this.session.has(this.TokenKey);
-  }
+    static set sessionToken(token: string) {
+        this.session.set(this.TokenKey, token);
+    }
 
-  static get userInfo(): UserAccount {
-    return this.session.get(this.UserInfoKey);
-  }
+    static get sessionExists(): boolean {
+        return this.session.has(this.TokenKey);
+    }
 
-  static set userInfo(userInfo: UserAccount) {
-    this.session.set(this.UserInfoKey, userInfo);
-  }
+    static get userInfo(): UserAccount {
+        return this.session.get(this.UserInfoKey);
+    }
 
-  static get userOrganizations(): UserRoleInOrganization[] {
-    return this.session.get(this.UserOrganizationsKey);
-  }
+    static set userInfo(userInfo: UserAccount) {
+        this.session.set(this.UserInfoKey, userInfo);
+    }
 
-  static set userOrganizations(userOrganizations: UserRoleInOrganization[]) {
-    this.session.set(this.UserOrganizationsKey, userOrganizations);
-  }
+    static get userOrganizations(): UserRoleInOrganization[] {
+        return this.session.get(this.UserOrganizationsKey);
+    }
 
-  static get currentOrganizationIndex(): number {
-    return this.session.get(this.CurrentOrganizationIndexKey);
-  }
+    static set userOrganizations(userOrganizations: UserRoleInOrganization[]) {
+        this.session.set(this.UserOrganizationsKey, userOrganizations);
+    }
 
-  static set currentOrganizationIndex(organizationIndex: number) {
-    this.session.set(this.CurrentOrganizationIndexKey, organizationIndex);
-  }
+    static get currentOrganizationIndex(): number {
+        return this.session.get(this.CurrentOrganizationIndexKey);
+    }
 
-  static get currentOrganization(): Organization {
-    return this.userOrganizations[this.currentOrganizationIndex].organization;
-  }
+    static set currentOrganizationIndex(organizationIndex: number) {
+        this.session.set(this.CurrentOrganizationIndexKey, organizationIndex);
+    }
 
-  static set defaultDataStoreId(dataStoreId: string) {
-    this.session.set(this.DefaultDataStoreKey, dataStoreId);
-  }
+    static get currentOrganization(): Organization {
+        return this.userOrganizations[this.currentOrganizationIndex].organization;
+    }
 
-  static get defaultDataStoreId(): string {
-    return this.session.get(this.DefaultDataStoreKey);
-  }
+    static set defaultDataStoreId(dataStoreId: string) {
+        this.session.set(this.DefaultDataStoreKey, dataStoreId);
+    }
 
-  static removeSession() {
-    this.session.destroy();
-  }
+    static get defaultDataStoreId(): string {
+        return this.session.get(this.DefaultDataStoreKey);
+    }
+
+    static removeSession() {
+        this.session.destroy();
+    }
 }
 
 export default SessionStorage;
