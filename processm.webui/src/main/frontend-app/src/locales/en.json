@@ -173,6 +173,13 @@
     "language": "Language",
     "change-password": "Change password"
   },
+  "organizations": {
+    "attach": "Attach the organization as a sub-organization",
+    "detach": "Detach the organization from its parent organization",
+    "moved": "Organization moved successfully.",
+    "switch-to-private": "Public organization. Switch to private.",
+    "switch-to-public": "Private organization. Switch to public."
+  },
   "users": {
     "exclude-member": "Exclude from organization",
     "groups": "Groups",
@@ -187,13 +194,10 @@
     "no-organization-error": "You are not a member of any organization",
     "organization": "Organization",
     "organizations": "Organizations",
-    "organization-moved": "Organization moved successfully.",
     "page-title": "Users",
     "role": "Role",
     "select-organization": "Select organization",
     "shared": "Shared",
-    "switch-to-private": "Public organization. Switch to private.",
-    "switch-to-public": "Private organization. Switch to public.",
     "users": "Users",
     "user": "User",
     "you": "You",

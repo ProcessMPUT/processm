@@ -21,24 +21,44 @@
                 <v-icon v-else>lock_open</v-icon>
               </v-btn>
             </template>
-            <span v-if="item.organization.isPrivate">{{ $t("users.switch-to-public") }}</span>
-            <span v-else>{{ $t("users.switch-to-private") }}</span>
+            <span v-if="item.organization.isPrivate">{{ $t("organizations.switch-to-public") }}</span>
+            <span v-else>{{ $t("organizations.switch-to-private") }}</span>
           </v-tooltip>
         </template>
         <template v-slot:append="{item}">
-          <v-btn icon v-if="item.organization.parentOrganizationId !== undefined && item.canDetach"
-                 @click.stop="detach(item)">
-            <v-icon>arrow_upward</v-icon>
-          </v-btn>
-          <v-btn icon @click.stop="beginAttach(item)" v-if="item.canAttach">
-            <v-icon>arrow_downward</v-icon>
-          </v-btn>
-          <v-btn icon v-if="item.canRemove">
-            <v-icon small @click="remove(item)">delete_forever</v-icon>
-          </v-btn>
-          <v-btn icon v-if="item.canAttachTo">
-            <v-icon small @click="beginCreate(item)">add</v-icon>
-          </v-btn>
+          <v-tooltip bottom>
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn icon v-if="item.organization.parentOrganizationId !== undefined && item.canDetach"
+                     @click.stop="detach(item)" v-bind="attrs" v-on="on">
+                <v-icon>arrow_upward</v-icon>
+              </v-btn>
+            </template>
+            <span>{{ $t("organizations.detach") }}</span>
+          </v-tooltip>
+          <v-tooltip bottom>
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn icon @click.stop="beginAttach(item)" v-if="item.canAttach" v-bind="attrs" v-on="on">
+                <v-icon>arrow_downward</v-icon>
+              </v-btn>
+            </template>
+            <span>{{ $t("organizations.attach") }}</span>
+          </v-tooltip>
+          <v-tooltip bottom>
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn icon v-if="item.canRemove" v-bind="attrs" v-on="on">
+                <v-icon small @click="remove(item)">delete_forever</v-icon>
+              </v-btn>
+            </template>
+            <span>{{ $t("common.remove") }}</span>
+          </v-tooltip>
+          <v-tooltip bottom>
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn icon v-if="item.canAttachTo" v-bind="attrs" v-on="on">
+                <v-icon small @click="beginCreate(item)">add</v-icon>
+              </v-btn>
+            </template>
+            <span>{{ $t("common.add-new") }}</span>
+          </v-tooltip>
         </template>
         <template v-slot:label="{item}">
           <v-btn v-if="orgToAttach!==null && item.organization.id != orgToAttach.id && item.canAttachTo"
@@ -178,7 +198,7 @@ export default class OrganizationList extends Vue {
       const subOrganizationId = this.orgToAttach?.id
       const organizationId = item.organization?.id
       await this.organizationService.attach(organizationId!, subOrganizationId!)
-      this.app.success(this.$t("users.organization-moved").toString())
+      this.app.success(this.$t("organizations.organization-moved").toString())
       await this.load()
     } catch (e) {
       console.error(e)
