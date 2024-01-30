@@ -178,7 +178,8 @@
     "detach": "Odłącz organizację od jej organizacji nadrzędnej",
     "moved": "Pomyślnie przeniesiono organizację.",
     "switch-to-private": "Organizacja publiczna. Przełącz na prywatną.",
-    "switch-to-public": "Organizacja prywatna. Przełącz na publiczną."
+    "switch-to-public": "Organizacja prywatna. Przełącz na publiczną.",
+    "login": "Zaloguj do organizacji"
   },
   "users": {
     "exclude-member": "Usuń członka z organizacji",

@@ -178,7 +178,8 @@
     "detach": "Detach the organization from its parent organization",
     "moved": "Organization moved successfully.",
     "switch-to-private": "Public organization. Switch to private.",
-    "switch-to-public": "Private organization. Switch to public."
+    "switch-to-public": "Private organization. Switch to public.",
+    "login": "Login to the organization"
   },
   "users": {
     "exclude-member": "Exclude from organization",

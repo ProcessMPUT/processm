@@ -44,7 +44,10 @@ class SessionStorage {
     }
 
     static set userOrganizations(userOrganizations: UserRoleInOrganization[]) {
+        const orgId = this.currentOrganization.id;
         this.session.set(this.UserOrganizationsKey, userOrganizations);
+        if (orgId !== undefined && this.currentOrganization.id != orgId)
+            this.switchToOrganization(orgId);
     }
 
     static get currentOrganizationIndex(): number {
@@ -69,6 +72,14 @@ class SessionStorage {
 
     static removeSession() {
         this.session.destroy();
+    }
+
+    static switchToOrganization(organizationId: string): boolean {
+        const idx = this.userOrganizations.findIndex((role) => role.organization.id == organizationId)
+        if (idx < 0)
+            return false
+        this.currentOrganizationIndex = idx
+        return true
     }
 }
 

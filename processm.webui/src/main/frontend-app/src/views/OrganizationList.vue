@@ -59,6 +59,14 @@
             </template>
             <span>{{ $t("common.add-new") }}</span>
           </v-tooltip>
+          <v-tooltip bottom>
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn icon v-if="item.canLogin && item.organization.id != $sessionStorage.currentOrganization.id" v-bind="attrs" v-on="on">
+                <v-icon small @click="login(item)">input</v-icon>
+              </v-btn>
+            </template>
+            <span>{{ $t("organizations.login") }}</span>
+          </v-tooltip>
         </template>
         <template v-slot:label="{item}">
           <v-btn v-if="orgToAttach!==null && item.organization.id != orgToAttach.id && item.canAttachTo"
@@ -121,6 +129,7 @@ class OrganizationTreeItem {
   canDetach: boolean = false;
   canRemove: boolean = false;
   canEdit: boolean = false;
+  canLogin: boolean = false;
   dirty: boolean = false;
   focus: boolean = false;
 }
@@ -172,6 +181,7 @@ export default class OrganizationList extends Vue {
           canRemove: this.atLeast(orgPerm, OrganizationRole.Owner),
           canDetach: this.atLeast(orgPerm, OrganizationRole.Owner) || this.atLeast(parentPerm, OrganizationRole.Writer),
           canEdit: this.atLeast(orgPerm, OrganizationRole.Writer),
+          canLogin: this.atLeast(orgPerm, OrganizationRole.Reader),
           dirty: false,
           focus: false,
           children: []
@@ -274,6 +284,15 @@ export default class OrganizationList extends Vue {
       this.app.success(this.$t("common.saving.success").toString())
     } catch (e) {
       this.app.error(this.$t("common.saving.error").toString())
+    }
+  }
+
+  async login(item: OrganizationTreeItem) {
+    const orgId = item.organization?.id!;
+    if (this.$sessionStorage.currentOrganization.id != orgId) {
+      this.$sessionStorage.switchToOrganization(orgId);
+      // Refresh page for all components to take the new organization into account
+      this.$router.go(0);
     }
   }
 }
