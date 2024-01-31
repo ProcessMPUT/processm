@@ -44,7 +44,9 @@ class SessionStorage {
     }
 
     static set userOrganizations(userOrganizations: UserRoleInOrganization[]) {
-        const orgId = this.currentOrganization.id;
+        let orgId: string | undefined = undefined;
+        if (this.sessionExists && this.session !== undefined && this.userOrganizations?.length > this.currentOrganizationIndex)
+            orgId = this.currentOrganization.id;
         this.session.set(this.UserOrganizationsKey, userOrganizations);
         if (orgId !== undefined && this.currentOrganization.id != orgId)
             this.switchToOrganization(orgId);

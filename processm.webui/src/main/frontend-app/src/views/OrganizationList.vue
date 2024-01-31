@@ -61,7 +61,8 @@
           </v-tooltip>
           <v-tooltip bottom>
             <template v-slot:activator="{ on, attrs }">
-              <v-btn icon v-if="item.canLogin && item.organization.id != $sessionStorage.currentOrganization.id" v-bind="attrs" v-on="on">
+              <v-btn icon v-if="item.canLogin && item.organization.id != $sessionStorage.currentOrganization.id"
+                     v-bind="attrs" v-on="on">
                 <v-icon small @click="login(item)">input</v-icon>
               </v-btn>
             </template>
@@ -208,7 +209,7 @@ export default class OrganizationList extends Vue {
       const subOrganizationId = this.orgToAttach?.id
       const organizationId = item.organization?.id
       await this.organizationService.attach(organizationId!, subOrganizationId!)
-      this.app.success(this.$t("organizations.organization-moved").toString())
+      this.app.success(this.$t("organizations.moved").toString())
       await this.load()
     } catch (e) {
       console.error(e)
@@ -223,7 +224,7 @@ export default class OrganizationList extends Vue {
       const organizationId = item.organization?.parentOrganizationId
       const subOrganizationId = item.organization?.id
       await this.organizationService.detach(organizationId!, subOrganizationId!)
-      this.app.success(this.$t("users.organization-moved").toString())
+      this.app.success(this.$t("organizations.moved").toString())
       await this.load()
     } catch (e) {
       console.error(e)
