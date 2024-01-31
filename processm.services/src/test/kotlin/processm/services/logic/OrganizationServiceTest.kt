@@ -191,4 +191,25 @@ class OrganizationServiceTest : ServiceTestBase() {
         }
     }
 
+    @Test
+    fun `delete organization`() {
+        val org = createOrganization("test")
+        organizationService.remove(org.id.value)
+    }
+
+    @Test
+    fun `delete sub-organization`() {
+        val parent = createOrganization(name = "parent", isPrivate = false).id.value
+        val child = createOrganization(name = "child", isPrivate = true, parentOrganizationId = parent).id.value
+        organizationService.remove(child)
+    }
+
+    @Test
+    fun `delete an organization with a child`() {
+        val parent = createOrganization(name = "parent", isPrivate = false).id.value
+        val child = createOrganization(name = "child", isPrivate = true, parentOrganizationId = parent).id.value
+        organizationService.remove(parent)
+        assertNull(organizationService.get(child).parentOrganization)
+    }
+
 }

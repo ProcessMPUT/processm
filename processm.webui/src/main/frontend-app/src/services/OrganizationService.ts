@@ -39,7 +39,11 @@ export default class OrganizationService extends BaseService {
 
     public async removeOrganization(organizationId: string) {
         const response = await this.organizationsApi.removeOrganization(organizationId);
-        return response.status == 204
+        if (response.status == 204) {
+            await this.updateClaims()
+            return true
+        }
+        return false
     }
 
     protected async updateClaims() {

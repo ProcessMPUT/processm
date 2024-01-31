@@ -179,12 +179,14 @@ class OrganizationService(
      * Deletes organization with the given [id].
      */
     fun remove(id: UUID): Unit = transactionMain {
+        Organizations.update(where = { Organizations.parentOrganizationId eq id }) {
+            it[parentOrganizationId] = null
+        }
+        Groups.deleteWhere {
+            (Groups.organizationId eq id) and (Groups.isShared eq true)
+        }
         Organizations.deleteWhere {
             Organizations.id eq id
-        }
-
-        Groups.deleteWhere {
-            (Groups.organizationId eq id) and (Groups.isImplicit eq true)
         }
     }
 
