@@ -13,10 +13,7 @@ import processm.services.api.models.OrganizationRole
 import processm.services.logic.*
 import java.util.*
 import java.util.stream.Stream
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class OrganizationsApiTest : BaseApiTest() {
@@ -371,6 +368,9 @@ class OrganizationsApiTest : BaseApiTest() {
         val organizationService = declareMock<OrganizationService> {
             every { create("my org", false, ownerUserId = ownerId) } returns mockk {
                 every { id } returns EntityID(organizationId, Organizations)
+                every { name } returns "my org"
+                every { isPrivate } returns false
+                every { parentOrganization } returns null
             }
         }
         withAuthentication(userId = ownerId) {
@@ -378,9 +378,11 @@ class OrganizationsApiTest : BaseApiTest() {
                 withSerializedBody(ApiOrganization(name = "my org", isPrivate = false))
             }) {
                 assertEquals(HttpStatusCode.Created, response.status())
-                val uri = response.headers["Location"]
-                assertNotNull(uri)
-                assertEquals(organizationId.toString(), uri.substringAfterLast('/'))
+                val org = response.deserializeContent<processm.services.api.models.Organization>()
+                assertEquals(organizationId, org.id)
+                assertNull(org.parentOrganizationId)
+                assertFalse(org.isPrivate)
+                assertEquals("my org", org.name)
 
                 verify(exactly = 1) { organizationService.create("my org", false, ownerUserId = ownerId) }
             }
