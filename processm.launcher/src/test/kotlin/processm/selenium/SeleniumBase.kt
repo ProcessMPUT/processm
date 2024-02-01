@@ -16,6 +16,7 @@ import org.testcontainers.utility.DockerImageName
 import processm.core.esb.EnterpriseServiceBus
 import processm.core.helpers.loadConfiguration
 import processm.core.persistence.Migrator
+import processm.core.persistence.connection.DatabaseChecker
 import java.time.Duration
 import kotlin.random.Random
 
@@ -143,7 +144,7 @@ abstract class SeleniumBase(
                 override fun run() {
                     loadConfiguration(true)
                     System.setProperty(
-                        "PROCESSM.CORE.PERSISTENCE.CONNECTION.URL",
+                        DatabaseChecker.databaseConnectionURLProperty,
                         "${mainDbContainer.jdbcUrl}&user=${mainDbContainer.username}&password=${mainDbContainer.password}"
                     )
                     Migrator.reloadConfiguration()

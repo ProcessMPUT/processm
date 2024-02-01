@@ -19,6 +19,7 @@ import processm.core.esb.EnterpriseServiceBus
 import processm.core.helpers.loadConfiguration
 import processm.core.log.XMLXESInputStream
 import processm.core.persistence.Migrator
+import processm.core.persistence.connection.DatabaseChecker
 import processm.etl.PostgreSQLEnvironment
 import processm.etl.metamodel.MetaModelDebeziumWatchingService.Companion.DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY
 import processm.services.LocalDateTimeTypeAdapter
@@ -139,7 +140,7 @@ class ProcessMTestingEnvironment {
             loadConfiguration(true)
             properties.forEach { (k, v) -> System.setProperty(k, v) }
             jdbcUrl?.let { jdbcUrl ->
-                System.setProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL", jdbcUrl)
+                System.setProperty(DatabaseChecker.databaseConnectionURLProperty, jdbcUrl)
                 Migrator.reloadConfiguration()
             }
             httpPort = Random.Default.nextInt(1025, 65535)

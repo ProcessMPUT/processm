@@ -8,8 +8,9 @@ import processm.core.helpers.loadConfiguration
 import kotlin.properties.Delegates
 
 object DatabaseChecker {
+    const val databaseConnectionURLProperty = "PROCESSM.CORE.PERSISTENCE.CONNECTION.URL"
     const val jdbcPostgresqlStart = "jdbc:postgresql://"
-    lateinit var baseConnectionURL:String
+    lateinit var baseConnectionURL: String
         private set
     var mainDatabaseName: String by Delegates.notNull()
         private set
@@ -37,7 +38,7 @@ object DatabaseChecker {
      */
     private fun readDatabaseConnectionURL(): String {
         loadConfiguration()
-        return checkNotNull(getPropertyIgnoreCase("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL")) {
+        return checkNotNull(getPropertyIgnoreCase(databaseConnectionURLProperty)) {
             "Database connection string is not set. Set the property processm.core.persistence.connection.URL."
         }
     }
