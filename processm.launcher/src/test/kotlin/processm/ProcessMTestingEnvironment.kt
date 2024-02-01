@@ -252,7 +252,7 @@ class ProcessMTestingEnvironment {
 
     val organizations: List<Organization>
         get() = get<Paths.UserOrganizations, List<Organization>> {
-            return@get body<List<Organization>>().toList()
+            return@get body<List<UserRoleInOrganization>>().map { it.organization }
         }
 
     fun registerUser(userEmail: String, organizationName: String) =
