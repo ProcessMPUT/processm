@@ -13,13 +13,18 @@ import org.junit.jupiter.api.BeforeAll
 import processm.core.communication.Producer
 import processm.core.communication.email.EMAIL_TOPIC
 import processm.core.esb.Artemis
+import processm.core.helpers.loadConfiguration
+import processm.core.persistence.Migrator
+import processm.core.persistence.connection.DatabaseChecker
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.*
+import java.sql.DriverManager
 import java.time.LocalDateTime
 import java.util.*
 import kotlin.test.BeforeTest
 
 abstract class ServiceTestBase {
+
     @BeforeTest
     open fun setUp() {
         MockKAnnotations.init(this, relaxUnitFun = true)
@@ -27,10 +32,22 @@ abstract class ServiceTestBase {
 
     companion object {
         private lateinit var artemis: Artemis
+        private val dbName = "processm-${UUID.randomUUID()}"
 
         @JvmStatic
         @BeforeAll
         fun `start Artemis`() {
+            loadConfiguration(true)
+            DriverManager.getConnection(DatabaseChecker.baseConnectionURL).use { connection ->
+                connection.createStatement().use { stmt ->
+                    stmt.execute("create database \"$dbName\"")
+                }
+            }
+            System.setProperty(
+                DatabaseChecker.databaseConnectionURLProperty,
+                DatabaseChecker.baseConnectionURL.replace("/${DatabaseChecker.mainDatabaseName}", "/$dbName")
+            )
+            Migrator.reloadConfiguration()
             artemis = Artemis()
             artemis.register()
             artemis.start()
@@ -40,6 +57,13 @@ abstract class ServiceTestBase {
         @AfterAll
         fun `stop Artemis`() {
             artemis.stop()
+            loadConfiguration(true)
+            Migrator.reloadConfiguration()
+            DriverManager.getConnection(DatabaseChecker.baseConnectionURL).use { connection ->
+                connection.createStatement().use { stmt ->
+                    stmt.execute("drop database \"$dbName\"")
+                }
+            }
         }
     }
 
