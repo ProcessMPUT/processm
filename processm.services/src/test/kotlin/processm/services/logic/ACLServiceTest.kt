@@ -4,6 +4,7 @@ package processm.services.logic
 import processm.dbmodels.models.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ACLServiceTest : ServiceTestBase() {
@@ -52,5 +53,33 @@ class ACLServiceTest : ServiceTestBase() {
             commit()
             val groups = aclService.getAvailableGroups(urn, user1.id.value).toList()
             assertTrue { groups.isEmpty() }
+        }
+
+    @Test
+    fun `group of the parent organization is available`() =
+        withCleanTables(AccessControlList, Users, Groups, Organizations) {
+            val parent = createOrganization()
+            val child = createOrganization()
+            val user1 = createUser(userEmail = "user1@example.com", organizationId = child.id.value)
+            val group = createGroup(organizationId = parent.id.value)
+            organizationService.attachSubOrganization(parent.id.value, child.id.value)
+            val workspace = workspaceService.create("workspace1", user1.id.value, child.id.value)
+            val urn = aclService.getURN(Workspaces, workspace)
+            val groups = aclService.getAvailableGroups(urn, user1.id.value).toList()
+            assertTrue { groups.any { it.id == group } }
+        }
+
+    @Test
+    fun `group of the child organization is not available`() =
+        withCleanTables(AccessControlList, Users, Groups, Organizations) {
+            val parent = createOrganization()
+            val child = createOrganization()
+            val user1 = createUser(userEmail = "user1@example.com", organizationId = parent.id.value)
+            val group = createGroup(organizationId = child.id.value)
+            organizationService.attachSubOrganization(parent.id.value, child.id.value)
+            val workspace = workspaceService.create("workspace1", user1.id.value, parent.id.value)
+            val urn = aclService.getURN(Workspaces, workspace)
+            val groups = aclService.getAvailableGroups(urn, user1.id.value).toList()
+            assertFalse { groups.any { it.id == group } }
         }
 }

@@ -193,15 +193,21 @@ class ACLService {
             val organizations = (UsersInGroups innerJoin Groups).slice(Groups.organizationId).select {
                 (UsersInGroups.userId eq userId) and Groups.organizationId.isNotNull()
             }
+            // these organizations + their ascendants, i.e., super-organizations
+            val ascendantsOrSelf = OrganizationsDescendants
+                .slice(OrganizationsDescendants.superOrganizationId)
+                .select {
+                    OrganizationsDescendants.subOrganizationId inSubQuery organizations
+                }.union(organizations)
             // groups of these organizations
             val organizationGroups =
-                Groups.slice(Groups.id).select { Groups.organizationId inSubQuery organizations }
+                Groups.slice(Groups.id).select { Groups.organizationId inSubQuery ascendantsOrSelf }
             // all users belonging to these groups
             val usersOfOrganizations1 = UsersInGroups.slice(UsersInGroups.userId)
                 .select { UsersInGroups.groupId inSubQuery organizationGroups }
-            // all users belonging to the organizations according to UsersRolesInOrganizations
+            // all users belonging to the organizations (inc. ascendants) according to UsersRolesInOrganizations
             val usersOfOrganizations2 = UsersRolesInOrganizations.slice(UsersRolesInOrganizations.userId)
-                .select { UsersRolesInOrganizations.organizationId inSubQuery organizations }
+                .select { UsersRolesInOrganizations.organizationId inSubQuery ascendantsOrSelf }
             // private groups of all possibly relevant users
             val userGroups = (UsersInGroups innerJoin Groups).slice(Groups.id)
                 .select { (Groups.isImplicit eq true) and ((UsersInGroups.userId inSubQuery usersOfOrganizations1) or (UsersInGroups.userId inSubQuery usersOfOrganizations2)) }
