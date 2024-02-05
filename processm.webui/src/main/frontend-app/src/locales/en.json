@@ -154,6 +154,7 @@
     "password": "Password",
     "database-name": "Database name",
     "database": "Database",
+    "trust-server-certificate": "Always trust server certificate",
     "connector-not-supported": "Connection string based connectors are not yet supported",
     "validation": {
       "non-empty-field": "The value cannot be empty",
