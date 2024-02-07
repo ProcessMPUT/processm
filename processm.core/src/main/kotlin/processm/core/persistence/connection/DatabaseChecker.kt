@@ -30,11 +30,16 @@ object DatabaseChecker {
             mainDatabaseName = ensureMainDBNameNotUUID()
             val maxConnections = readMaxConnections() ?: error("Cannot read max_connections")
             logger.debug("Read max_connections: $maxConnections")
-            check(maxConnections >= 2) { "The underlying database is configured incorrectly. Increase the max_connections parameter." }
+            check(maxConnections >= 2) { "The underlying database is configured incorrectly. Increase the max_connections parameter. Currently it is set to $maxConnections" }
             val reserved = getPropertyIgnoreCase(reservedConnectionsPropertyName)?.toIntOrNull() ?: 10
             maxPoolSize = maxConnections - reserved
             logger.info("Set max pool size to $maxPoolSize")
-            check(maxPoolSize >= 1) { "Too many connections reserved for other clients. Modify the `max_connections` parameter of the database or the PROCESSM.CORE.PERSISTENCE.CONNECTION.RESERVED configuration property of ProcessM" }
+            check(maxPoolSize >= 1) {
+                """Too many connections reserved for other clients. Modify the `max_connections`
+                |parameter of the database (currently: $maxConnections) or the `PROCESSM.CORE.PERSISTENCE.CONNECTION.RESERVED`
+                |configuration property of ProcessM (currently: $reserved). `max_connections` must exceed
+                |`PROCESSM.CORE.PERSISTENCE.CONNECTION.RESERVED`.""".trimMargin()
+            }
         }
     }
 
