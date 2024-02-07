@@ -2236,6 +2236,10 @@ components:
                   support:
                     type: number
                     format: double
+            alignments:
+              type: array
+              items:
+                type: alignment
     ProcessModelCustomizationData:
       type: object
       properties:
@@ -2341,6 +2345,10 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/DFGEdge'
+            alignments:
+              type: array
+              items:
+                type: alignment
     DFGNode:
       type: object
       required: [ id, label ]
@@ -2503,6 +2511,29 @@ components:
           type: string
         role:
           $ref: '#/components/schemas/OrganizationRole'
+    Alignment:
+      type: object
+      required: [ steps, cost ]
+      properties:
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/Step'
+        cost:
+          type: integer
+    Step:
+      type: object
+      required: [ type ]
+      properties:
+        modelMove:
+          type: object
+        logMove:
+          type: object
+        type:
+          $ref: '#/components/schemas/DeviationType'
+    DeviationType:
+      type: string
+      enum: [ None, LogDeviation, ModelDeviation ]
   responses:
     BadRequest:
       description: Invalid request body

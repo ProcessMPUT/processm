@@ -1,5 +1,5 @@
 // TODO add PetriNet = "petriNet" to ComponentType
-import { AbstractComponent, AlignerKpiReport, ComponentType, CustomProperty } from "@/openapi";
+import { AbstractComponent, AlignerKpiReport, Alignment, ComponentType, CustomProperty } from "@/openapi";
 import { CNetNodeConfig } from "@/components/Graph.vue";
 import { EdgeConfig } from "@antv/g6-core/lib/types";
 
@@ -26,6 +26,7 @@ export abstract class ComponentData {
 export class CNetComponentData extends ComponentData {
   nodes!: Array<CNetNodeConfig>;
   edges!: Array<EdgeConfig>;
+  alignments?: Array<Alignment>;
 
   get isDisplayable() {
     return this.nodes != null && this.edges != null && this.nodes.length > 0;

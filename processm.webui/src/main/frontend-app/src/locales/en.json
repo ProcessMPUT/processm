@@ -14,6 +14,10 @@
     "user-profile": "Profile settings",
     "sign-out": "Sign out"
   },
+  "alignments-dialog": {
+    "title": "Alignments for {name}",
+    "page-hint": "Replays every trace from the given event log on the model shows compatible and deviating moves."
+  },
   "workspace": {
     "default-name": "Workspace",
     "tooltip": {
@@ -33,6 +37,7 @@
       "select": "Select type",
       "no-data": "No data to be displayed",
       "dfg": {
+        "alignments-table": "Show the alignments table",
         "support": "Support"
       },
       "edit": {
@@ -54,6 +59,8 @@
       },
       "flat-log-view": "Flat log view",
       "flat-log": {
+        "log-deviation": "An event in the log not corresponding to the process model",
+        "model-deviation": "An activity in the model not corresponding to the event in the log",
         "no-data": "(no data)"
       }
     }

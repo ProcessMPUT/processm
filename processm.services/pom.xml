@@ -18,7 +18,7 @@
 
     <properties>
         <ktor.version>2.0.3</ktor.version>
-        <openapi-tools.version>6.0.1</openapi-tools.version>
+        <openapi-tools.version>6.6.0</openapi-tools.version>
         <swagger-ui.version>4.12.0</swagger-ui.version>
         <koin.version>3.2.0</koin.version>
         <jargon2.version>1.1.1</jargon2.version>
@@ -52,6 +52,12 @@
                             <typeMappings>
                                 array=kotlin.Array,date-time=java.time.LocalDateTime,DateTime=java.time.LocalDateTime
                             </typeMappings>
+                            <importMappings>
+                                Alignment=processm.conformance.models.alignments.Alignment
+                            </importMappings>
+                            <schemaMappings>
+                                Alignment=processm.conformance.models.alignments.Alignment
+                            </schemaMappings>
                             <instantiationTypes>array=kotlin.Array</instantiationTypes>
                             <output>${project.build.directory}/generated-sources/openapi</output>
                         </configuration>
@@ -193,15 +199,22 @@
         </dependency>
         <dependency>
             <groupId>${project.parent.groupId}</groupId>
+            <artifactId>conformance</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.parent.groupId}</groupId>
             <artifactId>miners</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
+        <!--
         <dependency>
             <groupId>${project.parent.groupId}</groupId>
             <artifactId>webui</artifactId>
             <version>${project.parent.version}</version>
             <scope>runtime</scope>
         </dependency>
+        -->
         <dependency>
             <groupId>${project.parent.groupId}</groupId>
             <artifactId>etl</artifactId>
