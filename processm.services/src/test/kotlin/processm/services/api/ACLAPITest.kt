@@ -35,7 +35,7 @@ class ACLAPITest : BaseApiTest() {
         val urn = URN("urn:processm:db/Table/object")
         val base64urn = Base64.getEncoder().encodeToString(urn.urn.toByteArray())
         val aclService = declareMock<ACLService>()
-        every { aclService.hasPermission(userId, organizationId, urn, RoleType.Owner) } returns true
+        every { aclService.hasPermission(userId, urn, RoleType.Owner) } returns true
         every { aclService.getEntries(urn) } returns listOf(
             mockk {
                 every { this@mockk.urn } returns urn
@@ -68,7 +68,7 @@ class ACLAPITest : BaseApiTest() {
         val urn = URN("urn:processm:db/Table/object")
         val base64urn = Base64.getEncoder().encodeToString(urn.urn.toByteArray())
         val aclService = declareMock<ACLService>()
-        every { aclService.hasPermission(userId, organizationId, urn, RoleType.Owner) } returns false
+        every { aclService.hasPermission(userId, urn, RoleType.Owner) } returns false
         withAuthentication(userId, role = OrganizationRole.reader to organizationId) {
             with(handleRequest(HttpMethod.Get, "/api/acl/$base64urn")) {
                 assertEquals(HttpStatusCode.Forbidden, response.status())
@@ -84,7 +84,7 @@ class ACLAPITest : BaseApiTest() {
         val urn = URN("urn:processm:db/Table/object")
         val base64urn = Base64.getEncoder().encodeToString(urn.urn.toByteArray())
         val aclService = declareMock<ACLService>()
-        every { aclService.hasPermission(userId, organizationId, urn, RoleType.Owner) } returns true
+        every { aclService.hasPermission(userId, urn, RoleType.Owner) } returns true
         every { aclService.addEntry(urn, groupId, RoleType.Reader) } returns mockk { }
         withAuthentication(userId, role = OrganizationRole.owner to organizationId) {
             with(handleRequest(HttpMethod.Post, "/api/acl/$base64urn") {
@@ -104,7 +104,7 @@ class ACLAPITest : BaseApiTest() {
         val urn = URN("urn:processm:db/Table/object")
         val base64urn = Base64.getEncoder().encodeToString(urn.urn.toByteArray())
         val aclService = declareMock<ACLService>()
-        every { aclService.hasPermission(userId, organizationId, urn, RoleType.Owner) } returns true
+        every { aclService.hasPermission(userId, urn, RoleType.Owner) } returns true
         every { aclService.addEntry(urn, groupId, RoleType.Reader) } throws mockk<ExposedSQLException>(relaxed = true)
         withAuthentication(userId, role = OrganizationRole.owner to organizationId) {
             with(handleRequest(HttpMethod.Post, "/api/acl/$base64urn") {
@@ -124,7 +124,7 @@ class ACLAPITest : BaseApiTest() {
         val urn = URN("urn:processm:db/Table/object")
         val base64urn = Base64.getEncoder().encodeToString(urn.urn.toByteArray())
         val aclService = declareMock<ACLService>()
-        every { aclService.hasPermission(userId, organizationId, urn, RoleType.Owner) } returns false
+        every { aclService.hasPermission(userId, urn, RoleType.Owner) } returns false
         every { aclService.addEntry(urn, groupId, RoleType.Reader) } returns mockk { }
         withAuthentication(userId, role = OrganizationRole.owner to organizationId) {
             with(handleRequest(HttpMethod.Post, "/api/acl/$base64urn") {
@@ -144,7 +144,7 @@ class ACLAPITest : BaseApiTest() {
         val urn = URN("urn:processm:db/Table/object")
         val base64urn = Base64.getEncoder().encodeToString(urn.urn.toByteArray())
         val aclService = declareMock<ACLService>()
-        every { aclService.hasPermission(userId, organizationId, urn, RoleType.Owner) } returns true
+        every { aclService.hasPermission(userId, urn, RoleType.Owner) } returns true
         every { aclService.getEntries(urn) } returns listOf(
             mockk {
                 every { this@mockk.urn } returns urn
@@ -174,7 +174,7 @@ class ACLAPITest : BaseApiTest() {
         val urn = URN("urn:processm:db/Table/object")
         val base64urn = Base64.getEncoder().encodeToString(urn.urn.toByteArray())
         val aclService = declareMock<ACLService>()
-        every { aclService.hasPermission(userId, organizationId, urn, RoleType.Owner) } returns false
+        every { aclService.hasPermission(userId, urn, RoleType.Owner) } returns false
         every { aclService.removeEntry(urn, groupId) } returns null
         withAuthentication(userId, role = OrganizationRole.owner to organizationId) {
             with(handleRequest(HttpMethod.Delete, "/api/acl/$base64urn/ace/$groupId")) {
@@ -192,7 +192,7 @@ class ACLAPITest : BaseApiTest() {
         val urn = URN("urn:processm:db/Table/object")
         val base64urn = Base64.getEncoder().encodeToString(urn.urn.toByteArray())
         val aclService = declareMock<ACLService>()
-        every { aclService.hasPermission(userId, organizationId, urn, RoleType.Owner) } returns true
+        every { aclService.hasPermission(userId, urn, RoleType.Owner) } returns true
         every { aclService.getEntries(urn) } returns listOf(
             mockk {
                 every { this@mockk.urn } returns urn
@@ -217,7 +217,7 @@ class ACLAPITest : BaseApiTest() {
         val urn = URN("urn:processm:db/Table/object")
         val base64urn = Base64.getEncoder().encodeToString(urn.urn.toByteArray())
         val aclService = declareMock<ACLService>()
-        every { aclService.hasPermission(userId, organizationId, urn, RoleType.Owner) } returns true
+        every { aclService.hasPermission(userId, urn, RoleType.Owner) } returns true
         every { aclService.getEntries(urn) } returns listOf(
             mockk {
                 every { this@mockk.urn } returns urn
@@ -249,7 +249,7 @@ class ACLAPITest : BaseApiTest() {
         val urn = URN("urn:processm:db/Table/object")
         val base64urn = Base64.getEncoder().encodeToString(urn.urn.toByteArray())
         val aclService = declareMock<ACLService>()
-        every { aclService.hasPermission(userId, organizationId, urn, RoleType.Owner) } returns true
+        every { aclService.hasPermission(userId, urn, RoleType.Owner) } returns true
         every { aclService.getEntries(urn) } returns listOf(
             mockk {
                 every { this@mockk.urn } returns urn
@@ -280,7 +280,7 @@ class ACLAPITest : BaseApiTest() {
         val urn = URN("urn:processm:db/Table/object")
         val base64urn = Base64.getEncoder().encodeToString(urn.urn.toByteArray())
         val aclService = declareMock<ACLService>()
-        every { aclService.hasPermission(userId, organizationId, urn, RoleType.Owner) } returns true
+        every { aclService.hasPermission(userId, urn, RoleType.Owner) } returns true
         every { aclService.getEntries(urn) } returns listOf(
             mockk {
                 every { this@mockk.urn } returns urn

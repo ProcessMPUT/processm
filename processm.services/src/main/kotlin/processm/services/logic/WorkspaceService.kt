@@ -1,8 +1,11 @@
 package processm.services.logic
 
 import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.JoinType
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.statements.BatchUpdateStatement
+import org.jetbrains.exposed.sql.stringLiteral
 import processm.core.communication.Producer
 import processm.core.logging.loggedScope
 import processm.core.persistence.connection.transactionMain
@@ -20,29 +23,27 @@ class WorkspaceService(
     private val producer: Producer
 ) {
     /**
-     * Returns all user workspaces for the specified [userId] in the context of the specified [organizationId].
+     * Returns all user workspaces for the specified [userId]
      */
-    fun getUserWorkspaces(userId: UUID, organizationId: UUID): List<Workspace> =
+    fun getUserWorkspaces(userId: UUID): List<Workspace> =
         transactionMain {
             Workspace.wrapRows(
-                Workspaces.select {
-                    Workspaces.id inSubQuery Groups
-                        .innerJoin(UsersInGroups)
-                        .crossJoin(Workspaces)
-                        .join(AccessControlList, JoinType.INNER, AccessControlList.group_id, Groups.id)
-                        .slice(Workspaces.id)
-                        .select {
-                            (UsersInGroups.userId eq userId) and
-                                    ((Groups.isImplicit eq true) or (Groups.organizationId eq organizationId)) and
-                                    (AccessControlList.urn.column eq concat(
-                                        stringLiteral("urn:processm:db/${Workspaces.tableName}/"),
-                                        Workspaces.id
-                                    )) and
-                                    (AccessControlList.role_id neq RoleType.None.role.id) and
-                                    (Workspaces.deleted eq false)
-                        }
-                }.withDistinct(true)
+                Groups
+                    .innerJoin(UsersInGroups)
+                    .crossJoin(Workspaces)
+                    .join(AccessControlList, JoinType.INNER, AccessControlList.group_id, Groups.id)
+                    .slice(Workspaces.columns)
+                    .select {
+                        (UsersInGroups.userId eq userId) and
+                                (AccessControlList.urn.column eq concat(
+                                    stringLiteral("urn:processm:db/${Workspaces.tableName}/"),
+                                    Workspaces.id
+                                )) and
+                                (AccessControlList.role_id neq RoleType.None.role.id) and
+                                (Workspaces.deleted eq false)
+                    }.withDistinct(true)
             ).toList()
+
         }
 
     /**
@@ -71,10 +72,10 @@ class WorkspaceService(
             return@transactionMain workspace.id.value
         }
 
-    fun update(userId: UUID, organizationId: UUID, workspace: ApiWorkspace) =
+    fun update(userId: UUID, workspace: ApiWorkspace) =
         transactionMain {
             workspace.id.validateNotNull { "Workspace id must not be null." }
-            aclService.checkAccess(userId, organizationId, Workspaces, workspace.id, RoleType.Writer)
+            aclService.checkAccess(userId, Workspaces, workspace.id, RoleType.Writer)
 
             with(Workspace[workspace.id]) {
                 name = workspace.name
@@ -84,9 +85,9 @@ class WorkspaceService(
     /**
      * Removes the specified [workspaceId].
      */
-    fun remove(workspaceId: UUID, userId: UUID, organizationId: UUID): Unit = loggedScope { logger ->
+    fun remove(workspaceId: UUID, userId: UUID): Unit = loggedScope { logger ->
         transactionMain {
-            aclService.checkAccess(userId, organizationId, Workspaces, workspaceId, RoleType.Owner)
+            aclService.checkAccess(userId, Workspaces, workspaceId, RoleType.Owner)
 
             Workspace.findById(workspaceId)
                 .validateNotNull(Reason.ResourceNotFound) { "Workspace $workspaceId is not found." }
@@ -112,9 +113,9 @@ class WorkspaceService(
     /**
      * Returns the specified component [componentId] from the workspace [workspaceId].
      */
-    fun getComponent(componentId: UUID, userId: UUID, organizationId: UUID, workspaceId: UUID): WorkspaceComponent =
+    fun getComponent(componentId: UUID, userId: UUID, workspaceId: UUID): WorkspaceComponent =
         transactionMain {
-            aclService.checkAccess(userId, organizationId, Workspaces, workspaceId, RoleType.Reader)
+            aclService.checkAccess(userId, Workspaces, workspaceId, RoleType.Reader)
 
             WorkspaceComponent.find {
                 (WorkspaceComponents.id eq componentId) and (WorkspaceComponents.deleted eq false)
@@ -124,9 +125,9 @@ class WorkspaceService(
     /**
      * Returns all components in the specified [workspaceId].
      */
-    fun getComponents(workspaceId: UUID, userId: UUID, organizationId: UUID): List<WorkspaceComponent> =
+    fun getComponents(workspaceId: UUID, userId: UUID): List<WorkspaceComponent> =
         transactionMain {
-            aclService.checkAccess(userId, organizationId, Workspaces, workspaceId, RoleType.Reader)
+            aclService.checkAccess(userId, Workspaces, workspaceId, RoleType.Reader)
 
             WorkspaceComponent.find {
                 (WorkspaceComponents.workspaceId eq workspaceId) and (WorkspaceComponents.deleted eq false)
@@ -141,7 +142,6 @@ class WorkspaceService(
         workspaceComponentId: UUID,
         workspaceId: UUID,
         userId: UUID,
-        organizationId: UUID,
         name: String?,
         query: String?,
         dataStore: UUID?,
@@ -151,7 +151,7 @@ class WorkspaceService(
         data: String? = null,
         customProperties: Array<CustomProperty>
     ): Unit = transactionMain {
-        aclService.checkAccess(userId, organizationId, Workspaces, workspaceId, RoleType.Writer)
+        aclService.checkAccess(userId, Workspaces, workspaceId, RoleType.Writer)
 
         val componentAlreadyExists = WorkspaceComponents
             .select { (WorkspaceComponents.id eq workspaceComponentId) and (WorkspaceComponents.deleted eq false) }
@@ -200,9 +200,8 @@ class WorkspaceService(
         workspaceComponentId: UUID,
         workspaceId: UUID,
         userId: UUID,
-        organizationId: UUID,
     ): Unit = transactionMain {
-        aclService.checkAccess(userId, organizationId, Workspaces, workspaceId, RoleType.Writer)
+        aclService.checkAccess(userId, Workspaces, workspaceId, RoleType.Writer)
 
         WorkspaceComponent.findById(workspaceComponentId)
             .validateNotNull(Reason.ResourceNotFound) { "Workspace component is not found." }
@@ -217,10 +216,9 @@ class WorkspaceService(
     fun updateLayout(
         workspaceId: UUID,
         userId: UUID,
-        organizationId: UUID,
         layout: Map<UUID, String>
     ): Unit = transactionMain {
-        aclService.checkAccess(userId, organizationId, Workspaces, workspaceId, RoleType.Reader)
+        aclService.checkAccess(userId, Workspaces, workspaceId, RoleType.Reader)
 
         BatchUpdateStatement(WorkspaceComponents).apply {
             layout.forEach { (componentId, layoutData) ->
