@@ -1,5 +1,5 @@
 import Vue from "vue";
-import DataStore, {DataConnector} from "@/models/DataStore";
+import DataStore, { DataConnector } from "@/models/DataStore";
 import BaseService from "./BaseService";
 import {
   AbstractEtlProcess,
@@ -210,7 +210,9 @@ export default class DataStoreService extends BaseService {
   }
 
   public async changeEtlProcessActivationState(dataStoreId: string, etlProcessId: string, isActive: boolean) {
-    const response = await this.dataStoresApi.patchEtlProcess(DataStoreService.currentOrganizationId, dataStoreId, etlProcessId, { isActive: isActive });
+    const response = await this.dataStoresApi.patchEtlProcess(DataStoreService.currentOrganizationId, dataStoreId, etlProcessId, {
+      isActive: isActive
+    } as AbstractEtlProcess);
 
     return response.status == 204;
   }
@@ -229,7 +231,7 @@ export default class DataStoreService extends BaseService {
     };
     const response = await this.dataStoresApi.createSamplingJdbcEtlProcess(DataStoreService.currentOrganizationId, dataStoreId, data);
 
-    return response.data;
+    return response.data as AbstractEtlProcess;
   }
 
   public async getEtlProcessInfo(dataStoreId: string, etlProcessId: string): Promise<EtlProcessInfo> {

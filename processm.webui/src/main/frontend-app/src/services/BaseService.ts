@@ -25,7 +25,7 @@ export default abstract class BaseService {
     apiClientCtor: new (configuration: Configuration, basePath: string, axios: AxiosInstance) => ApiClient
   ): ApiClient {
     const token = Vue.prototype.$sessionStorage.sessionToken;
-    return new apiClientCtor({ accessToken: token }, this.defaultApiPath, this.axiosInstance);
+    return new apiClientCtor(new Configuration({ accessToken: token }), this.defaultApiPath, this.axiosInstance);
   }
 
   protected get configApi() {

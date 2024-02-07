@@ -1,5 +1,17 @@
 // TODO add PetriNet = "petriNet" to ComponentType
-import { AbstractComponent, AlignerKpiReport, Alignment, ComponentType, CustomProperty } from "@/openapi";
+import {
+  AbstractComponent,
+  AlignerKpiComponent,
+  AlignerKpiReport,
+  Alignment,
+  BPMNComponent,
+  CausalNetComponent,
+  ComponentType,
+  CustomProperty,
+  DirectlyFollowsGraphComponent,
+  KpiComponent,
+  PetriNetComponent
+} from "@/openapi";
 import { CNetNodeConfig } from "@/components/Graph.vue";
 import { EdgeConfig } from "@antv/g6-core/lib/types";
 
@@ -103,36 +115,36 @@ export class WorkspaceComponent {
     // FIXME: customizations like this should be implemented using inheritance
     switch (this.type) {
       case ComponentType.CausalNet: {
-        this.data = new CNetComponentData(init.data ?? {});
+        this.data = new CNetComponentData((init as CausalNetComponent).data ?? {});
         break;
       }
       case ComponentType.Kpi: {
-        this.data = new KpiComponentData(init.data ?? {});
+        this.data = new KpiComponentData((init as KpiComponent).data ?? {});
         break;
       }
       case ComponentType.AlignerKpi: {
-        this.data = new AlignerKpiComponentData(init.data ?? {});
+        this.data = new AlignerKpiComponentData((init as AlignerKpiComponent).data ?? {});
         break;
       }
       case ComponentType.PetriNet: {
-        this.data = new PetriNetComponentData(init.data ?? {});
-        this.customizationData = new ProcessModelCustomizationData(init.customizationData ?? {});
+        this.data = new PetriNetComponentData((init as PetriNetComponent).data ?? {});
+        this.customizationData = new ProcessModelCustomizationData((init as PetriNetComponent).customizationData ?? {});
         break;
       }
       case ComponentType.Bpmn: {
-        this.data = new BPMNComponentData(init.data ?? {});
+        this.data = new BPMNComponentData((init as BPMNComponent).data ?? {});
         break;
       }
       case ComponentType.TreeLogView: {
-        this.data = new TreeLogViewComponentData(init.data ?? {});
+        this.data = new TreeLogViewComponentData({});
         break;
       }
       case ComponentType.FlatLogView: {
-        this.data = new FlatLogViewComponentData(init.data ?? {});
+        this.data = new FlatLogViewComponentData({});
         break;
       }
       case ComponentType.DirectlyFollowsGraph: {
-        this.data = new DirectlyFollowsGraphData(init.data ?? {});
+        this.data = new DirectlyFollowsGraphData((init as DirectlyFollowsGraphComponent).data ?? {});
         break;
       }
     }

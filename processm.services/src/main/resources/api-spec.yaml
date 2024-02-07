@@ -1554,7 +1554,6 @@ paths:
           format: uuid
     get:
       tags:
-        - dataStores
         - logs
       summary: Query logs stored in the specified data store
       operationId: submitLogsQuery
@@ -1592,7 +1591,6 @@ paths:
         - bearerAuth: [ ]
     post:
       tags:
-        - dataStores
         - logs
       summary: Upload new log file to the specified data store
       operationId: uploadLogFile
@@ -2062,6 +2060,7 @@ components:
             $ref: '#/components/schemas/LayoutElement'
     AbstractComponent:
       oneOf:
+        - $ref: '#/components/schemas/Component'
         - $ref: '#/components/schemas/KpiComponent'
         - $ref: '#/components/schemas/AlignerKpiComponent'
         - $ref: '#/components/schemas/CausalNetComponent'
@@ -2074,7 +2073,10 @@ components:
           alignerKpi: '#/components/schemas/AlignerKpiComponent'
           causalNet: '#/components/schemas/CausalNetComponent'
           petriNet: '#/components/schemas/PetriNetComponent'
+          directlyFollowsGraph: '#/components/schemas/DirectlyFollowsGraphComponent'
           bpmn: '#/components/schemas/BPMNComponent'
+          flatLogView: '#/components/schemas/Component'
+          treeLogView: '#/components/schemas/Component'
       type: object
       properties:
         data:
@@ -2329,6 +2331,15 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/BPMNComponentData'
+            customizationData:
+              type: object
+    DirectlyFollowsGraphComponent:
+      allOf:
+        - $ref: '#/components/schemas/Component'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DirectlyFollowsGraphComponentData'
             customizationData:
               type: object
     DirectlyFollowsGraphComponentData:

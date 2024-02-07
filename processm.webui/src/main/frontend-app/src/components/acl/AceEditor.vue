@@ -2,21 +2,19 @@
   <v-dialog v-model="value" @click:outside="cancel" max-width="400">
     <v-card>
       <v-card-title class="headline">
-        {{ $t('acl.ace-dialog-title') }}
+        {{ $t("acl.ace-dialog-title") }}
       </v-card-title>
       <v-card-text>
         <v-container>
           <v-form ref="editor">
             <v-row v-if="groupId == null">
               <v-col>
-                <v-combobox :label="$t('users.group')" v-model="newGroup" :items="availableGroups" item-text="name"
-                            item-value="id"></v-combobox>
+                <v-combobox v-model="newGroup" :items="availableGroups" :label="$t('users.group')" item-text="name" item-value="id"></v-combobox>
               </v-col>
             </v-row>
             <v-row>
               <v-col>
-                <v-select v-model="newRole" :items="roles" item-text="name" item-value="value"
-                          :label="$t('users.role')"></v-select>
+                <v-select v-model="newRole" :items="roles" :label="$t('users.role')" item-text="name" item-value="value"></v-select>
               </v-col>
             </v-row>
           </v-form>
@@ -30,12 +28,7 @@
           {{ $t("common.cancel") }}
         </v-btn>
 
-        <v-btn
-            color="primary"
-            text
-            @click.stop="save"
-            :disabled="newGroup === null && groupId === null"
-        >
+        <v-btn :disabled="newGroup === null && groupId === null" color="primary" text @click.stop="save">
           {{ $t("common.submit") }}
         </v-btn>
       </v-card-actions>
@@ -45,31 +38,31 @@
 
 <script lang="ts">
 import Vue from "vue";
-import {Component, Inject, Prop, Watch} from "vue-property-decorator";
-import {Group, OrganizationRole} from "@/openapi";
+import { Component, Inject, Prop, Watch } from "vue-property-decorator";
+import { Group, OrganizationRole } from "@/openapi";
 import ACLService from "@/services/ACLService";
 import App from "@/App.vue";
 
 @Component({})
 export default class AceEditor extends Vue {
-  @Prop({default: null})
+  @Prop({ default: null })
   readonly groupId!: string | null;
-  @Prop({default: null})
+  @Prop({ default: null })
   readonly role!: OrganizationRole | null;
-  @Prop({default: false})
+  @Prop({ default: false })
   readonly value!: boolean;
-  @Prop({default: null})
+  @Prop({ default: null })
   readonly urn!: string | null;
 
   @Inject() app!: App;
   @Inject() aclService!: ACLService;
 
   newGroup: Group | null = null;
-  newRole = OrganizationRole.None;
+  newRole: OrganizationRole = OrganizationRole.None;
   readonly roles = [OrganizationRole.None, OrganizationRole.Owner, OrganizationRole.Writer, OrganizationRole.Reader].map((r) => ({
-    'name': this.$t(`users.roles.${r}`),
-    'value': r
-  }))
+    name: this.$t(`users.roles.${r}`),
+    value: r
+  }));
 
   availableGroups: Array<Group> = [];
 

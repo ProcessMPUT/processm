@@ -139,7 +139,7 @@ export enum ComponentMode {
 })
 export default class WorkspaceComponent extends Vue {
   @Prop({ default: null })
-  readonly componentDetails?: WorkspaceComponentModel;
+  readonly componentDetails!: WorkspaceComponentModel | null;
   @Prop({ default: false })
   readonly interactive!: boolean;
   @Prop({ default: false })
