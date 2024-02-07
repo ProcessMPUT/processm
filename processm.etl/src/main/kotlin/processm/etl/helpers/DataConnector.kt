@@ -38,7 +38,6 @@ fun getDataSource(connectionProperties: Map<String, String>): DataSource {
             user = connectionProperties["username"]
             setPassword(connectionProperties["password"].orEmpty())
             databaseName = connectionProperties["database"]
-            // TODO expose this in the interface - see #184
             trustServerCertificate = connectionProperties["trustServerCertificate"]?.toBoolean() ?: false
         }
 
