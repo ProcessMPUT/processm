@@ -114,7 +114,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
             assertFailsWith<ValidationException>("The specified workspace does not exist or the user has insufficient permissions to it") {
                 workspaceService.remove(workspaceId2, user.id.value)
             }
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.Unauthorized, exception.reason)
         assertTrue { Workspaces.select { Workspaces.id eq workspaceId }.any() }
         assertTrue { Workspaces.select { Workspaces.id eq workspaceId2 }.any() }
     }
@@ -132,7 +132,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
             assertFailsWith<ValidationException>("The specified workspace does not exist or the user has insufficient permissions to it") {
                 workspaceService.remove(UUID.randomUUID(), UUID.randomUUID())
             }
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.Unauthorized, exception.reason)
         assertTrue { Workspaces.select { Workspaces.id eq workspaceId }.any() }
     }
 
@@ -302,7 +302,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
                     customProperties = emptyArray()
                 )
             }
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.Unauthorized, exception.reason)
     }
 
     @Test
@@ -385,7 +385,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
                 workspaceService.removeComponent(componentId.value, workspaceId, user2.id.value)
             }
 
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.Unauthorized, exception.reason)
         assertTrue {
             WorkspaceComponents.select {
                 WorkspaceComponents.id eq componentId
