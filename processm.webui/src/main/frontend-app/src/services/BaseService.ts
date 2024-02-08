@@ -11,7 +11,7 @@ export default abstract class BaseService {
 
   constructor() {
     this.axiosInstance = axios.create();
-    createAuthRefreshInterceptor(this.axiosInstance, (error) => this.prolongExistingSession(error, this.usersApi));
+    createAuthRefreshInterceptor(this.axiosInstance, this.prolongExistingSession);
     this.axiosInstance.interceptors.response.use(
       (response) => response,
       (error) => {
@@ -56,11 +56,11 @@ export default abstract class BaseService {
     return this.getGenericClient(LogsApi);
   }
 
-  protected prolongExistingSession(failedRequest: AxiosError<object> | undefined, api: UsersApi): Promise<void> {
+  protected prolongExistingSession(failedRequest: AxiosError<object> | undefined): Promise<void> {
     const expiredToken = Vue.prototype.$sessionStorage.sessionToken;
     const getAuthorizationHeaderValue = (token: string) => `Bearer ${token}`;
 
-    return api
+    return new UsersApi()
       .signUserIn(getAuthorizationHeaderValue(expiredToken))
       .then((tokenRefreshResponse) => {
         const newToken = tokenRefreshResponse.data.authorizationToken;
