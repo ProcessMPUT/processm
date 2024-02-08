@@ -1,6 +1,7 @@
 package processm.services.api
 
 import com.google.gson.Gson
+import io.ktor.client.utils.*
 import io.ktor.http.*
 import io.ktor.server.engine.*
 import io.ktor.server.request.*
@@ -30,8 +31,7 @@ import processm.services.logic.ValidationException
 import processm.services.logic.WorkspaceService
 import java.time.Instant
 import java.util.*
-import java.util.concurrent.ConcurrentLinkedDeque
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 import java.util.stream.Stream
 import kotlin.test.*
 
@@ -41,18 +41,23 @@ class WorkspacesApiTest : BaseApiTest() {
     companion object {
 
         val artemis = Artemis()
+        lateinit var pool: CloseableCoroutineDispatcher
+        val Dispatchers.Request: CloseableCoroutineDispatcher
+            get() = pool
 
         @JvmStatic
         @BeforeAll
         fun `start artemis`() {
             artemis.register()
             artemis.start()
+            pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
         }
 
         @JvmStatic
         @AfterAll
         fun `stop artemis`() {
             artemis.stop()
+            pool.close()
         }
     }
 
@@ -674,7 +679,7 @@ class WorkspacesApiTest : BaseApiTest() {
             }
             val sync = Channel<Int>(Channel.UNLIMITED)
             withAuthentication {
-                launch(context = Dispatchers.IO) {
+                launch(context = Dispatchers.Request) {
                     sync.receive()
                     repeat(5) {
                         delay(200L)
@@ -719,7 +724,7 @@ class WorkspacesApiTest : BaseApiTest() {
         withConfiguredTestApplication {
             val sync = Channel<Int>(Channel.UNLIMITED)
             withAuthentication {
-                launch(context = Dispatchers.IO) {
+                launch(context = Dispatchers.Request) {
                     sync.receive()
                     component1.triggerEvent(Producer(), DATA_CHANGE)
                     component2.triggerEvent(Producer(), DATA_CHANGE)
@@ -771,8 +776,7 @@ class WorkspacesApiTest : BaseApiTest() {
     }
 
     @Test
-    @Timeout(60L, unit = TimeUnit.SECONDS)
-    @Ignore("This test randomly fails")
+    @Timeout(10L, unit = TimeUnit.SECONDS)
     fun `five subscriptions from different clients`() {
         val result = ConcurrentLinkedDeque<UUID>()
         val workspaceId = UUID.randomUUID()
@@ -786,7 +790,7 @@ class WorkspacesApiTest : BaseApiTest() {
         withConfiguredTestApplication {
             val sync = Channel<Int>(Channel.UNLIMITED)
             val jobs = (0 until n).map { ctr ->
-                launch(context = Dispatchers.IO) {
+                launch(context = Dispatchers.Request) {
                     withAuthentication(login = "user${ctr}@example.com") {
                         handleSse("/api/organizations/${UUID.randomUUID()}/workspaces/${workspaceId}") { channel ->
                             sync.send(ctr)

@@ -3,6 +3,7 @@ package processm.services.api
 import com.google.common.reflect.TypeToken
 import com.google.gson.GsonBuilder
 import io.ktor.http.*
+import io.ktor.server.application.*
 import io.ktor.server.config.*
 import io.ktor.server.testing.*
 import io.ktor.util.pipeline.*
@@ -12,7 +13,7 @@ import io.mockk.*
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
@@ -113,7 +114,7 @@ abstract class BaseApiTest : KoinTest {
         testLogic(this)
     }
 
-    protected fun TestApplicationEngine.withAuthentication(
+    protected inline fun TestApplicationEngine.withAuthentication(
         userId: UUID = UUID.randomUUID(),
         login: String = "user@example.com",
         password: String = "pass",
@@ -176,7 +177,7 @@ abstract class BaseApiTest : KoinTest {
         }
 
         // Based on https://youtrack.jetbrains.com/issue/KTOR-3290/Improve-support-for-testing-Server-Sent-Events-SSE
-        fun handleSse(
+        suspend fun handleSse(
             uri: String,
             setup: TestApplicationRequest.() -> Unit = {},
             callback: suspend TestApplicationCall.(incoming: ByteReadChannel) -> Unit
@@ -194,7 +195,7 @@ abstract class BaseApiTest : KoinTest {
                 engine.pipeline.execute(call)
             }
 
-            runBlocking(call.coroutineContext) {
+            withContext(call.coroutineContext) {
                 // responseChannelDeferred is internal, so we wait like this.
                 // Ref: https://github.com/ktorio/ktor/blob/c5877a22c91fd693ea6dcd0b4e1924f05d3b6825/ktor-server/ktor-server-test-host/jvm/src/io/ktor/server/testing/TestApplicationEngine.kt#L225-L230
                 var responseChannel: ByteReadChannel?
