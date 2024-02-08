@@ -110,7 +110,7 @@ class DataStoresApiTest : BaseApiTest() {
                 with(
                     handleRequest(
                         HttpMethod.Get,
-                        "/api/organizations/$organizationId/data-stores/$dataStoreId/logs?query=where+log:identity:id=$logIdentityId"
+                        "/api/data-stores/$dataStoreId/logs?query=where+log:identity:id=$logIdentityId"
                     )
                 ) {
                     assertEquals(HttpStatusCode.OK, response.status())
@@ -121,7 +121,7 @@ class DataStoresApiTest : BaseApiTest() {
                     assertEquals(1, map.size)
                     assertEquals("bar", map["foo"])
                 }
-                with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/data-stores/$dataStoreId/logs/$logIdentityId")) {
+                with(handleRequest(HttpMethod.Delete, "/api/data-stores/$dataStoreId/logs/$logIdentityId")) {
                     assertEquals(HttpStatusCode.NoContent, response.status())
                 }
                 with(
