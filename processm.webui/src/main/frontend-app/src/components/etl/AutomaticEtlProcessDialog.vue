@@ -122,8 +122,9 @@ import DataStoreService from "@/services/DataStoreService";
 import App from "@/App.vue";
 import { capitalize } from "@/utils/StringCaseConverter";
 import { notEmptyRule } from "@/utils/FormValidationRules";
-import CaseNotionEditor from "./CaseNotionEditor.vue";
 import { AutomaticEtlProcess, CaseNotion, EtlProcessType, RelationshipGraph, RelationshipGraphEdgesInner } from "@/openapi";
+
+const CaseNotionEditor = () => import("./CaseNotionEditor.vue");
 
 @Component({
   components: {

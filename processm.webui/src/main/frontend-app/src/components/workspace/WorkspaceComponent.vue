@@ -111,14 +111,15 @@ button.v-btn.v-btn.component-name[type="button"] {
 import Vue from "vue";
 import Component from "vue-class-component";
 import { Prop } from "vue-property-decorator"; //import CausalNetComponent from "./causal-net/CausalNetComponent.vue";
-import PetriNetComponent from "./petri-net/PetriNetComponent.vue";
-import KpiComponent from "./KpiComponent.vue";
-import BPMNComponent from "./bpmn/BPMNComponent.vue";
 import { WorkspaceComponent as WorkspaceComponentModel } from "@/models/WorkspaceComponent";
-import TreeLogViewComponent from "@/components/workspace/TreeLogViewComponent.vue";
-import FlatLogViewComponent from "@/components/workspace/FlatLogViewComponent.vue";
-import DirectlyFollowsGraphComponent from "@/components/workspace/DirectlyFollowsGraphComponent.vue";
-import CNetComponent from "@/components/workspace/CNetComponent.vue";
+
+const PetriNetComponent = () => import("./petri-net/PetriNetComponent.vue");
+const KpiComponent = () => import("./KpiComponent.vue");
+const BPMNComponent = () => import("./bpmn/BPMNComponent.vue");
+const TreeLogViewComponent = () => import("@/components/workspace/TreeLogViewComponent.vue");
+const FlatLogViewComponent = () => import("@/components/workspace/FlatLogViewComponent.vue");
+const DirectlyFollowsGraphComponent = () => import("@/components/workspace/DirectlyFollowsGraphComponent.vue");
+const CNetComponent = () => import("@/components/workspace/CNetComponent.vue");
 
 export enum ComponentMode {
   Static,

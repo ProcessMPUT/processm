@@ -40,8 +40,8 @@
     <v-row align="center">
       <v-col align="center">
         <p>
-          Duration: 1&nbsp;January&nbsp;2020 – 31&nbsp;December&nbsp;2023<br />
-          &copy;2020-{{ Math.max(new Date().getFullYear(), 2023) }} Poznan University of Technology, Poland.<br />
+          Duration: 1 January&nbsp;2020 – 30&nbsp;September&nbsp;2024<br />
+          &copy;2020-{{ Math.max(new Date().getFullYear(), 2024) }} Poznan University of Technology, Poland.<br />
           <a href="https://processm.cs.put.poznan.pl">Project home page</a>
           <v-spacer></v-spacer>
           <a href="#/licensing">Software license</a>

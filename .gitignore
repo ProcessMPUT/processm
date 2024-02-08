@@ -9,3 +9,4 @@ processm.core/gen/
 *.DS_Store
 /processm-docker-image.tar
 *dependency-reduced-pom.xml
+/processm.webui/src/main/frontend-app/tsconfig.tsbuildinfo

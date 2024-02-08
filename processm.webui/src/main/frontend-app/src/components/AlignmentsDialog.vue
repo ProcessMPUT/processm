@@ -42,7 +42,7 @@ export default class AlignmentsDialog extends Vue {
   @Prop({ default: "(no-name)" })
   name?: string;
 
-  @Prop({ default: [] })
+  @Prop({ default: () => [] })
   alignments!: Array<Alignment>;
 
   open: boolean = false;

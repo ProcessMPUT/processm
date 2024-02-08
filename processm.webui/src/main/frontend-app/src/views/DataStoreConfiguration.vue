@@ -377,7 +377,6 @@ import { Component, Inject, Prop, Watch } from "vue-property-decorator";
 import DataStoreService from "@/services/DataStoreService";
 import DataStore, { DataConnector } from "@/models/DataStore";
 import AddDataConnectorDialog from "@/components/data-connections/AddDataConnectorDialog.vue";
-import XesDataTable from "@/components/XesDataTable.vue";
 import LogsService from "@/services/LogsService";
 import { waitForRepaint } from "@/utils/waitForRepaint";
 import XesProcessor, { LogItem } from "@/utils/XesProcessor";
@@ -389,9 +388,13 @@ import App from "@/App.vue";
 import JdbcEtlProcessDialog from "@/components/etl/JdbcEtlProcessDialog.vue";
 import ProcessDetailsDialog from "@/components/etl/ProcessDetailsDialog.vue";
 import { EtlProcess, EtlProcessType } from "@/openapi";
+import LogTable from "@/components/LogTable.vue";
+
+const XesDataTable = () => import("@/components/XesDataTable.vue");
 
 @Component({
   components: {
+    LogTable,
     ProcessDetailsDialog,
     JdbcEtlProcessDialog: JdbcEtlProcessDialog,
     AddDataConnectorDialog,
