@@ -5,9 +5,9 @@
         <v-btn icon dark @click="closeConfiguration" name="btn-close-configuration">
           <v-icon>arrow_back</v-icon>
         </v-btn>
-        <v-spacer/>
+        <v-spacer />
         <v-toolbar-title
-        >{{ dataStoreName }}
+          >{{ dataStoreName }}
           <v-tooltip bottom max-width="600px">
             <template v-slot:activator="{ on, attrs }">
               <v-icon color="accent" v-bind="attrs" v-on="on">help</v-icon>
@@ -15,7 +15,7 @@
             <span>{{ $t("data-stores.page-hint") }}</span>
           </v-tooltip>
         </v-toolbar-title>
-        <v-spacer/>
+        <v-spacer />
       </v-toolbar>
 
       <v-expansion-panels flat multiple :value="[0, 1, 2, 3]">
@@ -30,16 +30,16 @@
             <v-simple-table v-show="!isLoadingDataStore">
               <template v-slot:default>
                 <thead>
-                <tr>
-                  <th class="text-left">{{ $t("common.name") }}</th>
-                  <th class="text-left">{{ $t("common.value") }}</th>
-                </tr>
+                  <tr>
+                    <th class="text-left">{{ $t("common.name") }}</th>
+                    <th class="text-left">{{ $t("common.value") }}</th>
+                  </tr>
                 </thead>
                 <tbody>
-                <tr v-for="item in dataStoreSummary" :key="item.field">
-                  <td>{{ item.field }}</td>
-                  <td>{{ item.value }}</td>
-                </tr>
+                  <tr v-for="item in dataStoreSummary" :key="item.field">
+                    <td>{{ item.field }}</td>
+                    <td>{{ item.value }}</td>
+                  </tr>
                 </tbody>
               </template>
             </v-simple-table>
@@ -63,8 +63,7 @@
                         <div v-on="on" class="d-inline-block" @click.stop>
                           <v-btn class="mx-2" color="primary" v-bind="attrs" @click.stop="fileUploadDialog = true">
                             {{ $t("data-stores.upload-xes-file.title") }}
-                            <v-progress-circular v-show="isUploading" :size="20" :width="3" class="ml-2"
-                                                 color="secondary" indeterminate></v-progress-circular>
+                            <v-progress-circular v-show="isUploading" :size="20" :width="3" class="ml-2" color="secondary" indeterminate></v-progress-circular>
                           </v-btn>
                         </div>
                       </template>
@@ -81,22 +80,22 @@
               <v-progress-circular v-show="isLoadingXesLogs" color="primary" indeterminate></v-progress-circular>
             </div>
             <xes-data-table
-                v-show="!isLoadingXesLogs"
-                :items="xesLogItems"
-                :headers="xesLogHeaders"
-                :is-fold="false"
-                :selectable="true"
-                :is-expanded="false"
-                :loading="isLoadingXesLogs"
-                :keep-tree-expand="false"
-                :empty-text="$t('common.no-data')"
-                :disable-pagination="false"
-                :disable-hierarchy="true"
-                :items-per-page="5"
-                :items-per-page-options="[1, 5, -1]"
-                :removable="true"
-                children-prop="_children"
-                @removed="removeLogs"
+              v-show="!isLoadingXesLogs"
+              :items="xesLogItems"
+              :headers="xesLogHeaders"
+              :is-fold="false"
+              :selectable="true"
+              :is-expanded="false"
+              :loading="isLoadingXesLogs"
+              :keep-tree-expand="false"
+              :empty-text="$t('common.no-data')"
+              :disable-pagination="false"
+              :disable-hierarchy="true"
+              :items-per-page="5"
+              :items-per-page-options="[1, 5, -1]"
+              :removable="true"
+              children-prop="_children"
+              @removed="removeLogs"
             />
           </v-expansion-panel-content>
         </v-expansion-panel>
@@ -113,8 +112,7 @@
                 </v-tooltip>
                 <v-fade-transition leave-absolute>
                   <div v-if="open" class="add-button-group">
-                    <v-btn class="mx-2" color="primary" @click.stop="addDataConnectorDialog = true"
-                           name="btn-add-data-connector">
+                    <v-btn class="mx-2" color="primary" @click.stop="addDataConnectorDialog = true" name="btn-add-data-connector">
                       {{ $t("data-stores.add-data-connector") }}
                     </v-btn>
                   </div>
@@ -128,10 +126,10 @@
               <v-progress-circular v-show="isLoadingDataConnectors" color="primary" indeterminate></v-progress-circular>
             </div>
             <v-data-table
-                v-show="!isLoadingDataConnectors"
-                dense
-                show-expand
-                :headers="[
+              v-show="!isLoadingDataConnectors"
+              dense
+              show-expand
+              :headers="[
                 {
                   text: $t('common.name'),
                   value: 'name'
@@ -151,7 +149,7 @@
                   sortable: false
                 }
               ]"
-                :items="dataConnectors"
+              :items="dataConnectors"
             >
               <template v-slot:[`item.lastConnectionStatus`]="{ item }">
                 <v-icon v-if="item.lastConnectionStatus">check_circle_outline</v-icon>
@@ -182,9 +180,7 @@
               <template v-slot:expanded-item="{ headers, item }">
                 <td :colspan="headers.length">
                   <ul v-if="Object.keys(item.properties).length > 0">
-                    <li v-for="(value, name, index) in item.properties" :key="index">
-                      {{ capitalize(name.replace("-", " ")) }}: {{ value }}
-                    </li>
+                    <li v-for="(value, name, index) in item.properties" :key="index">{{ capitalize(name.replace("-", " ")) }}: {{ value }}</li>
                   </ul>
                   <span v-else>
                     {{ $t("data-stores.data-connector-no-properties") }}
@@ -211,38 +207,36 @@
                       <template v-slot:activator="{ on, attrs }">
                         <div v-on="on" class="d-inline-block" @click.stop>
                           <v-btn
-                              color="primary"
-                              class="mx-2"
-                              :disabled="dataConnectors.length == 0"
-                              @click.stop="automaticEtlProcessDialogVisible = true"
-                              v-bind="attrs"
-                              name="btn-add-automatic-etl-process"
+                            color="primary"
+                            class="mx-2"
+                            :disabled="dataConnectors.length == 0"
+                            @click.stop="automaticEtlProcessDialogVisible = true"
+                            v-bind="attrs"
+                            name="btn-add-automatic-etl-process"
                           >
                             {{ $t("data-stores.automatic-etl-process.title") }}
                           </v-btn>
                         </div>
                       </template>
                       <span>{{
-                          dataConnectors.length == 0 ? $t("data-stores.data-connector-required") : $t("data-stores.automatic-etl-process.description")
-                        }}</span>
+                        dataConnectors.length == 0 ? $t("data-stores.data-connector-required") : $t("data-stores.automatic-etl-process.description")
+                      }}</span>
                     </v-tooltip>
                     <v-tooltip bottom>
                       <template v-slot:activator="{ on, attrs }">
                         <div v-on="on" class="d-inline-block" @click.stop>
                           <v-btn
-                              color="primary"
-                              class="mx-2"
-                              :disabled="dataConnectors.length == 0"
-                              @click.stop="jdbcEtlProcessDialogVisible = true"
-                              v-bind="attrs"
+                            color="primary"
+                            class="mx-2"
+                            :disabled="dataConnectors.length == 0"
+                            @click.stop="jdbcEtlProcessDialogVisible = true"
+                            v-bind="attrs"
                           >
                             {{ $t("data-stores.jdbc-etl-process.title") }}
                           </v-btn>
                         </div>
                       </template>
-                      <span>{{
-                          dataConnectors.length == 0 ? $t("data-stores.data-connector-required") : $t("data-stores.jdbc-etl-process.description")
-                        }}</span>
+                      <span>{{ dataConnectors.length == 0 ? $t("data-stores.data-connector-required") : $t("data-stores.jdbc-etl-process.description") }}</span>
                     </v-tooltip>
                   </div>
                   <span v-else> ({{ etlProcesses.length }}) </span>
@@ -255,9 +249,9 @@
               <v-progress-circular v-show="isLoadingEtlProcesses" color="primary" indeterminate></v-progress-circular>
             </div>
             <v-data-table
-                v-show="!isLoadingEtlProcesses"
-                dense
-                :headers="[
+              v-show="!isLoadingEtlProcesses"
+              dense
+              :headers="[
                 {
                   text: $t('common.name'),
                   value: 'name'
@@ -281,7 +275,7 @@
                   sortable: false
                 }
               ]"
-                :items="etlProcesses"
+              :items="etlProcesses"
             >
               <template v-slot:[`item.actions`]="{ item }">
                 <v-tooltip bottom>
@@ -328,46 +322,45 @@
       </v-expansion-panels>
     </v-card>
     <add-data-connector-dialog
-        v-model="addDataConnectorDialog"
-        :data-store-id="dataStoreId"
-        @cancelled="addDataConnectorDialog = false"
-        @submitted="addDataConnector"
+      v-model="addDataConnectorDialog"
+      :data-store-id="dataStoreId"
+      @cancelled="addDataConnectorDialog = false"
+      @submitted="addDataConnector"
     />
     <automatic-etl-process-dialog
-        v-model="automaticEtlProcessDialogVisible"
-        :data-store-id="dataStoreId"
-        :data-connectors="dataConnectors"
-        :initial-config="etlProcessToEdit"
-        @cancelled="
+      v-model="automaticEtlProcessDialogVisible"
+      :data-store-id="dataStoreId"
+      :data-connectors="dataConnectors"
+      :initial-config="etlProcessToEdit"
+      @cancelled="
         automaticEtlProcessDialogVisible = false;
         etlProcessToEdit = null;
       "
-        @submitted="handleEtlProcessChange"
+      @submitted="handleEtlProcessChange"
     />
-    <file-upload-dialog v-model="fileUploadDialog" :sizeLimit="fileSizeLimit" @cancelled="fileUploadDialog = false"
-                        @submitted="submitFile"/>
+    <file-upload-dialog v-model="fileUploadDialog" :sizeLimit="fileSizeLimit" @cancelled="fileUploadDialog = false" @submitted="submitFile" />
     <rename-dialog
-        :value="dataConnectorIdToRename != null"
-        :old-name="dataConnectorNameToRename"
-        @cancelled="dataConnectorIdToRename = null"
-        @submitted="renameDataConnector"
+      :value="dataConnectorIdToRename != null"
+      :old-name="dataConnectorNameToRename"
+      @cancelled="dataConnectorIdToRename = null"
+      @submitted="renameDataConnector"
     />
     <jdbc-etl-process-dialog
-        v-model="jdbcEtlProcessDialogVisible"
-        :data-store-id="dataStoreId"
-        :dataConnectors="dataConnectors"
-        :initial-config="etlProcessToEdit"
-        @cancelled="
+      v-model="jdbcEtlProcessDialogVisible"
+      :data-store-id="dataStoreId"
+      :dataConnectors="dataConnectors"
+      :initial-config="etlProcessToEdit"
+      @cancelled="
         jdbcEtlProcessDialogVisible = false;
         etlProcessToEdit = null;
       "
-        @submitted="handleEtlProcessChange"
+      @submitted="handleEtlProcessChange"
     />
     <process-details-dialog
-        :value="processDetailsDialogEtlProcess !== null"
-        :data-store-id="dataStoreId"
-        :etl-process="processDetailsDialogEtlProcess"
-        @cancelled="processDetailsDialogEtlProcess = null"
+      :value="processDetailsDialogEtlProcess !== null"
+      :data-store-id="dataStoreId"
+      :etl-process="processDetailsDialogEtlProcess"
+      @cancelled="processDetailsDialogEtlProcess = null"
     ></process-details-dialog>
   </v-dialog>
 </template>
@@ -380,22 +373,22 @@
 
 <script lang="ts">
 import Vue from "vue";
-import {Component, Inject, Prop, Watch} from "vue-property-decorator";
+import { Component, Inject, Prop, Watch } from "vue-property-decorator";
 import DataStoreService from "@/services/DataStoreService";
-import DataStore, {DataConnector} from "@/models/DataStore";
+import DataStore, { DataConnector } from "@/models/DataStore";
 import AddDataConnectorDialog from "@/components/data-connections/AddDataConnectorDialog.vue";
 import XesDataTable from "@/components/XesDataTable.vue";
 import LogsService from "@/services/LogsService";
-import {waitForRepaint} from "@/utils/waitForRepaint";
-import XesProcessor, {LogItem} from "@/utils/XesProcessor";
+import { waitForRepaint } from "@/utils/waitForRepaint";
+import XesProcessor, { LogItem } from "@/utils/XesProcessor";
 import FileUploadDialog from "@/components/FileUploadDialog.vue";
 import RenameDialog from "@/components/RenameDialog.vue";
 import AutomaticEtlProcessDialog from "@/components/etl/AutomaticEtlProcessDialog.vue";
-import {capitalize} from "@/utils/StringCaseConverter";
+import { capitalize } from "@/utils/StringCaseConverter";
 import App from "@/App.vue";
 import JdbcEtlProcessDialog from "@/components/etl/JdbcEtlProcessDialog.vue";
 import ProcessDetailsDialog from "@/components/etl/ProcessDetailsDialog.vue";
-import {EtlProcess, EtlProcessType} from "@/openapi";
+import { EtlProcess, EtlProcessType } from "@/openapi";
 
 @Component({
   components: {
@@ -432,10 +425,10 @@ export default class DataStoreConfiguration extends Vue {
   processDetailsDialogEtlProcess: EtlProcess | null = null;
   etlProcessToEdit: EtlProcess | null = null;
 
-  @Prop({default: false})
+  @Prop({ default: false })
   readonly value!: boolean;
 
-  @Prop({default: null})
+  @Prop({ default: null })
   readonly dataStoreId!: string | null;
 
   private readonly getLogsQuery = "select log:concept:name, log:identity:id, log:lifecycle:model";
@@ -443,7 +436,7 @@ export default class DataStoreConfiguration extends Vue {
 
   get dataStoreSummary() {
     return this.dataStore != null
-        ? [
+      ? [
           {
             field: "ID",
             value: this.dataStore.id
@@ -461,7 +454,7 @@ export default class DataStoreConfiguration extends Vue {
             value: `${this.dataStore?.size != null ? (this.dataStore.size / 1024 / 1024).toFixed(2) : "?"} MB`
           }
         ]
-        : [];
+      : [];
   }
 
   get dataConnectorNameToRename(): string | null {
@@ -512,11 +505,11 @@ export default class DataStoreConfiguration extends Vue {
   async removeLogs(logsIds: string[]) {
     try {
       await Promise.all(
-          logsIds.map(async (logId) => {
-            if (this.dataStoreId == null) return;
+        logsIds.map(async (logId) => {
+          if (this.dataStoreId == null) return;
 
-            await this.logsService.removeLog(this.dataStoreId, logId);
-          })
+          await this.logsService.removeLog(this.dataStoreId, logId);
+        })
       );
       this.displaySuccessfulRemovalMessage();
       await this.loadXesLogs();
@@ -535,7 +528,7 @@ export default class DataStoreConfiguration extends Vue {
       const queryResults = await this.logsService.submitUserQuery(this.dataStoreId, this.getLogsQuery);
 
       await waitForRepaint(async () => {
-        const {headers, logItems} = this.xesProcessor.extractLogItemsFromLogScope(queryResults);
+        const { headers, logItems } = this.xesProcessor.extractLogItemsFromLogScope(queryResults);
         this.xesLogHeaders = headers;
 
         for (const item of logItems) {
@@ -583,13 +576,13 @@ export default class DataStoreConfiguration extends Vue {
   async renameDataConnector(newName: string) {
     try {
       if (
-          this.dataStoreId != null &&
-          this.dataConnectorIdToRename != null &&
-          (await this.dataStoreService.updateDataConnector(this.dataStoreId, this.dataConnectorIdToRename, {
-            id: this.dataConnectorIdToRename,
-            name: newName,
-            properties: {}
-          }))
+        this.dataStoreId != null &&
+        this.dataConnectorIdToRename != null &&
+        (await this.dataStoreService.updateDataConnector(this.dataStoreId, this.dataConnectorIdToRename, {
+          id: this.dataConnectorIdToRename,
+          name: newName,
+          properties: {}
+        }))
       ) {
         const dataConnector = this.dataConnectors.find((dataConnector) => dataConnector.id == this.dataConnectorIdToRename);
 
@@ -606,12 +599,12 @@ export default class DataStoreConfiguration extends Vue {
     if (this.dataStoreId == null) return;
 
     const isRemovalConfirmed = await this.$confirm(
-        `${this.$t("data-stores.data-connector-removal-confirmation", {
-          dataConnectorName: dataConnector.name
-        })}`,
-        {
-          title: `${this.$t("common.warning")}`
-        }
+      `${this.$t("data-stores.data-connector-removal-confirmation", {
+        dataConnectorName: dataConnector.name
+      })}`,
+      {
+        title: `${this.$t("common.warning")}`
+      }
     );
 
     if (!isRemovalConfirmed) return;
@@ -646,12 +639,12 @@ export default class DataStoreConfiguration extends Vue {
     if (this.dataStoreId == null) return;
 
     const isRemovalConfirmed = await this.$confirm(
-        `${this.$t("data-stores.etl.removal-confirmation", {
-          etlProcessName: etlProcess.name
-        })}`,
-        {
-          title: `${this.$t("common.warning")}`
-        }
+      `${this.$t("data-stores.etl.removal-confirmation", {
+        etlProcessName: etlProcess.name
+      })}`,
+      {
+        title: `${this.$t("common.warning")}`
+      }
     );
 
     if (!isRemovalConfirmed) return;
@@ -681,15 +674,15 @@ export default class DataStoreConfiguration extends Vue {
     if (this.dataStoreId == null) return;
 
     const isConfirmed =
-        !etlProcess.isActive ||
-        (await this.$confirm(
-            `${this.$t("data-stores.etl.deactivation-confirmation", {
-              etlProcessName: etlProcess.name
-            })}`,
-            {
-              title: `${this.$t("common.warning")}`
-            }
-        ));
+      !etlProcess.isActive ||
+      (await this.$confirm(
+        `${this.$t("data-stores.etl.deactivation-confirmation", {
+          etlProcessName: etlProcess.name
+        })}`,
+        {
+          title: `${this.$t("common.warning")}`
+        }
+      ));
 
     if (!isConfirmed) return;
 

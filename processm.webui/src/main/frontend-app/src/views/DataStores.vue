@@ -1,7 +1,7 @@
 <template>
   <v-container :fluid="true">
     <v-data-table
-        :headers="[
+      :headers="[
         {
           text: $t('common.name'),
           value: 'name',
@@ -18,9 +18,9 @@
           sortable: false
         }
       ]"
-        :items="dataStores"
-        :loading="loading"
-        item-key="id"
+      :items="dataStores"
+      :loading="loading"
+      item-key="id"
     >
       <template v-slot:top>
         <v-toolbar flat>
@@ -44,8 +44,7 @@
               <v-card-title>{{ $t("common.add-new") }}</v-card-title>
               <v-card-text>
                 <v-form>
-                  <v-text-field v-model="newName" name="new-name" :hint="$t('data-stores.name-hint')"
-                                :label="$t('common.name')" type="text"></v-text-field>
+                  <v-text-field v-model="newName" name="new-name" :hint="$t('data-stores.name-hint')" :label="$t('common.name')" type="text"></v-text-field>
                 </v-form>
               </v-card-text>
               <v-card-actions>
@@ -96,19 +95,13 @@
         </v-tooltip>
       </template>
     </v-data-table>
-    <data-store-configuration :data-store-id="dataStoreIdToConfigure" :value="dataStoreIdToConfigure != null"
-                              @closed="closeDataStoreConfiguration"/>
-    <acl-dialog
-        :value="dataStoreUrn != null"
-        :urn="dataStoreUrn"
-        @closed="dataStoreUrn = null"
-        :force-view-only="false"
-    />
+    <data-store-configuration :data-store-id="dataStoreIdToConfigure" :value="dataStoreIdToConfigure != null" @closed="closeDataStoreConfiguration" />
+    <acl-dialog :value="dataStoreUrn != null" :urn="dataStoreUrn" @closed="dataStoreUrn = null" :force-view-only="false" />
     <rename-dialog
-        :value="dataStoreIdToRename != null"
-        :old-name="dataStoreNameToRename"
-        @cancelled="dataStoreIdToRename = null"
-        @submitted="renameDataStore"
+      :value="dataStoreIdToRename != null"
+      :old-name="dataStoreNameToRename"
+      @cancelled="dataStoreIdToRename = null"
+      @submitted="renameDataStore"
     />
   </v-container>
 </template>
@@ -120,7 +113,7 @@
 
 <script lang="ts">
 import Vue from "vue";
-import {Component, Inject} from "vue-property-decorator";
+import { Component, Inject } from "vue-property-decorator";
 import DataStoreService from "@/services/DataStoreService";
 import DataStore from "@/models/DataStore";
 import DataStoreConfiguration from "@/views/DataStoreConfiguration.vue";
@@ -129,7 +122,7 @@ import App from "@/App.vue";
 import AclDialog from "@/components/acl/AclDialog.vue";
 
 @Component({
-  components: {AclDialog, DataStoreConfiguration, RenameDialog}
+  components: { AclDialog, DataStoreConfiguration, RenameDialog }
 })
 export default class DataStores extends Vue {
   @Inject() app!: App;
@@ -165,11 +158,11 @@ export default class DataStores extends Vue {
   async renameDataStore(newName: string) {
     try {
       if (
-          this.dataStoreIdToRename != null &&
-          (await this.dataStoreService.updateDataStore(this.dataStoreIdToRename, {
-            id: this.dataStoreIdToRename,
-            name: newName
-          }))
+        this.dataStoreIdToRename != null &&
+        (await this.dataStoreService.updateDataStore(this.dataStoreIdToRename, {
+          id: this.dataStoreIdToRename,
+          name: newName
+        }))
       ) {
         const dataStore = this.dataStores.find((dataStore) => dataStore.id == this.dataStoreIdToRename);
 
@@ -183,12 +176,12 @@ export default class DataStores extends Vue {
 
   async removeDataStore(dataStore: DataStore) {
     const isRemovalConfirmed = await this.$confirm(
-        `${this.$t("data-stores.removal-confirmation", {
-          dataStoreName: dataStore.name
-        })}`,
-        {
-          title: `${this.$t("common.warning")}`
-        }
+      `${this.$t("data-stores.removal-confirmation", {
+        dataStoreName: dataStore.name
+      })}`,
+      {
+        title: `${this.$t("common.warning")}`
+      }
     );
 
     if (!isRemovalConfirmed) return;
