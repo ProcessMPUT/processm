@@ -32,6 +32,11 @@
         :label="$t('add-data-connector-dialog.database')"
         required
       ></v-text-field>
+      <v-checkbox
+        v-model="value['trustServerCertificate']"
+        :label="$t('add-data-connector-dialog.trust-server-certificate')"
+        required>
+      </v-checkbox>
     </template>
   </sql-connection-configuration>
 </template>
