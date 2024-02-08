@@ -40,23 +40,19 @@ fun Route.DataStoresApi() {
             val messageBody = call.receiveOrNull<DataStore>()
                 ?: throw ApiException("The provided data store data cannot be parsed")
 
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
-
             if (messageBody.name.isEmpty()) throw ApiException("Data store name needs to be specified")
             val ds =
                 dataStoreService.createDataStore(
                     userId = principal.userId,
-                    organizationId = pathParams.organizationId,
                     name = messageBody.name
                 )
             call.respond(HttpStatusCode.Created, DataStore(name = ds.name, id = ds.id.value))
         }
 
-        get<Paths.DataStores> { pathParams ->
+        get<Paths.DataStores> {
             val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
-            val dataStores = dataStoreService.allByOrganizationId(organizationId = pathParams.organizationId).map {
-                DataStore(it.name, it.id, null, it.creationDate)
+            val dataStores = dataStoreService.getUserDataStores(principal.userId).map {
+                DataStore(it.name, it.id.value, null, it.creationDate)
             }.toTypedArray()
 
             call.respond(HttpStatusCode.OK, dataStores)
@@ -76,7 +72,7 @@ fun Route.DataStoresApi() {
                 HttpStatusCode.OK,
                 DataStore(
                     dataStore.name,
-                    dataStore.id,
+                    dataStore.id.value,
                     dataStoreSize.toInt(),
                     dataStore.creationDate
                 )
@@ -85,7 +81,6 @@ fun Route.DataStoresApi() {
 
         delete<Paths.DataStore> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
@@ -98,7 +93,6 @@ fun Route.DataStoresApi() {
 
         patch<Paths.DataStore> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
@@ -191,7 +185,6 @@ fun Route.DataStoresApi() {
 
         get<Paths.DataConnectors> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
@@ -212,7 +205,6 @@ fun Route.DataStoresApi() {
 
         post<Paths.DataConnectors> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
@@ -245,7 +237,6 @@ fun Route.DataStoresApi() {
 
         delete<Paths.DataConnector> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
@@ -258,7 +249,6 @@ fun Route.DataStoresApi() {
 
         patch<Paths.DataConnector> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
@@ -277,7 +267,6 @@ fun Route.DataStoresApi() {
 
         post<Paths.ConnectionTest> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
@@ -299,7 +288,6 @@ fun Route.DataStoresApi() {
 
         get<Paths.CaseNotionSuggestions> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
@@ -317,7 +305,6 @@ fun Route.DataStoresApi() {
 
         get<Paths.RelationshipGraph> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
@@ -334,7 +321,6 @@ fun Route.DataStoresApi() {
 
         get<Paths.EtlProcesses> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
@@ -351,7 +337,6 @@ fun Route.DataStoresApi() {
 
         post<Paths.EtlProcesses> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
@@ -402,7 +387,6 @@ fun Route.DataStoresApi() {
 
         patch<Paths.EtlProcess> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
@@ -422,7 +406,6 @@ fun Route.DataStoresApi() {
 
         put<Paths.EtlProcess> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
@@ -466,7 +449,6 @@ fun Route.DataStoresApi() {
 
         get<Paths.EtlProcess> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
@@ -487,7 +469,6 @@ fun Route.DataStoresApi() {
 
         delete<Paths.EtlProcess> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
@@ -500,7 +481,6 @@ fun Route.DataStoresApi() {
 
         post<Paths.SamplingEtlProcess> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,

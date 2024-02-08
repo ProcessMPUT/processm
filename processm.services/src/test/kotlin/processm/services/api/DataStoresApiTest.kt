@@ -83,7 +83,7 @@ class DataStoresApiTest : BaseApiTest() {
                 with(
                     handleRequest(
                         HttpMethod.Post,
-                        "/api/organizations/$organizationId/data-stores/$dataStoreId/sampling-etl-processes/"
+                        "/api/data-stores/$dataStoreId/sampling-etl-processes/"
                     ) {
                         withSerializedBody(process)
                     }
@@ -99,7 +99,7 @@ class DataStoresApiTest : BaseApiTest() {
                 with(
                     handleRequest(
                         HttpMethod.Get,
-                        "/api/organizations/$organizationId/data-stores/$dataStoreId/etl-processes/$etlProcessId"
+                        "/api/data-stores/$dataStoreId/etl-processes/$etlProcessId"
                     )
                 ) {
                     assertEquals(HttpStatusCode.OK, response.status())
@@ -127,7 +127,7 @@ class DataStoresApiTest : BaseApiTest() {
                 with(
                     handleRequest(
                         HttpMethod.Delete,
-                        "/api/organizations/$organizationId/data-stores/$dataStoreId/etl-processes/$etlProcessId"
+                        "/api/data-stores/$dataStoreId/etl-processes/$etlProcessId"
                     )
                 ) {
                     assertEquals(HttpStatusCode.NoContent, response.status())

@@ -86,7 +86,7 @@ class DataStoresACLTest : SeleniumBase() {
     @Test
     fun `user 2 doesn't see the created data stores`() {
         iam(email2, "goto-data-stores")
-        Thread.sleep(2000)
+        waitForText("No data available")
         assertThrows<org.openqa.selenium.NoSuchElementException> { byText(dataStores[0]) }
         assertThrows<org.openqa.selenium.NoSuchElementException> { byText(dataStores[1]) }
         assertThrows<org.openqa.selenium.NoSuchElementException> { byText(dataStores[2]) }
@@ -111,6 +111,17 @@ class DataStoresACLTest : SeleniumBase() {
         acknowledgeSnackbar("info")
         wait.until {
             driver.findElements(By.xpath("//td[text()[contains(.,'$email2')]]")).isNotEmpty()
+        }
+    }
+
+    @Order(75)
+    @Test
+    fun `user 1 adds shared group to all datastores as a reader`() {
+        iam(email1, "goto-data-stores")
+        for (ds in dataStores) {
+            openACLEditor(ds)
+            addACE(organization, "Reader", "Czytelnik")
+            closeACLEditor()
         }
     }
 
@@ -160,18 +171,6 @@ class DataStoresACLTest : SeleniumBase() {
             acknowledgeSnackbar("error")
         }
     }
-
-    @Order(90)
-    @Test
-    fun `user 2 cannot configure any of the datastores`() {
-        iam(email2, "goto-data-stores")
-        for (dataStoreId in dataStores) {
-            clickButtonInRow(dataStoreId, "btn-configure-data-store")
-            acknowledgeSnackbar("error")
-            click("btn-close-configuration")
-        }
-    }
-
 
     @Order(125)
     @Test

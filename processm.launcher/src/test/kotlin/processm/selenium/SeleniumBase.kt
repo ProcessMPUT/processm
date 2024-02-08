@@ -268,7 +268,8 @@ abstract class SeleniumBase(
     private fun shutdownSelenium() {
         recorder?.take()
         recorder?.finish()
-        driver.close()
+        if (headless)
+            driver.close()
     }
 
     @AfterAll

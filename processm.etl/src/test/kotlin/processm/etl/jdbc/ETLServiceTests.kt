@@ -209,10 +209,6 @@ OFFSET ?::bigint
                 DataStore.new(dataStoreId.toUUID()) {
                     name = "Temporary data store for tests"
                     creationDate = LocalDateTime.now()
-                    organization = Organization.all().firstOrNull() ?: Organization.new {
-                        name = "Test organization"
-                        isPrivate = true
-                    }
                 }
             }
         }

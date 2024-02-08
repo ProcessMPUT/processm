@@ -1,5 +1,5 @@
 import Vue from "vue";
-import DataStore, {DataConnector} from "@/models/DataStore";
+import DataStore, { DataConnector } from "@/models/DataStore";
 import BaseService from "./BaseService";
 import {
   AbstractEtlProcess,
@@ -17,12 +17,8 @@ import {
 import JdbcEtlProcessConfiguration from "@/models/JdbcEtlProcessConfiguration";
 
 export default class DataStoreService extends BaseService {
-  private static get currentOrganizationId() {
-    return Vue.prototype.$sessionStorage.currentOrganization.id;
-  }
-
   public async getAll(): Promise<Array<DataStore>> {
-    const response = await this.dataStoresApi.getDataStores(DataStoreService.currentOrganizationId);
+    const response = await this.dataStoresApi.getDataStores();
 
     const dataStores = response.data.reduce((dataStores: DataStore[], dataStore: ApiDataStore) => {
       if (dataStore.id != null) {
@@ -44,7 +40,7 @@ export default class DataStoreService extends BaseService {
   }
 
   public async getDataStore(dataStoreId: string): Promise<DataStore> {
-    const response = await this.dataStoresApi.getDataStore(DataStoreService.currentOrganizationId, dataStoreId);
+    const response = await this.dataStoresApi.getDataStore(dataStoreId);
 
     const dataStore = response.data;
 
@@ -59,7 +55,7 @@ export default class DataStoreService extends BaseService {
   }
 
   public async createDataStore(name: string): Promise<DataStore> {
-    const response = await this.dataStoresApi.createDataStore(DataStoreService.currentOrganizationId, {
+    const response = await this.dataStoresApi.createDataStore({
       name: name
     });
 
@@ -75,19 +71,19 @@ export default class DataStoreService extends BaseService {
   }
 
   public async updateDataStore(dataStoreId: string, dataStore: DataStore) {
-    const response = await this.dataStoresApi.updateDataStore(DataStoreService.currentOrganizationId, dataStoreId, dataStore);
+    const response = await this.dataStoresApi.updateDataStore(dataStoreId, dataStore);
 
     return response.status == 204;
   }
 
   public async removeDataStore(dataStoreId: string): Promise<void> {
-    await this.dataStoresApi.deleteDataStore(DataStoreService.currentOrganizationId, dataStoreId, {
+    await this.dataStoresApi.deleteDataStore(dataStoreId, {
       validateStatus: (status: number) => [204, 404].indexOf(status) >= 0
     });
   }
 
   public async getDataConnectors(dataStoreId: string): Promise<Array<DataConnector>> {
-    const response = await this.dataStoresApi.getDataConnectors(DataStoreService.currentOrganizationId, dataStoreId);
+    const response = await this.dataStoresApi.getDataConnectors(dataStoreId);
 
     return response.data.reduce((dataConnectors: DataConnector[], dataConnector: ApiDataConnector) => {
       if (dataConnector.id != null) {
@@ -105,7 +101,7 @@ export default class DataStoreService extends BaseService {
   }
 
   public async createDataConnector(dataStoreId: string, dataConnectorName: string, dataConnectorConfiguration: Record<string, string>): Promise<DataConnector> {
-    const response = await this.dataStoresApi.createDataConnector(DataStoreService.currentOrganizationId, dataStoreId, {
+    const response = await this.dataStoresApi.createDataConnector(dataStoreId, {
       name: dataConnectorName,
       properties: dataConnectorConfiguration
     });
@@ -123,23 +119,23 @@ export default class DataStoreService extends BaseService {
   }
 
   public async updateDataConnector(dataStoreId: string, dataConnectorId: string, dataConnector: DataConnector) {
-    const response = await this.dataStoresApi.updateDataConnector(DataStoreService.currentOrganizationId, dataStoreId, dataConnectorId, dataConnector);
+    const response = await this.dataStoresApi.updateDataConnector(dataStoreId, dataConnectorId, dataConnector);
 
     return response.status == 204;
   }
 
   public async removeDataConnector(dataStoreId: string, dataConnectorId: string): Promise<void> {
-    await this.dataStoresApi.deleteDataConnector(DataStoreService.currentOrganizationId, dataStoreId, dataConnectorId, {
+    await this.dataStoresApi.deleteDataConnector(dataStoreId, dataConnectorId, {
       validateStatus: (status: number) => [204, 404].indexOf(status) >= 0
     });
   }
 
   public async testDataConnector(dataStoreId: string, dataConnectorConfiguration: Record<string, string>): Promise<void> {
-    await this.dataStoresApi.testDataConnector(DataStoreService.currentOrganizationId, dataStoreId, { properties: dataConnectorConfiguration });
+    await this.dataStoresApi.testDataConnector(dataStoreId, { properties: dataConnectorConfiguration });
   }
 
   public async getCaseNotionSuggestions(dataStoreId: string, dataConnectorId: string): Promise<CaseNotion[]> {
-    const response = await this.dataStoresApi.getCaseNotionSuggestions(DataStoreService.currentOrganizationId, dataStoreId, dataConnectorId);
+    const response = await this.dataStoresApi.getCaseNotionSuggestions(dataStoreId, dataConnectorId);
 
     return response.data.reduce((caseNotions: CaseNotion[], caseNotion: ApiCaseNotion) => {
       if (caseNotion != null) {
@@ -151,13 +147,13 @@ export default class DataStoreService extends BaseService {
   }
 
   public async getRelationshipGraph(dataStoreId: string, dataConnectorId: string): Promise<RelationshipGraph> {
-    const response = await this.dataStoresApi.getRelationshipGraph(DataStoreService.currentOrganizationId, dataStoreId, dataConnectorId);
+    const response = await this.dataStoresApi.getRelationshipGraph(dataStoreId, dataConnectorId);
 
     return response.data;
   }
 
   public async getEtlProcesses(dataStoreId: string): Promise<EtlProcess[]> {
-    const response = await this.dataStoresApi.getEtlProcesses(DataStoreService.currentOrganizationId, dataStoreId);
+    const response = await this.dataStoresApi.getEtlProcesses(dataStoreId);
 
     const etlProcesses = response.data.reduce((etlProcesses: EtlProcess[], etlProcess: ApiEtlProcess) => {
       if (etlProcess.dataConnectorId == null || etlProcess.type == null) {
@@ -201,16 +197,16 @@ export default class DataStoreService extends BaseService {
       };
     }
     if (etlId === undefined) {
-      const response = await this.dataStoresApi.createEtlProcess(DataStoreService.currentOrganizationId, dataStoreId, data);
+      const response = await this.dataStoresApi.createEtlProcess(dataStoreId, data);
       return response.data;
     }
 
-    await this.dataStoresApi.updateEtlProcess(DataStoreService.currentOrganizationId, dataStoreId, etlId, data);
+    await this.dataStoresApi.updateEtlProcess(dataStoreId, etlId, data);
     return data;
   }
 
   public async changeEtlProcessActivationState(dataStoreId: string, etlProcessId: string, isActive: boolean) {
-    const response = await this.dataStoresApi.patchEtlProcess(DataStoreService.currentOrganizationId, dataStoreId, etlProcessId, { isActive: isActive });
+    const response = await this.dataStoresApi.patchEtlProcess(dataStoreId, etlProcessId, { isActive: isActive });
 
     return response.status == 204;
   }
@@ -227,18 +223,18 @@ export default class DataStoreService extends BaseService {
       type: ApiEtlProcessType.Jdbc,
       configuration: configuration as JdbcEtlProcessConfiguration
     };
-    const response = await this.dataStoresApi.createSamplingJdbcEtlProcess(DataStoreService.currentOrganizationId, dataStoreId, data);
+    const response = await this.dataStoresApi.createSamplingJdbcEtlProcess(dataStoreId, data);
 
     return response.data;
   }
 
   public async getEtlProcessInfo(dataStoreId: string, etlProcessId: string): Promise<EtlProcessInfo> {
-    const response = await this.dataStoresApi.getEtlProcess(DataStoreService.currentOrganizationId, dataStoreId, etlProcessId);
+    const response = await this.dataStoresApi.getEtlProcess(dataStoreId, etlProcessId);
     return response.data;
   }
 
   public async removeEtlProcess(dataStoreId: string, etlProcessId: string): Promise<void> {
-    await this.dataStoresApi.deleteEtlProcess(DataStoreService.currentOrganizationId, dataStoreId, etlProcessId, {
+    await this.dataStoresApi.deleteEtlProcess(dataStoreId, etlProcessId, {
       validateStatus: (status: number) => [204, 404].indexOf(status) >= 0
     });
   }

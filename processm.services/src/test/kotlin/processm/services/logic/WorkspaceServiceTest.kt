@@ -164,7 +164,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
     ) {
         val organizationId = createOrganization().id.value
         val user = createUser()
-        val dataStoreId = createDataStore(organizationId).value
+        val dataStoreId = createDataStore().value
         val workspaceId = createWorkspace("Workspace1", user.id.value, organizationId)
         val componentId = DBSerializer.insert(DBCache.get(dataStoreId.toString()).database, MutableCausalNet())
         val componentWithInvalidData =

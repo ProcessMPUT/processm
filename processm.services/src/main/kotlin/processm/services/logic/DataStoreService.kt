@@ -43,20 +43,33 @@ class DataStoreService(
     private val aclService: ACLService,
     private val producer: Producer
 ) {
+
     /**
-     * Returns all data stores for the specified [organizationId].
+     * Returns all data stores the user identified by [userId] can access
      */
-    fun allByOrganizationId(organizationId: UUID): List<DataStoreDto> {
-        return transactionMain {
-            val query = DataStores.select { DataStores.organizationId eq organizationId }
-            return@transactionMain DataStore.wrapRows(query).map { it.toDto() }
+    fun getUserDataStores(userId: UUID): List<DataStore> =
+        transactionMain {
+            DataStore.wrapRows(
+                Groups
+                    .innerJoin(UsersInGroups)
+                    .crossJoin(DataStores)
+                    .join(AccessControlList, JoinType.INNER, AccessControlList.group_id, Groups.id)
+                    .slice(DataStores.columns)
+                    .select {
+                        (UsersInGroups.userId eq userId) and
+                                (AccessControlList.urn.column eq concat(
+                                    stringLiteral("urn:processm:db/${DataStores.tableName}/"),
+                                    DataStores.id
+                                )) and
+                                (AccessControlList.role_id neq RoleType.None.role.id)
+                    }.withDistinct(true)
+            ).toList()
         }
-    }
 
     /**
      * Returns the specified data store.
      */
-    fun getDataStore(dataStoreId: UUID) = getById(dataStoreId).toDto()
+    fun getDataStore(dataStoreId: UUID) = getById(dataStoreId)
 
     fun getDatabaseSize(databaseName: String): Long {
         return transactionMain {
@@ -69,14 +82,13 @@ class DataStoreService(
     }
 
     /**
-     * Creates new data store named [name] and assigned to the specified [organizationId].
+     * Creates new data store named [name]
      */
-    fun createDataStore(userId: UUID, organizationId: UUID, name: String): DataStore {
+    fun createDataStore(userId: UUID, name: String): DataStore {
         return transactionMain {
             val dataStoreId = DataStores.insertAndGetId {
                 it[this.name] = name
                 it[this.creationDate] = CurrentDateTime
-                it[this.organizationId] = EntityID(organizationId, Organizations)
             }
             Migrator.migrate("${dataStoreId.value}")
 
