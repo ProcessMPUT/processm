@@ -1,17 +1,12 @@
 import { Log } from "@/models/Xes";
 import BaseService from "./BaseService";
 import DuplicateKeysJsonParser from "@/utils/DuplicateKeysJsonParser";
-import Vue from "vue";
 
 export default class LogsService extends BaseService {
   private readonly jsonParser = new DuplicateKeysJsonParser();
 
-  private static get currentOrganizationId() {
-    return Vue.prototype.$sessionStorage.currentOrganization.id;
-  }
-
   public async uploadLogFile(dataStoreId: string, file: File): Promise<void> {
-    const response = await this.logsApi.uploadLogFile(LogsService.currentOrganizationId, dataStoreId, file);
+    const response = await this.logsApi.uploadLogFile(dataStoreId, file);
 
     if (response.status != 201) {
       throw new Error(response.statusText);
@@ -38,7 +33,7 @@ export default class LogsService extends BaseService {
       };
     }
 
-    const response = await this.logsApi.submitLogsQuery(LogsService.currentOrganizationId, dataStoreId, accept, query, options);
+    const response = await this.logsApi.submitLogsQuery(dataStoreId, accept, query, options);
 
     if (accept == "application/json") {
       // FIXME: TypeError: response.data.reduce is not a function
@@ -66,7 +61,7 @@ export default class LogsService extends BaseService {
   }
 
   public async removeLog(dataStoreId: string, identityId: string): Promise<void> {
-    const response = await this.logsApi.removeLog(LogsService.currentOrganizationId, dataStoreId, identityId);
+    const response = await this.logsApi.removeLog(dataStoreId, identityId);
 
     if (response.status != 204) {
       throw new Error(response.statusText);
