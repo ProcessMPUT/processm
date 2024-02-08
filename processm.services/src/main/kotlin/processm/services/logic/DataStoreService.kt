@@ -527,14 +527,13 @@ class DataStoreService(
     }
 
     /**
-     * Asserts that the specified [userId] has at least [role] allowing for access to [dataStoreId] within the context of [organizationId]
+     * Asserts that the specified [userId] has at least [role] allowing for access to [dataStoreId]
      */
     fun assertUserHasSufficientPermissionToDataStore(
         userId: UUID,
-        organizationId: UUID,
         dataStoreId: UUID,
         role: RoleType
-    ) = aclService.checkAccess(userId, organizationId, DataStores, dataStoreId, role)
+    ) = aclService.checkAccess(userId, DataStores, dataStoreId, role)
 
     /**
      * Returns data store struct by its identifier.

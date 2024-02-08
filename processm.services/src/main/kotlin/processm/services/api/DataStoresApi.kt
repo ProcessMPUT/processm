@@ -66,7 +66,6 @@ fun Route.DataStoresApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
-                pathParams.organizationId,
                 pathParams.dataStoreId,
                 RoleType.Reader
             )
@@ -89,7 +88,6 @@ fun Route.DataStoresApi() {
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
-                pathParams.organizationId,
                 pathParams.dataStoreId,
                 RoleType.Owner
             )
@@ -103,7 +101,6 @@ fun Route.DataStoresApi() {
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
-                pathParams.organizationId,
                 pathParams.dataStoreId,
                 RoleType.Owner
             )
@@ -118,7 +115,6 @@ fun Route.DataStoresApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
-                pathParams.organizationId,
                 pathParams.dataStoreId,
                 RoleType.Writer
             )
@@ -143,7 +139,6 @@ fun Route.DataStoresApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
-                pathParams.organizationId,
                 pathParams.dataStoreId,
                 RoleType.Reader
             )
@@ -186,7 +181,6 @@ fun Route.DataStoresApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
-                pathParams.organizationId,
                 pathParams.dataStoreId,
                 RoleType.Owner
             )
@@ -200,7 +194,6 @@ fun Route.DataStoresApi() {
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
-                pathParams.organizationId,
                 pathParams.dataStoreId,
                 RoleType.Reader
             )
@@ -222,7 +215,6 @@ fun Route.DataStoresApi() {
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
-                pathParams.organizationId,
                 pathParams.dataStoreId,
                 RoleType.Writer
             )
@@ -256,7 +248,6 @@ fun Route.DataStoresApi() {
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
-                pathParams.organizationId,
                 pathParams.dataStoreId,
                 RoleType.Owner
             )
@@ -270,7 +261,6 @@ fun Route.DataStoresApi() {
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
-                pathParams.organizationId,
                 pathParams.dataStoreId,
                 RoleType.Writer
             )
@@ -290,7 +280,6 @@ fun Route.DataStoresApi() {
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
-                pathParams.organizationId,
                 pathParams.dataStoreId,
                 RoleType.Reader
             )
@@ -313,7 +302,6 @@ fun Route.DataStoresApi() {
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
-                pathParams.organizationId,
                 pathParams.dataStoreId,
                 RoleType.Reader
             )
@@ -332,7 +320,6 @@ fun Route.DataStoresApi() {
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
-                pathParams.organizationId,
                 pathParams.dataStoreId,
                 RoleType.Reader
             )
@@ -350,7 +337,6 @@ fun Route.DataStoresApi() {
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
-                pathParams.organizationId,
                 pathParams.dataStoreId,
                 RoleType.Reader
             )
@@ -368,7 +354,6 @@ fun Route.DataStoresApi() {
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
-                pathParams.organizationId,
                 pathParams.dataStoreId,
                 RoleType.Writer
             )
@@ -420,7 +405,6 @@ fun Route.DataStoresApi() {
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
-                pathParams.organizationId,
                 pathParams.dataStoreId,
                 RoleType.Writer
             )
@@ -441,7 +425,6 @@ fun Route.DataStoresApi() {
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
-                pathParams.organizationId,
                 pathParams.dataStoreId,
                 RoleType.Writer
             )
@@ -486,7 +469,6 @@ fun Route.DataStoresApi() {
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
-                pathParams.organizationId,
                 pathParams.dataStoreId,
                 RoleType.Reader
             )
@@ -508,7 +490,6 @@ fun Route.DataStoresApi() {
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
-                pathParams.organizationId,
                 pathParams.dataStoreId,
                 RoleType.Owner
             )
@@ -522,7 +503,6 @@ fun Route.DataStoresApi() {
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
-                pathParams.organizationId,
                 pathParams.dataStoreId,
                 RoleType.Owner
             )

@@ -7,7 +7,6 @@ import io.mockk.just
 import org.junit.jupiter.api.TestInstance
 import org.koin.test.mock.declareMock
 import processm.core.helpers.toLocalDateTime
-import processm.dbmodels.models.RoleType
 import processm.services.api.models.*
 import processm.services.logic.DataStoreService
 import processm.services.logic.LogsService
@@ -77,7 +76,6 @@ class DataStoresApiTest : BaseApiTest() {
                 every {
                     dataStoreService.assertUserHasSufficientPermissionToDataStore(
                         userId,
-                        organizationId,
                         dataStoreId,
                         any()
                     )
