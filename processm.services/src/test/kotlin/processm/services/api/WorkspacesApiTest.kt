@@ -80,7 +80,7 @@ class WorkspacesApiTest : BaseApiTest() {
         val workspaceId2 = UUID.randomUUID()
 
         withAuthentication(userId) {
-            every { workspaceService.getUserWorkspaces(userId, organizationId) } returns listOf(
+            every { workspaceService.getUserWorkspaces(userId) } returns listOf(
                 mockk {
                     every { id } returns EntityID(workspaceId1, Workspaces)
                     every { name } returns "Workspace1"
@@ -110,8 +110,7 @@ class WorkspacesApiTest : BaseApiTest() {
             every {
                 workspaceService.remove(
                     workspaceId,
-                    userId = any(),
-                    organizationId = organizationId
+                    userId = any()
                 )
             } just runs
             with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/workspaces/$workspaceId")) {
@@ -130,8 +129,7 @@ class WorkspacesApiTest : BaseApiTest() {
             every {
                 workspaceService.remove(
                     workspaceId,
-                    userId = any(),
-                    organizationId = organizationId
+                    userId = any()
                 )
             } throws ValidationException(Reason.ResourceNotFound, "Workspace is not found")
             with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/workspaces/$workspaceId")) {
@@ -273,8 +271,7 @@ class WorkspacesApiTest : BaseApiTest() {
             every {
                 workspaceService.getComponents(
                     workspaceId,
-                    userId = any(),
-                    organizationId = organizationId
+                    userId = any()
                 )
             } returns listOf(
                 mockk(relaxed = true) {
@@ -337,8 +334,7 @@ class WorkspacesApiTest : BaseApiTest() {
             every {
                 workspaceService.getComponents(
                     workspaceId,
-                    userId = any(),
-                    organizationId = organizationId
+                    userId = any()
                 )
             } returns listOf(
                 mockk {
@@ -393,7 +389,6 @@ class WorkspacesApiTest : BaseApiTest() {
                         componentId,
                         workspaceId,
                         any(),
-                        organizationId,
                         componentName,
                         dataQuery,
                         dataStore,
@@ -441,7 +436,6 @@ class WorkspacesApiTest : BaseApiTest() {
                     componentId,
                     workspaceId,
                     any(),
-                    organizationId,
                     componentName,
                     dataQuery,
                     dataStore,
@@ -502,7 +496,6 @@ class WorkspacesApiTest : BaseApiTest() {
                     workspaceService.updateLayout(
                         workspaceId,
                         any(),
-                        organizationId,
                         layoutData.mapValues { Gson().toJson(it.value) }
                     )
                 } just Runs
@@ -540,7 +533,6 @@ class WorkspacesApiTest : BaseApiTest() {
                     workspaceService.updateLayout(
                         workspaceId,
                         any(),
-                        organizationId,
                         layoutData.mapValues { Gson().toJson(it.value) }
                     )
                 } throws ValidationException(
@@ -573,8 +565,7 @@ class WorkspacesApiTest : BaseApiTest() {
                     workspaceService.removeComponent(
                         componentId,
                         workspaceId,
-                        any(),
-                        organizationId
+                        any()
                     )
                 } just runs
                 with(
@@ -601,8 +592,7 @@ class WorkspacesApiTest : BaseApiTest() {
                     workspaceService.removeComponent(
                         componentId,
                         workspaceId,
-                        any(),
-                        organizationId
+                        any()
                     )
                 } throws ValidationException(
                     Reason.ResourceNotFound,
