@@ -17,6 +17,8 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.koin.test.mock.declareMock
 import processm.core.communication.Producer
 import processm.core.esb.Artemis
@@ -50,7 +52,7 @@ class WorkspacesApiTest : BaseApiTest() {
         fun `start artemis`() {
             artemis.register()
             artemis.start()
-            pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
+            pool = Executors.newFixedThreadPool(7).asCoroutineDispatcher()
         }
 
         @JvmStatic
@@ -741,11 +743,11 @@ class WorkspacesApiTest : BaseApiTest() {
         assertEquals(component2.id.value, result[0])
     }
 
-    @Test
+    @ParameterizedTest
+    @ValueSource(ints = intArrayOf(5, 50, 64, 128, 1024))
     @Timeout(10L, unit = TimeUnit.SECONDS)
-    fun `five subscriptions from a single client`() {
+    fun `n subscriptions from a single client`(n: Int) {
         val result = ConcurrentLinkedDeque<UUID>()
-        val n = 5
         val workspaceId = UUID.randomUUID()
         val component = mockk<WorkspaceComponent> {
             every { componentType } returns ComponentTypeDto.Kpi
@@ -757,7 +759,7 @@ class WorkspacesApiTest : BaseApiTest() {
             val sync = Channel<Int>()
             withAuthentication {
                 val jobs = (0 until n).map {
-                    launch(context = Dispatchers.IO) {
+                    launch(context = Dispatchers.Request) {
                         handleSse("/api/organizations/${UUID.randomUUID()}/workspaces/${workspaceId}") { channel ->
                             sync.send(1)
                             result.add(channel.readSSE().asUpdateEvent())
@@ -775,9 +777,10 @@ class WorkspacesApiTest : BaseApiTest() {
         assertTrue { result.all { it.equals(component.id.value) } }
     }
 
-    @Test
+    @ParameterizedTest
+    @ValueSource(ints = intArrayOf(5, 50, 64, 128, 1024))
     @Timeout(10L, unit = TimeUnit.SECONDS)
-    fun `five subscriptions from different clients`() {
+    fun `n subscriptions from different clients`(n: Int) {
         val result = ConcurrentLinkedDeque<UUID>()
         val workspaceId = UUID.randomUUID()
         val component = mockk<WorkspaceComponent> {
@@ -786,7 +789,6 @@ class WorkspacesApiTest : BaseApiTest() {
                     mockk { every { id } returns EntityID(workspaceId, Workspaces) }
             every { id } returns EntityID(UUID.randomUUID(), WorkspaceComponents)
         }
-        val n = 5
         withConfiguredTestApplication {
             val sync = Channel<Int>(Channel.UNLIMITED)
             val jobs = (0 until n).map { ctr ->
