@@ -97,7 +97,6 @@ class AutomaticEtlTest : SeleniumBase() {
         click("btn-add-new")
         typeIn("new-name", dataStoreName)
         click("btn-add-new-confirm")
-        wait.until { driver.findElements(By.name("btn-configure-data-store")).isNotEmpty() }
         click("btn-configure-data-store")
         click("btn-add-data-connector")
         expand("header-specify-connection-properties")
