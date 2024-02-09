@@ -5,6 +5,7 @@ import jakarta.jms.Message
 import kotlinx.coroutines.channels.Channel
 import processm.core.esb.AbstractJMSListener
 import processm.core.helpers.toUUID
+import processm.core.logging.loggedScope
 import processm.dbmodels.models.*
 import java.util.*
 import java.util.concurrent.locks.ReentrantReadWriteLock
@@ -28,8 +29,9 @@ class WorkspaceNotificationService {
      *
      * If sending a notification fails, the channel is closed and unsubscribed.
      */
-    fun subscribe(workspaceId: UUID, channel: Channel<UUID>) {
+    fun subscribe(workspaceId: UUID, channel: Channel<UUID>) = loggedScope { logger ->
         lock.write {
+            logger.info("subscribe($workspaceId, $channel)")
             if (clients.isEmpty())
                 listener.listen()
             clients.computeIfAbsent(workspaceId) { ArrayDeque<Channel<UUID>>() }.addLast(channel)
@@ -41,8 +43,9 @@ class WorkspaceNotificationService {
      */
     fun unsubscribe(workspaceId: UUID, channel: Channel<UUID>) = unsubscribe(workspaceId, listOf(channel))
 
-    fun unsubscribe(workspaceId: UUID, channel: Collection<Channel<UUID>>) {
+    fun unsubscribe(workspaceId: UUID, channel: Collection<Channel<UUID>>) = loggedScope { logger ->
         lock.write {
+            logger.info("unsubscribe($workspaceId, $channel)")
             clients.computeIfPresent(workspaceId) { _, queue ->
                 queue.removeAll(channel)
                 channel.forEach { it.close() }
@@ -60,7 +63,7 @@ class WorkspaceNotificationService {
     private inner class Listener :
         AbstractJMSListener(WORKSPACE_COMPONENTS_TOPIC, null, "WorkspaceNotificationService") {
 
-        override fun onMessage(msg: Message?) {
+        override fun onMessage(msg: Message?) = loggedScope { logger ->
             if (msg !is MapMessage) return
             val event = msg.getString(WORKSPACE_COMPONENT_EVENT)
             if (event != DATA_CHANGE) return
@@ -68,6 +71,7 @@ class WorkspaceNotificationService {
             val workspaceId = checkNotNull(msg.getString(WORKSPACE_ID).toUUID())
             val failed = ArrayList<Channel<UUID>>()
             lock.read {
+                logger.info("onMessage($workspaceId, $componentId)")
                 clients[workspaceId]?.forEach { channel ->
                     val result = channel.trySend(componentId)
                     if (!result.isSuccess) {
