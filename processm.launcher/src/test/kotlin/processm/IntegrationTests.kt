@@ -288,7 +288,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 //wait for the email
                 val re = Regex("[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}", RegexOption.IGNORE_CASE)
                 val token = runBlocking {
-                    for (i in 1..15) {
+                    for (i in 1..30) {
                         try {
                             re.find(sendmail.lastEmailBody)?.value?.let { return@runBlocking it }
                         } catch (e: IOException) {

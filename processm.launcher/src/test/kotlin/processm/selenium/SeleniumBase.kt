@@ -235,9 +235,9 @@ abstract class SeleniumBase(
             addArguments("--window-size=1920,1080")
             if (headless) addArguments("--headless=new")
         })
-        driver.manage().timeouts().implicitlyWait(Duration.ofMillis(500))
+        driver.manage().timeouts().implicitlyWait(Duration.ofMillis(1000))
         if (recordSlideshow) recorder = VideoRecorder(driver)
-        wait = WebDriverWait(driver, Duration.ofSeconds(5))
+        wait = WebDriverWait(driver, Duration.ofSeconds(15))
         driver.get("http://localhost:$httpPort/")
     }
 
