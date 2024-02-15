@@ -1,5 +1,6 @@
 package processm.core.models.causalnet
 
+import kotlinx.serialization.Serializable
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ActivityExecution
 import java.util.*
@@ -7,10 +8,11 @@ import java.util.*
 /**
  * Represents the possibility of executing [activity] using [join] and [split]
  */
+@Serializable(with = DecoupledNodeExecutionSerializer::class)
 open class DecoupledNodeExecution(
     override val activity: Node,
-    val join: Join?,
-    val split: Split?
+    val join: Join? = null,
+    val split: Split? = null
 ) : ActivityExecution, Activity {
 
     override val name: String

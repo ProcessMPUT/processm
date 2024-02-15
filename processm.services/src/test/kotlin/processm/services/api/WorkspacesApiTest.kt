@@ -375,10 +375,10 @@ class WorkspacesApiTest : BaseApiTest() {
                 assertEquals(HttpStatusCode.OK, response.status())
                 val layout = assertNotNull(response.deserializeContent<List<AbstractComponent>>().firstOrNull()?.layout)
 
-                assertEquals(15.toBigDecimal(), layout.x)
-                assertEquals(30.toBigDecimal(), layout.y)
-                assertEquals(150.toBigDecimal(), layout.width)
-                assertEquals(300.toBigDecimal(), layout.height)
+                assertEquals(15, layout.x)
+                assertEquals(30, layout.y)
+                assertEquals(150, layout.width)
+                assertEquals(300, layout.height)
             }
         }
     }
@@ -474,8 +474,8 @@ class WorkspacesApiTest : BaseApiTest() {
                                 arrayOf(
                                     ProcessModelCustomizationDataLayoutInner(
                                         id = "id1",
-                                        x = 10.toBigDecimal(),
-                                        y = 10.toBigDecimal()
+                                        x = 10,
+                                        y = 10
                                     )
                                 )
                             ),
@@ -497,10 +497,10 @@ class WorkspacesApiTest : BaseApiTest() {
             val componentId = UUID.randomUUID()
             val layoutData = mapOf(
                 componentId to LayoutElement(
-                    1.toBigDecimal(),
-                    1.toBigDecimal(),
-                    2.toBigDecimal(),
-                    2.toBigDecimal()
+                    1,
+                    1,
+                    2,
+                    2
                 )
             )
 
@@ -535,10 +535,10 @@ class WorkspacesApiTest : BaseApiTest() {
             val componentId = UUID.randomUUID()
             val layoutData = mapOf(
                 componentId to LayoutElement(
-                    1.toBigDecimal(),
-                    1.toBigDecimal(),
-                    2.toBigDecimal(),
-                    2.toBigDecimal()
+                    1,
+                    1,
+                    2,
+                    2
                 )
             )
 

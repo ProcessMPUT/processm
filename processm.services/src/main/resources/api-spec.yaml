@@ -2043,13 +2043,13 @@ components:
       type: object
       properties:
         x:
-          type: number
+          type: integer
         y:
-          type: number
+          type: integer
         width:
-          type: number
+          type: integer
         height:
-          type: number
+          type: integer
     LayoutCollectionMessageBody:
       type: object
       required: [ data ]
@@ -2152,6 +2152,7 @@ components:
             report:
               $ref: '#/components/schemas/AlignerKpiReport'
     AlignerKpiReport:
+      required: [ logKPI, traceKPI, eventKPI, alignments ]
       properties:
         logKPI:
           type: object
@@ -2167,6 +2168,10 @@ components:
             type: object
             additionalProperties:
               $ref: '#/components/schemas/Distribution'
+        alignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Alignment'
     Distribution:
       properties:
         min:
@@ -2241,7 +2246,7 @@ components:
             alignments:
               type: array
               items:
-                type: alignment
+                $ref: '#/components/schemas/Alignment'
     ProcessModelCustomizationData:
       type: object
       properties:
@@ -2254,9 +2259,9 @@ components:
               id:
                 type: string
               x:
-                type: number
+                type: integer
               y:
-                type: number
+                type: integer
     CausalNetComponent:
       allOf:
         - $ref: '#/components/schemas/Component'
@@ -2359,7 +2364,7 @@ components:
             alignments:
               type: array
               items:
-                type: alignment
+                $ref: '#/components/schemas/Alignment'
     DFGNode:
       type: object
       required: [ id, label ]
@@ -2480,7 +2485,8 @@ components:
         query:
           type: string
         refresh:
-          type: number
+          type: integer
+          format: int64
         enabled:
           type: boolean
         batch:

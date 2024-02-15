@@ -89,10 +89,14 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
     try {
         when (componentType) {
             ComponentTypeDto.CausalNet -> {
-                val cnet = DBSerializer.fetch(
-                    DBCache.get(dataStoreId.toString()).database,
-                    requireNotNull(data) { "Missing C-net id" }.toInt()
-                )
+                val cnet = data?.let {
+                    DBSerializer.fetch(
+                        DBCache.get(dataStoreId.toString()).database,
+                        it.toInt()
+                    )
+                } ?: return null.apply {
+                    logger.debug("Missing C-net id for component $id.")
+                }
                 val nodes = ArrayList<Node>().apply {
                     add(cnet.start)
                     cnet.activities.filterTo(this) { it != cnet.start && it != cnet.end }
@@ -194,6 +198,10 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
             }
 
             ComponentTypeDto.FlatLogView -> {
+                null
+            }
+
+            ComponentTypeDto.AlignerKpi -> {
                 null
             }
 

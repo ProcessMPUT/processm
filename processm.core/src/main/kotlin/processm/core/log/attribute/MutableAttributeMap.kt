@@ -200,8 +200,8 @@ open class MutableAttributeMap(
      *
      * This function is intended only for deserialization and should be otherwise avoided.
      */
-    fun putFlat(key: String, value: Any) {
-        require(value.isAllowedAttributeValue())
+    fun putFlat(key: String, value: Any?) {
+        require(value.isAllowedAttributeValue()) { "Unsupported type ${value?.javaClass} of value $value" }
         flat[key] = value
     }
 }

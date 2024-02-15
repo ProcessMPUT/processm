@@ -2,13 +2,13 @@ package processm.services.logic
 
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.javatime.CurrentDateTime
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.json.simple.JSONObject
 import processm.core.communication.Producer
 import processm.core.helpers.mapToArray
 import processm.core.helpers.toLocalDateTime
@@ -31,7 +31,6 @@ import processm.etl.jdbc.notifyUsers
 import processm.etl.metamodel.DAGBusinessPerspectiveExplorer
 import processm.etl.metamodel.buildMetaModel
 import processm.services.api.models.*
-import java.math.BigDecimal
 import java.sql.Connection
 import java.sql.DriverManager
 import java.time.Instant
@@ -153,7 +152,7 @@ class DataStoreService(private val producer: Producer) {
         return transaction(DBCache.get("$dataStoreId").database) {
             val dataConnectorId = DataConnectors.insertAndGetId {
                 it[this.name] = name
-                it[this.connectionProperties] = JSONObject(connectionProperties).toString()
+                it[this.connectionProperties] = Json.encodeToString(connectionProperties)
             }
 
             return@transaction dataConnectorId.value
@@ -395,7 +394,7 @@ class DataStoreService(private val producer: Producer) {
             attributes = cfg.columnToAttributeMap.filter { !it.eventId && !it.traceId }.mapToArray {
                 JdbcEtlColumnConfiguration(it.sourceColumn, it.target)
             },
-            refresh = BigDecimal.valueOf(cfg.refresh ?: 0L),
+            refresh = cfg.refresh ?: 0L,
             lastEventExternalId = cfg.lastEventExternalId,
             lastEventExternalIdType = cfg.lastEventExternalIdType
         )
@@ -423,6 +422,7 @@ class DataStoreService(private val producer: Producer) {
                 AbstractEtlProcess(
                     id = it.metadata.id.value,
                     name = it.metadata.name,
+                    dataConnectorId = it.metadata.dataConnector.id.value,
                     isActive = it.metadata.isActive,
                     lastExecutionTime = it.metadata.lastExecutionTime?.toLocalDateTime(),
                     type = EtlProcessType.jdbc,

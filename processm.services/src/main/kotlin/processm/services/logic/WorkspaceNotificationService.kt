@@ -31,7 +31,6 @@ class WorkspaceNotificationService {
      */
     fun subscribe(workspaceId: UUID, channel: Channel<UUID>) = loggedScope { logger ->
         lock.write {
-            logger.info("subscribe($workspaceId, $channel)")
             if (clients.isEmpty())
                 listener.listen()
             clients.computeIfAbsent(workspaceId) { ArrayDeque<Channel<UUID>>() }.addLast(channel)
@@ -45,7 +44,6 @@ class WorkspaceNotificationService {
 
     fun unsubscribe(workspaceId: UUID, channel: Collection<Channel<UUID>>) = loggedScope { logger ->
         lock.write {
-            logger.info("unsubscribe($workspaceId, $channel)")
             clients.computeIfPresent(workspaceId) { _, queue ->
                 queue.removeAll(channel)
                 channel.forEach { it.close() }
@@ -71,7 +69,6 @@ class WorkspaceNotificationService {
             val workspaceId = checkNotNull(msg.getString(WORKSPACE_ID).toUUID())
             val failed = ArrayList<Channel<UUID>>()
             lock.read {
-                logger.info("onMessage($workspaceId, $componentId)")
                 clients[workspaceId]?.forEach { channel ->
                     val result = channel.trySend(componentId)
                     if (!result.isSuccess) {

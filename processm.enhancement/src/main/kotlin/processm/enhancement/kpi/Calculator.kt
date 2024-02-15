@@ -1,10 +1,7 @@
 package processm.enhancement.kpi
 
 import processm.conformance.models.DeviationType
-import processm.conformance.models.alignments.AStar
-import processm.conformance.models.alignments.Aligner
-import processm.conformance.models.alignments.AlignerFactory
-import processm.conformance.models.alignments.CompositeAligner
+import processm.conformance.models.alignments.*
 import processm.conformance.models.alignments.cache.CachingAlignerFactory
 import processm.conformance.models.alignments.cache.DefaultAlignmentCache
 import processm.conformance.models.alignments.events.DefaultEventsSummarizer
@@ -248,6 +245,7 @@ class Calculator(
         val traceKPIraw = HashMap<String, ArrayList<Double>>()
         val eventKPIraw = DoublingMap2D<String, Activity?, ArrayList<Double>>()
         val arcKPIraw = DoublingMap2D<String, CausalArc, RawArcKPI>()
+        val alignmentList = ArrayList<Alignment>()
 
         val arcKPIHandler: ArcKPIHandler = when (model) {
             is ProcessTree -> ProcessTreeArcKPIHandler(model, arcKPIraw)
@@ -300,6 +298,8 @@ class Calculator(
 
                     step.modelMove?.let { arcKPIHandler.step(it, rawValues) }
                 }
+
+                alignmentList.add(alignment)
             }
 
         }
@@ -313,7 +313,7 @@ class Calculator(
         val outboundArcKPI = arcKPIraw.mapValuesNotNull { _, _, v ->
             if (v.outbound.isNotEmpty()) Distribution(v.outbound) else null
         }
-        return Report(logKPI, traceKPI, eventKPI, outboundArcKPI, inboundArcKPI)
+        return Report(logKPI, traceKPI, eventKPI, outboundArcKPI, inboundArcKPI, alignmentList)
     }
 
     /**

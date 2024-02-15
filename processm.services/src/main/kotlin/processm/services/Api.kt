@@ -1,7 +1,7 @@
 package processm.services
 
 import io.ktor.http.*
-import io.ktor.serialization.gson.*
+import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.locations.*
@@ -20,19 +20,13 @@ import processm.core.communication.Producer
 import processm.core.logging.loggedScope
 import processm.services.api.*
 import processm.services.logic.*
-import java.time.LocalDateTime
 
 fun Application.apiModule() {
     loggedScope { logger ->
         logger.info("Starting API module")
         install(DefaultHeaders)
         install(ContentNegotiation) {
-            // TODO: replace with kotlinx/serialization; this requires the OpenAPI generator to add kotlinx/serialization annotations; currently, this is not supported
-            gson(ContentType.Application.Json) {
-                // Correctly serialize/deserialize LocalDateTime
-                registerTypeAdapter(LocalDateTime::class.java, LocalDateTimeTypeAdapter())
-                registerTypeAdapterFactory(NonNullableTypeAdapterFactory())
-            }
+            json(JsonSerializer, ContentType.Application.Json)
         }
         install(AutoHeadResponse)
         install(HSTS, ApplicationHstsConfiguration())

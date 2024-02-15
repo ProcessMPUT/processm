@@ -1,5 +1,7 @@
 package processm.conformance.models.alignments
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import processm.conformance.models.DeviationType
 import processm.core.log.Event
 import processm.core.models.commons.Activity
@@ -9,6 +11,7 @@ import java.util.*
 /**
  * Represents a step in an [Alignment].
  */
+@Serializable
 data class Step(
     /**
      * The move in the model corresponding to this step.
@@ -18,7 +21,7 @@ data class Step(
      * The state of the model after conducting this step.
      */
     @Transient
-    val modelState: ProcessModelState?,
+    val modelState: ProcessModelState? = null,
     /**
      * The event in the log corresponding to this step. Null for no move.
      */
@@ -27,7 +30,7 @@ data class Step(
      * The history of events after executing this step.
      */
     @Transient
-    val logState: Sequence<Event>?,
+    val logState: Sequence<Event>? = null,
     /**
      * The type of this step.
      */

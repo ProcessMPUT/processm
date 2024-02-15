@@ -17,8 +17,8 @@
     <name>ProcessM Services</name>
 
     <properties>
-        <ktor.version>2.0.3</ktor.version>
-        <openapi-tools.version>6.6.0</openapi-tools.version>
+        <ktor.version>2.3.8</ktor.version>
+        <openapi-tools.version>7.3.0</openapi-tools.version>
         <swagger-ui.version>4.12.0</swagger-ui.version>
         <koin.version>3.2.0</koin.version>
         <jargon2.version>1.1.1</jargon2.version>
@@ -53,10 +53,12 @@
                                 array=kotlin.Array,date-time=java.time.LocalDateTime,DateTime=java.time.LocalDateTime
                             </typeMappings>
                             <importMappings>
-                                Alignment=processm.conformance.models.alignments.Alignment
+                                Alignment=processm.conformance.models.alignments.Alignment,
+                                Config=processm.services.api.Config
                             </importMappings>
                             <schemaMappings>
-                                Alignment=processm.conformance.models.alignments.Alignment
+                                Alignment=processm.conformance.models.alignments.Alignment,
+                                Config=processm.services.api.Config
                             </schemaMappings>
                             <instantiationTypes>array=kotlin.Array</instantiationTypes>
                             <output>${project.build.directory}/generated-sources/openapi</output>
@@ -180,6 +182,40 @@
                             </replacements>
                         </configuration>
                     </execution>
+                    <execution>
+                        <!-- OpenAPI generator kotlin-server v7.3.0 does not really support kotlinx/serialization -->
+                        <id>add @Serializable annotations</id>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>replace</goal>
+                        </goals>
+                        <configuration>
+                            <filesToInclude>
+                                ${project.build.directory}/generated-sources/openapi/src/main/kotlin/**/*.kt
+                            </filesToInclude>
+                            <replacements>
+                                <replacement>
+                                    <token>data class</token>
+                                    <value>@kotlinx.serialization.Serializable data class</value>
+                                </replacement>
+                                <replacement>
+                                    <token>val (`?[a-zA-Z0-9]+`?): java.util.UUID</token>
+                                    <value>
+                                        @kotlinx.serialization.Serializable(with=processm.core.helpers.UUIDSerializer::class)
+                                        val $1: java.util.UUID
+                                    </value>
+                                </replacement>
+                                <replacement>
+                                    <token>val (`?[a-zA-Z0-9]+`?): kotlin.Any</token>
+                                    <value>@kotlinx.serialization.Contextual val $1: kotlin.Any</value>
+                                </replacement>
+                                <replacement>
+                                    <token>val (`?[a-zA-Z0-9]+`?): java.time.LocalDateTime</token>
+                                    <value>@kotlinx.serialization.Contextual val $1: java.time.LocalDateTime</value>
+                                </replacement>
+                            </replacements>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
 
@@ -209,13 +245,13 @@
         </dependency>
         <dependency>
             <groupId>${project.parent.groupId}</groupId>
-            <artifactId>webui</artifactId>
+            <artifactId>etl</artifactId>
             <version>${project.parent.version}</version>
-            <scope>runtime</scope>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>${project.parent.groupId}</groupId>
-            <artifactId>etl</artifactId>
+            <artifactId>enhancement</artifactId>
             <version>${project.parent.version}</version>
             <scope>compile</scope>
         </dependency>
@@ -286,6 +322,18 @@
             <groupId>io.ktor</groupId>
             <artifactId>ktor-serialization-gson-jvm</artifactId>
             <version>${ktor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-serialization-kotlinx-json-jvm</artifactId>
+            <version>${ktor.version}</version>
+            <exclusions>
+                <!-- we explicitly import a different version of this package -->
+                <exclusion>
+                    <groupId>org.jetbrains.kotlinx</groupId>
+                    <artifactId>kotlinx-serialization-json-jvm</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>

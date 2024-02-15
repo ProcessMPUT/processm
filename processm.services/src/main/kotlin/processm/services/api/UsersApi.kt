@@ -27,7 +27,7 @@ fun Route.UsersApi() {
 
     post<Paths.UsersSession> {
         loggedScope { logger ->
-            val credentials = call.receiveOrNull<UserCredentials>()
+            val credentials = kotlin.runCatching { call.receiveNullable<UserCredentials>() }.getOrNull()
 
             when {
                 credentials != null -> {

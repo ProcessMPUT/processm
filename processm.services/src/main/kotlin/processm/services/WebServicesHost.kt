@@ -51,7 +51,7 @@ class WebServicesHost : Service {
                 deleteOnExit()
             }
             val keyPassword = (1..100).map {
-                Random.nextInt(Char.MIN_VALUE.code, Char.MAX_VALUE.code).toChar()
+                Random.nextInt(' '.code, '~'.code).toChar()
             }.joinToString("")
 
             logger().debug("Generating certificate and writing into file ${certFile.canonicalPath}")

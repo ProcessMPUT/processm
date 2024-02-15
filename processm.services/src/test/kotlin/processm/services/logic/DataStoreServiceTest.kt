@@ -15,7 +15,6 @@ import processm.etl.jdbc.toXESInputStream
 import processm.services.api.models.JdbcEtlColumnConfiguration
 import processm.services.api.models.JdbcEtlProcessConfiguration
 import java.io.ByteArrayOutputStream
-import java.math.BigDecimal
 import java.sql.Types
 import java.util.*
 import kotlin.test.*
@@ -218,7 +217,7 @@ internal class DataStoreServiceTest : ServiceTestBase() {
         val cfg = JdbcEtlProcessConfiguration(
             "query", true, false,
             JdbcEtlColumnConfiguration("traceId", "traceId"), JdbcEtlColumnConfiguration("eventId", "eventId"),
-            emptyArray(), BigDecimal(60), "0", Types.INTEGER
+            emptyArray(), 60L, "0", Types.INTEGER
         )
 
         service.createSamplingJdbcEtlProcess(ds.id.value, dc, "dummy", cfg, 3)
@@ -238,7 +237,7 @@ internal class DataStoreServiceTest : ServiceTestBase() {
             val cfg = JdbcEtlProcessConfiguration(
                 "query", true, false,
                 JdbcEtlColumnConfiguration("traceId", "traceId"), JdbcEtlColumnConfiguration("eventId", "eventId"),
-                emptyArray(), BigDecimal(60), "0", Types.INTEGER
+                emptyArray(), 60L, "0", Types.INTEGER
             )
 
             mockkStatic(ETLConfiguration::toXESInputStream)

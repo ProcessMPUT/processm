@@ -119,6 +119,7 @@ inline fun <T> List<T>.indexOfFirst(startIndex: Int, predicate: (item: T) -> Boo
 
 /**
  * Parses a timestamp with timezone in the ISO-8601 format into [Instant].
+ * @throws java.time.format.DateTimeParseException if unable to parse the requested string
  */
 inline fun String.parseISO8601(): Instant = DateTimeFormatter.ISO_DATE_TIME.parse(this, Instant::from)
 
@@ -127,6 +128,8 @@ inline fun String.parseISO8601(): Instant = DateTimeFormatter.ISO_DATE_TIME.pars
  * This function trades some safety-checks for performance. E.g.,
  * * The exception messages may be less detailed than these thrown by [parseISO8601] but the normal results of both
  * methods should equal.
+ * @throws java.time.format.DateTimeParseException if unable to parse the requested string
+ * @throws java.time.DateTimeException if the date/time cannot be represented using [Instant]
  */
 inline fun String.fastParseISO8601(): Instant =
     DateTimeFormatter.ISO_DATE_TIME.parse(this) { temporal ->
