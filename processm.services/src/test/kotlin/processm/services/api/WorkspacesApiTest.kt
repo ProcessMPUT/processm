@@ -375,10 +375,10 @@ class WorkspacesApiTest : BaseApiTest() {
                 assertEquals(HttpStatusCode.OK, response.status())
                 val layout = assertNotNull(response.deserializeContent<List<AbstractComponent>>().firstOrNull()?.layout)
 
-                assertEquals(15, layout.x)
-                assertEquals(30, layout.y)
-                assertEquals(150, layout.width)
-                assertEquals(300, layout.height)
+                assertEquals(15.0, layout.x)
+                assertEquals(30.0, layout.y)
+                assertEquals(150.0, layout.width)
+                assertEquals(300.0, layout.height)
             }
         }
     }
@@ -470,12 +470,12 @@ class WorkspacesApiTest : BaseApiTest() {
                             dataStore = dataStore,
                             name = "Component1",
                             type = ComponentType.causalNet,
-                            customizationData = ProcessModelCustomizationData(
+                            customizationData = CustomizationData(
                                 arrayOf(
-                                    ProcessModelCustomizationDataLayoutInner(
+                                    CustomizationDataLayoutInner(
                                         id = "id1",
-                                        x = 10,
-                                        y = 10
+                                        x = 10.0,
+                                        y = 10.0
                                     )
                                 )
                             ),
@@ -497,10 +497,10 @@ class WorkspacesApiTest : BaseApiTest() {
             val componentId = UUID.randomUUID()
             val layoutData = mapOf(
                 componentId to LayoutElement(
-                    1,
-                    1,
-                    2,
-                    2
+                    1.0,
+                    1.0,
+                    2.0,
+                    2.0
                 )
             )
 
@@ -535,10 +535,10 @@ class WorkspacesApiTest : BaseApiTest() {
             val componentId = UUID.randomUUID()
             val layoutData = mapOf(
                 componentId to LayoutElement(
-                    1,
-                    1,
-                    2,
-                    2
+                    1.0,
+                    1.0,
+                    2.0,
+                    2.0
                 )
             )
 

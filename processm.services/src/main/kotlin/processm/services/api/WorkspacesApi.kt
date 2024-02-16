@@ -47,7 +47,7 @@ fun Route.WorkspacesApi() {
     authenticate {
         post<Paths.Workspaces> {
             val principal = call.authentication.principal<ApiUser>()!!
-            val workspace = call.receiveOrNull<Workspace>()
+            val workspace = runCatching { call.receiveNullable<Workspace>() }.getOrNull()
                 ?: throw ApiException("The provided workspace data cannot be parsed")
 
             principal.ensureUserBelongsToOrganization(it.organizationId, OrganizationRole.writer)
@@ -83,7 +83,7 @@ fun Route.WorkspacesApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(path.organizationId)
 
-            val workspace = call.receiveOrNull<Workspace>()
+            val workspace = runCatching { call.receiveNullable<Workspace>() }.getOrNull()
                 ?: throw ApiException("The provided workspace data cannot be parsed")
 
             workspaceService.update(
@@ -111,8 +111,12 @@ fun Route.WorkspacesApi() {
 
         put<Paths.WorkspaceComponent> { component ->
             val principal = call.authentication.principal<ApiUser>()!!
-            val workspaceComponent = call.receiveOrNull<AbstractComponent>()
-                ?: throw ApiException("The provided workspace data cannot be parsed")
+            val workspaceComponent = runCatching { call.receiveNullable<AbstractComponent>() }.let {
+                it.getOrThrow() ?: throw ApiException(
+                    publicMessage = "The provided workspace data cannot be parsed",
+                    message = it.exceptionOrNull()!!.message
+                )
+            }
 
             principal.ensureUserBelongsToOrganization(component.organizationId)
             with(workspaceComponent) {
@@ -174,8 +178,9 @@ fun Route.WorkspacesApi() {
 
         patch<Paths.WorkspaceLayout> { workspace ->
             val principal = call.authentication.principal<ApiUser>()!!
-            val workspaceLayout = call.receiveOrNull<LayoutCollectionMessageBody>()?.data
-                ?: throw ApiException("The provided workspace data cannot be parsed")
+            val workspaceLayout =
+                runCatching { call.receiveNullable<LayoutCollectionMessageBody>() }.getOrNull()?.data
+                    ?: throw ApiException("The provided workspace data cannot be parsed")
 
             principal.ensureUserBelongsToOrganization(workspace.organizationId)
 

@@ -36,7 +36,7 @@ fun Route.DataStoresApi() {
     authenticate {
         post<Paths.DataStores> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-            val messageBody = call.receiveOrNull<DataStore>()
+            val messageBody = kotlin.runCatching { call.receiveNullable<DataStore>() }.getOrNull()
                 ?: throw ApiException("The provided data store data cannot be parsed")
 
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
@@ -95,7 +95,7 @@ fun Route.DataStoresApi() {
                 pathParams.dataStoreId,
                 OrganizationRole.owner
             )
-            val dataStore = call.receiveOrNull<DataStore>()
+            val dataStore = kotlin.runCatching { call.receiveNullable<DataStore>() }.getOrNull()
                 ?: throw ApiException("The provided data store data cannot be parsed")
             dataStoreService.renameDataStore(pathParams.dataStoreId, dataStore.name)
 
@@ -193,7 +193,7 @@ fun Route.DataStoresApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
-            val dataConnector = call.receiveOrNull<DataConnector>()
+            val dataConnector = kotlin.runCatching { call.receiveNullable<DataConnector>() }.getOrNull()
                 ?: throw ApiException("The provided data connector configuration cannot be parsed")
             val connectorProperties =
                 dataConnector.properties ?: throw ApiException("Connector configuration is required")
@@ -239,7 +239,7 @@ fun Route.DataStoresApi() {
                 pathParams.dataStoreId,
                 OrganizationRole.owner
             )
-            val dataConnector = call.receiveOrNull<DataConnector>()
+            val dataConnector = kotlin.runCatching { call.receiveNullable<DataConnector>() }.getOrNull()
                 ?: throw ApiException("The provided data connector data cannot be parsed")
             dataStoreService.renameDataConnector(
                 pathParams.dataStoreId,
@@ -254,8 +254,9 @@ fun Route.DataStoresApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
-            val connectionProperties = call.receiveOrNull<DataConnector>()?.properties
-                ?: throw ApiException("The provided data connector configuration cannot be parsed")
+            val connectionProperties =
+                kotlin.runCatching { call.receiveNullable<DataConnector>() }.getOrNull()?.properties
+                    ?: throw ApiException("The provided data connector configuration cannot be parsed")
             val connectionString = connectionProperties[connectionStringPropertyName]
 
             try {
@@ -318,7 +319,7 @@ fun Route.DataStoresApi() {
                 OrganizationRole.owner,
                 OrganizationRole.writer
             )
-            val etlProcessData = call.receiveOrNull<AbstractEtlProcess>()
+            val etlProcessData = kotlin.runCatching { call.receiveNullable<AbstractEtlProcess>() }.getOrNull()
                 ?: throw ApiException("The provided ETL process definition cannot be parsed")
             if (etlProcessData.dataConnectorId == null) throw ApiException("A data connector reference is required")
             if (etlProcessData.name.isNullOrBlank()) throw ApiException("A name for ETL process is required")
@@ -371,7 +372,7 @@ fun Route.DataStoresApi() {
                 OrganizationRole.owner,
                 OrganizationRole.writer
             )
-            val etlProcessData = call.receiveOrNull<AbstractEtlProcess>()
+            val etlProcessData = kotlin.runCatching { call.receiveNullable<AbstractEtlProcess>() }.getOrNull()
                 ?: throw ApiException("The provided ETL process definition cannot be parsed")
             if (etlProcessData.isActive == null) throw ApiException("An activation status for ETL process is required")
             dataStoreService.changeEtlProcessActivationState(
@@ -394,7 +395,7 @@ fun Route.DataStoresApi() {
             )
             dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
 
-            val etlProcessData = call.receiveOrNull<AbstractEtlProcess>()
+            val etlProcessData = kotlin.runCatching { call.receiveNullable<AbstractEtlProcess>() }.getOrNull()
                 ?: throw ApiException("The provided ETL process definition cannot be parsed")
             if (etlProcessData.dataConnectorId == null) throw ApiException("A data connector reference is required")
             if (etlProcessData.name.isNullOrBlank()) throw ApiException("A name for ETL process is required")
@@ -477,7 +478,7 @@ fun Route.DataStoresApi() {
                 OrganizationRole.owner
             )
             val nComponents = (pathParams.nComponents ?: defaultSampleSize).coerceAtMost(maxSampleSize)
-            val etlProcessData = call.receiveOrNull<AbstractEtlProcess>()
+            val etlProcessData = kotlin.runCatching { call.receiveNullable<AbstractEtlProcess>() }.getOrNull()
                 ?: throw ApiException("The provided ETL process definition cannot be parsed")
             val id = when (etlProcessData.type) {
                 EtlProcessType.jdbc -> {

@@ -78,7 +78,7 @@ fun Route.ACLApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             val urn = URN(Base64.getDecoder().decode(it.urn).decodeToString())
             principal.ensureCanModify(urn)
-            val entry = call.receiveOrNull<APIAccessControlEntry>()
+            val entry = kotlin.runCatching { call.receiveNullable<APIAccessControlEntry>() }.getOrNull()
                 ?: throw ApiException("The provided ACE data cannot be parsed")
             try {
                 aclService.addEntry(urn, entry.groupId, entry.role.toRoleType())
@@ -96,7 +96,7 @@ fun Route.ACLApi() {
             val urn = URN(Base64.getDecoder().decode(it.urn).decodeToString())
             principal.ensureCanModify(urn)
             val groupId = it.groupId
-            val role = call.receiveOrNull<OrganizationRole>()
+            val role = kotlin.runCatching { call.receiveNullable<OrganizationRole>() }.getOrNull()
                 ?: throw ApiException("The provided ACE data cannot be parsed")
             transactionMain {
                 if (role.toRoleType() > leastRoleToModifyACL && isLastAbleToModify(urn, groupId))

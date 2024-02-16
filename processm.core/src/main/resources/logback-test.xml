@@ -2,7 +2,7 @@
     <!-- This is development-only configuration. Maven must not include it in the generated JAR. -->
 
     <!-- Enable JMX interface (runtime configuration using Hawtio etc.) -->
-    <jmxConfigurator />
+    <jmxConfigurator/>
 
     <!-- Make sure all compression tasks are finished before exiting JVM. -->
     <!-- TODO: change the class name to DefaultShutdownHook when updating to logback 1.3+ -->
@@ -57,6 +57,7 @@
             level="INFO"/>
     <logger name="processm.conformance.models.alignments.CausalNetAsPetriNetAligner" level="INFO"/>
     <logger name="processm.conformance.models.alignments.petrinet.DecompositionAligner" level="INFO"/>
+    <logger name="processm.services.logic.WorkspaceNotificationService" level="TRACE"/>
     <logger name="kotlin.sequences" level="DEBUG"/>
 
 </configuration>

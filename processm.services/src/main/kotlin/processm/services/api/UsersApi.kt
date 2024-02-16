@@ -27,7 +27,7 @@ fun Route.UsersApi() {
 
     post<Paths.UsersSession> {
         loggedScope { logger ->
-            val credentials = kotlin.runCatching { call.receiveNullable<UserCredentials>() }.getOrNull()
+            val credentials = runCatching { call.receiveNullable<UserCredentials>() }.getOrNull()
 
             when {
                 credentials != null -> {
@@ -73,7 +73,7 @@ fun Route.UsersApi() {
 
     post<Paths.Users> {
         loggedScope { logger ->
-            val accountInfo = call.receiveOrNull<AccountRegistrationInfo>()
+            val accountInfo = runCatching { call.receiveNullable<AccountRegistrationInfo>() }.getOrNull()
                 ?: throw ApiException("The provided account details cannot be parsed")
             val locale = call.request.acceptLanguageItems().getOrNull(0)
 
@@ -102,7 +102,7 @@ fun Route.UsersApi() {
 
     post<Paths.ResetPasswordRequest> {
         loggedScope { logger ->
-            val request = call.receiveOrNull<ResetPasswordRequest>()
+            val request = runCatching { call.receiveNullable<ResetPasswordRequest>() }.getOrNull()
                 ?: throw ApiException("The provided information cannot be parsed")
             try {
                 accountService.sendPasswordResetEmail(request.email)
@@ -118,7 +118,8 @@ fun Route.UsersApi() {
         loggedScope {
             val token = path.token
             val request =
-                call.receiveOrNull<PasswordChange>() ?: throw ApiException("The provided information cannot be parsed")
+                runCatching { call.receiveNullable<PasswordChange>() }.getOrNull()
+                    ?: throw ApiException("The provided information cannot be parsed")
             if (accountService.resetPasswordWithToken(token, request.newPassword))
                 call.respond(HttpStatusCode.OK)
             else
@@ -146,7 +147,7 @@ fun Route.UsersApi() {
                 patch {
                     loggedScope { logger ->
                         val principal = call.authentication.principal<ApiUser>()!!
-                        val passwordData = call.receiveOrNull<PasswordChange>()
+                        val passwordData = runCatching { call.receiveNullable<PasswordChange>() }.getOrNull()
                             ?: throw ApiException("The provided password data cannot be parsed")
 
                         if (accountService.changePassword(
@@ -166,7 +167,7 @@ fun Route.UsersApi() {
             route("/locale") {
                 patch {
                     val principal = call.authentication.principal<ApiUser>()!!
-                    val localeData = call.receiveOrNull<LocaleChange>()
+                    val localeData = runCatching { call.receiveNullable<LocaleChange>() }.getOrNull()
                         ?: throw ApiException("The provided locale data cannot be parsed")
 
                     accountService.changeLocale(principal.userId, localeData.locale)

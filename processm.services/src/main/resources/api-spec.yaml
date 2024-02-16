@@ -2043,19 +2043,24 @@ components:
       type: object
       properties:
         x:
-          type: integer
+          type: number
+          format: double
         y:
-          type: integer
+          type: number
+          format: double
         width:
-          type: integer
+          type: number
+          format: double
         height:
-          type: integer
+          type: number
+          format: double
     LayoutCollectionMessageBody:
       type: object
       required: [ data ]
       properties:
         data:
           type: object
+          readOnly: true
           additionalProperties:
             $ref: '#/components/schemas/LayoutElement'
     AbstractComponent:
@@ -2081,6 +2086,7 @@ components:
       properties:
         data:
           type: object
+          readOnly: true
     CustomProperty:
       required: [ id, name ]
       properties:
@@ -2142,8 +2148,6 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/KpiComponentData'
-            customizationData:
-              type: object
     AlignerKpiComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -2202,8 +2206,6 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/AlignerKpiComponentData'
-            customizationData:
-              type: object
     CausalNetComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -2247,7 +2249,7 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/Alignment'
-    ProcessModelCustomizationData:
+    CustomizationData:
       type: object
       properties:
         layout:
@@ -2259,9 +2261,11 @@ components:
               id:
                 type: string
               x:
-                type: integer
+                type: number
+                format: double
               y:
-                type: integer
+                type: number
+                format: double
     CausalNetComponent:
       allOf:
         - $ref: '#/components/schemas/Component'
@@ -2270,7 +2274,7 @@ components:
             data:
               $ref: '#/components/schemas/CausalNetComponentData'
             customizationData:
-              $ref: '#/components/schemas/ProcessModelCustomizationData'
+              $ref: '#/components/schemas/CustomizationData'
     PetriNetComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -2321,7 +2325,7 @@ components:
             data:
               $ref: '#/components/schemas/PetriNetComponentData'
             customizationData:
-              $ref: '#/components/schemas/ProcessModelCustomizationData'
+              $ref: '#/components/schemas/CustomizationData'
     BPMNComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -2336,8 +2340,6 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/BPMNComponentData'
-            customizationData:
-              type: object
     DirectlyFollowsGraphComponent:
       allOf:
         - $ref: '#/components/schemas/Component'
@@ -2345,8 +2347,6 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/DirectlyFollowsGraphComponentData'
-            customizationData:
-              type: object
     DirectlyFollowsGraphComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'

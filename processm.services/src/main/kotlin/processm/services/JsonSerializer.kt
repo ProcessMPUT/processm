@@ -30,7 +30,9 @@ private object AnySerializer : KSerializer<Any?> {
     override val descriptor: SerialDescriptor = buildClassSerialDescriptor("Any") {}
 
     override fun deserialize(decoder: Decoder): Any? {
-        throw UnsupportedOperationException("Deserialization of Any field is not supported")
+        if (decoder.decodeNotNullMark())
+            throw UnsupportedOperationException("Deserialization of Any field is not supported")
+        return null
     }
 
     @OptIn(ExperimentalSerializationApi::class)
