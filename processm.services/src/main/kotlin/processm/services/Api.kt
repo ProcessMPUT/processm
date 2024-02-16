@@ -26,6 +26,8 @@ fun Application.apiModule() {
         logger.info("Starting API module")
         install(DefaultHeaders)
         install(ContentNegotiation) {
+            // Use deserializer for String too:
+            removeIgnoredType(String::class)
             json(JsonSerializer, ContentType.Application.Json)
         }
         install(AutoHeadResponse)
