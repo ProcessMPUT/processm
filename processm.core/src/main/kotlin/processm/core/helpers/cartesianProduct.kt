@@ -27,12 +27,12 @@ fun <T, L> List<L>.cartesianProduct(): Sequence<List<T>> where L : List<T>, L : 
         }
     }
 
-    val iterators = this@cartesianProduct.mapTo(ArrayList()) { ResettableListIterator(it) }
-    val current = iterators.mapTo(ArrayList()) { it.next() }
+    val iterators = this@cartesianProduct.mapToArray { ResettableListIterator(it) }
+    val current = iterators.mapTo(ArrayList()) { if (!it.hasNext()) return@sequence; it.next() }
     while (true) {
         yield(ArrayList(current))   //return a copy
         var finished = true
-        for (idx in 0 until iterators.size) {
+        for (idx in iterators.indices) {
             if (iterators[idx].hasNext()) {
                 current[idx] = iterators[idx].next()
                 finished = false
