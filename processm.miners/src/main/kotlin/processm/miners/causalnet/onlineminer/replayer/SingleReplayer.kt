@@ -374,7 +374,7 @@ class SingleReplayer(
                 )
             )
             while (!queue.isEmpty()) {
-                val current = queue.pollFirst()
+                val current = queue.pollFirst()!!
                 val key = current.trace.state to current.solutionLength
                 if (seen.contains(key)) {
                     continue
