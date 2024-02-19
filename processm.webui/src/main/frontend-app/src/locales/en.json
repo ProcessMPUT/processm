@@ -179,7 +179,8 @@
   },
   "user-profile": {
     "language": "Language",
-    "change-password": "Change password"
+    "change-password": "Change password",
+    "password-changed": "The password has been changed."
   },
   "users": {
     "exclude-member": "Exclude from organization",

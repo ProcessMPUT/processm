@@ -193,7 +193,7 @@ paths:
               $ref: '#/components/schemas/PasswordChange'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'

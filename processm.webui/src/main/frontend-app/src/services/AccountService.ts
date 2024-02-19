@@ -59,7 +59,7 @@ export default class AccountService extends BaseService {
       newPassword: newPassword
     });
 
-    console.assert(response.status == 202, response.statusText);
+    console.assert(response.status == 204, response.statusText);
   }
 
   public async changeLocale(locale: string) {

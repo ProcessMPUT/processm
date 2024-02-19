@@ -154,8 +154,8 @@ fun Route.UsersApi() {
                                 principal.userId, passwordData.currentPassword, passwordData.newPassword
                             )
                         ) {
-                            logger.info("The user ${principal.userId} has successfully changed his password")
-                            call.respond(HttpStatusCode.OK)
+                            logger.info("The user ${principal.userId} has successfully changed his/her password")
+                            call.respond(HttpStatusCode.NoContent)
                         } else {
                             call.respond(
                                 HttpStatusCode.Forbidden, ErrorMessage("The current password could not be changed")

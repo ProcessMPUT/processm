@@ -379,7 +379,7 @@ class UsersApiTest : BaseApiTest() {
         }
 
     @Test
-    fun `responds to successful password change with 200`() = withConfiguredTestApplication {
+    fun `responds to successful password change with 204`() = withConfiguredTestApplication {
         val accountService = declareMock<AccountService>()
 
         every {
@@ -393,7 +393,7 @@ class UsersApiTest : BaseApiTest() {
                 addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                 withSerializedBody(PasswordChange("current", "new"))
             }) {
-                assertEquals(HttpStatusCode.OK, response.status())
+                assertEquals(HttpStatusCode.NoContent, response.status())
             }
         }
 
