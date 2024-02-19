@@ -1,6 +1,6 @@
 package processm.core.models.petrinet
 
-import com.google.common.collect.Lists
+import processm.core.helpers.cartesianProduct
 import processm.core.helpers.optimize
 import processm.core.models.commons.*
 import processm.core.models.commons.DecisionPoint
@@ -246,7 +246,7 @@ class PetriNet(
     }
 
     // TODO verify the assumption that no transition occurs more than once in any of the lists
-    private fun compareTranstionLists(left: List<Transition>?, right: List<Transition>?) =
+    private fun compareTransitionLists(left: List<Transition>?, right: List<Transition>?) =
         left?.toSet().orEmpty() == right?.toSet().orEmpty()
 
     private fun matchPlaces(
@@ -262,8 +262,8 @@ class PetriNet(
             val mineOutTransitions = placeToFollowingTransition[mine]?.mapNotNull { transitionsMap[it] }
             var hit = false
             for (theirs in theirsAvailable) {
-                if (compareTranstionLists(mineInTransitions, other.placeToPrecedingTransition[theirs]) &&
-                    compareTranstionLists(mineOutTransitions, other.placeToFollowingTransition[theirs])
+                if (compareTransitionLists(mineInTransitions, other.placeToPrecedingTransition[theirs]) &&
+                    compareTransitionLists(mineOutTransitions, other.placeToFollowingTransition[theirs])
                 ) {
                     hit = true
                     theirsAvailable.remove(theirs)
@@ -343,8 +343,7 @@ class PetriNet(
             if (t.isSilent) {
                 if (t !in visited) {
                     val visitedPlusT = visited + setOf(t)
-                    Lists
-                        .cartesianProduct(t.outPlaces.map { forwardSearchInternal(it, visitedPlusT) })
+                    t.outPlaces.map { forwardSearchInternal(it, visitedPlusT) as ArrayList }.cartesianProduct()
                         .mapTo(result) { parts -> parts.flatMapTo(HashSet()) { it } }
                 }
             } else
