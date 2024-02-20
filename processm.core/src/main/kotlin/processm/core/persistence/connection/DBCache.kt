@@ -18,6 +18,7 @@ object DBCache {
      * As key database's name and lock to prevent concurrent read and write action.
      */
     private val db = Caffeine.newBuilder()
+        .maximumSize((DatabaseChecker.maxPoolSize).toLong())
         .removalListener<CacheKey, DBConnectionPool> { key, pool, _ ->
             key!!.lock.write {
                 pool!!.close()
