@@ -106,12 +106,9 @@ class WorkspacesApiTest : BaseApiTest() {
         val organizationId = UUID.randomUUID()
         val workspaceId = UUID.randomUUID()
 
-        withAuthentication(role = OrganizationRole.writer to organizationId) {
+        withAuthentication(acl = acl { RoleType.Owner * Workspaces * workspaceId }) {
             every {
-                workspaceService.remove(
-                    workspaceId,
-                    userId = any()
-                )
+                workspaceService.remove(workspaceId)
             } just runs
             with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/workspaces/$workspaceId")) {
                 assertEquals(HttpStatusCode.NoContent, response.status())
@@ -125,12 +122,9 @@ class WorkspacesApiTest : BaseApiTest() {
         val organizationId = UUID.randomUUID()
         val workspaceId = UUID.randomUUID()
 
-        withAuthentication(role = OrganizationRole.writer to organizationId) {
+        withAuthentication(acl = acl { RoleType.Owner * Workspaces * workspaceId }) {
             every {
-                workspaceService.remove(
-                    workspaceId,
-                    userId = any()
-                )
+                workspaceService.remove(workspaceId)
             } throws ValidationException(Reason.ResourceNotFound, "Workspace is not found")
             with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/workspaces/$workspaceId")) {
                 assertEquals(HttpStatusCode.NotFound, response.status())
@@ -139,22 +133,19 @@ class WorkspacesApiTest : BaseApiTest() {
     }
 
     @Test
-    fun `responds to workspace removal request with insufficient permissions with 403 and error message`() =
+    fun `responds to workspace removal request with insufficient permissions with 403`() =
         withConfiguredTestApplication {
             val organizationId = UUID.randomUUID()
+            val workspaceId = UUID.randomUUID()
 
-            withAuthentication(role = OrganizationRole.reader to organizationId) {
+            withAuthentication(acl = acl { RoleType.Reader * Workspaces * workspaceId }) {
                 with(
                     handleRequest(
                         HttpMethod.Delete,
-                        "/api/organizations/$organizationId/workspaces/${UUID.randomUUID()}"
+                        "/api/organizations/$organizationId/workspaces/$workspaceId"
                     )
                 ) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
-                    assertTrue(
-                        response.deserializeContent<ErrorMessage>().error
-                            .contains("The user has insufficient permissions to access the related organization")
-                    )
                 }
             }
         }
@@ -201,20 +192,16 @@ class WorkspacesApiTest : BaseApiTest() {
         }
 
     @Test
-    fun `responds to workspace creation request with insufficient permissions with 403 and error message`() =
+    fun `responds to workspace creation request with insufficient permissions with 403`() =
         withConfiguredTestApplication {
             val organizationId = UUID.randomUUID()
 
-            withAuthentication(role = OrganizationRole.reader to organizationId) {
+            withAuthentication() {
                 with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspaces") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                     withSerializedBody(Workspace("Workspace1"))
                 }) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
-                    assertTrue(
-                        response.deserializeContent<ErrorMessage>().error
-                            .contains("The user has insufficient permissions to access the related organization")
-                    )
                 }
             }
         }
@@ -236,7 +223,7 @@ class WorkspacesApiTest : BaseApiTest() {
         }
 
     @Test
-    fun `responds to workspace components request with workspace not related to user with 403 and error message`() =
+    fun `responds to workspace components request with workspace not related to user with 403`() =
         withConfiguredTestApplication {
             withAuthentication {
                 with(
@@ -246,10 +233,6 @@ class WorkspacesApiTest : BaseApiTest() {
                     )
                 ) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
-                    assertTrue(
-                        response.deserializeContent<ErrorMessage>().error
-                            .contains("The user is not a member of the related organization")
-                    )
                 }
             }
         }
@@ -267,11 +250,10 @@ class WorkspacesApiTest : BaseApiTest() {
         val cnet1 = DBSerializer.insert(DBCache.get(dataStore.toString()).database, MutableCausalNet())
         val cnet2 = DBSerializer.insert(DBCache.get(dataStore.toString()).database, MutableCausalNet())
 
-        withAuthentication(role = OrganizationRole.reader to organizationId) {
+        withAuthentication(acl = acl { RoleType.Reader * Workspaces * workspaceId }) {
             every {
                 workspaceService.getComponents(
-                    workspaceId,
-                    userId = any()
+                    workspaceId
                 )
             } returns listOf(
                 mockk(relaxed = true) {
@@ -330,11 +312,10 @@ class WorkspacesApiTest : BaseApiTest() {
 
         val cnet1 = DBSerializer.insert(DBCache.get(dataStore.toString()).database, MutableCausalNet())
 
-        withAuthentication(role = OrganizationRole.reader to organizationId) {
+        withAuthentication(acl = acl { RoleType.Reader * Workspaces * workspaceId }) {
             every {
                 workspaceService.getComponents(
-                    workspaceId,
-                    userId = any()
+                    workspaceId
                 )
             } returns listOf(
                 mockk {
@@ -383,12 +364,11 @@ class WorkspacesApiTest : BaseApiTest() {
             val dataQuery = "query"
             val dataStore = UUID.randomUUID()
 
-            withAuthentication(role = OrganizationRole.reader to organizationId) {
+            withAuthentication(acl = acl { RoleType.Writer * Workspaces * workspaceId }) {
                 every {
                     workspaceService.addOrUpdateComponent(
                         componentId,
                         workspaceId,
-                        any(),
                         componentName,
                         dataQuery,
                         dataStore,
@@ -430,12 +410,11 @@ class WorkspacesApiTest : BaseApiTest() {
         val dataQuery = "query"
         val dataStore = UUID.randomUUID()
 
-        withAuthentication(role = OrganizationRole.reader to organizationId) {
+        withAuthentication(acl = acl { RoleType.Writer * Workspaces * workspaceId }) {
             every {
                 workspaceService.addOrUpdateComponent(
                     componentId,
                     workspaceId,
-                    any(),
                     componentName,
                     dataQuery,
                     dataStore,
@@ -491,11 +470,9 @@ class WorkspacesApiTest : BaseApiTest() {
                 )
             )
 
-            withAuthentication(role = OrganizationRole.reader to organizationId) {
+            withAuthentication(acl = acl { RoleType.Reader * Workspaces * workspaceId }) {
                 every {
                     workspaceService.updateLayout(
-                        workspaceId,
-                        any(),
                         layoutData.mapValues { Gson().toJson(it.value) }
                     )
                 } just Runs
@@ -528,11 +505,9 @@ class WorkspacesApiTest : BaseApiTest() {
                 )
             )
 
-            withAuthentication(role = OrganizationRole.reader to organizationId) {
+            withAuthentication(acl = acl { RoleType.Reader * Workspaces * workspaceId }) {
                 every {
                     workspaceService.updateLayout(
-                        workspaceId,
-                        any(),
                         layoutData.mapValues { Gson().toJson(it.value) }
                     )
                 } throws ValidationException(
@@ -560,12 +535,10 @@ class WorkspacesApiTest : BaseApiTest() {
             val workspaceId = UUID.randomUUID()
             val componentId = UUID.randomUUID()
 
-            withAuthentication(role = OrganizationRole.reader to organizationId) {
+            withAuthentication(acl = acl { RoleType.Owner * Workspaces * workspaceId }) {
                 every {
                     workspaceService.removeComponent(
-                        componentId,
-                        workspaceId,
-                        any()
+                        componentId
                     )
                 } just runs
                 with(
@@ -587,13 +560,9 @@ class WorkspacesApiTest : BaseApiTest() {
             val workspaceId = UUID.randomUUID()
             val componentId = UUID.randomUUID()
 
-            withAuthentication(role = OrganizationRole.reader to organizationId) {
+            withAuthentication(acl = acl { RoleType.Owner * Workspaces * workspaceId }) {
                 every {
-                    workspaceService.removeComponent(
-                        componentId,
-                        workspaceId,
-                        any()
-                    )
+                    workspaceService.removeComponent(componentId)
                 } throws ValidationException(
                     Reason.ResourceNotFound,
                     "The specified workspace/component does not exist or the user has insufficient permissions to it"
