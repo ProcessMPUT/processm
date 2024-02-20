@@ -35,7 +35,7 @@
         <v-spacer></v-spacer>
         <v-dialog v-model="newDialog" max-width="600px" @input.capture="resetNewDialog">
           <template v-slot:activator="{ on, attrs }">
-            <v-btn color="primary" v-bind="attrs" v-on="on">
+            <v-btn color="primary" v-bind="attrs" v-on="on" name="btn-add-new-group">
               {{ $t("common.add-new") }}
             </v-btn>
           </template>

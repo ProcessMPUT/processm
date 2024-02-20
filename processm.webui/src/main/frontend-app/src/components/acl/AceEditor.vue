@@ -10,13 +10,13 @@
             <v-row v-if="groupId == null">
               <v-col>
                 <v-combobox :label="$t('users.group')" v-model="newGroup" :items="availableGroups" item-text="name"
-                            item-value="id"></v-combobox>
+                            item-value="id" name="ace-editor-group"></v-combobox>
               </v-col>
             </v-row>
             <v-row>
               <v-col>
                 <v-select v-model="newRole" :items="roles" item-text="name" item-value="value"
-                          :label="$t('users.role')"></v-select>
+                          :label="$t('users.role')" name="ace-editor-role"></v-select>
               </v-col>
             </v-row>
           </v-form>
@@ -26,7 +26,7 @@
       <v-card-actions>
         <v-spacer></v-spacer>
 
-        <v-btn color="primary" text @click.stop="cancel">
+        <v-btn color="primary" text @click.stop="cancel" name="btn-ace-editor-cancel">
           {{ $t("common.cancel") }}
         </v-btn>
 
@@ -35,6 +35,7 @@
             text
             @click.stop="save"
             :disabled="newGroup === null && groupId === null"
+            name="btn-ace-editor-submit"
         >
           {{ $t("common.submit") }}
         </v-btn>

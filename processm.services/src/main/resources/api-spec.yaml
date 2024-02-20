@@ -242,15 +242,7 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/data-stores:
-    parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
+  /data-stores:
     get:
       tags:
         - dataStores
@@ -296,15 +288,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/data-stores/{dataStoreId}:
+  /data-stores/{dataStoreId}:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: dataStoreId
         in: path
         description: Data store ID
@@ -364,15 +349,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors:
+  /data-stores/{dataStoreId}/data-connectors:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: dataStoreId
         in: path
         description: Data store ID
@@ -425,15 +403,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/{dataConnectorId}:
+  /data-stores/{dataStoreId}/data-connectors/{dataConnectorId}:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: dataStoreId
         in: path
         description: Data store ID
@@ -482,15 +453,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/test:
+  /data-stores/{dataStoreId}/data-connectors/test:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: dataStoreId
         in: path
         description: Data store ID
@@ -519,15 +483,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/{dataConnectorId}/case-notions:
+  /data-stores/{dataStoreId}/data-connectors/{dataConnectorId}/case-notions:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: dataStoreId
         in: path
         description: Data store ID
@@ -562,15 +519,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/{dataConnectorId}/relationship-graph:
+  /data-stores/{dataStoreId}/data-connectors/{dataConnectorId}/relationship-graph:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: dataStoreId
         in: path
         description: Data store ID
@@ -603,15 +553,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/data-stores/{dataStoreId}/etl-processes:
+  /data-stores/{dataStoreId}/etl-processes:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: dataStoreId
         in: path
         description: Data store ID
@@ -664,15 +607,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/data-stores/{dataStoreId}/etl-processes/{etlProcessId}:
+  /data-stores/{dataStoreId}/etl-processes/{etlProcessId}:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: dataStoreId
         in: path
         description: Data store ID
@@ -761,15 +697,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/data-stores/{dataStoreId}/sampling-etl-processes/:
+  /data-stores/{dataStoreId}/sampling-etl-processes/:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: dataStoreId
         in: path
         description: Data store ID

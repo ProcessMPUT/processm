@@ -25,6 +25,7 @@ import processm.dbmodels.models.*
 import processm.dbmodels.models.AutomaticEtlProcess
 import processm.dbmodels.models.DataConnector
 import processm.dbmodels.models.DataStore
+import processm.dbmodels.urn
 import processm.etl.discovery.SchemaCrawlerExplorer
 import processm.etl.helpers.getDataSource
 import processm.etl.jdbc.notifyUsers
@@ -37,21 +38,38 @@ import java.sql.DriverManager
 import java.time.Instant
 import java.util.*
 
-class DataStoreService(private val producer: Producer) {
+class DataStoreService(
+    private val accountService: AccountService,
+    private val aclService: ACLService,
+    private val producer: Producer
+) {
+
     /**
-     * Returns all data stores for the specified [organizationId].
+     * Returns all data stores the user identified by [userId] can access
      */
-    fun allByOrganizationId(organizationId: UUID): List<DataStoreDto> {
-        return transactionMain {
-            val query = DataStores.select { DataStores.organizationId eq organizationId }
-            return@transactionMain DataStore.wrapRows(query).map { it.toDto() }
+    fun getUserDataStores(userId: UUID): List<DataStore> =
+        transactionMain {
+            DataStore.wrapRows(
+                Groups
+                    .innerJoin(UsersInGroups)
+                    .crossJoin(DataStores)
+                    .join(AccessControlList, JoinType.INNER, AccessControlList.group_id, Groups.id)
+                    .slice(DataStores.columns)
+                    .select {
+                        (UsersInGroups.userId eq userId) and
+                                (AccessControlList.urn.column eq concat(
+                                    stringLiteral("urn:processm:db/${DataStores.tableName}/"),
+                                    DataStores.id
+                                )) and
+                                (AccessControlList.role_id neq RoleType.None.role.id)
+                    }.withDistinct(true)
+            ).toList()
         }
-    }
 
     /**
      * Returns the specified data store.
      */
-    fun getDataStore(dataStoreId: UUID) = getById(dataStoreId).toDto()
+    fun getDataStore(dataStoreId: UUID) = getById(dataStoreId)
 
     fun getDatabaseSize(databaseName: String): Long {
         return transactionMain {
@@ -64,16 +82,21 @@ class DataStoreService(private val producer: Producer) {
     }
 
     /**
-     * Creates new data store named [name] and assigned to the specified [organizationId].
+     * Creates new data store named [name]
      */
-    fun createDataStore(organizationId: UUID, name: String): DataStore {
+    fun createDataStore(userId: UUID, name: String): DataStore {
         return transactionMain {
             val dataStoreId = DataStores.insertAndGetId {
                 it[this.name] = name
                 it[this.creationDate] = CurrentDateTime
-                it[this.organizationId] = EntityID(organizationId, Organizations)
             }
             Migrator.migrate("${dataStoreId.value}")
+
+            val user = accountService.getUser(userId)
+
+            // Add ACL entry for the user being the owner
+            aclService.addEntry(dataStoreId.urn, user.privateGroup.id.value, RoleType.Owner)
+
             return@transactionMain getById(dataStoreId.value)
         }
     }
@@ -516,39 +539,13 @@ class DataStoreService(private val producer: Producer) {
     }
 
     /**
-     * Asserts that the specified [dataStoreId] is attached to [organizationId].
-     */
-    fun assertDataStoreBelongsToOrganization(organizationId: UUID, dataStoreId: UUID) = transactionMain {
-        DataStores.select { DataStores.organizationId eq organizationId and (DataStores.id eq dataStoreId) }.limit(1)
-            .any()
-                || throw ValidationException(
-            Reason.ResourceNotFound,
-            "The specified organization and/or data store does not exist"
-        )
-    }
-
-    /**
-     * Asserts that the specified [userId] has any of the specified [allowedOrganizationRoles] allowing for access to [dataStoreId].
+     * Asserts that the specified [userId] has at least [role] allowing for access to [dataStoreId]
      */
     fun assertUserHasSufficientPermissionToDataStore(
         userId: UUID,
         dataStoreId: UUID,
-        vararg allowedOrganizationRoles: OrganizationRole
-    ) = transactionMain {
-        DataStores
-            .innerJoin(Organizations)
-            .innerJoin(UsersRolesInOrganizations)
-            .innerJoin(Roles)
-            .select {
-                DataStores.id eq dataStoreId and
-                        (UsersRolesInOrganizations.userId eq userId) and
-                        (Roles.name inList allowedOrganizationRoles.map { it.value })
-            }.limit(1).any()
-                || throw ValidationException(
-            Reason.ResourceNotFound,
-            "The specified user account and/or data store does not exist"
-        )
-    }
+        role: RoleType
+    ) = aclService.checkAccess(userId, DataStores, dataStoreId, role)
 
     /**
      * Returns data store struct by its identifier.

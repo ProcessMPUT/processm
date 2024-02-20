@@ -111,12 +111,10 @@ object Paths {
     class OrganizationMember(val organizationId: UUID, val userId: UUID)
 
     /**
-     * Data stores assigned to [organizationId].
-     *
-     * @param organizationId Organization ID
+     * Data stores
      */
-    @Location("/organizations/{organizationId}/data-stores")
-    class DataStores(val organizationId: UUID)
+    @Location("/data-stores")
+    class DataStores()
 
     /**
      * Logs stored in [dataStoreId].
@@ -137,78 +135,71 @@ object Paths {
     class Log(val dataStoreId: UUID, val identityId: UUID)
 
     /**
-     * Data store assigned to [organizationId] and specified by [dataStoreId].
+     * Data store specified by [dataStoreId].
      *
-     * @param organizationId Organization ID
      * @param dataStoreId Data store ID
      */
-    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}")
-    class DataStore(val organizationId: UUID, val dataStoreId: UUID)
+    @Location("/data-stores/{dataStoreId}")
+    class DataStore(val dataStoreId: UUID)
 
     /**
      * Data connectors assigned to [dataStoreId].
      *
-     * @param organizationId Organization ID
      * @param dataStoreId Data store ID
      */
-    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors")
-    class DataConnectors(val organizationId: UUID, val dataStoreId: UUID)
+    @Location("/data-stores/{dataStoreId}/data-connectors")
+    class DataConnectors(val dataStoreId: UUID)
 
     /**
      * Data connector assigned to [dataStoreId] and specified by [dataConnectorId].
      *
-     * @param organizationId Organization ID
      * @param dataStoreId Data store ID
      * @param dataConnectorId Data connector ID
      */
-    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/{dataConnectorId}")
-    class DataConnector(val organizationId: UUID, val dataStoreId: UUID, val dataConnectorId: UUID)
+    @Location("/data-stores/{dataStoreId}/data-connectors/{dataConnectorId}")
+    class DataConnector(val dataStoreId: UUID, val dataConnectorId: UUID)
 
     /**
      * Tests connectivity with the specified connection properties.
      *
-     * @param organizationId Organization ID
      * @param dataStoreId Data store ID
      */
-    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/test")
-    class ConnectionTest(val organizationId: UUID, val dataStoreId: UUID)
+    @Location("/data-stores/{dataStoreId}/data-connectors/test")
+    class ConnectionTest(val dataStoreId: UUID)
 
     /**
      * Case notions related to the specified [dataConnectorId].
      *
-     * @param organizationId Organization ID
      * @param dataStoreId Data store ID
      * @param dataConnectorId Data connector ID
      */
-    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/{dataConnectorId}/case-notions")
-    class CaseNotionSuggestions(val organizationId: UUID, val dataStoreId: UUID, val dataConnectorId: UUID)
+    @Location("/data-stores/{dataStoreId}/data-connectors/{dataConnectorId}/case-notions")
+    class CaseNotionSuggestions(val dataStoreId: UUID, val dataConnectorId: UUID)
 
 
-    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/{dataConnectorId}/relationship-graph")
-    class RelationshipGraph(val organizationId: UUID, val dataStoreId: UUID, val dataConnectorId: UUID)
+    @Location("/data-stores/{dataStoreId}/data-connectors/{dataConnectorId}/relationship-graph")
+    class RelationshipGraph(val dataStoreId: UUID, val dataConnectorId: UUID)
 
     /**
      * ETL processes assigned to [dataStoreId].
      *
-     * @param organizationId Organization ID
      * @param dataStoreId Data store ID
      */
-    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/etl-processes")
-    class EtlProcesses(val organizationId: UUID, val dataStoreId: UUID)
+    @Location("/data-stores/{dataStoreId}/etl-processes")
+    class EtlProcesses(val dataStoreId: UUID)
 
     /**
      * ETL process assigned to [dataStoreId] and specified by [etlProcessId].
      *
-     * @param organizationId Organization ID
      * @param dataStoreId Data store ID
      * @param etlProcessId Data connector ID
      */
-    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/etl-processes/{etlProcessId}")
-    class EtlProcess(val organizationId: UUID, val dataStoreId: UUID, val etlProcessId: UUID)
+    @Location("/data-stores/{dataStoreId}/etl-processes/{etlProcessId}")
+    class EtlProcess(val dataStoreId: UUID, val etlProcessId: UUID)
 
 
-    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/sampling-etl-processes/")
-    class SamplingEtlProcess(val organizationId: UUID, val dataStoreId: UUID, val nComponents: Int? = null)
+    @Location("/data-stores/{dataStoreId}/sampling-etl-processes/")
+    class SamplingEtlProcess(val dataStoreId: UUID, val nComponents: Int? = null)
 
     /**
      * Get details about current user
