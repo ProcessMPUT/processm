@@ -58,6 +58,8 @@
     <logger name="processm.conformance.models.alignments.CausalNetAsPetriNetAligner" level="INFO"/>
     <logger name="processm.conformance.models.alignments.petrinet.DecompositionAligner" level="INFO"/>
     <logger name="processm.services.logic.WorkspaceNotificationService" level="TRACE"/>
+    <logger name="processm.services.logic.WorkspaceNotificationService.Listener" level="TRACE"/>
+    <logger name="processm.core.communication.Producer" level="TRACE"/>
     <logger name="kotlin.sequences" level="DEBUG"/>
 
 </configuration>

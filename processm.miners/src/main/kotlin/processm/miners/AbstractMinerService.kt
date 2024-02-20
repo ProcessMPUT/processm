@@ -136,7 +136,7 @@ abstract class AbstractMinerService(
         require(type == componentType) { "Expected $componentType, got $type." }
 
         val id = message.getString(WORKSPACE_COMPONENT_ID)
-        val event = message.getString(WORKSPACE_COMPONENT_EVENT)
+        val event = message.getStringProperty(WORKSPACE_COMPONENT_EVENT)
 
         return when (event) {
             CREATE_OR_UPDATE -> listOf(createJob(id.toUUID()!!, calcJob))

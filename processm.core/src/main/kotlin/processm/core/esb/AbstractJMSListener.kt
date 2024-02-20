@@ -13,7 +13,8 @@ import javax.naming.InitialContext
 abstract class AbstractJMSListener(
     protected val topicName: String,
     protected val filter: String?,
-    protected val name: String
+    protected val name: String,
+    protected val durable: Boolean = true
 ) : JMSListener {
     companion object {
         protected val jmsContext = InitialContext()
@@ -32,7 +33,10 @@ abstract class AbstractJMSListener(
         session = connection!!.createTopicSession(false, Session.AUTO_ACKNOWLEDGE)
         val topic = session!!.createTopic(topicName)
 
-        consumer = session!!.createSharedDurableConsumer(topic, name, filter)
+
+        consumer =
+            if (durable) session!!.createSharedDurableConsumer(topic, name, filter)
+            else session!!.createSubscriber(topic, filter, false)
         consumer!!.messageListener = this
 
         // run

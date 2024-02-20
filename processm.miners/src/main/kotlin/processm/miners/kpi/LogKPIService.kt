@@ -48,7 +48,7 @@ class LogKPIService : AbstractJobService(
         require(type == ComponentTypeDto.Kpi) { "Expected ${ComponentTypeDto.Kpi}, got $type." }
 
         val id = message.getString(WORKSPACE_COMPONENT_ID)
-        val event = message.getString(WORKSPACE_COMPONENT_EVENT)
+        val event = message.getStringProperty(WORKSPACE_COMPONENT_EVENT)
 
         return when (event) {
             CREATE_OR_UPDATE -> listOf(createJob(id.toUUID()!!))

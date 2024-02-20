@@ -31,9 +31,10 @@ class WorkspaceNotificationService {
      */
     fun subscribe(workspaceId: UUID, channel: Channel<UUID>) = loggedScope { logger ->
         lock.write {
-            if (clients.isEmpty())
-                listener.listen()
+            val isEmpty = clients.isEmpty()
             clients.computeIfAbsent(workspaceId) { ArrayDeque<Channel<UUID>>() }.addLast(channel)
+            if (isEmpty)
+                listener.listen()
         }
     }
 
@@ -59,12 +60,16 @@ class WorkspaceNotificationService {
     private val listener = Listener()
 
     private inner class Listener :
-        AbstractJMSListener(WORKSPACE_COMPONENTS_TOPIC, null, "WorkspaceNotificationService") {
+        AbstractJMSListener(
+            WORKSPACE_COMPONENTS_TOPIC,
+            "$WORKSPACE_COMPONENT_EVENT = '$DATA_CHANGE'",
+            "WorkspaceNotificationService",
+            false
+        ) {
 
         override fun onMessage(msg: Message?) = loggedScope { logger ->
+            logger.error("onMessage $msg")
             if (msg !is MapMessage) return
-            val event = msg.getString(WORKSPACE_COMPONENT_EVENT)
-            if (event != DATA_CHANGE) return
             val componentId = checkNotNull(msg.getString(WORKSPACE_COMPONENT_ID).toUUID())
             val workspaceId = checkNotNull(msg.getString(WORKSPACE_ID).toUUID())
             val failed = ArrayList<Channel<UUID>>()
