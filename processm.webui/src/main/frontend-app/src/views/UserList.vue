@@ -27,7 +27,7 @@
         <v-spacer></v-spacer>
         <v-dialog v-model="newDialog" max-width="600px" @input.capture="resetNewDialog">
           <template v-slot:activator="{ on, attrs }">
-            <v-btn v-bind="attrs" v-on="on" color="primary">
+            <v-btn v-bind="attrs" v-on="on" color="primary" name="btn-add-new-user">
               {{ $t("common.add-new") }}
             </v-btn>
           </template>
@@ -40,8 +40,9 @@
                   :rules="[(v) => /^([a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6})*$/.test(v) || $t('registration-form.validation.email-format')]"
                   :search="searchUsers"
                   :value.sync="newUser"
+                  name="new-user"
                 ></combo-box-with-search>
-                <v-select v-model="newRole" :items="roles" :label="$t('users.role')"></v-select>
+                <v-select v-model="newRole" :items="roles" :label="$t('users.role')" name="new-role"></v-select>
               </v-form>
             </v-card-text>
             <v-card-actions>
@@ -49,8 +50,7 @@
               <v-btn color="primary darken-1" text @click="newDialog = false">
                 {{ $t("common.cancel") }}
               </v-btn>
-
-              <v-btn :disabled="!isNewValid" color="primary darken-1" form="newOrgMemberForm" type="submit">
+              <v-btn :disabled="!isNewValid" color="primary darken-1" form="newForm" type="submit" name="btn-commit-add-member">
                 {{ $t("common.save") }}
               </v-btn>
             </v-card-actions>

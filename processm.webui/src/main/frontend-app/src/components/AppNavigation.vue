@@ -20,7 +20,7 @@
           {{ $t("navigation.workspaces") }}
         </v-list-item-content>
       </v-list-item>
-      <v-list-item :to="'users'" color="primary">
+      <v-list-item :to="'users'" color="primary" name="goto-users">
         <v-list-item-action>
           <v-icon>people</v-icon>
         </v-list-item-action>

@@ -154,6 +154,7 @@
     "password": "Hasło",
     "database-name": "Nazwa bazy danych",
     "database": "Baza danych",
+    "trust-server-certificate": "Zawsze ufaj certyfikatowi serwera",
     "connector-not-supported": "Łącza danych zdefiniowane za pomocą connection stringa nie są jeszcze wspierane",
     "validation": {
       "non-empty-field": "Wartość nie może być pusta",
