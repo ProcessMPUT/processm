@@ -792,12 +792,10 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             jdbcUrl = this.jdbcUrl!!
             registerUser(email, "org")
             login(email, "P@ssw0rd!")
-            val org = EntityID(organizations.single().id!!, Organizations)
             transactionMain {
                 DataStores.batchInsert(1..100) { i ->
                     this[DataStores.name] = "ds$i"
                     this[DataStores.creationDate] = CurrentDateTime
-                    this[DataStores.organizationId] = org
                 }
             }
         }
