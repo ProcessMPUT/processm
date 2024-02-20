@@ -57,18 +57,18 @@ class WorkspacesApiTest : BaseApiTest() {
     }
 
     override fun endpointsWithAuthentication() = Stream.of(
-        HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/workspaces",
-        HttpMethod.Post to "/api/organizations/${UUID.randomUUID()}/workspaces",
-        HttpMethod.Put to "/api/organizations/${UUID.randomUUID()}/workspaces/${UUID.randomUUID()}",
-        HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}/workspaces/${UUID.randomUUID()}",
-        HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/workspaces/${UUID.randomUUID()}/components",
-        HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/workspaces/${UUID.randomUUID()}/components/${UUID.randomUUID()}",
-        HttpMethod.Put to "/api/organizations/${UUID.randomUUID()}/workspaces/${UUID.randomUUID()}/components/${UUID.randomUUID()}",
-        HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/workspaces/${UUID.randomUUID()}/components/${UUID.randomUUID()}/data"
+        HttpMethod.Get to "/api/workspaces",
+        HttpMethod.Post to "/api/organizations/${UUID.randomUUID()}/workspace",
+        HttpMethod.Put to "/api/workspaces/${UUID.randomUUID()}",
+        HttpMethod.Delete to "/api/workspaces/${UUID.randomUUID()}",
+        HttpMethod.Get to "/api/workspaces/${UUID.randomUUID()}/components",
+        HttpMethod.Get to "/api/workspaces/${UUID.randomUUID()}/components/${UUID.randomUUID()}",
+        HttpMethod.Put to "/api/workspaces/${UUID.randomUUID()}/components/${UUID.randomUUID()}",
+        HttpMethod.Get to "/api/workspaces/${UUID.randomUUID()}/components/${UUID.randomUUID()}/data"
     )
 
     override fun endpointsWithNoImplementation() = Stream.of(
-        HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/workspaces/${UUID.randomUUID()}/components/${UUID.randomUUID()}/data"
+        HttpMethod.Get to "/api/workspaces/${UUID.randomUUID()}/components/${UUID.randomUUID()}/data"
     )
 
     @Test
@@ -90,7 +90,7 @@ class WorkspacesApiTest : BaseApiTest() {
                     every { name } returns "Workspace2"
                 }
             )
-            with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId/workspaces")) {
+            with(handleRequest(HttpMethod.Get, "/api/workspaces")) {
                 assertEquals(HttpStatusCode.OK, response.status())
                 val workspaces = assertNotNull(response.deserializeContent<List<Workspace>>())
                 assertEquals(2, workspaces.count())
@@ -110,7 +110,7 @@ class WorkspacesApiTest : BaseApiTest() {
             every {
                 workspaceService.remove(workspaceId)
             } just runs
-            with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/workspaces/$workspaceId")) {
+            with(handleRequest(HttpMethod.Delete, "/api/workspaces/$workspaceId")) {
                 assertEquals(HttpStatusCode.NoContent, response.status())
             }
         }
@@ -126,7 +126,7 @@ class WorkspacesApiTest : BaseApiTest() {
             every {
                 workspaceService.remove(workspaceId)
             } throws ValidationException(Reason.ResourceNotFound, "Workspace is not found")
-            with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/workspaces/$workspaceId")) {
+            with(handleRequest(HttpMethod.Delete, "/api/workspaces/$workspaceId")) {
                 assertEquals(HttpStatusCode.NotFound, response.status())
             }
         }
@@ -142,7 +142,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 with(
                     handleRequest(
                         HttpMethod.Delete,
-                        "/api/organizations/$organizationId/workspaces/$workspaceId"
+                        "/api/workspaces/$workspaceId"
                     )
                 ) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
@@ -156,7 +156,7 @@ class WorkspacesApiTest : BaseApiTest() {
             val organizationId = UUID.randomUUID()
 
             withAuthentication(role = OrganizationRole.writer to organizationId) {
-                with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspaces") {
+                with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspace") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                     withSerializedBody(Workspace(""))
                 }) {
@@ -180,7 +180,7 @@ class WorkspacesApiTest : BaseApiTest() {
 
             withAuthentication(userId, role = OrganizationRole.writer to organizationId) {
                 every { workspaceService.create(workspaceName, userId, organizationId) } returns workspaceId
-                with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspaces") {
+                with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspace") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                     withSerializedBody(Workspace(workspaceName))
                 }) {
@@ -197,7 +197,7 @@ class WorkspacesApiTest : BaseApiTest() {
             val organizationId = UUID.randomUUID()
 
             withAuthentication() {
-                with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspaces") {
+                with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspace") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                     withSerializedBody(Workspace("Workspace1"))
                 }) {
@@ -212,7 +212,7 @@ class WorkspacesApiTest : BaseApiTest() {
             val organizationId = UUID.randomUUID()
 
             withAuthentication(role = OrganizationRole.reader to organizationId) {
-                with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspaces")) {
+                with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspace")) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
                     assertTrue(
                         response.deserializeContent<ErrorMessage>().error
@@ -229,7 +229,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 with(
                     handleRequest(
                         HttpMethod.Get,
-                        "/api/organizations/${UUID.randomUUID()}/workspaces/${UUID.randomUUID()}/components"
+                        "/api/workspaces/${UUID.randomUUID()}/components"
                     )
                 ) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
@@ -289,7 +289,7 @@ class WorkspacesApiTest : BaseApiTest() {
             with(
                 handleRequest(
                     HttpMethod.Get,
-                    "/api/organizations/$organizationId/workspaces/$workspaceId/components"
+                    "/api/workspaces/$workspaceId/components"
                 )
             ) {
                 assertEquals(HttpStatusCode.OK, response.status())
@@ -339,7 +339,7 @@ class WorkspacesApiTest : BaseApiTest() {
             with(
                 handleRequest(
                     HttpMethod.Get,
-                    "/api/organizations/$organizationId/workspaces/$workspaceId/components"
+                    "/api/workspaces/$workspaceId/components"
                 )
             ) {
                 assertEquals(HttpStatusCode.OK, response.status())
@@ -380,7 +380,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 with(
                     handleRequest(
                         HttpMethod.Put,
-                        "/api/organizations/$organizationId/workspaces/$workspaceId/components/$componentId"
+                        "/api/workspaces/$workspaceId/components/$componentId"
                     ) {
                         addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                         withSerializedBody(
@@ -426,7 +426,7 @@ class WorkspacesApiTest : BaseApiTest() {
             with(
                 handleRequest(
                     HttpMethod.Put,
-                    "/api/organizations/$organizationId/workspaces/$workspaceId/components/$componentId"
+                    "/api/workspaces/$workspaceId/components/$componentId"
                 ) {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                     withSerializedBody(
@@ -479,7 +479,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 with(
                     handleRequest(
                         HttpMethod.Patch,
-                        "/api/organizations/$organizationId/workspaces/$workspaceId/layout"
+                        "/api/workspaces/$workspaceId/layout"
                     ) {
                         addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                         withSerializedBody(LayoutCollectionMessageBody(layoutData.mapKeys { it.key.toString() }))
@@ -517,7 +517,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 with(
                     handleRequest(
                         HttpMethod.Patch,
-                        "/api/organizations/$organizationId/workspaces/$workspaceId/layout"
+                        "/api/workspaces/$workspaceId/layout"
                     ) {
                         addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                         withSerializedBody(LayoutCollectionMessageBody(layoutData.mapKeys { it.key.toString() }))
@@ -544,7 +544,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 with(
                     handleRequest(
                         HttpMethod.Delete,
-                        "/api/organizations/$organizationId/workspaces/$workspaceId/components/$componentId"
+                        "/api/workspaces/$workspaceId/components/$componentId"
                     )
                 ) {
                     assertEquals(HttpStatusCode.NoContent, response.status())
@@ -570,7 +570,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 with(
                     handleRequest(
                         HttpMethod.Delete,
-                        "/api/organizations/$organizationId/workspaces/$workspaceId/components/$componentId"
+                        "/api/workspaces/$workspaceId/components/$componentId"
                     )
                 ) {
                     assertEquals(HttpStatusCode.NotFound, response.status())
@@ -642,7 +642,7 @@ class WorkspacesApiTest : BaseApiTest() {
                     }
                 }
                 runBlocking {
-                    handleSse("/api/organizations/${UUID.randomUUID()}/workspaces/${workspaceId}") { channel ->
+                    handleSse("/api/workspaces/${workspaceId}") { channel ->
                         sync.send(1)
                         repeat(2) {
                             result.add(channel.readSSE().asUpdateEvent())
@@ -684,7 +684,7 @@ class WorkspacesApiTest : BaseApiTest() {
                     component2.triggerEvent(Producer(), DATA_CHANGE)
                 }
                 runBlocking {
-                    handleSse("/api/organizations/${UUID.randomUUID()}/workspaces/${workspaceId2}") { channel ->
+                    handleSse("/api/workspaces/${workspaceId2}") { channel ->
                         sync.send(1)
                         result.add(channel.readSSE().asUpdateEvent())
                     }
@@ -712,7 +712,7 @@ class WorkspacesApiTest : BaseApiTest() {
             withAuthentication {
                 val jobs = (0 until n).map {
                     launch(context = Dispatchers.IO) {
-                        handleSse("/api/organizations/${UUID.randomUUID()}/workspaces/${workspaceId}") { channel ->
+                        handleSse("/api/workspaces/${workspaceId}") { channel ->
                             sync.send(1)
                             result.add(channel.readSSE().asUpdateEvent())
                         }
@@ -747,7 +747,7 @@ class WorkspacesApiTest : BaseApiTest() {
             val jobs = (0 until n).map { ctr ->
                 launch(context = Dispatchers.IO) {
                     withAuthentication(login = "user${ctr}@example.com") {
-                        handleSse("/api/organizations/${UUID.randomUUID()}/workspaces/${workspaceId}") { channel ->
+                        handleSse("/api/workspaces/${workspaceId}") { channel ->
                             sync.send(ctr)
                             result.add(channel.readSSE().asUpdateEvent())
                         }

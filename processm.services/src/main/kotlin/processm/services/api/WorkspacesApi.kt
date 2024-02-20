@@ -49,7 +49,7 @@ fun Route.WorkspacesApi() {
     val logger = logger()
 
     authenticate {
-        post<Paths.Workspaces> { path ->
+        post<Paths.NewWorkspace> { path ->
             val principal = call.authentication.principal<ApiUser>()!!
             val workspace = call.receiveOrNull<Workspace>()
                 ?: throw ApiException("The provided workspace data cannot be parsed")

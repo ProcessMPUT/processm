@@ -236,59 +236,60 @@ object Paths {
     class ResetPassword(val token: UUID)
 
     /**
-     * Get, update or remove the specified workspace in the context of the specified organization
+     * Get, update or remove the specified workspace
      *
-     * @param organizationId Organization ID
      * @param workspaceId Workspace ID
      */
-    @Location("/organizations/{organizationId}/workspaces/{workspaceId}")
-    class Workspace(val organizationId: UUID, val workspaceId: UUID)
+    @Location("/workspaces/{workspaceId}")
+    class Workspace(val workspaceId: UUID)
 
     /**
-     * Get or update the specified component in the specified workspace in the context of the specified organization
+     * Get or update the specified component in the specified workspace
      *
-     * @param organizationId Organization ID
      * @param workspaceId Workspace ID
      * @param componentId Component ID
      */
-    @Location("/organizations/{organizationId}/workspaces/{workspaceId}/components/{componentId}")
-    class WorkspaceComponent(val organizationId: UUID, val workspaceId: UUID, val componentId: UUID)
+    @Location("/workspaces/{workspaceId}/components/{componentId}")
+    class WorkspaceComponent(val workspaceId: UUID, val componentId: UUID)
 
     /**
-     * Get data of the specified component in the specified workspace in the context of the specified organization
+     * Get data of the specified component in the specified workspace
      *
-     * @param organizationId Organization ID
      * @param workspaceId Workspace ID
      * @param componentId Component ID
      */
-    @Location("/organizations/{organizationId}/workspaces/{workspaceId}/components/{componentId}/data")
-    class WorkspaceComponentData(val organizationId: UUID, val workspaceId: UUID, val componentId: UUID)
+    @Location("/workspaces/{workspaceId}/components/{componentId}/data")
+    class WorkspaceComponentData(val workspaceId: UUID, val componentId: UUID)
 
     /**
-     * Get all components available to the calling user in the specified workspace in the context of the specified organization
+     * Get all components available to the calling user in the specified workspace
      *
-     * @param organizationId Organization ID
      * @param workspaceId Workspace ID
      */
-    @Location("/organizations/{organizationId}/workspaces/{workspaceId}/components")
-    class WorkspaceComponents(val organizationId: UUID, val workspaceId: UUID)
+    @Location("/workspaces/{workspaceId}/components")
+    class WorkspaceComponents(val workspaceId: UUID)
 
     /**
      * Update size and position of the specified components
      *
-     * @param organizationId Organization ID
      * @param workspaceId Workspace ID
      */
-    @Location("/organizations/{organizationId}/workspaces/{workspaceId}/layout")
-    class WorkspaceLayout(val organizationId: UUID, val workspaceId: UUID)
+    @Location("/workspaces/{workspaceId}/layout")
+    class WorkspaceLayout(val workspaceId: UUID)
 
     /**
-     * Get all workspaces available to the calling user in the context of the specified organization
+     * Get all workspaces available to the calling user
+     */
+    @Location("/workspaces")
+    class Workspaces
+
+    /**
+     * New workspace linked to the specified organization
      *
      * @param organizationId Organization ID
      */
-    @Location("/organizations/{organizationId}/workspaces")
-    class Workspaces(val organizationId: UUID)
+    @Location("/organizations/{organizationId}/workspace")
+    class NewWorkspace(val organizationId: UUID)
 
     /**
      * Get the whole ACL for the given URN
