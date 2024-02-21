@@ -20,13 +20,16 @@ import processm.core.helpers.mapToArray
 import processm.core.logging.loggedScope
 import processm.core.logging.logger
 import processm.dbmodels.models.ComponentTypeDto
+import processm.dbmodels.models.RoleType
 import processm.dbmodels.models.WorkspaceComponent
+import processm.dbmodels.models.Workspaces
 import processm.services.api.models.AbstractComponent
 import processm.services.api.models.LayoutCollectionMessageBody
 import processm.services.api.models.OrganizationRole
 import processm.services.api.models.Workspace
 import processm.services.helpers.ServerSentEvent
 import processm.services.helpers.eventStream
+import processm.services.logic.ACLService
 import processm.services.logic.WorkspaceNotificationService
 import processm.services.logic.WorkspaceService
 import java.util.*
@@ -41,37 +44,38 @@ data class ComponentUpdateEventPayload(val componentId: SerializableUUID)
 @KtorExperimentalLocationsAPI
 fun Route.WorkspacesApi() {
     val workspaceService by inject<WorkspaceService>()
+    val aclService by inject<ACLService>()
     val workspaceNotificationService by inject<WorkspaceNotificationService>()
     val logger = logger()
 
     authenticate {
-        post<Paths.Workspaces> {
+        post<Paths.NewWorkspace> { path ->
             val principal = call.authentication.principal<ApiUser>()!!
             val workspace = call.receiveOrNull<Workspace>()
                 ?: throw ApiException("The provided workspace data cannot be parsed")
 
-            principal.ensureUserBelongsToOrganization(it.organizationId, OrganizationRole.writer)
+            // The user must be a member of the organization, but does not require any privileges, as the privileges are related only to user and group management
+            principal.ensureUserBelongsToOrganization(path.organizationId, OrganizationRole.none)
 
             if (workspace.name.isEmpty()) {
                 throw ApiException("Workspace name needs to be specified when creating new workspace")
             }
 
-            val workspaceId = workspaceService.create(workspace.name, principal.userId, it.organizationId)
+            val workspaceId = workspaceService.create(workspace.name, principal.userId, path.organizationId)
 
             call.respond(HttpStatusCode.Created, Workspace(workspace.name, workspaceId))
         }
 
-        delete<Paths.Workspace> { workspace ->
+        delete<Paths.Workspace> { path ->
             val principal = call.authentication.principal<ApiUser>()!!
 
-            principal.ensureUserBelongsToOrganization(workspace.organizationId, OrganizationRole.writer)
-
-            workspaceService.remove(workspace.workspaceId, principal.userId)
+            aclService.checkAccess(principal.userId, Workspaces, path.workspaceId, RoleType.Owner)
+            workspaceService.remove(path.workspaceId)
 
             call.respond(HttpStatusCode.NoContent)
         }
 
-        get<Paths.Workspaces> { workspace ->
+        get<Paths.Workspaces> {
             val principal = call.authentication.principal<ApiUser>()!!
             val workspaces = workspaceService.getUserWorkspaces(principal.userId)
                 .map { Workspace(it.name, it.id.value) }.toTypedArray()
@@ -81,28 +85,21 @@ fun Route.WorkspacesApi() {
 
         put<Paths.Workspace> { path ->
             val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(path.organizationId)
 
             val workspace = call.receiveOrNull<Workspace>()
                 ?: throw ApiException("The provided workspace data cannot be parsed")
 
-            workspaceService.update(
-                principal.userId,
-                workspace
-            )
+            aclService.checkAccess(principal.userId, Workspaces, path.workspaceId, RoleType.Writer)
+            workspaceService.update(path.workspaceId, workspace.name)
 
             call.respond(HttpStatusCode.OK)
         }
 
-        get<Paths.WorkspaceComponent> { component ->
+        get<Paths.WorkspaceComponent> { path ->
             val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(component.organizationId)
+            aclService.checkAccess(principal.userId, Workspaces, path.workspaceId, RoleType.Reader)
 
-            val component = workspaceService.getComponent(
-                component.componentId,
-                principal.userId,
-                component.workspaceId
-            ).toAbstractComponent()
+            val component = workspaceService.getComponent(path.componentId).toAbstractComponent()
 
             call.respond(HttpStatusCode.OK, component)
         }
@@ -112,12 +109,11 @@ fun Route.WorkspacesApi() {
             val workspaceComponent = call.receiveOrNull<AbstractComponent>()
                 ?: throw ApiException("The provided workspace data cannot be parsed")
 
-            principal.ensureUserBelongsToOrganization(component.organizationId)
+            aclService.checkAccess(principal.userId, Workspaces, component.workspaceId, RoleType.Writer)
             with(workspaceComponent) {
                 workspaceService.addOrUpdateComponent(
                     component.componentId,
                     component.workspaceId,
-                    principal.userId,
                     name,
                     query,
                     dataStore,
@@ -136,12 +132,8 @@ fun Route.WorkspacesApi() {
         delete<Paths.WorkspaceComponent> { component ->
             val principal = call.authentication.principal<ApiUser>()!!
 
-            principal.ensureUserBelongsToOrganization(component.organizationId)
-            workspaceService.removeComponent(
-                component.componentId,
-                component.workspaceId,
-                principal.userId
-            )
+            aclService.checkAccess(principal.userId, Workspaces, component.workspaceId, RoleType.Writer)
+            workspaceService.removeComponent(component.componentId)
 
             call.respond(HttpStatusCode.NoContent)
         }
@@ -152,16 +144,14 @@ fun Route.WorkspacesApi() {
             call.respond(HttpStatusCode.NotImplemented)
         }
 
-        get<Paths.WorkspaceComponents> { workspace ->
+        get<Paths.WorkspaceComponents> { path ->
             loggedScope {
                 val principal = call.authentication.principal<ApiUser>()!!
 
-                principal.ensureUserBelongsToOrganization(workspace.organizationId)
+                aclService.checkAccess(principal.userId, Workspaces, path.workspaceId, RoleType.Reader)
 
-                val components = workspaceService.getComponents(
-                    workspace.workspaceId,
-                    principal.userId
-                ).mapToArray(WorkspaceComponent::toAbstractComponent)
+                val components = workspaceService.getComponents(path.workspaceId)
+                    .mapToArray(WorkspaceComponent::toAbstractComponent)
 
                 call.respond(HttpStatusCode.OK, components)
             }
@@ -172,22 +162,16 @@ fun Route.WorkspacesApi() {
             val workspaceLayout = call.receiveOrNull<LayoutCollectionMessageBody>()?.data
                 ?: throw ApiException("The provided workspace data cannot be parsed")
 
-            principal.ensureUserBelongsToOrganization(workspace.organizationId)
+            aclService.checkAccess(principal.userId, Workspaces, workspace.workspaceId, RoleType.Reader)
 
             val layoutData = workspaceLayout
                 .mapKeys { UUID.fromString(it.key) }
                 .mapValues { Gson().toJson(it.value) }
 
-            workspaceService.updateLayout(
-                workspace.workspaceId,
-                principal.userId,
-                layoutData
-            )
+            workspaceService.updateLayout(layoutData)
 
             call.respond(HttpStatusCode.NoContent)
         }
-
-
 
         get<Paths.Workspace> { workspace ->
             call.eventStream {

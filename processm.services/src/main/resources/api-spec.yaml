@@ -731,15 +731,7 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/workspaces:
-    parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
+  /workspaces:
     get:
       tags:
         - workspaces
@@ -756,6 +748,15 @@ paths:
                   $ref: '#/components/schemas/Workspace'
       security:
         - bearerAuth: [ ]
+  /organizations/{organizationId}/workspace:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
     post:
       tags:
         - workspaces
@@ -779,15 +780,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/workspaces/{workspaceId}:
+  /workspaces/{workspaceId}:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: workspaceId
         in: path
         description: Workspace ID
@@ -848,15 +842,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/workspaces/{workspaceId}/components:
+  /workspaces/{workspaceId}/components:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: workspaceId
         in: path
         description: Workspace ID
@@ -885,15 +872,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/workspaces/{workspaceId}/components/{componentId}:
+  /workspaces/{workspaceId}/components/{componentId}:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: workspaceId
         in: path
         description: Workspace ID
@@ -968,15 +948,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/workspaces/{workspaceId}/components/{componentId}/data:
+  /workspaces/{workspaceId}/components/{componentId}/data:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: workspaceId
         in: path
         description: Workspace ID
@@ -1010,15 +983,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/workspaces/{workspaceId}/layout:
+  /workspaces/{workspaceId}/layout:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: workspaceId
         in: path
         description: Workspace ID
