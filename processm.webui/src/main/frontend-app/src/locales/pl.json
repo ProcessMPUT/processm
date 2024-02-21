@@ -187,6 +187,7 @@
     "member-excluded": "Usunięto członka z organizacji",
     "organizations": "Organizacje",
     "page-title": "Użytkownicy",
+    "remove-objects": "Ta grupa is jedynym właścicielem następujących obiektów. Czy chcesz je usunąć w celu usunięcia grupy?",
     "role": "Rola",
     "shared": "Współdzielona",
     "users": "Użytkownicy",

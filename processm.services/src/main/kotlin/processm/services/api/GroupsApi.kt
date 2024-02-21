@@ -13,6 +13,12 @@ import org.koin.ktor.ext.inject
 import processm.core.helpers.mapToArray
 import processm.core.helpers.toUUID
 import processm.core.logging.loggedScope
+import processm.core.persistence.connection.transactionMain
+import processm.dbmodels.decode
+import processm.dbmodels.models.DataStore
+import processm.dbmodels.models.DataStores
+import processm.dbmodels.models.Workspace
+import processm.dbmodels.models.Workspaces
 import processm.services.api.models.Group
 import processm.services.api.models.Organization
 import processm.services.api.models.OrganizationRole
@@ -20,6 +26,9 @@ import processm.services.api.models.UserInfo
 import processm.services.logic.*
 import processm.services.respondCreated
 import java.util.*
+
+typealias ApiEntityID = processm.services.api.models.EntityID
+typealias ApiEntityType = processm.services.api.models.EntityType
 
 fun Route.GroupsApi() = loggedScope { logger ->
     val groupService by inject<GroupService>()
@@ -93,6 +102,27 @@ fun Route.GroupsApi() = loggedScope { logger ->
             groupService.remove(path.groupId)
 
             call.respond(HttpStatusCode.NoContent)
+        }
+
+        get<Paths.GroupSoleOwnership> { path ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(path.organizationId, OrganizationRole.reader)
+
+            val objects = transactionMain {
+                groupService.getSoleOwnershipURNs(path.groupId).mapToArray {
+                    val entity = it.decode()
+                    when (entity.table) {
+                        is Workspaces ->
+                            ApiEntityID(ApiEntityType.workspace, entity.value, Workspace.findById(entity.value)?.name)
+
+                        is DataStores ->
+                            ApiEntityID(ApiEntityType.dataStore, entity.value, DataStore.findById(entity.value)?.name)
+
+                        else -> error("Unsupported table `${entity.table.tableName}`")
+                    }
+                }
+            }
+            call.respond(objects)
         }
 
         get<Paths.GroupMembers> { path ->

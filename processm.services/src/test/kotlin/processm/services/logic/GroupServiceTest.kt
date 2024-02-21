@@ -1,10 +1,12 @@
 package processm.services.logic
 
+import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import processm.dbmodels.models.*
+import processm.dbmodels.urn
 import java.util.*
 import kotlin.test.*
 
@@ -155,5 +157,126 @@ class GroupServiceTest : ServiceTestBase() {
             assertThrows<ValidationException> {
                 groupService.detachUserFromGroup(user.id.value, org.sharedGroup.id.value)
             }
+        }
+
+    @Test
+    fun `getSoleOwnershipURNs - user is the sole owner of two workspaces`(): Unit =
+        withCleanTables(AccessControlList, Groups, UsersInGroups, Workspaces) {
+            val org = createOrganization().id.value
+            val user = createUser(organizationId = org)
+            val w1 = EntityID(createWorkspace("W1", user.id.value, org), Workspaces).urn
+            val w2 = EntityID(createWorkspace("W2", user.id.value, org), Workspaces).urn
+            with(groupService.getSoleOwnershipURNs(user.privateGroup.id.value)) {
+                assertEquals(2, size)
+                assertTrue { w1 in this }
+                assertTrue { w2 in this }
+            }
+        }
+
+    @Test
+    fun `getSoleOwnershipURNs - user shares the ownership of one of two workspaces with a group`(): Unit =
+        withCleanTables(AccessControlList, Groups, UsersInGroups, Workspaces) {
+            val org = createOrganization().id.value
+            val user = createUser(organizationId = org)
+            val group = createGroup().value
+            val w1 = EntityID(createWorkspace("W1", user.id.value, org), Workspaces).urn
+            val w2 = EntityID(createWorkspace("W2", user.id.value, org), Workspaces).urn
+            aclService.addEntry(w1, group, RoleType.Owner)
+            with(groupService.getSoleOwnershipURNs(user.privateGroup.id.value)) {
+                assertEquals(1, size)
+                assertTrue { w1 !in this }
+                assertTrue { w2 in this }
+            }
+            with(groupService.getSoleOwnershipURNs(group)) {
+                assertTrue { isEmpty() }
+            }
+        }
+
+    @Test
+    fun `getSoleOwnershipURNs - user is the sole owner of two workspaces but there's a reader`(): Unit =
+        withCleanTables(AccessControlList, Groups, UsersInGroups, Workspaces) {
+            val org = createOrganization().id.value
+            val user = createUser(organizationId = org)
+            val group = createGroup().value
+            val w1 = EntityID(createWorkspace("W1", user.id.value, org), Workspaces).urn
+            val w2 = EntityID(createWorkspace("W2", user.id.value, org), Workspaces).urn
+            aclService.addEntry(w1, group, RoleType.Reader)
+            with(groupService.getSoleOwnershipURNs(user.privateGroup.id.value)) {
+                assertEquals(2, size)
+                assertTrue { w1 in this }
+                assertTrue { w2 in this }
+            }
+            with(groupService.getSoleOwnershipURNs(group)) {
+                assertTrue { isEmpty() }
+            }
+        }
+
+    @Test
+    fun `getSoleOwnershipURNs - user owns one workspace, group owns another workspace, both can read both`(): Unit =
+        withCleanTables(AccessControlList, Groups, UsersInGroups, Workspaces) {
+            val org = createOrganization().id.value
+            val user = createUser(organizationId = org)
+            val group = createGroup().value
+            val w1 = EntityID(createWorkspace("W1", user.id.value, org), Workspaces).urn
+            val w2 = EntityID(createWorkspace("W2", user.id.value, org), Workspaces).urn
+            aclService.addEntry(w1, group, RoleType.Owner)
+            aclService.removeEntry(w1, user.privateGroup.id.value)
+            aclService.addEntry(w2, group, RoleType.Reader)
+            aclService.addEntry(w1, user.privateGroup.id.value, RoleType.Reader)
+            with(groupService.getSoleOwnershipURNs(user.privateGroup.id.value)) {
+                assertEquals(1, size)
+                assertTrue { w1 !in this }
+                assertTrue { w2 in this }
+            }
+            with(groupService.getSoleOwnershipURNs(group)) {
+                assertEquals(1, size)
+                assertTrue { w1 in this }
+                assertTrue { w2 !in this }
+            }
+        }
+
+    @Test
+    fun `remove does not removes dangling objects`(): Unit =
+        withCleanTables(AccessControlList, Groups, UsersInGroups, Workspaces) {
+            val org = createOrganization().id.value
+            val user = createUser(organizationId = org)
+            val group = createGroup(organizationId = org).value
+            val w1 = createWorkspace("W1", user.id.value, org)
+            val w2 = createWorkspace("W2", user.id.value, org)
+            val urn1 = EntityID(w1, Workspaces).urn
+            val urn2 = EntityID(w2, Workspaces).urn
+            aclService.addEntry(urn1, group, RoleType.Owner)
+            aclService.removeEntry(urn1, user.privateGroup.id.value)
+            aclService.addEntry(urn2, group, RoleType.Reader)
+            aclService.addEntry(urn1, user.privateGroup.id.value, RoleType.Reader)
+            try {
+                groupService.remove(group)
+                assertFalse(true)
+            } catch (e: ValidationException) {
+                assertEquals(Reason.UnprocessableResource, e.reason)
+            }
+            assertFalse { aclService.getEntries(urn1).isEmpty() }
+            assertFalse { Workspaces.select { (Workspaces.id eq w1) and (Workspaces.deleted eq false) }.empty() }
+            assertEquals(group, groupService.getGroup(group).id.value)
+        }
+
+    @Test
+    fun `remove succeeds if there are no dangling objects`(): Unit =
+        withCleanTables(AccessControlList, Groups, UsersInGroups, Workspaces) {
+            val org = createOrganization().id.value
+            val user = createUser(organizationId = org)
+            val group = createGroup(organizationId = org).value
+            val w1 = createWorkspace("W1", user.id.value, org)
+            val w2 = createWorkspace("W2", user.id.value, org)
+            val urn1 = EntityID(w1, Workspaces).urn
+            val urn2 = EntityID(w2, Workspaces).urn
+            aclService.addEntry(urn1, group, RoleType.Owner)
+            aclService.removeEntry(urn1, user.privateGroup.id.value)
+            aclService.addEntry(urn2, group, RoleType.Reader)
+            aclService.addEntry(urn1, user.privateGroup.id.value, RoleType.Reader)
+            workspaceService.remove(w1)
+            assertEquals(group, groupService.getGroup(group).id.value)
+            groupService.remove(group)
+            assertThrows<ValidationException> { groupService.getGroup(group) }
         }
 }
