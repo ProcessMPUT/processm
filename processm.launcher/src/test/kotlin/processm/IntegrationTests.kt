@@ -16,6 +16,8 @@ import processm.core.log.Event
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
+import processm.core.log.hierarchical.LogInputStream
+import processm.core.logging.logger
 import processm.etl.DBMSEnvironment
 import processm.etl.MSSQLEnvironment
 import processm.etl.MySQLEnvironment
@@ -26,6 +28,8 @@ import processm.services.api.models.*
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
+import java.sql.Statement
+import java.util.concurrent.ForkJoinPool
 import kotlin.test.*
 
 /**
@@ -128,7 +132,7 @@ class IntegrationTests {
 
             deleteLog(logIdentityId)
             with(pqlQuery("where log:identity:id=$logIdentityId")) {
-                assertTrue { isEmpty() }
+                assertTrue { none() }
             }
 
             deleteCurrentEtlProcess()
@@ -221,20 +225,18 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             assertTrue { info.errors.isNullOrEmpty() }
             val logIdentityId = info.logIdentityId
 
-            val logs: Array<Any> = pqlQuery("where log:identity:id=$logIdentityId")
+            val logs: LogInputStream = pqlQuery("where log:identity:id=$logIdentityId")
 
-            assertEquals(1, logs.size)
-            val log = logs[0]
-            with(ducktyping) {
-                assertEquals(logIdentityId.toString(), log["log"]["id"]["@value"])
-                val traces = log["log"]["trace"] as List<*>
-                val nItems = 1 + traces.size + traces.sumOf { trace -> (trace["event"] as List<*>).size }
+            assertEquals(1, logs.count())
+            logs.first().let { log ->
+                assertEquals(logIdentityId, log.identityId)
+                val nItems = 1 + log.traces.count() + log.traces.sumOf { trace -> trace.events.count() }
                 assertTrue { nItems <= defaultSampleSize }
             }
 
             deleteLog(logIdentityId)
             with(pqlQuery("where log:identity:id=$logIdentityId")) {
-                assertTrue { isEmpty() }
+                assertTrue { none() }
             }
 
             deleteCurrentEtlProcess()
@@ -702,19 +704,30 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                         // A delay for Debezium to kick in and start monitoring the DB
                         Thread.sleep(5_000)
 
-                        postgresSakila.connect().use { connection ->
-                            connection.autoCommit = false
-                            connection.createStatement().use { s ->
-                                s.execute(
-                                    File(
-                                        DBMSEnvironment.TEST_DATABASES_PATH,
-                                        PostgreSQLEnvironment.SAKILA_INSERT_SCRIPT
-                                    ).readText()
-                                )
+                        val postgresInsertTask = ForkJoinPool.commonPool().submit {
+                            val stime = System.currentTimeMillis()
+                            postgresSakila.connect().use { connection ->
+                                connection.autoCommit = false
+                                connection.createStatement().use { s ->
+                                    s.execute(
+                                        File(
+                                            DBMSEnvironment.TEST_DATABASES_PATH,
+                                            PostgreSQLEnvironment.SAKILA_INSERT_SCRIPT
+                                        ).readText(),
+                                        Statement.NO_GENERATED_KEYS
+                                    )
+                                }
+                                connection.commit()
                             }
-                            connection.commit()
+                            logger().info("Data inserted to Postgres in ${System.currentTimeMillis() - stime}ms")
                         }
-                        mysqlSakila.configure(listOf(MySQLEnvironment.SAKILA_INSERT_SCRIPT))
+                        val mysqlInsertTask = ForkJoinPool.commonPool().submit {
+                            val stime = System.currentTimeMillis()
+                            mysqlSakila.configure(listOf(MySQLEnvironment.SAKILA_INSERT_SCRIPT))
+                            logger().info("Data inserted to MySQL in ${System.currentTimeMillis() - stime}ms")
+                        }
+                        postgresInsertTask.join()
+                        mysqlInsertTask.join()
 
                         val infos = etlProcesses.parallelMap {
                             for (i in 0..10) {

@@ -343,37 +343,36 @@ class AutomaticEtlProcessExecutor(
         return result
     }
 
-    private fun List<XESComponent>.writeToDB() {
+    private fun List<XESComponent>.writeToDB(connection: Connection) {
         assert(any { it is Event })
-        DBCache.get(dataStoreDBName).getConnection().use { connection ->
-            //No use on AppendingDBXESOutputStream to avoid closing the connection
-            val output = AppendingDBXESOutputStream(connection)
-            output.write(Log(mutableAttributeMapOf(Attribute.IDENTITY_ID to logId)))
-            output.write(asSequence())
-            output.flush()
-            // Add object described by an event to the objects column of the event's trace
-            connection.prepareStatement(
-                """
+        //No use on AppendingDBXESOutputStream to avoid closing the connection
+        val output = AppendingDBXESOutputStream(connection, size + 1)
+        output.write(Log(mutableAttributeMapOf(Attribute.IDENTITY_ID to logId)))
+        output.write(asSequence())
+        output.flush()
+        // Add object described by an event to the objects column of the event's trace
+        connection.prepareStatement(
+            """
                 update traces
                 set objects = jsonb_build_object(?::text, '{}'::jsonb) || objects
                 where "identity:id"=?::uuid and not (objects ?? ?::text)
             """.trimIndent()
-            ).use { stmt ->
-                var currentTraceIdentityId: String? = null
-                for (component in this) {
-                    if (component is Trace) currentTraceIdentityId = component.identityId?.toString()
-                    else if (component is Event) {
-                        val dbId = component.getObject()?.toDB() ?: continue
-                        stmt.setString(1, dbId)
-                        stmt.setString(2, checkNotNull(currentTraceIdentityId))
-                        stmt.setString(3, dbId)
-                        stmt.executeUpdate()
-                    }
+        ).use { stmt ->
+            var currentTraceIdentityId: String? = null
+            for (component in this) {
+                if (component is Trace) currentTraceIdentityId = component.identityId?.toString()
+                else if (component is Event) {
+                    val dbId = component.getObject()?.toDB() ?: continue
+                    stmt.setString(1, dbId)
+                    stmt.setString(2, checkNotNull(currentTraceIdentityId))
+                    stmt.setString(3, dbId)
+                    stmt.executeUpdate()
                 }
             }
-            // Add attribute values relevant according to the relation graph
-            connection.prepareStatement(
-                """
+        }
+        // Add attribute values relevant according to the relation graph
+        connection.prepareStatement(
+            """
                     update traces 
                     set objects=
                     jsonb_set(
@@ -386,37 +385,35 @@ class AutomaticEtlProcessExecutor(
                         jsonb_build_object(?::text, jsonb_build_object(?::text, jsonb_build_array(?::text))) 
                         <@ objects
                     ) and "identity:id"=?::uuid""".trimIndent()
-            ).use { stmt ->
-                var currentTraceIdentityId: String? = null
-                for (component in this) {
-                    if (component is Trace) currentTraceIdentityId = component.identityId?.toString()
-                    else if (component is Event) {
-                        val remoteObjectId = component.getObject() ?: continue
-                        val source = remoteObjectId.toDB()
-                        for (r in descriptor.graph.outgoingEdgesOf(remoteObjectId.classId)) {
-                            val targetObjectId =
-                                component.attributes.getOrNull("$DB_ATTR_NS:${r.referencingAttributesName.name}")
-                                    ?.toString()
-                                    ?: continue
-                            val target = "${r.targetClass.id.value}${RemoteObjectID.DELIMITER}${targetObjectId}"
-                            val path =
-                                connection.createArrayOf(
-                                    JDBCType.VARCHAR.name,
-                                    arrayOf(source, r.referencingAttributesName.name)
-                                )
-                            stmt.setArray(1, path)
-                            stmt.setString(2, target)
-                            stmt.setArray(3, path)
-                            stmt.setString(4, source)
-                            stmt.setString(5, r.referencingAttributesName.name)
-                            stmt.setString(6, target)
-                            stmt.setString(7, checkNotNull(currentTraceIdentityId))
-                            stmt.executeUpdate()
-                        }
+        ).use { stmt ->
+            var currentTraceIdentityId: String? = null
+            for (component in this) {
+                if (component is Trace) currentTraceIdentityId = component.identityId?.toString()
+                else if (component is Event) {
+                    val remoteObjectId = component.getObject() ?: continue
+                    val source = remoteObjectId.toDB()
+                    for (r in descriptor.graph.outgoingEdgesOf(remoteObjectId.classId)) {
+                        val targetObjectId =
+                            component.attributes.getOrNull("$DB_ATTR_NS:${r.referencingAttributesName.name}")
+                                ?.toString()
+                                ?: continue
+                        val target = "${r.targetClass.id.value}${RemoteObjectID.DELIMITER}${targetObjectId}"
+                        val path =
+                            connection.createArrayOf(
+                                JDBCType.VARCHAR.name,
+                                arrayOf(source, r.referencingAttributesName.name)
+                            )
+                        stmt.setArray(1, path)
+                        stmt.setString(2, target)
+                        stmt.setArray(3, path)
+                        stmt.setString(4, source)
+                        stmt.setString(5, r.referencingAttributesName.name)
+                        stmt.setString(6, target)
+                        stmt.setString(7, checkNotNull(currentTraceIdentityId))
+                        stmt.executeUpdate()
                     }
-
                 }
-                connection.commit()
+
             }
         }
     }
@@ -440,7 +437,7 @@ class AutomaticEtlProcessExecutor(
                     val result = connection.processEvent(event.dbEvent)
                     if (result.any { it is Event }) {
                         logger.trace("Successfully processed {}", event)
-                        result.writeToDB()
+                        result.writeToDB(connection)
                         queue.remove(event)
                         modified = true
                     } else unprocessedObjects.add(obj)
@@ -468,12 +465,14 @@ class AutomaticEtlProcessExecutor(
             val result = if (!queue.hasObject(objectOfEvent)) connection.processEvent(dbEvent)
             else emptyList()
             if (result.any { it is Event }) {
-                result.writeToDB()
+                result.writeToDB(connection)
                 processQueue(connection)
+                connection.commit()
                 return true
             } else {
                 logger.trace("Postponing {}", dbEvent)
                 queue.add(dbEvent, objectOfEvent)
+                connection.rollback()
                 return false
             }
         }

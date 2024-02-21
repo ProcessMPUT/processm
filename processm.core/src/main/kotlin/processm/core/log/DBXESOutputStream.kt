@@ -15,7 +15,11 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.*
 
-open class DBXESOutputStream protected constructor(protected val connection: Connection, val isAppending: Boolean) :
+open class DBXESOutputStream protected constructor(
+    protected val connection: Connection,
+    val isAppending: Boolean,
+    val batchSize: Int = DBXESOutputStream.batchSize
+) :
     XESOutputStream {
     companion object {
         internal const val batchSize = 1024 * 1024    //An arbitrarily chosen value

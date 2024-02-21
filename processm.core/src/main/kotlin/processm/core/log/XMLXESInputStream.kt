@@ -16,11 +16,13 @@ import javax.xml.stream.XMLStreamReader
  * Extracts a sequence of [XESComponent]s from the underlying stream.
  * @see XESInputStream
  */
-class XMLXESInputStream(private val input: InputStream) : XESInputStream {
+class XMLXESInputStream(private val reader: XMLStreamReader) : XESInputStream {
     companion object {
         private val exitTags = setOf("trace", "event")
         private val attributeTags = setOf("string", "date", "boolean", "int", "float", "list", "id")
     }
+
+    constructor(input: InputStream) : this(XMLInputFactory.newDefaultFactory().createXMLStreamReader(input))
 
     /**
      * Number formatter for parsing numeric attributes. This object changes its state during parsing and cannot be
@@ -36,9 +38,6 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
     private val nameMap = HashMapWithDefault<String, String>(false) { k -> k }
 
     override fun iterator(): Iterator<XESComponent> = sequence<XESComponent> {
-        val xmlInputFactory: XMLInputFactory = XMLInputFactory.newDefaultFactory()
-        val reader = xmlInputFactory.createXMLStreamReader(input)
-
         while (reader.hasNext()) {
             if (!reader.isStartElement || lastSeenElement == null)
                 reader.next()
