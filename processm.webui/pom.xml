@@ -51,6 +51,7 @@
                         <goals>
                             <goal>install-node-and-npm</goal>
                         </goals>
+                        <phase>initialize</phase>
                         <configuration>
                             <nodeVersion>v18.18.0</nodeVersion>
                             <npmVersion>9.8.1</npmVersion>
