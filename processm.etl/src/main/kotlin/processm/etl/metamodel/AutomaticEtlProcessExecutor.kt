@@ -459,6 +459,7 @@ class AutomaticEtlProcessExecutor(
      */
     fun processEvent(dbEvent: DatabaseChangeApplier.DatabaseChangeEvent): Boolean {
         DBCache.get(dataStoreDBName).getConnection().use { connection ->
+            connection.autoCommit = false
             logger.trace("For the first time {}", dbEvent)
             val objectOfEvent = dbEvent.getObject()
             // Process an event only if there are no unprocessed events related to this object
