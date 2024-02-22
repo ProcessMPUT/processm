@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalSerializationApi::class)
+
 package processm.services
 
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -8,11 +10,13 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.*
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.serializer
 import processm.enhancement.kpi.Report
+import processm.helpers.UUIDSerializer
 import java.time.LocalDateTime
+import java.util.*
 
 val JsonSerializer = Json {
     allowSpecialFloatingPointValues = true
@@ -23,22 +27,34 @@ val JsonSerializer = Json {
         include(Report.Json.serializersModule)
         contextual(Any::class, AnySerializer as KSerializer<Any>)
         contextual(LocalDateTime::class, LocalDateTimeSerializer)
+        contextual(UUID::class, UUIDSerializer)
     }
 }
 
 private object AnySerializer : KSerializer<Any?> {
     override val descriptor: SerialDescriptor = buildClassSerialDescriptor("Any") {}
+    private val emptyObjectDescriptor: SerialDescriptor = buildClassSerialDescriptor("EmptyObject") {}
 
     override fun deserialize(decoder: Decoder): Any? {
-        if (decoder.decodeNotNullMark())
-            throw UnsupportedOperationException("Deserialization of Any field is not supported")
-        return null
+        if (!decoder.decodeNotNullMark())
+            return null
+
+        decoder as JsonDecoder
+        return deserializeJsonElement(decoder.decodeJsonElement())
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
+    private fun deserializeJsonElement(element: JsonElement): Any = when (element) {
+        is JsonObject -> element.mapValues { deserializeJsonElement(it.value) }
+        is JsonArray -> element.map { deserializeJsonElement(it) }
+        is JsonPrimitive -> element.toString()
+        else -> throw IllegalStateException("Unknown object type: $element")
+    }
+
     override fun serialize(encoder: Encoder, value: Any?) {
         if (value === null)
             encoder.encodeNull()
+        else if (value::class == Any::class)
+            encoder.beginStructure(emptyObjectDescriptor).endStructure(emptyObjectDescriptor)
         else {
             val serializer = encoder.serializersModule.serializer(value.javaClass)
             encoder.encodeSerializableValue(serializer, value)

@@ -216,7 +216,7 @@ class UsersApiTest : BaseApiTest() {
         withAuthentication(uuid, email) {
             with(handleRequest(HttpMethod.Get, "/api/users")) {
                 assertEquals(HttpStatusCode.OK, response.status())
-                assertNotNull(response.deserializeContent<List<UserInfo>>())
+                assertNotNull(response.deserializeContent<List<UserAccountInfo>>())
             }
         }
 
