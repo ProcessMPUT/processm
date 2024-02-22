@@ -1,7 +1,5 @@
 package processm.services.api
 
-import com.google.common.reflect.TypeToken
-import com.google.gson.GsonBuilder
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.config.*
@@ -15,6 +13,7 @@ import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
+import kotlinx.serialization.encodeToString
 import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
@@ -25,14 +24,12 @@ import org.koin.test.mock.declareMock
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.Organizations
 import processm.dbmodels.models.Users
-import processm.services.LocalDateTimeTypeAdapter
-import processm.services.NonNullableTypeAdapterFactory
+import processm.services.JsonSerializer
 import processm.services.api.models.AuthenticationResult
 import processm.services.api.models.OrganizationRole
 import processm.services.apiModule
 import processm.services.logic.AccountService
 import processm.services.logic.toDB
-import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.stream.Stream
@@ -41,17 +38,6 @@ import kotlin.test.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class BaseApiTest : KoinTest {
-    companion object {
-        val gson by lazy {
-            // TODO: replace GSON with kotlinx/serialization
-            val gsonBuilder = GsonBuilder()
-            // Correctly serialize/deserialize LocalDateTime
-            gsonBuilder.registerTypeAdapter(LocalDateTime::class.java, LocalDateTimeTypeAdapter())
-            gsonBuilder.registerTypeAdapterFactory(NonNullableTypeAdapterFactory())
-            gsonBuilder.create()
-        }
-    }
-
     protected abstract fun endpointsWithAuthentication(): Stream<Pair<HttpMethod, String>?>
     protected abstract fun endpointsWithNoImplementation(): Stream<Pair<HttpMethod, String>?>
     private val mocksMap = ConcurrentHashMap<KClass<*>, Any>()
@@ -221,11 +207,11 @@ abstract class BaseApiTest : KoinTest {
     }
 
     protected inline fun <reified T> TestApplicationResponse.deserializeContent(): T =
-        gson.fromJson(content, object : TypeToken<T>() {}.type)
+        JsonSerializer.decodeFromString(requireNotNull(content))
 
-    protected inline fun <T : Any> TestApplicationRequest.withSerializedBody(requestBody: T) {
+    protected inline fun <reified T : Any> TestApplicationRequest.withSerializedBody(requestBody: T) {
         addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-        setBody(gson.toJson(requestBody))
+        setBody(JsonSerializer.encodeToString(requestBody))
     }
 
 }

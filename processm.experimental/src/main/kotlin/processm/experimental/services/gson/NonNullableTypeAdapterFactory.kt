@@ -1,4 +1,4 @@
-package processm.services
+package processm.experimental.services.gson
 
 import com.google.gson.Gson
 import com.google.gson.TypeAdapter

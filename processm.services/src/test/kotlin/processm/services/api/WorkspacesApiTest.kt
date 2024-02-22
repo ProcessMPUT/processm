@@ -1,6 +1,5 @@
 package processm.services.api
 
-import com.google.gson.Gson
 import io.ktor.client.utils.*
 import io.ktor.http.*
 import io.ktor.server.engine.*
@@ -11,6 +10,7 @@ import io.ktor.websocket.*
 import io.mockk.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.AfterAll
@@ -26,6 +26,7 @@ import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.MutableCausalNet
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
+import processm.services.JsonSerializer
 import processm.services.api.models.*
 import processm.services.api.models.Workspace
 import processm.services.logic.Reason
@@ -510,7 +511,7 @@ class WorkspacesApiTest : BaseApiTest() {
                         workspaceId,
                         any(),
                         organizationId,
-                        layoutData.mapValues { Gson().toJson(it.value) }
+                        layoutData.mapValues { JsonSerializer.encodeToString(it.value) }
                     )
                 } just Runs
                 with(
@@ -548,7 +549,7 @@ class WorkspacesApiTest : BaseApiTest() {
                         workspaceId,
                         any(),
                         organizationId,
-                        layoutData.mapValues { Gson().toJson(it.value) }
+                        layoutData.mapValues { JsonSerializer.encodeToString(it.value) }
                     )
                 } throws ValidationException(
                     Reason.ResourceNotFound,
@@ -644,7 +645,7 @@ class WorkspacesApiTest : BaseApiTest() {
         while (true) {
             // This is sloppy, as readUTF8Line treats both \n and \r\n as line terminators, thus possibly leading to misinterpreting received data.
             // It doesn't seem to be a problem in the current use case and, nevertheless, it is recommended to encode the content of the event as JSON
-            var line = readUTF8Line()
+            val line = readUTF8Line()
             if (line.isNullOrEmpty())
                 break
             val i = line.indexOf(':')

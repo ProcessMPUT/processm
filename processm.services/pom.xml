@@ -320,11 +320,6 @@
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
-            <artifactId>ktor-serialization-gson-jvm</artifactId>
-            <version>${ktor.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.ktor</groupId>
             <artifactId>ktor-serialization-kotlinx-json-jvm</artifactId>
             <version>${ktor.version}</version>
             <exclusions>

@@ -1,6 +1,5 @@
 package processm.services.api
 
-import com.google.gson.Gson
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -14,6 +13,7 @@ import io.ktor.server.routing.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import org.koin.ktor.ext.inject
 import processm.core.helpers.SerializableUUID
 import processm.core.helpers.mapToArray
@@ -21,6 +21,7 @@ import processm.core.logging.loggedScope
 import processm.core.logging.logger
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
+import processm.services.JsonSerializer
 import processm.services.api.models.AbstractComponent
 import processm.services.api.models.LayoutCollectionMessageBody
 import processm.services.api.models.OrganizationRole
@@ -129,10 +130,9 @@ fun Route.WorkspacesApi() {
                     query,
                     dataStore,
                     ComponentTypeDto.byTypeNameInDatabase(type.toString()),
-                    // TODO: replace the dependency on Gson with kotlinx/serialization
-                    customizationData = customizationData?.let { Gson().toJson(it) },
-                    layoutData = layout?.let { Gson().toJson(it) },
-                    data = data?.let { Gson().toJson(it) },
+                    customizationData = customizationData?.let { JsonSerializer.encodeToString(it) },
+                    layoutData = layout?.let { JsonSerializer.encodeToString(it) },
+                    data = data?.let { JsonSerializer.encodeToString(it) },
                     customProperties = customProperties
                 )
             }
@@ -186,7 +186,7 @@ fun Route.WorkspacesApi() {
 
             val layoutData = workspaceLayout
                 .mapKeys { UUID.fromString(it.key) }
-                .mapValues { Gson().toJson(it.value) }
+                .mapValues { JsonSerializer.encodeToString(it.value) }
 
             workspaceService.updateLayout(
                 workspace.workspaceId,
