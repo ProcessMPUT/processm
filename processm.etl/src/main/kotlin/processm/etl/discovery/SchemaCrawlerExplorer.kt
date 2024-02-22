@@ -23,26 +23,31 @@ class SchemaCrawlerExplorer(private val connection: Connection, schema: String? 
             .withLoadOptions(loadOptionsBuilder.toOptions())
     }
 
-    override fun getClasses(): Set<Class> {
+    private val tables: List<Table> by lazy {
+        // The performance of SchemaCralwerUtility varies wildly from DBMS to DBMS even on seemingly identical DB schema.
+        // For example, with Sakila, on Postgres it takes negligible amount of time, whereas on MSSQL it takes around 10 seconds
         val catalog = SchemaCrawlerUtility.getCatalog(connection, options)
-
-        return catalog.schemas
+        catalog.schemas
             .flatMap { catalog.getTables(it) }
             .filter { it !is View }
-            .mapToSet { it.convertToClass() }
+    }
+
+    override fun getClasses(): Set<Class> {
+        return tables.mapToSet { it.convertToClass() }
     }
 
     override fun getRelationships(): Set<Relationship> {
-        val catalog = SchemaCrawlerUtility.getCatalog(connection, options)
-
-        return catalog.schemas
-            .flatMap { catalog.getTables(it) }
-            .filter { it !is View }
+        return tables
             .flatMapTo(HashSet()) {
                 it.importedForeignKeys.map {
                     val sourceColumn = it.columnReferences.first().foreignKeyColumn
                     val targetColumn = it.columnReferences.first().primaryKeyColumn
-                    Relationship(it.name, sourceColumn.parent.convertToClass(), targetColumn.parent.convertToClass(), sourceColumn.name)
+                    Relationship(
+                        it.name,
+                        sourceColumn.parent.convertToClass(),
+                        targetColumn.parent.convertToClass(),
+                        sourceColumn.name
+                    )
                 }
             }
     }
@@ -51,5 +56,6 @@ class SchemaCrawlerExplorer(private val connection: Connection, schema: String? 
         connection.close()
     }
 
-    private fun Table.convertToClass() = Class(this.name, this.columns.map {Attribute(it.name, it.columnDataType.name, it.isPartOfForeignKey) })
+    private fun Table.convertToClass() =
+        Class(this.name, this.columns.map { Attribute(it.name, it.columnDataType.name, it.isPartOfForeignKey) })
 }
