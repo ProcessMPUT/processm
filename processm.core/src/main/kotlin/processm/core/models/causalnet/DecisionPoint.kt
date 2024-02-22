@@ -1,10 +1,10 @@
 package processm.core.models.causalnet
 
 import processm.core.models.commons.Activity
-import processm.core.helpers.allSubsets
 import processm.core.models.commons.ControlStructure
 import processm.core.models.commons.ControlStructureType
 import processm.core.models.commons.DecisionPoint
+import processm.helpers.allSubsets
 
 /**
  * A CausalNet decision point, i.e., choice of a join or a split for the give [node]

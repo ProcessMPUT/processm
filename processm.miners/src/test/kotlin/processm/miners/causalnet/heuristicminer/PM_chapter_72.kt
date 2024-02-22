@@ -1,6 +1,5 @@
 package processm.miners.causalnet.heuristicminer
 
-import processm.core.helpers.mapToSet
 import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.log.Helpers.event
 import processm.core.log.hierarchical.Log
@@ -9,6 +8,7 @@ import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
+import processm.helpers.mapToSet
 import processm.miners.causalnet.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.causalnet.heuristicminer.bindingproviders.hypothesisselector.MostParsimoniousHypothesisSelector
 import processm.miners.causalnet.heuristicminer.bindingselectors.CountSeparately

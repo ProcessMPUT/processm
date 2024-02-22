@@ -17,7 +17,7 @@ import io.ktor.server.routing.*
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import processm.core.communication.Producer
-import processm.core.logging.loggedScope
+import processm.logging.loggedScope
 import processm.services.api.*
 import processm.services.logic.*
 

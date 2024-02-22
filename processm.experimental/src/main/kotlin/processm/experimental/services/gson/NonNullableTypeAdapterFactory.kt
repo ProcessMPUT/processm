@@ -6,8 +6,8 @@ import com.google.gson.TypeAdapterFactory
 import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
-import processm.core.logging.debug
-import processm.core.logging.loggedScope
+import processm.logging.debug
+import processm.logging.loggedScope
 import kotlin.jvm.internal.Reflection
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties

@@ -1,7 +1,7 @@
 package processm.core.esb
 
 import jakarta.jms.*
-import processm.core.logging.loggedScope
+import processm.logging.loggedScope
 import javax.naming.InitialContext
 
 /**

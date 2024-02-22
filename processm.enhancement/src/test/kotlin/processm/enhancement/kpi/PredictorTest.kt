@@ -1,12 +1,12 @@
 package processm.enhancement.kpi
 
 import processm.core.DBTestHelper
-import processm.core.helpers.Counter
 import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.querylanguage.Query
+import processm.helpers.Counter
 import java.util.*
 import kotlin.math.pow
 import kotlin.test.Test

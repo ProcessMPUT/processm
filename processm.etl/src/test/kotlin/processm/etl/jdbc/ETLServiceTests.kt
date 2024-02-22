@@ -10,10 +10,8 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Timeout
 import processm.core.esb.Artemis
 import processm.core.esb.ServiceStatus
-import processm.core.helpers.toUUID
 import processm.core.log.DBLogCleaner
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
-import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.core.querylanguage.Query
@@ -26,6 +24,8 @@ import processm.dbmodels.models.EtlProcessesMetadata
 import processm.dbmodels.models.Organization
 import processm.etl.DBMSEnvironment
 import processm.etl.PostgreSQLEnvironment
+import processm.helpers.toUUID
+import processm.logging.logger
 import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit

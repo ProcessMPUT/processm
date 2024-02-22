@@ -9,11 +9,11 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.Route
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.koin.ktor.ext.inject
-import processm.core.helpers.mapToArray
 import processm.core.models.metadata.URN
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.Group
 import processm.dbmodels.models.RoleType
+import processm.helpers.mapToArray
 import processm.services.api.models.OrganizationRole
 import processm.services.logic.ACLService
 import processm.services.logic.ValidationException

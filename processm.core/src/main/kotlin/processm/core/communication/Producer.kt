@@ -4,7 +4,7 @@ import jakarta.jms.MapMessage
 import jakarta.jms.Session
 import org.messaginghub.pooled.jms.JmsPoolConnectionFactory
 import processm.core.esb.getTopicConnectionFactory
-import processm.core.logging.loggedScope
+import processm.logging.loggedScope
 import javax.naming.InitialContext
 
 /**

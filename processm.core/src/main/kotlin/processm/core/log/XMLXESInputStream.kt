@@ -1,11 +1,11 @@
 package processm.core.log
 
-import processm.core.helpers.HashMapWithDefault
-import processm.core.helpers.fastParseISO8601
-import processm.core.helpers.toUUID
 import processm.core.log.attribute.AttributeMap.Companion.LIST_TAG
 import processm.core.log.attribute.MutableAttributeMap
-import processm.core.logging.logger
+import processm.helpers.HashMapWithDefault
+import processm.helpers.fastParseISO8601
+import processm.helpers.toUUID
+import processm.logging.logger
 import java.io.InputStream
 import java.text.NumberFormat
 import java.util.*

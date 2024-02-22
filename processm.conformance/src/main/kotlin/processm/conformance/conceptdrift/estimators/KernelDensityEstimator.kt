@@ -5,9 +5,9 @@ import processm.conformance.conceptdrift.numerical.integration.Integrator
 import processm.conformance.conceptdrift.numerical.integration.MidpointIntegrator
 import processm.conformance.conceptdrift.numerical.optimization.Optimizer
 import processm.conformance.conceptdrift.numerical.optimization.RMSProp
-import processm.core.helpers.stats.Distribution
-import processm.core.logging.logger
-import processm.core.logging.trace
+import processm.helpers.stats.Distribution
+import processm.logging.logger
+import processm.logging.trace
 import kotlin.math.absoluteValue
 import kotlin.math.pow
 import kotlin.math.sqrt

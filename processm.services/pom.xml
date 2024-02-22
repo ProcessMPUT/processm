@@ -201,7 +201,7 @@
                                 <replacement>
                                     <token>val (`?[a-zA-Z0-9]+`?): java.util.UUID</token>
                                     <value>
-                                        @kotlinx.serialization.Serializable(with=processm.core.helpers.UUIDSerializer::class)
+                                        @kotlinx.serialization.Serializable(with=processm.helpers.UUIDSerializer::class)
                                         val $1: java.util.UUID
                                     </value>
                                 </replacement>
@@ -230,7 +230,7 @@
         </dependency>
         <dependency>
             <groupId>${project.parent.groupId}</groupId>
-            <artifactId>core</artifactId>
+            <artifactId>helpers</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>

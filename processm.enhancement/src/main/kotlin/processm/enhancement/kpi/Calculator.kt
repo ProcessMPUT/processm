@@ -7,9 +7,6 @@ import processm.conformance.models.alignments.cache.DefaultAlignmentCache
 import processm.conformance.models.alignments.events.DefaultEventsSummarizer
 import processm.conformance.models.alignments.events.EventsSummarizer
 import processm.conformance.models.alignments.petrinet.DecompositionAligner
-import processm.core.helpers.MRUMap
-import processm.core.helpers.map2d.DoublingMap2D
-import processm.core.helpers.stats.Distribution
 import processm.core.log.hierarchical.Log
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.DecoupledNodeExecution
@@ -20,6 +17,9 @@ import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.Place
 import processm.core.models.petrinet.Transition
 import processm.core.models.processtree.*
+import processm.helpers.MRUMap
+import processm.helpers.map2d.DoublingMap2D
+import processm.helpers.stats.Distribution
 import kotlin.sequences.Sequence
 
 /**

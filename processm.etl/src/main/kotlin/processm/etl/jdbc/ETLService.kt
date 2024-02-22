@@ -11,15 +11,14 @@ import org.quartz.*
 import org.quartz.SimpleScheduleBuilder.simpleSchedule
 import processm.core.esb.AbstractJobService
 import processm.core.esb.ServiceJob
-import processm.core.helpers.toUUID
 import processm.core.log.AppendingDBXESOutputStream
-import processm.core.logging.loggedScope
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.etl.jdbc.*
 import processm.dbmodels.models.DataStores
-import processm.dbmodels.models.ETLError
 import processm.etl.helpers.reportETLError
+import processm.helpers.toUUID
+import processm.logging.loggedScope
 
 /**
  * A micro-service running the JDBC-based ETL processes. On [start] call it loads the ETL configurations from all

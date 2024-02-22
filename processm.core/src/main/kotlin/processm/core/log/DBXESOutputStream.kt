@@ -1,13 +1,13 @@
 package processm.core.log
 
-import processm.core.helpers.toUUID
 import processm.core.log.attribute.AttributeMap
 import processm.core.log.attribute.xesTag
-import processm.core.logging.loggedScope
 import processm.core.persistence.copy.Copy
 import processm.core.persistence.copy.EagerCopy
 import processm.core.persistence.copy.LazyCopy
 import processm.core.querylanguage.Scope
+import processm.helpers.toUUID
+import processm.logging.loggedScope
 import java.sql.Connection
 import java.sql.ResultSet
 import java.time.Instant

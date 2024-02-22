@@ -19,7 +19,6 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
 import processm.core.esb.EnterpriseServiceBus
-import processm.core.helpers.loadConfiguration
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
@@ -27,6 +26,7 @@ import processm.core.log.hierarchical.LogInputStream
 import processm.core.persistence.Migrator
 import processm.etl.PostgreSQLEnvironment
 import processm.etl.metamodel.MetaModelDebeziumWatchingService.Companion.DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY
+import processm.helpers.loadConfiguration
 import processm.services.JsonSerializer
 import processm.services.api.Paths
 import processm.services.api.models.*

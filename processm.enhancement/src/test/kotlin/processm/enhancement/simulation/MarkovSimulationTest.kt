@@ -2,7 +2,6 @@ package processm.enhancement.simulation
 
 import processm.conformance.PetriNets
 import processm.conformance.models.alignments.CompositeAligner
-import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.takeTraces
@@ -11,6 +10,7 @@ import processm.core.models.petrinet.Marking
 import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.Place
 import processm.core.models.petrinet.Transition
+import processm.helpers.map2d.DoublingMap2D
 import kotlin.math.abs
 import kotlin.random.Random
 import kotlin.test.*

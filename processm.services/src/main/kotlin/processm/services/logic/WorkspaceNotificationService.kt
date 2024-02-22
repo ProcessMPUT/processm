@@ -4,9 +4,9 @@ import jakarta.jms.MapMessage
 import jakarta.jms.Message
 import kotlinx.coroutines.channels.Channel
 import processm.core.esb.AbstractJMSListener
-import processm.core.helpers.toUUID
-import processm.core.logging.loggedScope
 import processm.dbmodels.models.*
+import processm.helpers.toUUID
+import processm.logging.loggedScope
 import java.util.*
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read

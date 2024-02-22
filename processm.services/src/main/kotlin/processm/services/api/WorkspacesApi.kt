@@ -15,12 +15,12 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import org.koin.ktor.ext.inject
-import processm.core.helpers.SerializableUUID
-import processm.core.helpers.mapToArray
-import processm.core.logging.loggedScope
-import processm.core.logging.logger
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
+import processm.helpers.SerializableUUID
+import processm.helpers.mapToArray
+import processm.logging.loggedScope
+import processm.logging.logger
 import processm.services.JsonSerializer
 import processm.services.api.models.AbstractComponent
 import processm.services.api.models.LayoutCollectionMessageBody

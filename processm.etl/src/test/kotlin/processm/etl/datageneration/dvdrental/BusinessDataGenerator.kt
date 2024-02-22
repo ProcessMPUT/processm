@@ -5,7 +5,7 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.javatime.CurrentDateTime
 import org.jetbrains.exposed.sql.transactions.transaction
-import processm.core.logging.loggedScope
+import processm.logging.loggedScope
 import java.math.BigDecimal
 import java.sql.DriverManager
 import java.util.*

@@ -1,8 +1,6 @@
 package processm.core.log
 
 import kotlinx.serialization.Serializable
-import processm.core.helpers.parseISO8601
-import processm.core.helpers.toUUID
 import processm.core.log.attribute.Attribute.CONCEPT_INSTANCE
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.COST_CURRENCY
@@ -15,6 +13,8 @@ import processm.core.log.attribute.Attribute.ORG_RESOURCE
 import processm.core.log.attribute.Attribute.ORG_ROLE
 import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
 import processm.core.log.attribute.MutableAttributeMap
+import processm.helpers.parseISO8601
+import processm.helpers.toUUID
 import java.time.Instant
 import java.util.*
 

@@ -1,7 +1,7 @@
 package processm.services.api
 
 import kotlinx.serialization.Serializable
-import processm.core.helpers.getPropertyIgnoreCase
+import processm.helpers.getPropertyIgnoreCase
 
 /**
  * The system's configuration exposed using API.

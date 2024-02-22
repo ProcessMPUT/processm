@@ -5,7 +5,7 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import processm.core.esb.Service
 import processm.core.esb.ServiceStatus
-import processm.core.logging.loggedScope
+import processm.logging.loggedScope
 import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random

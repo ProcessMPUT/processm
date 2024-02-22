@@ -1,9 +1,9 @@
 package processm.core.models.causalnet
 
-import processm.core.helpers.allSubsets
-import processm.core.helpers.mapToSet
 import processm.core.verifiers.causalnet.ActivityBinding
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
+import processm.helpers.allSubsets
+import processm.helpers.mapToSet
 import java.util.*
 import kotlin.random.Random
 

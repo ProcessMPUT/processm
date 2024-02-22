@@ -1,9 +1,9 @@
 package processm.core.verifiers.causalnet
 
-import processm.core.helpers.mapToSet
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
+import processm.helpers.mapToSet
 import kotlin.test.*
 
 class FromModelToLogAndBackAgain {

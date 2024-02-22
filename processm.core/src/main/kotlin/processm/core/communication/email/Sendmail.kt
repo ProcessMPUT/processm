@@ -1,7 +1,7 @@
 package processm.core.communication.email
 
-import processm.core.helpers.getPropertyIgnoreCase
-import processm.core.logging.loggedScope
+import processm.helpers.getPropertyIgnoreCase
+import processm.logging.loggedScope
 
 /**
  * API for the classic Unix sendmail command. This should be the preferred way of sending emails, since in principle

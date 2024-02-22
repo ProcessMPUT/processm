@@ -2,13 +2,13 @@ package processm.enhancement.metadata
 
 import processm.conformance.models.alignments.Alignment
 import processm.conformance.models.alignments.CompositeAligner
-import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.log.*
 import processm.core.models.causalnet.DecoupledNodeExecution
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.*
 import processm.core.models.metadata.BasicMetadata.BASIC_TIME_STATISTICS
+import processm.helpers.map2d.DoublingMap2D
 import java.time.Duration
 
 

@@ -1,7 +1,5 @@
 package processm.enhancement.simulation
 
-import processm.core.helpers.map2d.DoublingMap2D
-import processm.core.helpers.map2d.Map2D
 import processm.core.log.*
 import processm.core.log.attribute.Attribute
 import processm.core.log.attribute.Attribute.CONCEPT_INSTANCE
@@ -10,6 +8,8 @@ import processm.core.log.attribute.Attribute.IDENTITY_ID
 import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
+import processm.helpers.map2d.DoublingMap2D
+import processm.helpers.map2d.Map2D
 import java.util.*
 import kotlin.random.Random
 

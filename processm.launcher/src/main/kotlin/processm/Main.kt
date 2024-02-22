@@ -1,8 +1,8 @@
 package processm
 
 import processm.core.esb.EnterpriseServiceBus
-import processm.core.helpers.loadConfiguration
-import processm.core.logging.loggedScope
+import processm.helpers.loadConfiguration
+import processm.logging.loggedScope
 import kotlin.concurrent.thread
 
 object Main {

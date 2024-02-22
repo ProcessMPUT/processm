@@ -4,11 +4,11 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.BatchUpdateStatement
 import processm.core.communication.Producer
-import processm.core.logging.loggedScope
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
 import processm.dbmodels.urn
+import processm.logging.loggedScope
 import processm.services.api.models.CustomProperty
 import processm.services.api.updateData
 import java.time.Instant

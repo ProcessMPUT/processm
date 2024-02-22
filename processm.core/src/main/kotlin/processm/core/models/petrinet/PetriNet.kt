@@ -1,11 +1,11 @@
 package processm.core.models.petrinet
 
-import processm.core.helpers.cartesianProduct
-import processm.core.helpers.optimize
 import processm.core.models.commons.*
 import processm.core.models.commons.DecisionPoint
 import processm.core.models.metadata.DefaultMutableMetadataHandler
 import processm.core.models.metadata.MetadataHandler
+import processm.helpers.cartesianProduct
+import processm.helpers.optimize
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 

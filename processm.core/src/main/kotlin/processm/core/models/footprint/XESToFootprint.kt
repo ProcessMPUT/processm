@@ -1,11 +1,11 @@
 package processm.core.models.footprint
 
-import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.log.Event
 import processm.core.log.XESInputStream
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.log.hierarchical.toFlatSequence
+import processm.helpers.map2d.DoublingMap2D
 
 /**
  * Calculates the [Footprint] matrix from this [Log].

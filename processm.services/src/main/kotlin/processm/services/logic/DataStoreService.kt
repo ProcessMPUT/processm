@@ -10,9 +10,6 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.javatime.CurrentDateTime
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.communication.Producer
-import processm.core.helpers.mapToArray
-import processm.core.helpers.toLocalDateTime
-import processm.core.logging.loggedScope
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
@@ -30,6 +27,9 @@ import processm.etl.helpers.getDataSource
 import processm.etl.jdbc.notifyUsers
 import processm.etl.metamodel.DAGBusinessPerspectiveExplorer
 import processm.etl.metamodel.buildMetaModel
+import processm.helpers.mapToArray
+import processm.helpers.toLocalDateTime
+import processm.logging.loggedScope
 import processm.services.api.models.*
 import java.sql.Connection
 import java.sql.DriverManager

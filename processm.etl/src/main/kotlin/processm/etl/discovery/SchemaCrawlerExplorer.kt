@@ -1,6 +1,6 @@
 package processm.etl.discovery
 
-import processm.core.helpers.mapToSet
+import processm.helpers.mapToSet
 import schemacrawler.inclusionrule.RegularExpressionInclusionRule
 import schemacrawler.schema.Table
 import schemacrawler.schema.View

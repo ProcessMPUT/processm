@@ -1,8 +1,8 @@
 package processm.core.models.processtree.execution
 
-import processm.core.helpers.mapToArray
 import processm.core.models.commons.ProcessModelState
 import processm.core.models.processtree.Parallel
+import processm.helpers.mapToArray
 
 /**
  * An [ExecutionNode] for [Parallel]

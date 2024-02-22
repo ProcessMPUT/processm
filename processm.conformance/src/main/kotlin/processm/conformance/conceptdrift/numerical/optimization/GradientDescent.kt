@@ -1,8 +1,6 @@
 package processm.conformance.conceptdrift.numerical.optimization
 
-import processm.core.logging.debug
-import kotlin.math.absoluteValue
-import processm.core.logging.logger
+import processm.logging.logger
 
 /**
  * A classic gradient descent algorithm, updating the argument by subtracting the current value of derivative multiplied by

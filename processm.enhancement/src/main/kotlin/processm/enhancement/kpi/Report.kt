@@ -9,13 +9,13 @@ import kotlinx.serialization.encoding.*
 import kotlinx.serialization.json.*
 import kotlinx.serialization.modules.*
 import processm.conformance.models.alignments.Alignment
-import processm.core.helpers.map2d.DoublingMap2D
-import processm.core.helpers.map2d.Map2D
-import processm.core.helpers.stats.Distribution
 import processm.core.models.causalnet.DecoupledNodeExecution
 import processm.core.models.commons.Activity
 import processm.core.models.commons.CausalArc
 import processm.core.models.processtree.ProcessTreeActivity
+import processm.helpers.map2d.DoublingMap2D
+import processm.helpers.map2d.Map2D
+import processm.helpers.stats.Distribution
 
 /**
  * KPI report consisting of KPIs at the log, trace, and event scopes.

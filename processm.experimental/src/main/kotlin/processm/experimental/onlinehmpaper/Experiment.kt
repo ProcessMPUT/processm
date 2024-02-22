@@ -6,13 +6,13 @@ import processm.core.log.Event
 import processm.core.log.XMLXESInputStream
 import processm.core.log.XMLXESOutputStream
 import processm.core.log.hierarchical.*
-import processm.core.logging.logger
 import processm.core.models.causalnet.CausalNet
 import processm.experimental.core.models.causalnet.toDSL
 import processm.experimental.miners.causalnet.heuristicminer.OnlineHeuristicMiner
 import processm.experimental.performance.PerformanceAnalyzer
 import processm.experimental.performance.SkipSilentForFree
 import processm.experimental.performance.StandardDistance
+import processm.logging.logger
 import processm.miners.causalnet.heuristicminer.OfflineHeuristicMiner
 import processm.miners.causalnet.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.causalnet.heuristicminer.dependencygraphproviders.BasicDependencyGraphProvider

@@ -1,7 +1,7 @@
 package processm.core.querylanguage
 
-import processm.core.logging.debug
-import processm.core.logging.logger
+import processm.logging.debug
+import processm.logging.logger
 
 /**
  * A dummy class for any expression that does not match other classes.

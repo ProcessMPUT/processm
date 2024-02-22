@@ -4,10 +4,10 @@ import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.MSSQLServerContainer
 import org.testcontainers.containers.MSSQLServerContainer.MS_SQL_SERVER_PORT
 import org.testcontainers.lifecycle.Startables
-import processm.core.logging.logger
 import processm.dbmodels.models.ConnectionType
 import processm.dbmodels.models.DataConnector
 import processm.etl.DBMSEnvironment.Companion.TEST_DATABASES_PATH
+import processm.logging.logger
 import java.sql.Connection
 import java.util.*
 
