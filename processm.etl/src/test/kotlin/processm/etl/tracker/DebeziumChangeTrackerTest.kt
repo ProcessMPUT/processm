@@ -15,8 +15,6 @@ import org.testcontainers.utility.DockerImageName
 import processm.core.helpers.mapToSet
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.persistence.Migrator
-import processm.core.persistence.connection.DBCache
-import processm.core.persistence.connection.DatabaseChecker
 import processm.core.querylanguage.Query
 import processm.dbmodels.models.Classes
 import processm.dbmodels.models.DataModel
@@ -114,6 +112,7 @@ class DebeziumChangeTrackerTest {
     private lateinit var targetDBName: String
     private lateinit var dataStoreDBName: String
     private lateinit var tempDir: File
+    private lateinit var metaModelId: EntityID<Int>
 
     @BeforeAll
     fun setupDB() {
@@ -127,19 +126,11 @@ class DebeziumChangeTrackerTest {
             .withPassword(password)
             .withReuse(false)
         Startables.deepStart(listOf(container)).join()
-    }
-
-    @AfterAll
-    fun takeDownDB() {
-        container.close()
-    }
-
-    @BeforeTest
-    fun setup() {
-        targetDBName = UUID.randomUUID().toString()
         dataStoreId = UUID.randomUUID()
         dataStoreDBName = dataStoreId.toString()
-        tempDir = Files.createTempDirectory("processm").toFile()
+        Migrator.migrate(dataStoreDBName)
+
+        targetDBName = UUID.randomUUID().toString()
         container.createConnection("").use { connection ->
             connection.prepareStatement("CREATE DATABASE \"$targetDBName\"").use {
                 it.execute()
@@ -149,20 +140,33 @@ class DebeziumChangeTrackerTest {
             Regex("/[^/]*$"),
             "/$targetDBName?user=${container.username}&password=${container.password}"
         )
-        Migrator.migrate(dataStoreDBName)
+
+        DriverManager.getConnection(containerJdbcURL).use { connection ->
+            connection.createStatement().use { stmt ->
+                stmt.execute("create table EBAN (id int primary key, text text)")
+                stmt.execute("create table EKET (id int primary key, eban int references EBAN(id), text text)")
+                stmt.execute("create table EKKO (id int primary key, eban int references EBAN(id), text text)")
+                stmt.execute("create table EKPO (id int primary key, ekko int references EKKO(id), text text)")
+            }
+            metaModelId = buildMetaModel(dataStoreDBName, "metaModelName", SchemaCrawlerExplorer(connection))
+        }
+    }
+
+    @AfterAll
+    fun takeDownDB() {
+        container.close()
+    }
+
+    @BeforeTest
+    fun setup() {
+        tempDir = Files.createTempDirectory("processm").toFile()
     }
 
     @AfterTest
     fun cleanup() {
-        container.createConnection("").use { connection ->
-            connection.prepareStatement("DROP DATABASE \"$targetDBName\"").use {
-                it.execute()
-            }
-        }
-        DriverManager.getConnection(DatabaseChecker.baseConnectionURL).use { connection ->
-            DBCache.get(dataStoreDBName).close()
-            connection.prepareStatement("DROP DATABASE \"$dataStoreDBName\"").use {
-                it.execute()
+        DriverManager.getConnection(containerJdbcURL).use { connection ->
+            connection.createStatement().use { stmt ->
+                stmt.execute(" delete from EKPO;  delete from EKKO; delete from EKET; delete from EBAN; ")
             }
         }
         tempDir.deleteRecursively()
@@ -336,13 +340,7 @@ class DebeziumChangeTrackerTest {
         queries: List<String>
     ) {
         DriverManager.getConnection(containerJdbcURL).use { connection ->
-            connection.createStatement().use { stmt ->
-                stmt.execute("create table EBAN (id int primary key, text text)")
-                stmt.execute("create table EKET (id int primary key, eban int references EBAN(id), text text)")
-                stmt.execute("create table EKKO (id int primary key, eban int references EBAN(id), text text)")
-                stmt.execute("create table EKPO (id int primary key, ekko int references EKKO(id), text text)")
-            }
-            val metaModelId = buildMetaModel(dataStoreDBName, "metaModelName", SchemaCrawlerExplorer(connection))
+
 
             val etlProcessId = UUID.randomUUID()
 
@@ -369,7 +367,7 @@ class DebeziumChangeTrackerTest {
 
             val applier = mockk<LogGeneratingDatabaseChangeApplier> {
                 every { this@mockk.dataStoreDBName } returns this@DebeziumChangeTrackerTest.dataStoreDBName
-                every { this@mockk.metaModelId } returns metaModelId.value
+                every { this@mockk.metaModelId } returns this@DebeziumChangeTrackerTest.metaModelId.value
                 every { applyChange(any()) } answers { callOriginal() }
                 every { getExecutorsForClass(any()) } returns listOf(executor)
             }
@@ -388,7 +386,7 @@ class DebeziumChangeTrackerTest {
                     }
                     connection.commit()
                     val actual = HashMap<UUID, HashMap<UUID, HashSet<String>>>()
-                    for (i in 0..10) {
+                    for (i in 0..40) {
                         actual.clear()
                         val xes = DBHierarchicalXESInputStream(
                             dataStoreDBName,
@@ -403,7 +401,7 @@ class DebeziumChangeTrackerTest {
                         }
                         if (actual.isNotEmpty() && actual.values.sumOf { it.size } >= expected.size && actual.values.sumOf { it.values.sumOf { it.size } } == expected.sumOf { it.size })
                             break
-                        Thread.sleep(1000)
+                        Thread.sleep(250)
                     }
                     assertEquals(1, actual.size)
                     val traces = actual.values.single()
