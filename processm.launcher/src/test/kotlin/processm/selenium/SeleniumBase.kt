@@ -1,5 +1,10 @@
 package processm.selenium
 
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.request.*
+import io.ktor.http.*
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Tag
@@ -48,11 +53,6 @@ abstract class SeleniumBase(
      * This variable will be initialized only if [useManuallyStartedServices] is set to false
      */
     protected lateinit var mainDbContainer: PostgreSQLContainer<*>
-
-    /**
-     * This variable will be initialized only if [useManuallyStartedServices] is set to false
-     */
-    protected lateinit var backendThread: Thread
 
     /**
      * This variable will be initialized only if [useManuallyStartedServices] is set to false
@@ -211,22 +211,27 @@ abstract class SeleniumBase(
             System.setProperty("ktor.deployment.port", httpPort.toString())
 
             esb = EnterpriseServiceBus()
-            backendThread = object : Thread() {
-                override fun run() {
-                    loadConfiguration(true)
-                    System.setProperty(
-                        "PROCESSM.CORE.PERSISTENCE.CONNECTION.URL",
-                        "${mainDbContainer.jdbcUrl}&user=${mainDbContainer.username}&password=${mainDbContainer.password}"
-                    )
-                    Migrator.reloadConfiguration()
-                    esb.apply {
-                        autoRegister()
-                        startAll()
-                    }
-                }
+            loadConfiguration(true)
+            System.setProperty(
+                "PROCESSM.CORE.PERSISTENCE.CONNECTION.URL",
+                "${mainDbContainer.jdbcUrl}&user=${mainDbContainer.username}&password=${mainDbContainer.password}"
+            )
+            Migrator.reloadConfiguration()
+            esb.apply {
+                autoRegister()
+                startAll()
             }
-            backendThread.start()
-            Thread.sleep(10000)
+
+            val client = HttpClient(CIO)
+            for (i in 0..20) {
+                val ok = runBlocking {
+                    val response = client.get(Url("http://localhost:$httpPort"))
+                    return@runBlocking response.status == HttpStatusCode.OK
+                }
+                if (ok)
+                    break
+                Thread.sleep(500)
+            }
         }
     }
 
@@ -277,7 +282,6 @@ abstract class SeleniumBase(
         shutdownSelenium()
         if (!useManuallyStartedServices) {
             esb.close()
-            backendThread.join()
             mainDbContainer.close()
         }
     }
