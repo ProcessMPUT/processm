@@ -237,7 +237,7 @@
                     <excludedGroups>${excludedGroups}</excludedGroups>
                     <parallel>classes</parallel>
                     <useUnlimitedThreads>false</useUnlimitedThreads>
-                    <threadCount>2C</threadCount>
+                    <threadCount>64</threadCount>
                     <includes>
                         <include>**/*.java</include>
                         <include>**/*.kt</include>
