@@ -15,8 +15,7 @@ import org.openqa.selenium.chrome.ChromeOptions
 import org.openqa.selenium.interactions.Actions
 import org.openqa.selenium.support.ui.WebDriverWait
 import org.testcontainers.containers.PostgreSQLContainer
-import org.testcontainers.lifecycle.Startables
-import org.testcontainers.utility.DockerImageName
+import processm.SharedMainDB
 import processm.core.esb.EnterpriseServiceBus
 import processm.core.helpers.loadConfiguration
 import processm.core.persistence.Migrator
@@ -48,11 +47,6 @@ abstract class SeleniumBase(
      */
     protected val headless: Boolean = true
 ) : TestCaseAsAClass() {
-
-    /**
-     * This variable will be initialized only if [useManuallyStartedServices] is set to false
-     */
-    protected lateinit var mainDbContainer: PostgreSQLContainer<*>
 
     /**
      * This variable will be initialized only if [useManuallyStartedServices] is set to false
@@ -214,7 +208,7 @@ abstract class SeleniumBase(
             loadConfiguration(true)
             System.setProperty(
                 "PROCESSM.CORE.PERSISTENCE.CONNECTION.URL",
-                "${mainDbContainer.jdbcUrl}&user=${mainDbContainer.username}&password=${mainDbContainer.password}"
+                SharedMainDB.createNewMainDb()
             )
             Migrator.reloadConfiguration()
             esb.apply {
@@ -246,26 +240,8 @@ abstract class SeleniumBase(
         driver.get("http://localhost:$httpPort/")
     }
 
-    private fun setupMainDB() {
-        if (!useManuallyStartedServices) {
-            mainDbContainer = PostgreSQLContainer(
-                DockerImageName.parse("timescale/timescaledb:latest-pg12-oss").asCompatibleSubstituteFor("postgres")
-            ).withUsername("postgres").withPassword("password")
-            Startables.deepStart(listOf(mainDbContainer)).join()
-
-            val mainDbName = "processm${Random.Default.nextInt()}"
-            mainDbContainer.createConnection("").use { connection ->
-                connection.createStatement().use { stmt ->
-                    stmt.execute("create database \"$mainDbName\"")
-                }
-            }
-            mainDbContainer.withDatabaseName(mainDbName)
-        }
-    }
-
     @BeforeAll
     fun bringUp() {
-        setupMainDB()
         setupBackend()
         startSelenium()
     }
@@ -282,7 +258,6 @@ abstract class SeleniumBase(
         shutdownSelenium()
         if (!useManuallyStartedServices) {
             esb.close()
-            mainDbContainer.close()
         }
     }
 
