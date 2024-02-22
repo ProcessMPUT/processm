@@ -2,9 +2,9 @@ package processm.core.persistence.connection
 
 import org.postgresql.ds.PGSimpleDataSource
 import processm.core.Brand
+import processm.core.loadConfiguration
 import processm.helpers.getPropertyIgnoreCase
 import processm.helpers.isUUID
-import processm.helpers.loadConfiguration
 import kotlin.properties.Delegates
 
 object DatabaseChecker {

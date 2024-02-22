@@ -6,7 +6,7 @@ import org.junit.jupiter.api.TestInstance
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
-import processm.helpers.loadConfiguration
+import processm.core.loadConfiguration
 import processm.logging.logger
 import java.io.File
 import java.sql.Connection
