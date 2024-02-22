@@ -46,7 +46,7 @@ private object AnySerializer : KSerializer<Any?> {
     private fun deserializeJsonElement(element: JsonElement): Any = when (element) {
         is JsonObject -> element.mapValues { deserializeJsonElement(it.value) }
         is JsonArray -> element.map { deserializeJsonElement(it) }
-        is JsonPrimitive -> element.toString()
+        is JsonPrimitive -> element.content
         else -> throw IllegalStateException("Unknown object type: $element")
     }
 

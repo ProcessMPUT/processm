@@ -236,8 +236,8 @@
                     <groups>${groups}</groups>
                     <excludedGroups>${excludedGroups}</excludedGroups>
                     <parallel>classes</parallel>
-                    <useUnlimitedThreads>true</useUnlimitedThreads>
-                    <parallelOptimized>false</parallelOptimized>
+                    <useUnlimitedThreads>false</useUnlimitedThreads>
+                    <threadCount>2C</threadCount>
                     <includes>
                         <include>**/*.java</include>
                         <include>**/*.kt</include>
