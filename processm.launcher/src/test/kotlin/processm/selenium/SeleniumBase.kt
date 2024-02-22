@@ -69,7 +69,7 @@ abstract class SeleniumBase(
     }
 
     fun typeIn(name: String, value: String, replace: Boolean = true) {
-        val n = 2
+        val n = 10
         repeat(n) { ctr ->
             try {
                 with(byName(name)) {
@@ -85,7 +85,7 @@ abstract class SeleniumBase(
                 return
             } catch (e: InvalidElementStateException) {
                 if (ctr < n - 1) {
-                    Thread.sleep(500)
+                    Thread.sleep(100)
                 } else
                     throw e
             }
@@ -93,13 +93,14 @@ abstract class SeleniumBase(
     }
 
     fun click(element: WebElement) {
-        val n = 5
+        val n = 10
         repeat(n) { ctr ->
             try {
                 with(element) {
                     wait.until { isDisplayed }
                     wait.until { isEnabled }
-                    driver.executeScript("arguments[0].scrollIntoView();", this)
+                    if (ctr > 0)
+                        driver.executeScript("arguments[0].scrollIntoView();", this)
                     click()
                     recorder?.take()
                 }
@@ -125,7 +126,7 @@ abstract class SeleniumBase(
                         .moveToLocation(x, y)
                         .scrollByAmount(100, 100).build().perform()
 
-                    Thread.sleep((ctr + 1) * 200L)
+                    Thread.sleep((ctr + 1) * 100L)
                 } else
                     throw e
             }
@@ -236,7 +237,7 @@ abstract class SeleniumBase(
         })
         driver.manage().timeouts().implicitlyWait(Duration.ofMillis(1000))
         if (recordSlideshow) recorder = VideoRecorder(driver)
-        wait = WebDriverWait(driver, Duration.ofSeconds(15))
+        wait = WebDriverWait(driver, Duration.ofSeconds(15), Duration.ofMillis(100L))
         driver.get("http://localhost:$httpPort/")
     }
 
