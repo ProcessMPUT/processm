@@ -12,18 +12,24 @@ import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.Place
 import processm.core.models.petrinet.Transition
 import kotlin.math.abs
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
+import kotlin.random.Random
+import kotlin.test.*
 
 @OptIn(InMemoryXESProcessing::class)
 class MarkovSimulationTest {
+
+    lateinit var random: Random
+
+    @BeforeTest
+    fun beforeTest() {
+        random = Random(42)
+    }
+
     @Test
     fun `produces the same traces from sequential process model`() {
         val model = sequentialProcessModel()
         val activitiesCount = model.activities.count()
-        val simulation = MarkovSimulation(model)
+        val simulation = MarkovSimulation(model, random = random)
 
         val stream = simulation.takeTraces(10)
         val log = HoneyBadgerHierarchicalXESInputStream(stream).first()
@@ -37,7 +43,7 @@ class MarkovSimulationTest {
     fun `uses uniform distribution if no distribution is provided`() {
         val model = singleForkProcessModel()
         val tracesCount = 1000
-        val simulation = MarkovSimulation(model)
+        val simulation = MarkovSimulation(model, random = random)
 
         val stream = simulation.takeTraces(tracesCount)
         val log = HoneyBadgerHierarchicalXESInputStream(stream).first()
@@ -54,7 +60,7 @@ class MarkovSimulationTest {
         val transitionsProbabilitiesWeights = DoublingMap2D<String, String, Double>()
         transitionsProbabilitiesWeights["a", "b"] = 1.0
         transitionsProbabilitiesWeights["a", "c"] = 5.0
-        val simulation = MarkovSimulation(model, transitionsProbabilitiesWeights)
+        val simulation = MarkovSimulation(model, transitionsProbabilitiesWeights, random = random)
 
         val stream = simulation.takeTraces(tracesCount)
         val log = HoneyBadgerHierarchicalXESInputStream(stream).first()
@@ -66,7 +72,7 @@ class MarkovSimulationTest {
 
     @Test
     fun `model that terminates in the non-terminal state throw an exception`() {
-        val simulation = MarkovSimulation(CausalNets.fig316)
+        val simulation = MarkovSimulation(CausalNets.fig316, random = random)
         val exception = assertFailsWith<IllegalStateException> {
             simulation.takeTraces(10).forEach { /*just iterate*/ }
         }
@@ -75,7 +81,7 @@ class MarkovSimulationTest {
 
     @Test
     fun `generated log is perfectly aligned with the model`() {
-        val simulation = MarkovSimulation(CausalNets.fig312)
+        val simulation = MarkovSimulation(CausalNets.fig312, random = random)
         val tracesCount = 1000
         val log = HoneyBadgerHierarchicalXESInputStream(simulation.takeTraces(tracesCount)).first()
         val aligner = CompositeAligner(CausalNets.fig312)
