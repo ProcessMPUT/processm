@@ -1,18 +1,7 @@
 <template>
-  <v-container
-      class="d-flex align-stretch pa-0 align-content-start"
-      fluid
-      fill-height
-  >
+  <v-container class="d-flex align-stretch pa-0 align-content-start" fluid fill-height>
     <v-row class="mx-0">
-      <v-tabs
-          v-model="tab"
-          background-color="accent"
-          centered
-          light
-          icons-and-text
-          grow
-      >
+      <v-tabs v-model="tab" background-color="accent" centered light icons-and-text grow>
         <v-tab href="#users">
           {{ $t("users.users") }}
           <v-icon>group</v-icon>
@@ -33,13 +22,13 @@
       <v-col cols="12">
         <v-tabs-items v-model="tab">
           <v-tab-item value="users">
-            <user-list/>
+            <user-list />
           </v-tab-item>
           <v-tab-item value="groups">
-            <user-group-list/>
+            <user-group-list />
           </v-tab-item>
           <v-tab-item value="organizations">
-            <organization-list/>
+            <organization-list />
           </v-tab-item>
         </v-tabs-items>
       </v-col>
@@ -57,13 +46,13 @@
 
 <script lang="ts">
 import Vue from "vue";
-import {Component} from "vue-property-decorator";
+import { Component } from "vue-property-decorator";
 import UserList from "./UserList.vue";
 import UserGroupList from "./UserGroupList.vue";
 import OrganizationList from "./OrganizationList.vue";
 
 @Component({
-  components: {OrganizationList, UserList, UserGroupList}
+  components: { OrganizationList, UserList, UserGroupList }
 })
 export default class Users extends Vue {
   tab = 0;
