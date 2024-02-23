@@ -16,7 +16,7 @@
   },
   "alignments-dialog": {
     "title": "Alignments for {name}",
-    "page-hint": "Replays every trace from the given event log on the model shows compatible and deviating moves."
+    "page-hint": "Replays every trace from the given event log on the model and shows compatible and deviating moves."
   },
   "workspace": {
     "default-name": "Workspace",
