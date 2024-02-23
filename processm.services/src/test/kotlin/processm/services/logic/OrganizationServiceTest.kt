@@ -1,7 +1,9 @@
 package processm.services.logic
 
+import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.assertThrows
 import processm.dbmodels.models.*
+import processm.dbmodels.urn
 import java.util.*
 import kotlin.test.*
 
@@ -211,5 +213,118 @@ class OrganizationServiceTest : ServiceTestBase() {
         organizationService.remove(parent)
         assertNull(organizationService.get(child).parentOrganization)
     }
+
+    @Test
+    fun `cannot delete an organization with a group`() {
+        TODO()
+    }
+
+
+    @Test
+    fun `getSoleOwnershipURNs - user's ownership is not organization's ownership`(): Unit =
+        withCleanTables(AccessControlList, Groups, UsersInGroups, Workspaces) {
+            val org = createOrganization()
+            val user = createUser(organizationId = org.id.value)
+            EntityID(createWorkspace("W1", user.id.value, org.id.value), Workspaces).urn
+            assertTrue { organizationService.getSoleOwnershipURNs(org.id.value).isEmpty() }
+        }
+
+    @Test
+    fun `getSoleOwnershipURNs - ownership shared between user and shared group`(): Unit =
+        withCleanTables(AccessControlList, Groups, UsersInGroups, Workspaces) {
+            val org = createOrganization()
+            val user = createUser(organizationId = org.id.value)
+            val w1 = EntityID(createWorkspace("W1", user.id.value, org.id.value), Workspaces).urn
+            aclService.updateEntry(w1, org.sharedGroup.id.value, RoleType.Owner)
+            assertTrue { organizationService.getSoleOwnershipURNs(org.id.value).isEmpty() }
+        }
+
+    @Test
+    fun `getSoleOwnershipURNs - shared group is the sole owner`(): Unit =
+        withCleanTables(AccessControlList, Groups, UsersInGroups, Workspaces) {
+            val org = createOrganization()
+            val user = createUser(organizationId = org.id.value)
+            val w1 = EntityID(createWorkspace("W1", user.id.value, org.id.value), Workspaces).urn
+            val w2 = EntityID(createWorkspace("W2", user.id.value, org.id.value), Workspaces).urn
+            aclService.updateEntry(w1, org.sharedGroup.id.value, RoleType.Owner)
+            aclService.removeEntry(w1, user.privateGroup.id.value)
+            with(organizationService.getSoleOwnershipURNs(org.id.value)) {
+                assertEquals(1, size)
+                assertTrue { w1 in this }
+                assertTrue { w2 !in this }
+            }
+        }
+
+    @Test
+    fun `getSoleOwnershipURNs - two groups from the same organization`(): Unit =
+        withCleanTables(AccessControlList, Groups, UsersInGroups, Workspaces) {
+            val org = createOrganization().id.value
+            val user = createUser(organizationId = org)
+            val group1 = createGroup(organizationId = org).value
+            val group2 = createGroup(organizationId = org).value
+            val w1 = EntityID(createWorkspace("W1", user.id.value, org), Workspaces).urn
+            val w2 = EntityID(createWorkspace("W2", user.id.value, org), Workspaces).urn
+            aclService.removeEntries(w1)
+            aclService.removeEntries(w2)
+            aclService.addEntry(w1, group1, RoleType.Owner)
+            aclService.addEntry(w1, group2, RoleType.Owner)
+            aclService.addEntry(w2, group2, RoleType.Owner)
+            with(organizationService.getSoleOwnershipURNs(org)) {
+                assertEquals(2, size)
+                assertTrue { w1 in this }
+                assertTrue { w2 in this }
+            }
+        }
+
+    @Test
+    fun `getSoleOwnershipURNs - two groups from different organizations`(): Unit =
+        withCleanTables(AccessControlList, Groups, UsersInGroups, Workspaces) {
+            val org1 = createOrganization().id.value
+            val org2 = createOrganization().id.value
+            val user = createUser(organizationId = org1)
+            val group1 = createGroup(organizationId = org1).value
+            val group2 = createGroup(organizationId = org2).value
+            val w1 = EntityID(createWorkspace("W1", user.id.value, org1), Workspaces).urn
+            val w2 = EntityID(createWorkspace("W2", user.id.value, org1), Workspaces).urn
+            aclService.removeEntries(w1)
+            aclService.removeEntries(w2)
+            aclService.addEntry(w1, group1, RoleType.Owner)
+            aclService.addEntry(w1, group2, RoleType.Owner)
+            aclService.addEntry(w2, group2, RoleType.Owner)
+            assertTrue { organizationService.getSoleOwnershipURNs(org1).isEmpty() }
+            with(organizationService.getSoleOwnershipURNs(org2)) {
+                assertEquals(1, size)
+                assertTrue { w1 !in this }
+                assertTrue { w2 in this }
+            }
+        }
+
+    @Test
+    fun `getSoleOwnershipURNs - two groups from different organizations both can read both`(): Unit =
+        withCleanTables(AccessControlList, Groups, UsersInGroups, Workspaces) {
+            val org1 = createOrganization().id.value
+            val org2 = createOrganization().id.value
+            val user = createUser(organizationId = org1)
+            val group1 = createGroup(organizationId = org1).value
+            val group2 = createGroup(organizationId = org2).value
+            val w1 = EntityID(createWorkspace("W1", user.id.value, org1), Workspaces).urn
+            val w2 = EntityID(createWorkspace("W2", user.id.value, org1), Workspaces).urn
+            aclService.removeEntries(w1)
+            aclService.removeEntries(w2)
+            aclService.addEntry(w1, group1, RoleType.Owner)
+            aclService.addEntry(w2, group1, RoleType.Reader)
+            aclService.addEntry(w1, group2, RoleType.Reader)
+            aclService.addEntry(w2, group2, RoleType.Owner)
+            with(organizationService.getSoleOwnershipURNs(org1)) {
+                assertEquals(1, size)
+                assertTrue { w1 in this }
+                assertTrue { w2 !in this }
+            }
+            with(organizationService.getSoleOwnershipURNs(org2)) {
+                assertEquals(1, size)
+                assertTrue { w1 !in this }
+                assertTrue { w2 in this }
+            }
+        }
 
 }

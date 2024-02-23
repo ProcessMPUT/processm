@@ -7,6 +7,7 @@ import org.junit.jupiter.api.TestInstance
 import org.koin.test.mock.declareMock
 import processm.core.helpers.mapToSet
 import processm.dbmodels.models.*
+import processm.dbmodels.urn
 import processm.services.api.models.ErrorMessage
 import processm.services.api.models.OrganizationMember
 import processm.services.api.models.OrganizationRole
@@ -823,4 +824,24 @@ class OrganizationsApiTest : BaseApiTest() {
                 }
             }
         }
+
+    @Test
+    fun `responds with 200 to listing organization sole ownership`() = withConfiguredTestApplication {
+        val organizationId = UUID.randomUUID()
+        val e1 = EntityID(UUID.randomUUID(), Workspaces)
+        val e2 = EntityID(UUID.randomUUID(), DataStores)
+        declareMock<OrganizationService> {
+            every { getSoleOwnershipURNs(organizationId) } returns listOf(e1.urn, e2.urn)
+        }
+
+        withAuthentication(role = OrganizationRole.owner to organizationId) {
+            with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId/sole-ownership")) {
+                assertEquals(HttpStatusCode.OK, response.status())
+                val objects = response.deserializeContent<Array<ApiEntityID>>()
+                assertEquals(2, objects.size)
+                assertEquals(ApiEntityID(ApiEntityType.workspace, e1.value), objects[0])
+                assertEquals(ApiEntityID(ApiEntityType.dataStore, e2.value), objects[1])
+            }
+        }
+    }
 }

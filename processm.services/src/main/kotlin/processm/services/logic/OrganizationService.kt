@@ -7,6 +7,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inSubQuery
 import processm.core.logging.debug
 import processm.core.logging.loggedScope
+import processm.core.models.metadata.URN
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.ieq
 import processm.dbmodels.models.*
@@ -175,16 +176,45 @@ class OrganizationService(
         getOrganization(id).update()
     }
 
+    fun getSoleOwnershipURNs(organizationId: UUID): List<URN> = transactionMain {
+        val owner = RoleType.Owner.role.id
+        val acl1 = AccessControlList.alias("acl1")
+        val g1 = Groups.alias("g1")
+        val acl2 = AccessControlList.alias("acl2")
+        val g2 = Groups.alias("g2")
+        acl1
+            .join(g1, JoinType.INNER, acl1[AccessControlList.group_id], g1[Groups.id])
+            .slice(acl1[AccessControlList.urn.column])
+            .select {
+                (acl1[AccessControlList.role_id] eq owner) and
+                        (g1[Groups.organizationId] eq organizationId) and
+                        notExists(acl2
+                            .join(g2, JoinType.INNER, acl2[AccessControlList.group_id], g2[Groups.id])
+                            .select {
+                                (g2[Groups.organizationId] neq organizationId or g2[Groups.organizationId].isNull()) and
+                                        (acl2[AccessControlList.role_id] eq owner) and
+                                        (acl1[AccessControlList.urn.column] eq acl2[AccessControlList.urn.column])
+                            })
+            }
+            .withDistinct()
+            .map { URN(it[acl1[AccessControlList.urn.column]]) }
+
+    }
+
     /**
      * Deletes organization with the given [id].
+     *
+     * @throws ValidationException if there are objects that would lose all their owners once the organization is removed, i.e., if [getSoleOwnershipURNs] returns an non-empty list
      */
     fun remove(id: UUID): Unit = transactionMain {
+        getSoleOwnershipURNs(id).isEmpty().validate(Reason.UnprocessableResource)
         Organizations.update(where = { Organizations.parentOrganizationId eq id }) {
             it[parentOrganizationId] = null
         }
-        Groups.deleteWhere {
-            (Groups.organizationId eq id) and (Groups.isShared eq true)
+        AccessControlList.deleteWhere {
+            group_id inSubQuery Groups.slice(Groups.id).select { Groups.organizationId eq id }
         }
+        Groups.deleteWhere { organizationId eq id }
         Organizations.deleteWhere {
             Organizations.id eq id
         }

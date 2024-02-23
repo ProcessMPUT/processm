@@ -110,6 +110,14 @@ object Paths {
     class OrganizationMembers(val organizationId: UUID)
 
     /**
+     * Objects the groups of the organization are the sole owners of
+     *
+     * @param organizationId Organization ID
+     */
+    @Location("/organizations/{organizationId}/sole-ownership")
+    class OrganizationSoleOwnership(val organizationId: UUID)
+
+    /**
      * List of organizations
      */
     @Location("/organizations")

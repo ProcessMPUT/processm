@@ -13,6 +13,7 @@ import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
 import processm.core.helpers.mapToArray
 import processm.core.persistence.connection.transactionMain
+import processm.dbmodels.decode
 import processm.services.api.models.OrganizationMember
 import processm.services.api.models.OrganizationRole
 import processm.services.logic.*
@@ -194,6 +195,23 @@ fun Route.OrganizationsApi() {
 
             call.respond(HttpStatusCode.OK, organizationGroups)
         }
+        // endregion
+
+        // region Objects
+
+        get<Paths.OrganizationSoleOwnership> { path ->
+            val principal = call.authentication.principal<ApiUser>()!!
+
+            principal.ensureUserBelongsToOrganization(path.organizationId)
+
+            val objects = transactionMain {
+                organizationService.getSoleOwnershipURNs(path.organizationId).mapToArray {
+                    it.decode().toApi()
+                }
+            }
+            call.respond(objects)
+        }
+
         // endregion
     }
 }
