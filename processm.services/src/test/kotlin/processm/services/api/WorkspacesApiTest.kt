@@ -80,7 +80,7 @@ class WorkspacesApiTest : BaseApiTest() {
         val workspaceId2 = UUID.randomUUID()
 
         withAuthentication(userId) {
-            every { workspaceService.getUserWorkspaces(userId, organizationId) } returns listOf(
+            every { workspaceService.getUserWorkspaces(userId) } returns listOf(
                 mockk {
                     every { id } returns EntityID(workspaceId1, Workspaces)
                     every { name } returns "Workspace1"
@@ -110,8 +110,7 @@ class WorkspacesApiTest : BaseApiTest() {
             every {
                 workspaceService.remove(
                     workspaceId,
-                    userId = any(),
-                    organizationId = organizationId
+                    userId = any()
                 )
             } just runs
             with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/workspaces/$workspaceId")) {
@@ -130,8 +129,7 @@ class WorkspacesApiTest : BaseApiTest() {
             every {
                 workspaceService.remove(
                     workspaceId,
-                    userId = any(),
-                    organizationId = organizationId
+                    userId = any()
                 )
             } throws ValidationException(Reason.ResourceNotFound, "Workspace is not found")
             with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/workspaces/$workspaceId")) {
@@ -273,8 +271,7 @@ class WorkspacesApiTest : BaseApiTest() {
             every {
                 workspaceService.getComponents(
                     workspaceId,
-                    userId = any(),
-                    organizationId = organizationId
+                    userId = any()
                 )
             } returns listOf(
                 mockk(relaxed = true) {
@@ -322,7 +319,6 @@ class WorkspacesApiTest : BaseApiTest() {
         }
     }
 
-    @Ignore("See #148")
     @Test
     fun `responds to workspace components request with 200 and component details`() = withConfiguredTestApplication {
         val workspaceService = declareMock<WorkspaceService>()
@@ -338,8 +334,7 @@ class WorkspacesApiTest : BaseApiTest() {
             every {
                 workspaceService.getComponents(
                     workspaceId,
-                    userId = any(),
-                    organizationId = organizationId
+                    userId = any()
                 )
             } returns listOf(
                 mockk {
@@ -349,11 +344,12 @@ class WorkspacesApiTest : BaseApiTest() {
                     every { dataStoreId } returns dataStore
                     every { componentType } returns ComponentTypeDto.CausalNet
                     every { data } returns cnet1.toString()
-                    every { customizationData } returns "{\"layout\":[{\"id\":\"node_id\",\"x\":15,\"y\":30}]}"
-                    every { layoutData } returns null
+                    every { customizationData } returns null
+                    every { layoutData } returns "{\"x\":15,\"y\":30,\"width\":150,\"height\":300}"
                     every { dataLastModified } returns null
                     every { userLastModified } returns Instant.now()
                     every { lastError } returns null
+                    every { algorithm } returns null
                 }
             )
             every {
@@ -366,13 +362,12 @@ class WorkspacesApiTest : BaseApiTest() {
                 )
             ) {
                 assertEquals(HttpStatusCode.OK, response.status())
-                TODO("Fix the following commented-out lines so that they compile and the test passes")
-//                val componentCustomizationData =
-//                    assertNotNull(response.deserializeContent<ComponentCollectionMessageBody>().data.firstOrNull()?.customizationData?.layout)
-//
-//                assertEquals("node_id", componentCustomizationData.firstOrNull()?.id)
-//                assertEquals(15.toBigDecimal(), componentCustomizationData.firstOrNull()?.x)
-//                assertEquals(30.toBigDecimal(), componentCustomizationData.firstOrNull()?.y)
+                val layout = assertNotNull(response.deserializeContent<List<AbstractComponent>>().firstOrNull()?.layout)
+
+                assertEquals(15.toBigDecimal(), layout.x)
+                assertEquals(30.toBigDecimal(), layout.y)
+                assertEquals(150.toBigDecimal(), layout.width)
+                assertEquals(300.toBigDecimal(), layout.height)
             }
         }
     }
@@ -394,7 +389,6 @@ class WorkspacesApiTest : BaseApiTest() {
                         componentId,
                         workspaceId,
                         any(),
-                        organizationId,
                         componentName,
                         dataQuery,
                         dataStore,
@@ -442,7 +436,6 @@ class WorkspacesApiTest : BaseApiTest() {
                     componentId,
                     workspaceId,
                     any(),
-                    organizationId,
                     componentName,
                     dataQuery,
                     dataStore,
@@ -503,7 +496,6 @@ class WorkspacesApiTest : BaseApiTest() {
                     workspaceService.updateLayout(
                         workspaceId,
                         any(),
-                        organizationId,
                         layoutData.mapValues { Gson().toJson(it.value) }
                     )
                 } just Runs
@@ -541,7 +533,6 @@ class WorkspacesApiTest : BaseApiTest() {
                     workspaceService.updateLayout(
                         workspaceId,
                         any(),
-                        organizationId,
                         layoutData.mapValues { Gson().toJson(it.value) }
                     )
                 } throws ValidationException(
@@ -574,8 +565,7 @@ class WorkspacesApiTest : BaseApiTest() {
                     workspaceService.removeComponent(
                         componentId,
                         workspaceId,
-                        any(),
-                        organizationId
+                        any()
                     )
                 } just runs
                 with(
@@ -602,8 +592,7 @@ class WorkspacesApiTest : BaseApiTest() {
                     workspaceService.removeComponent(
                         componentId,
                         workspaceId,
-                        any(),
-                        organizationId
+                        any()
                     )
                 } throws ValidationException(
                     Reason.ResourceNotFound,

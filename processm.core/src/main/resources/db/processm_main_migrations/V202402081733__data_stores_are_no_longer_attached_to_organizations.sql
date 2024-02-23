@@ -1,0 +1,1 @@
+ALTER TABLE data_stores DROP COLUMN organization_id;

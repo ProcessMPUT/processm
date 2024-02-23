@@ -28,56 +28,56 @@
         sortable: false
       }
     ]"
-        :items="groups"
-        :loading="loading"
-        item-key="id"
-    >
-      <template v-slot:top>
-        <v-toolbar flat>
-          <v-toolbar-title> {{ $t("users.groups") }} {{ $t("common.in") }} {{ organization.name }}</v-toolbar-title>
-          <v-spacer></v-spacer>
-          <v-dialog v-model="newDialog" max-width="600px" @input.capture="resetNewDialog">
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn color="primary" v-bind="attrs" v-on="on">
-                {{ $t("common.add-new") }}
+    :items="groups"
+    :loading="loading"
+    item-key="id"
+  >
+    <template v-slot:top>
+      <v-toolbar flat>
+        <v-toolbar-title> {{ $t("users.groups") }} {{ $t("common.in") }} {{ organization.name }}</v-toolbar-title>
+        <v-spacer></v-spacer>
+        <v-dialog v-model="newDialog" max-width="600px" @input.capture="resetNewDialog">
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn color="primary" v-bind="attrs" v-on="on" name="btn-add-new-group">
+              {{ $t("common.add-new") }}
+            </v-btn>
+          </template>
+          <v-card>
+            <v-card-title>{{ $t("common.add-new") }}</v-card-title>
+            <v-card-text>
+              <v-form id="newGroupForm" ref="newGroupForm" v-model="isNewValid" @submit.prevent="addGroup">
+                <v-text-field v-model="newName" :rules="[(v) => !!v || $t('users.group-empty')]"></v-text-field>
+              </v-form>
+            </v-card-text>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn color="primary darken-1" text @click="newDialog = false">
+                {{ $t("common.cancel") }}
               </v-btn>
-            </template>
-            <v-card>
-              <v-card-title>{{ $t("common.add-new") }}</v-card-title>
-              <v-card-text>
-                <v-form id="newGroupForm" ref="newGroupForm" v-model="isNewValid" @submit.prevent="addGroup">
-                  <v-text-field v-model="newName" :rules="[(v) => !!v || $t('users.group-empty')]"></v-text-field>
-                </v-form>
-              </v-card-text>
-              <v-card-actions>
-                <v-spacer></v-spacer>
-                <v-btn color="primary darken-1" text @click="newDialog = false">
-                  {{ $t("common.cancel") }}
-                </v-btn>
 
-                <v-btn :disabled="!isNewValid" color="primary darken-1" form="newGroupForm" type="submit">
-                  {{ $t("common.save") }}
-                </v-btn>
-              </v-card-actions>
-            </v-card>
-          </v-dialog>
-        </v-toolbar>
-      </template>
+              <v-btn :disabled="!isNewValid" color="primary darken-1" form="newGroupForm" type="submit">
+                {{ $t("common.save") }}
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+      </v-toolbar>
+    </template>
 
-      <template v-slot:item.name="{ item }">
-        <v-text-field
-            v-model="item.name"
-            :readonly="item.isImplicit || item.isShared"
-            background-color="transparent"
-            flat
-            hide-details
-            solo
-            @blur="item.focus = false"
-            @change="item.dirty = true"
-            @focus="item.focus = true"
-        >
-          <template v-slot:append>
-            <v-tooltip bottom>
+    <template v-slot:item.name="{ item }">
+      <v-text-field
+        v-model="item.name"
+        :readonly="item.isImplicit || item.isShared"
+        background-color="transparent"
+        flat
+        hide-details
+        solo
+        @blur="item.focus = false"
+        @change="item.dirty = true"
+        @focus="item.focus = true"
+      >
+        <template v-slot:append>
+          <v-tooltip bottom>
               <template v-slot:activator="{ on, attrs }">
                 <v-btn
                     :disabled="!item.dirty && (!item.focus || item.isImplicit || item.isShared)"

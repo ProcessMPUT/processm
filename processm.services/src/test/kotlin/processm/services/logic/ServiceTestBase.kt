@@ -113,7 +113,6 @@ abstract class ServiceTestBase {
     ): Organization = organizationService.create(name, isPrivate, parentOrganizationId)
 
     protected fun createDataStore(
-        organizationId: UUID,
         name: String = "DataStore#1",
         creationDate: LocalDateTime = LocalDateTime.now()
     ): EntityID<UUID> {
@@ -121,7 +120,6 @@ abstract class ServiceTestBase {
         return DataStores.insertAndGetId {
             it[DataStores.name] = name
             it[DataStores.creationDate] = creationDate
-            it[DataStores.organizationId] = EntityID(organizationId, Organizations)
         }
     }
 

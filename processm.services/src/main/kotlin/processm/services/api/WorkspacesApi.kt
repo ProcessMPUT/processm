@@ -66,14 +66,14 @@ fun Route.WorkspacesApi() {
 
             principal.ensureUserBelongsToOrganization(workspace.organizationId, OrganizationRole.writer)
 
-            workspaceService.remove(workspace.workspaceId, principal.userId, workspace.organizationId)
+            workspaceService.remove(workspace.workspaceId, principal.userId)
 
             call.respond(HttpStatusCode.NoContent)
         }
 
         get<Paths.Workspaces> { workspace ->
             val principal = call.authentication.principal<ApiUser>()!!
-            val workspaces = workspaceService.getUserWorkspaces(principal.userId, workspace.organizationId)
+            val workspaces = workspaceService.getUserWorkspaces(principal.userId)
                 .map { Workspace(it.name, it.id.value) }.toTypedArray()
 
             call.respond(HttpStatusCode.OK, workspaces)
@@ -88,7 +88,6 @@ fun Route.WorkspacesApi() {
 
             workspaceService.update(
                 principal.userId,
-                path.organizationId,
                 workspace
             )
 
@@ -102,7 +101,6 @@ fun Route.WorkspacesApi() {
             val component = workspaceService.getComponent(
                 component.componentId,
                 principal.userId,
-                component.organizationId,
                 component.workspaceId
             ).toAbstractComponent()
 
@@ -120,7 +118,6 @@ fun Route.WorkspacesApi() {
                     component.componentId,
                     component.workspaceId,
                     principal.userId,
-                    component.organizationId,
                     name,
                     query,
                     dataStore,
@@ -143,8 +140,7 @@ fun Route.WorkspacesApi() {
             workspaceService.removeComponent(
                 component.componentId,
                 component.workspaceId,
-                principal.userId,
-                component.organizationId
+                principal.userId
             )
 
             call.respond(HttpStatusCode.NoContent)
@@ -164,8 +160,7 @@ fun Route.WorkspacesApi() {
 
                 val components = workspaceService.getComponents(
                     workspace.workspaceId,
-                    principal.userId,
-                    workspace.organizationId
+                    principal.userId
                 ).mapToArray(WorkspaceComponent::toAbstractComponent)
 
                 call.respond(HttpStatusCode.OK, components)
@@ -186,7 +181,6 @@ fun Route.WorkspacesApi() {
             workspaceService.updateLayout(
                 workspace.workspaceId,
                 principal.userId,
-                workspace.organizationId,
                 layoutData
             )
 

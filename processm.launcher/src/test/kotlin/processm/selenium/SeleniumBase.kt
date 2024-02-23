@@ -4,8 +4,7 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.TestInstance
-import org.openqa.selenium.By
-import org.openqa.selenium.WebElement
+import org.openqa.selenium.*
 import org.openqa.selenium.chrome.ChromeDriver
 import org.openqa.selenium.chrome.ChromeOptions
 import org.openqa.selenium.interactions.Actions
@@ -19,6 +18,7 @@ import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DatabaseChecker
 import java.time.Duration
 import kotlin.random.Random
+
 
 val <T : PostgreSQLContainer<T>?> PostgreSQLContainer<T>.port: Int
     get() = getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT)
@@ -75,23 +75,80 @@ abstract class SeleniumBase(
         return driver.findElement(By.xpath("//*[text()='$text']"))
     }
 
-    fun typeIn(name: String, value: String) {
-        with(byName(name)) {
-            wait.until { isDisplayed }
-            wait.until { isEnabled }
-            sendKeys(value)
-            recorder?.take()
+    fun typeIn(name: String, value: String, replace: Boolean = true) {
+        val n = 2
+        repeat(n) { ctr ->
+            try {
+                with(byName(name)) {
+                    wait.until { isDisplayed }
+                    wait.until { isEnabled }
+                    if (replace)
+                        while (getAttribute("value") != "") {
+                            sendKeys(Keys.BACK_SPACE);
+                        }
+                    sendKeys(value)
+                    recorder?.take()
+                }
+                return
+            } catch (e: InvalidElementStateException) {
+                if (ctr < n - 1) {
+                    Thread.sleep(500)
+                } else
+                    throw e
+            }
         }
     }
 
-    fun click(name: String) {
-        with(byName(name)) {
-            wait.until { isDisplayed }
-            wait.until { isEnabled }
-            driver.executeScript("arguments[0].scrollIntoView();", this)
-            click()
-            recorder?.take()
+    fun click(element: WebElement) {
+        val n = 5
+        repeat(n) { ctr ->
+            try {
+                with(element) {
+                    wait.until { isDisplayed }
+                    wait.until { isEnabled }
+                    driver.executeScript("arguments[0].scrollIntoView();", this)
+                    click()
+                    recorder?.take()
+                }
+                return
+            } catch (e: ElementClickInterceptedException) {
+                if (ctr < n - 1) {
+                    // Sometimes an overlay obscures the element and Selenium refuses to click it.
+                    // Interestingly enough it seems Selenium somehow "sees" the overlay even though it disappeared from the view.
+                    // The following combination of movement and scrolling seems to help Selenium to refresh the view.
+                    // Interestingly enough, neither (0, 0) nor (viewportWidth-1, viewportHeight-1) seem to work as the move target, hence randomization.
+                    // However, it is unknown how robust this solution is.
+
+                    //The way to retrieve viewportWidth and viewportHeight was contributed by ChatGPT.
+                    val viewportWidth =
+                        (driver as JavascriptExecutor).executeScript("return Math.max(document.documentElement.clientWidth, window.innerWidth || 0);") as Long
+                    val viewportHeight =
+                        (driver as JavascriptExecutor).executeScript("return Math.max(document.documentElement.clientHeight, window.innerHeight || 0);") as Long
+
+                    val x = Random.Default.nextInt(viewportWidth.toInt())
+                    val y = Random.Default.nextInt(viewportHeight.toInt())
+
+                    Actions(driver)
+                        .moveToLocation(x, y)
+                        .scrollByAmount(100, 100).build().perform()
+
+                    Thread.sleep((ctr + 1) * 200L)
+                } else
+                    throw e
+            }
         }
+    }
+
+    fun click(by: By) = click(checkNotNull(wait.until { driver.findElements(by).singleOrNull() }))
+
+    fun click(name: String) = click(By.name(name))
+
+    /**
+     * To open a v-expansion-panel
+     */
+    fun expand(name: String) {
+        require('\'' !in name) { "Apostrophes are currently not supported" }
+        click(By.xpath("//*[@name='$name']/.."))
     }
 
     fun toggleCheckbox(name: String) {
@@ -102,11 +159,14 @@ abstract class SeleniumBase(
     }
 
     fun openVuetifyDropDown(name: String) {
-        byName(name).findElement(By.xpath("..")).findElement(By.cssSelector("div.v-input__append-inner")).click()
+        click(byName(name).findElement(By.xpath("..")).findElement(By.cssSelector("div.v-input__append-inner")))
+        recorder?.take()
     }
 
-    fun selectVuetifyDropDownItem(text: String) {
-        byXpath("""//div[text()='${text}']""").click()
+    @Deprecated("This function is inherently brittle, as it (more often than not) relies on a translatable piece of text. Eventually, it should be replaced with something more robust.")
+    fun selectVuetifyDropDownItem(vararg text: String) {
+        val attributes = text.joinToString(separator = " or ") { "text()='$it'" }
+        click(byXpath("""//div[$attributes]"""))
         recorder?.take()
     }
 
@@ -127,6 +187,18 @@ abstract class SeleniumBase(
             wait.until { !isDisplayed }
             recorder?.take()
         }
+    }
+
+    fun clickButtonInRow(cellText: String, buttonName: String) {
+        require('\'' !in cellText) { "Apostrophes are not supported" }
+        require('\'' !in buttonName) { "Apostrophes are not supported" }
+        click(By.xpath("//td[text()='$cellText']/..//button[@name='$buttonName']"))
+    }
+
+
+    protected fun waitForText(text: String, tag: String = "*") {
+        require('\'' !in text) { "Apostrophes are not supported" }
+        wait.until { driver.findElements(By.xpath("//$tag[text()='$text']"))?.firstOrNull()?.isDisplayed }
     }
 
     // endregion
@@ -164,9 +236,9 @@ abstract class SeleniumBase(
             addArguments("--window-size=1920,1080")
             if (headless) addArguments("--headless=new")
         })
-        driver.manage().timeouts().implicitlyWait(Duration.ofMillis(500))
+        driver.manage().timeouts().implicitlyWait(Duration.ofMillis(1000))
         if (recordSlideshow) recorder = VideoRecorder(driver)
-        wait = WebDriverWait(driver, Duration.ofSeconds(5))
+        wait = WebDriverWait(driver, Duration.ofSeconds(15))
         driver.get("http://localhost:$httpPort/")
     }
 
@@ -197,7 +269,8 @@ abstract class SeleniumBase(
     private fun shutdownSelenium() {
         recorder?.take()
         recorder?.finish()
-        driver.close()
+        if (headless)
+            driver.close()
     }
 
     @AfterAll
@@ -208,7 +281,42 @@ abstract class SeleniumBase(
             backendThread.join()
             mainDbContainer.close()
         }
+    }
 
+    // endregion
+
+    // region ProcessM-specific helpers
+
+    protected fun register(email: String, password: String, organization: String? = null) {
+        click("btn-register")
+        typeIn("user-email", email)
+        typeIn("user-password", password)
+        if (organization !== null) {
+            toggleCheckbox("new-organization")
+            typeIn("organization-name", organization)
+        }
+        click("btn-register")
+        acknowledgeSnackbar("info")
+    }
+
+    protected fun login(email: String, password: String) {
+        typeIn("username", email)
+        typeIn("password", password)
+        click("btn-login")
+        wait.until { driver.findElements(By.name("btn-profile")).isNotEmpty() }
+        with(byName("btn-profile")) {
+            wait.until { isDisplayed }
+            click()
+        }
+        with(byName("btn-logout")) {
+            wait.until { isDisplayed }
+        }
+    }
+
+    protected fun logout() {
+        click("btn-profile")
+        click("btn-logout")
+        wait.until { byName("btn-login").isDisplayed }
     }
 
     // endregion
