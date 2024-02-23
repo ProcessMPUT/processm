@@ -20,8 +20,8 @@ export class WorkspaceObserver {
 
   private eventSource: EventSourcePolyfill | undefined;
 
-  constructor(apiPath: string, organizationId: string, workspaceId: string, callback: (componentId: string) => void) {
-    this.url = apiPath + WorkspacesApiAxiosParamCreator().getWorkspace(organizationId, workspaceId).url;
+  constructor(apiPath: string, workspaceId: string, callback: (componentId: string) => void) {
+    this.url = apiPath + WorkspacesApiAxiosParamCreator().getWorkspace(workspaceId).url;
     this.callback = callback;
   }
 
@@ -34,16 +34,18 @@ export class WorkspaceObserver {
     this.eventSource?.close();
     this.eventSource = new EventSourcePolyfill(this.url, {
       headers: {
-        "Authorization": `Bearer ${Vue.prototype.$sessionStorage.sessionToken}`
+        Authorization: `Bearer ${Vue.prototype.$sessionStorage.sessionToken}`
       }
     });
     this.eventSource.onerror = (event: Event) => {
       if (isConnectionEvent(event) && event.status == 401 && this.reauthenticate != undefined) {
-        this.reauthenticate().then(() => {this.start()})
+        this.reauthenticate().then(() => {
+          this.start();
+        });
       }
-    }
+    };
     this.eventSource.addEventListener("update", (event) => {
-      const data = JSON.parse((event as MessageEvent).data)
+      const data = JSON.parse((event as MessageEvent).data);
       const componentId = data.componentId;
       this.callback(componentId);
     });

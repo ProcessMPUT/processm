@@ -46,7 +46,7 @@
               <v-card-title>{{ $t("common.add-new") }}</v-card-title>
               <v-card-text>
                 <v-form id="newGroupForm" ref="newGroupForm" v-model="isNewValid" @submit.prevent="addGroup">
-                  <v-text-field v-model="newName" :rules="[(v) => !!v || $t('users.group-empty')]"></v-text-field>
+                  <v-text-field name="text-new-group-name" v-model="newName" :rules="[(v) => !!v || $t('users.group-empty')]"></v-text-field>
                 </v-form>
               </v-card-text>
               <v-card-actions>
@@ -55,7 +55,7 @@
                   {{ $t("common.cancel") }}
                 </v-btn>
 
-                <v-btn :disabled="!isNewValid" color="primary darken-1" form="newGroupForm" type="submit">
+                <v-btn :disabled="!isNewValid" color="primary darken-1" form="newGroupForm" type="submit" name="btn-new-group-submit">
                   {{ $t("common.save") }}
                 </v-btn>
               </v-card-actions>
@@ -88,6 +88,7 @@
                   @click="editGroup(item)"
                   v-on="on"
                   @keyup.enter.native="editGroup(item)"
+                  name="btn-edit-group-submit"
                 >
                   <v-icon v-show="item.dirty || (item.focus && !item.isImplicit && !item.isShared)" small>edit</v-icon>
                 </v-btn>
@@ -137,7 +138,7 @@
             <template v-slot:item.actions="props">
               <v-tooltip bottom>
                 <template v-slot:activator="{ on, attrs }">
-                  <v-btn color="primary" dark icon v-bind="attrs" v-on="on" v-if="!item.isShared && !item.isImplicit">
+                  <v-btn color="primary" dark icon v-bind="attrs" v-on="on" v-if="!item.isShared && !item.isImplicit" name="btn-remove-group-member">
                     <v-icon small @click="removeMember(props.item, item)">delete_forever</v-icon>
                   </v-btn>
                 </template>
@@ -162,19 +163,17 @@
       </template>
 
       <template v-slot:item.actions="{ item, index }">
-        <!--
         <v-tooltip bottom>
           <template v-slot:activator="{ on, attrs }">
-            <v-btn :disabled="groups[index].isImplicit || groups[index].isShared" color="primary" dark icon v-bind="attrs" v-on="on">
-              <v-icon small @click="editGroup(item)">edit</v-icon>
-            </v-btn>
-          </template>
-          <span>{{ $t("common.edit") }}</span>
-        </v-tooltip>
-        -->
-        <v-tooltip bottom>
-          <template v-slot:activator="{ on, attrs }">
-            <v-btn :disabled="groups[index].isImplicit || groups[index].isShared" color="primary" dark icon v-bind="attrs" v-on="on">
+            <v-btn
+              :disabled="groups[index].isImplicit || groups[index].isShared"
+              color="primary"
+              dark
+              icon
+              v-bind="attrs"
+              v-on="on"
+              name="btn-add-group-member"
+            >
               <v-icon small @click="addMemberToGroup(item)">add</v-icon>
             </v-btn>
           </template>
@@ -182,7 +181,7 @@
         </v-tooltip>
         <v-tooltip bottom>
           <template v-slot:activator="{ on, attrs }">
-            <v-btn :disabled="groups[index].isImplicit || groups[index].isShared" color="primary" dark icon v-bind="attrs" v-on="on">
+            <v-btn :disabled="groups[index].isImplicit || groups[index].isShared" color="primary" dark icon v-bind="attrs" v-on="on" name="btn-remove-group">
               <v-icon small @click="removeGroup(item)">delete_forever</v-icon>
             </v-btn>
           </template>
@@ -209,8 +208,34 @@
             {{ $t("common.cancel") }}
           </v-btn>
 
-          <v-btn :disabled="!isNewMemberValid" color="primary darken-1" form="newMemberForm" type="submit">
+          <v-btn :disabled="!isNewMemberValid" color="primary darken-1" form="newMemberForm" type="submit" name="btn-submit-new-group-member">
             {{ $t("common.save") }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+    <v-dialog v-model="objectRemovalDialog" max-width="400px">
+      <v-card>
+        <v-card-title>{{ $t("common.warning") }}</v-card-title>
+        <v-card-text>
+          {{ $t("users.remove-objects") }}
+          <v-list dense>
+            <v-list-item v-for="(item, i) in objectsToRemove" :key="i">
+              <v-list-item-content>
+                <v-list-item-title v-text="item.type"></v-list-item-title>
+                {{ item.name }}
+              </v-list-item-content>
+            </v-list-item>
+          </v-list>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary darken-1" text @click="objectRemovalDialog = false">
+            {{ $t("common.cancel") }}
+          </v-btn>
+
+          <v-btn color="primary darken-1" text @click="actualRemoveGroup()" name="btn-removal-dialog-submit">
+            {{ $t("common.remove") }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -222,11 +247,13 @@
 import Vue from "vue";
 import { Component, Inject } from "vue-property-decorator";
 import OrganizationService from "@/services/OrganizationService";
-import { Group, Organization, UserInfo } from "@/openapi";
+import { EntityID, EntityType, Group, Organization, UserInfo } from "@/openapi";
 import ComboBoxWithSearch from "@/components/ComboBoxWithSearch.vue";
 import App from "@/App.vue";
 import GroupService from "@/services/GroupService";
 import AccountService from "@/services/AccountService";
+import WorkspaceService from "@/services/WorkspaceService";
+import DataStoreService from "@/services/DataStoreService";
 
 interface EnhancedGroup extends Group {
   focus: boolean;
@@ -241,6 +268,8 @@ export default class UserGroupList extends Vue {
   @Inject() app!: App;
   @Inject() accountService!: AccountService;
   @Inject() groupService!: GroupService;
+  @Inject() workspaceService!: WorkspaceService;
+  @Inject() dataStoreService!: DataStoreService;
   @Inject() organizationService!: OrganizationService;
 
   loading = true;
@@ -257,6 +286,10 @@ export default class UserGroupList extends Vue {
   addMemberDialog = false;
   newMember = "";
   isNewMemberValid = false;
+
+  objectRemovalDialog = false;
+  objectsToRemove: Array<EntityID> = [];
+  groupIdToRemove: string | undefined = undefined;
 
   async mounted() {
     this.organizations = await this.organizationService.getOrganizations();
@@ -307,11 +340,39 @@ export default class UserGroupList extends Vue {
   async removeGroup(group: Group) {
     try {
       console.assert(group.id !== undefined);
-      await this.groupService.removeGroup(this.organization.id!, group.id!);
-      this.groups = this.groups.filter((item) => item != group);
+      this.groupIdToRemove = group.id!;
+      const entities = await this.groupService.getSoleOwnershipObjects(this.organization.id!, group.id!);
+      if (entities.length > 0) {
+        this.objectsToRemove = entities;
+        this.objectRemovalDialog = true;
+      } else await this.actualRemoveGroup();
+    } catch (e) {
+      this.app.error(e);
+    }
+  }
+
+  async actualRemoveGroup() {
+    try {
+      console.assert(this.groupIdToRemove !== undefined);
+      for (const entity of this.objectsToRemove) {
+        switch (entity.type) {
+          case EntityType.Workspace:
+            await this.workspaceService.removeWorkspace(entity.id);
+            break;
+          case EntityType.DataStore:
+            await this.dataStoreService.removeDataStore(entity.id);
+            break;
+        }
+      }
+      await this.groupService.removeGroup(this.organization.id!, this.groupIdToRemove!);
+      this.groups = this.groups.filter((item) => item.id != this.groupIdToRemove);
       this.app.info(this.$t("users.group-removed").toString());
     } catch (e) {
       this.app.error(e);
+    } finally {
+      this.groupIdToRemove = undefined;
+      this.objectRemovalDialog = false;
+      this.objectsToRemove = [];
     }
   }
 

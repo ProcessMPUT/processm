@@ -61,7 +61,7 @@ class ACLService {
     ) = transactionMain {
         if (!hasPermission(userId, urn, role)) {
             throw ValidationException(
-                Reason.Unauthorized,
+                Reason.Forbidden,
                 "The specified item (identified by ${urn.urn}) does not exist or the user does not have the required ${role.name} role."
             )
         }

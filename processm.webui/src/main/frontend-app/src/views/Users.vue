@@ -2,12 +2,12 @@
   <v-container class="d-flex align-stretch pa-0 align-content-start" fluid fill-height>
     <v-row class="mx-0">
       <v-tabs v-model="tab" background-color="accent" centered light icons-and-text grow>
-        <v-tab href="#users">
+        <v-tab href="#users" id="tab-users">
           {{ $t("users.users") }}
           <v-icon>group</v-icon>
         </v-tab>
 
-        <v-tab href="#groups">
+        <v-tab href="#groups" id="tab-groups">
           {{ $t("users.groups") }}
           <v-icon>group_work</v-icon>
         </v-tab>

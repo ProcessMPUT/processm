@@ -197,6 +197,7 @@
     "organization": "Organization",
     "organizations": "Organizations",
     "page-title": "Users",
+    "remove-objects": "This group is the sole owner of the following objects. Do you want to remove them to remove the group?",
     "role": "Role",
     "select-organization": "Select organization",
     "shared": "Shared",

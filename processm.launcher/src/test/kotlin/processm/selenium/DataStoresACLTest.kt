@@ -46,17 +46,6 @@ class DataStoresACLTest : SeleniumBase() {
         clickButtonInRow(datastore, "btn-data-store-security")
     }
 
-    private fun closeACLEditor() = click("btn-acl-dialog-close")
-
-    private fun addACE(group: String, vararg role: String) {
-        click("btn-acl-dialog-add-new")
-        openVuetifyDropDown("ace-editor-group")
-        selectVuetifyDropDownItem(group)
-        openVuetifyDropDown("ace-editor-role")
-        selectVuetifyDropDownItem(*role)
-        click("btn-ace-editor-submit")
-    }
-
     @Order(10)
     @Test
     fun `register with new organization`() {
@@ -97,7 +86,7 @@ class DataStoresACLTest : SeleniumBase() {
     fun `user 1 adds user 2 to the organization as a writer`() {
         iam(email1, "goto-users")
         click("btn-add-new-user")
-        with(driver.findElement(By.id("newForm"))) {
+        with(driver.findElement(By.id("newOrgMemberForm"))) {
             with(findElement(By.xpath(".//div[@role='combobox']"))) {
                 click()
                 with(findElement(By.xpath(".//input[@type='text']"))) {

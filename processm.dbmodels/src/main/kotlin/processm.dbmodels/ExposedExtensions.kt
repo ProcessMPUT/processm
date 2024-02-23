@@ -2,10 +2,16 @@ package processm.dbmodels
 
 import org.jetbrains.exposed.dao.Entity
 import org.jetbrains.exposed.dao.id.EntityID
+import org.jetbrains.exposed.dao.id.EntityIDFunctionProvider
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.StatementInterceptor
 import org.jetbrains.exposed.sql.transactions.TransactionManager
+import processm.core.helpers.isUUID
+import processm.core.helpers.toUUID
 import processm.core.models.metadata.URN
+import processm.dbmodels.models.DataStores
+import processm.dbmodels.models.Workspaces
+import java.util.*
 
 internal class
 ILikeOp(expr1: Expression<*>, expr2: Expression<*>) : ComparisonOp(expr1, expr2, "ILIKE")
@@ -53,3 +59,26 @@ val Entity<*>.urn: URN
  */
 val EntityID<*>.urn: URN
     get() = URN("urn:processm:db/${this.table.tableName}/${value}")
+
+/**
+ * A list of tables [decode] can recognize. Must be expanded if a new class of objects is introduced to ACLs.
+ */
+private val tables = listOf(Workspaces, DataStores)
+
+/**
+ * Decodes the URN returned by [urn] back to [EntityID].
+ * Currently, it is assumed that the entity uses UUID as the id.
+ */
+fun URN.decode(): EntityID<UUID> {
+    val firstSlash = urn.indexOf('/')
+    require(firstSlash >= 0)
+    val lastSlash = urn.lastIndexOf('/')
+    require(firstSlash + 1 < lastSlash)
+    val prefix = urn.substring(0, firstSlash)
+    require(prefix == "urn:processm:db")
+    val tableName = urn.substring(firstSlash + 1, lastSlash)
+    val table = tables.first { it.tableName == tableName }
+    val entityID = urn.substring(lastSlash + 1)
+    require(entityID.isUUID()) { "Entity ID `$entityID` is not a UUID" }
+    return EntityIDFunctionProvider.createEntityID(entityID.toUUID()!!, table)
+}

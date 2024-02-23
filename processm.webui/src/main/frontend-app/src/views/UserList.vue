@@ -50,7 +50,6 @@
               <v-btn color="primary darken-1" text @click="newDialog = false">
                 {{ $t("common.cancel") }}
               </v-btn>
-
               <v-btn :disabled="!isNewValid" color="primary darken-1" form="newOrgMemberForm" type="submit" name="btn-commit-add-member">
                 {{ $t("common.save") }}
               </v-btn>
