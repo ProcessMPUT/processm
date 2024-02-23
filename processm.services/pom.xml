@@ -199,18 +199,18 @@
                                     <value>@kotlinx.serialization.Serializable data class</value>
                                 </replacement>
                                 <replacement>
-                                    <token>val (`?[a-zA-Z0-9]+`?): java.util.UUID</token>
+                                    <token>val ([^:]+): java.util.UUID</token>
                                     <value>
                                         @kotlinx.serialization.Serializable(with=processm.helpers.UUIDSerializer::class)
                                         val $1: java.util.UUID
                                     </value>
                                 </replacement>
                                 <replacement>
-                                    <token>val (`?[a-zA-Z0-9]+`?): kotlin.Any</token>
+                                    <token>val ([^:]+): kotlin.Any</token>
                                     <value>@kotlinx.serialization.Contextual val $1: kotlin.Any</value>
                                 </replacement>
                                 <replacement>
-                                    <token>val (`?[a-zA-Z0-9]+`?): java.time.LocalDateTime</token>
+                                    <token>val ([^:]+): java.time.LocalDateTime</token>
                                     <value>@kotlinx.serialization.Contextual val $1: java.time.LocalDateTime</value>
                                 </replacement>
                             </replacements>
