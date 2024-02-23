@@ -11,6 +11,7 @@
               <v-col>
                 <v-text-field
                   v-model="newName"
+                  name="rename-dialog-new-name"
                   :label="$t('rename-dialog.new-name-placeholder')"
                   :rules="[
                     (v) => !!v || $t('rename-dialog.validation.name-empty')
@@ -26,7 +27,7 @@
       <v-card-actions>
         <v-spacer></v-spacer>
 
-        <v-btn color="primary darken-1" text @click.stop="cancel">
+        <v-btn color="primary darken-1" text @click.stop="cancel" name="btn-rename-dialog-cancel">
           {{ $t("common.cancel") }}
         </v-btn>
 
@@ -35,6 +36,7 @@
           text
           :disabled="!isNewNameValid"
           @click.stop="rename"
+          name="btn-rename-dialog-submit"
         >
           {{ $t("common.save") }}
         </v-btn>

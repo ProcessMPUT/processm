@@ -8,6 +8,7 @@
     cache-items
     :rules="rules"
     @input="$emit('update:value', valueInternal)"
+    :name="name"
   ></v-combobox>
 </template>
 
@@ -31,6 +32,8 @@ export default class ComboBoxWithSearch extends Vue {
   label?: string;
   @Prop()
   rules?: [];
+  @Prop()
+  name?: string;
 
   valueInternal = this.value;
   searchInternal = "";

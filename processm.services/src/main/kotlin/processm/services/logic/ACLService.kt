@@ -10,16 +10,15 @@ import java.util.*
 class ACLService {
 
     /**
-     * Creates a DB query that selects the ACL corresponding to [userId], [organizationId], and [role].
+     * Creates a DB query that selects the ACL corresponding to [userId] and [role].
      */
-    fun queryUserACL(userId: UUID, organizationId: UUID, role: RoleType): Query {
+    fun queryUserACL(userId: UUID, role: RoleType): Query {
         val allowedRoles = RoleType.values().filter { it.ordinal <= role.ordinal }.map { it.role.id }
 
         return Groups.innerJoin(UsersInGroups)
             .join(AccessControlList, JoinType.INNER, AccessControlList.group_id, Groups.id)
             .select {
                 (UsersInGroups.userId eq userId) and
-                        ((Groups.isImplicit eq true) or (Groups.organizationId eq organizationId)) and
                         (AccessControlList.role_id inList allowedRoles)
             }
     }
@@ -30,11 +29,10 @@ class ACLService {
      */
     fun hasPermission(
         userId: UUID,
-        organizationId: UUID,
         urn: URN,
         role: RoleType
     ) = transactionMain {
-        queryUserACL(userId, organizationId, role).andWhere {
+        queryUserACL(userId, role).andWhere {
             (AccessControlList.urn.column eq urn.urn)
         }
             .limit(1)
@@ -47,11 +45,10 @@ class ACLService {
      */
     fun checkAccess(
         userId: UUID,
-        organizationId: UUID,
         itemType: Table,
         itemId: UUID,
         role: RoleType
-    ) = checkAccess(userId, organizationId, getURN(itemType, itemId), role)
+    ) = checkAccess(userId, getURN(itemType, itemId), role)
 
     /**
      * Verifies whether the given [userId] has at least the given [role] to access the object identified by the [urn].
@@ -59,13 +56,12 @@ class ACLService {
      */
     fun checkAccess(
         userId: UUID,
-        organizationId: UUID,
         urn: URN,
         role: RoleType
     ) = transactionMain {
-        if (!hasPermission(userId, organizationId, urn, role)) {
+        if (!hasPermission(userId, urn, role)) {
             throw ValidationException(
-                Reason.ResourceNotFound,
+                Reason.Unauthorized,
                 "The specified item (identified by ${urn.urn}) does not exist or the user does not have the required ${role.name} role."
             )
         }

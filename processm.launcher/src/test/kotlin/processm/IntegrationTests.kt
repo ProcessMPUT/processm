@@ -8,6 +8,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.jetbrains.exposed.sql.batchInsert
+import org.jetbrains.exposed.sql.javatime.CurrentDateTime
 import org.junit.jupiter.api.Assumptions
 import org.testcontainers.lifecycle.Startables
 import processm.core.Brand
@@ -16,6 +18,8 @@ import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.LogInputStream
+import processm.core.persistence.connection.transactionMain
+import processm.dbmodels.models.DataStores
 import processm.etl.DBMSEnvironment
 import processm.etl.MSSQLEnvironment
 import processm.etl.MySQLEnvironment
@@ -290,7 +294,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 //wait for the email
                 val re = Regex("[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}", RegexOption.IGNORE_CASE)
                 val token = runBlocking {
-                    for (i in 1..15) {
+                    for (i in 1..30) {
                         try {
                             re.find(sendmail.lastEmailBody)?.value?.let { return@runBlocking it }
                         } catch (e: IOException) {
@@ -788,6 +792,26 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                         }
                     }
             }
+        }
+    }
+
+    @Test
+    fun `how many data stores is too many for ProcessM`() {
+        var jdbcUrl = ""
+        val email = "user@example.com"
+        ProcessMTestingEnvironment().withFreshDatabase().run {
+            jdbcUrl = this.jdbcUrl!!
+            registerUser(email, "org")
+            login(email, "P@ssw0rd!")
+            transactionMain {
+                DataStores.batchInsert(1..100) { i ->
+                    this[DataStores.name] = "ds$i"
+                    this[DataStores.creationDate] = CurrentDateTime
+                }
+            }
+        }
+        ProcessMTestingEnvironment().withPreexistingDatabase(jdbcUrl).run {
+            login(email, "P@ssw0rd!")
         }
     }
 }

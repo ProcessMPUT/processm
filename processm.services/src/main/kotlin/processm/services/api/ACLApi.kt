@@ -33,7 +33,6 @@ fun Route.ACLApi() {
         val canRead = organizations.keys.any { organizationId ->
             aclService.hasPermission(
                 userId,
-                organizationId,
                 urn,
                 leastRoleToReadACL
             )
@@ -49,7 +48,6 @@ fun Route.ACLApi() {
         val canModify = organizations.keys.any { organizationId ->
             aclService.hasPermission(
                 userId,
-                organizationId,
                 urn,
                 leastRoleToModifyACL
             )

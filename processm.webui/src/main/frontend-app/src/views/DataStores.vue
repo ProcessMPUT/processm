@@ -63,7 +63,7 @@
       <template v-slot:item.actions="{ item }">
         <v-tooltip bottom>
           <template v-slot:activator="{ on, attrs }">
-            <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+            <v-btn icon color="primary" dark v-bind="attrs" v-on="on" name="btn-rename-data-store">
               <v-icon small @click="dataStoreIdToRename = item.id">edit</v-icon>
             </v-btn>
           </template>
@@ -79,15 +79,24 @@
         </v-tooltip>
         <v-tooltip bottom>
           <template v-slot:activator="{ on, attrs }">
-            <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+            <v-btn icon color="primary" dark v-bind="attrs" v-on="on" name="btn-delete-data-store">
               <v-icon small @click="removeDataStore(item)">delete_forever</v-icon>
             </v-btn>
           </template>
           <span>{{ $t("common.remove") }}</span>
         </v-tooltip>
+        <v-tooltip bottom>
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn icon color="primary" dark v-bind="attrs" v-on="on" name="btn-data-store-security">
+              <v-icon small @click="configureACL(item.id)">security</v-icon>
+            </v-btn>
+          </template>
+          <span>{{ $t("common.security") }}</span>
+        </v-tooltip>
       </template>
     </v-data-table>
     <data-store-configuration :data-store-id="dataStoreIdToConfigure" :value="dataStoreIdToConfigure != null" @closed="closeDataStoreConfiguration" />
+    <acl-dialog :value="dataStoreUrn != null" :urn="dataStoreUrn" @closed="dataStoreUrn = null" :force-view-only="false" />
     <rename-dialog
       :value="dataStoreIdToRename != null"
       :old-name="dataStoreNameToRename"
@@ -110,9 +119,10 @@ import DataStore from "@/models/DataStore";
 import DataStoreConfiguration from "@/views/DataStoreConfiguration.vue";
 import RenameDialog from "@/components/RenameDialog.vue";
 import App from "@/App.vue";
+import AclDialog from "@/components/acl/AclDialog.vue";
 
 @Component({
-  components: { DataStoreConfiguration, RenameDialog }
+  components: { AclDialog, DataStoreConfiguration, RenameDialog }
 })
 export default class DataStores extends Vue {
   @Inject() app!: App;
@@ -123,6 +133,8 @@ export default class DataStores extends Vue {
   newName = "";
   dataStoreIdToConfigure: string | null = null;
   dataStoreIdToRename: string | null = null;
+  aclDialogDisplayed: boolean = false;
+  dataStoreUrn: string | null = null;
 
   get dataStoreNameToRename(): string | null {
     return this.dataStores.find((dataStore) => dataStore.id == this.dataStoreIdToRename)?.name || null;
@@ -144,18 +156,22 @@ export default class DataStores extends Vue {
   }
 
   async renameDataStore(newName: string) {
-    if (
-      this.dataStoreIdToRename != null &&
-      (await this.dataStoreService.updateDataStore(this.dataStoreIdToRename, {
-        id: this.dataStoreIdToRename,
-        name: newName
-      }))
-    ) {
-      const dataStore = this.dataStores.find((dataStore) => dataStore.id == this.dataStoreIdToRename);
+    try {
+      if (
+        this.dataStoreIdToRename != null &&
+        (await this.dataStoreService.updateDataStore(this.dataStoreIdToRename, {
+          id: this.dataStoreIdToRename,
+          name: newName
+        }))
+      ) {
+        const dataStore = this.dataStores.find((dataStore) => dataStore.id == this.dataStoreIdToRename);
 
-      if (dataStore != null) dataStore.name = newName;
-      this.dataStoreIdToRename = null;
+        if (dataStore != null) dataStore.name = newName;
+      }
+    } catch (error) {
+      this.app.error(`${this.$t("common.saving.failure")}`);
     }
+    this.dataStoreIdToRename = null;
   }
 
   async removeDataStore(dataStore: DataStore) {
@@ -185,6 +201,10 @@ export default class DataStores extends Vue {
 
   closeDataStoreConfiguration() {
     this.dataStoreIdToConfigure = null;
+  }
+
+  configureACL(dataStoreId: string) {
+    this.dataStoreUrn = "urn:processm:db/data_stores/" + dataStoreId;
   }
 }
 </script>

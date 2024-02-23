@@ -162,7 +162,7 @@
               <template v-slot:[`item.actions`]="{ item }">
                 <v-tooltip bottom>
                   <template v-slot:activator="{ on, attrs }">
-                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on" name="btn-data-connector-rename">
                       <v-icon small @click="dataConnectorIdToRename = item.id">edit</v-icon>
                     </v-btn>
                   </template>
@@ -170,7 +170,7 @@
                 </v-tooltip>
                 <v-tooltip bottom>
                   <template v-slot:activator="{ on, attrs }">
-                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on" name="btn-data-connector-remove">
                       <v-icon small @click="removeDataConnector(item)">delete_forever</v-icon>
                     </v-btn>
                   </template>
@@ -577,18 +577,23 @@ export default class DataStoreConfiguration extends Vue {
   }
 
   async renameDataConnector(newName: string) {
-    if (
-      this.dataStoreId != null &&
-      this.dataConnectorIdToRename != null &&
-      (await this.dataStoreService.updateDataConnector(this.dataStoreId, this.dataConnectorIdToRename, {
-        id: this.dataConnectorIdToRename,
-        name: newName,
-        properties: {}
-      }))
-    ) {
-      const dataConnector = this.dataConnectors.find((dataConnector) => dataConnector.id == this.dataConnectorIdToRename);
+    try {
+      if (
+        this.dataStoreId != null &&
+        this.dataConnectorIdToRename != null &&
+        (await this.dataStoreService.updateDataConnector(this.dataStoreId, this.dataConnectorIdToRename, {
+          id: this.dataConnectorIdToRename,
+          name: newName,
+          properties: {}
+        }))
+      ) {
+        const dataConnector = this.dataConnectors.find((dataConnector) => dataConnector.id == this.dataConnectorIdToRename);
 
-      if (dataConnector != null) dataConnector.name = newName;
+        if (dataConnector != null) dataConnector.name = newName;
+      }
+    } catch (error) {
+      this.app.error(`${this.$t("common.operation-error")}`);
+    } finally {
       this.dataConnectorIdToRename = null;
     }
   }
