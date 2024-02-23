@@ -196,6 +196,7 @@
     "no-organization-error": "Nie jesteś członkiem żadnej organizacji",
     "organization": "Organizacja",
     "organizations": "Organizacje",
+    "organization-remove-objects": "Grupy tej organizacji są jedynymi właścicielami następujących obiektów. Czy chcesz je usunąć w celu usunięcia organizacji?",
     "page-title": "Użytkownicy",
     "remove-objects": "Ta grupa is jedynym właścicielem następujących obiektów. Czy chcesz je usunąć w celu usunięcia grupy?",
     "role": "Rola",

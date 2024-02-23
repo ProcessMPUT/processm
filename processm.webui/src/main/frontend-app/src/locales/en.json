@@ -196,6 +196,7 @@
     "no-organization-error": "You are not a member of any organization",
     "organization": "Organization",
     "organizations": "Organizations",
+    "organization-remove-objects": "Groups of this organization are the sole owner of the following objects. Do you want to remove them to remove the organization?",
     "page-title": "Users",
     "remove-objects": "This group is the sole owner of the following objects. Do you want to remove them to remove the group?",
     "role": "Role",

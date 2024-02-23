@@ -46,6 +46,11 @@ export default class OrganizationService extends BaseService {
     return false;
   }
 
+  public async getSoleOwnership(organizationId: string) {
+    const response = await this.organizationsApi.getOrganizationSoleOwnership(organizationId);
+    return response.data;
+  }
+
   protected async updateClaims() {
     // refresh token to get new permissions
     await this.prolongExistingSession(undefined, this.usersApi);

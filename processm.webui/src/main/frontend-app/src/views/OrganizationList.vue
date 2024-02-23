@@ -111,6 +111,32 @@
         "
       />
     </v-card-text>
+    <v-dialog v-model="objectRemovalDialog" max-width="400px">
+      <v-card>
+        <v-card-title>{{ $t("common.warning") }}</v-card-title>
+        <v-card-text>
+          {{ $t("users.organization-remove-objects") }}
+          <v-list dense>
+            <v-list-item v-for="(item, i) in objectsToRemove" :key="i">
+              <v-list-item-content>
+                <v-list-item-title v-text="item.type"></v-list-item-title>
+                {{ item.name }}
+              </v-list-item-content>
+            </v-list-item>
+          </v-list>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary darken-1" text @click="objectRemovalDialog = false">
+            {{ $t("common.cancel") }}
+          </v-btn>
+
+          <v-btn color="primary darken-1" text @click="actualRemove()" name="btn-removal-dialog-submit">
+            {{ $t("common.remove") }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-card>
 </template>
 
@@ -120,8 +146,10 @@ import { Component, Inject } from "vue-property-decorator";
 import OrganizationService from "@/services/OrganizationService";
 import AccountService from "@/services/AccountService";
 import App from "@/App.vue";
-import { Organization, OrganizationRole } from "@/openapi";
+import { EntityID, EntityType, Organization, OrganizationRole } from "@/openapi";
 import NewDialog from "@/components/NewDialog.vue";
+import WorkspaceService from "@/services/WorkspaceService";
+import DataStoreService from "@/services/DataStoreService";
 
 class OrganizationTreeItem {
   organization: Organization | undefined;
@@ -143,10 +171,16 @@ export default class OrganizationList extends Vue {
   @Inject() app!: App;
   @Inject() accountService!: AccountService;
   @Inject() organizationService!: OrganizationService;
+  @Inject() workspaceService!: WorkspaceService;
+  @Inject() dataStoreService!: DataStoreService;
 
   organizations: OrganizationTreeItem[] = [];
   orgToAttach: Organization | null = null;
   createNewDialog: boolean = false;
+
+  objectRemovalDialog = false;
+  objectsToRemove: Array<EntityID> = [];
+  organizationIdToRemove: string | undefined = undefined;
 
   async mounted() {
     await this.load();
@@ -233,13 +267,39 @@ export default class OrganizationList extends Vue {
 
   async remove(item: OrganizationTreeItem) {
     try {
-      const organizationId = item.organization?.id;
-      await this.organizationService.removeOrganization(organizationId!);
-      this.app.success(this.$t("common.removal.success").toString());
-      await this.load();
+      this.organizationIdToRemove = item.organization?.id;
+      const entities = await this.organizationService.getSoleOwnership(this.organizationIdToRemove!);
+      if (entities.length > 0) {
+        this.objectsToRemove = entities;
+        this.objectRemovalDialog = true;
+      } else await this.actualRemove();
     } catch (e) {
       console.error(e);
       this.app.error(this.$t("common.removal.failure").toString());
+    }
+  }
+
+  async actualRemove() {
+    try {
+      for (const entity of this.objectsToRemove) {
+        switch (entity.type) {
+          case EntityType.Workspace:
+            await this.workspaceService.removeWorkspace(entity.id);
+            break;
+          case EntityType.DataStore:
+            await this.dataStoreService.removeDataStore(entity.id);
+            break;
+        }
+      }
+      await this.organizationService.removeOrganization(this.organizationIdToRemove!);
+      this.app.success(this.$t("common.removal.success").toString());
+      await this.load();
+    } catch (e) {
+      this.app.error(e);
+    } finally {
+      this.organizationIdToRemove = undefined;
+      this.objectRemovalDialog = false;
+      this.objectsToRemove = [];
     }
   }
 
