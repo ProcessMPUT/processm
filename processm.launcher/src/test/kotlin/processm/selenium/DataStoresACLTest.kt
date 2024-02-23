@@ -46,17 +46,6 @@ class DataStoresACLTest : SeleniumBase() {
         clickButtonInRow(datastore, "btn-data-store-security")
     }
 
-    private fun closeACLEditor() = click("btn-acl-dialog-close")
-
-    private fun addACE(group: String, vararg role: String) {
-        click("btn-acl-dialog-add-new")
-        openVuetifyDropDown("ace-editor-group")
-        selectVuetifyDropDownItem(group)
-        openVuetifyDropDown("ace-editor-role")
-        selectVuetifyDropDownItem(*role)
-        click("btn-ace-editor-submit")
-    }
-
     @Order(10)
     @Test
     fun `register with new organization`() {

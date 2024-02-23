@@ -17,6 +17,7 @@ import processm.core.helpers.loadConfiguration
 import processm.core.persistence.Migrator
 import java.time.Duration
 import kotlin.random.Random
+import kotlin.test.assertNotNull
 
 
 val <T : PostgreSQLContainer<T>?> PostgreSQLContainer<T>.port: Int
@@ -74,17 +75,20 @@ abstract class SeleniumBase(
         return driver.findElement(By.xpath("//*[text()='$text']"))
     }
 
-    fun typeIn(name: String, value: String, replace: Boolean = true) {
+    fun typeIn(name: String, value: String, replace: Boolean = true) = typeIn(byName(name), value, replace)
+
+    fun typeIn(element: WebElement, value: String, replace: Boolean = true) {
         val n = 2
         repeat(n) { ctr ->
             try {
-                with(byName(name)) {
+                with(element) {
                     wait.until { isDisplayed }
                     wait.until { isEnabled }
                     if (replace)
-                        while (getAttribute("value") != "") {
-                            sendKeys(Keys.BACK_SPACE);
-                        }
+                        sendKeys(Keys.END)
+                    while (getAttribute("value") != "") {
+                        sendKeys(Keys.BACK_SPACE);
+                    }
                     sendKeys(value)
                     recorder?.take()
                 }
@@ -96,6 +100,12 @@ abstract class SeleniumBase(
                     throw e
             }
         }
+    }
+
+    fun click(getter: (WebDriver) -> WebElement?) {
+        val element = wait.until(getter)
+        assertNotNull(element)
+        click(element)
     }
 
     fun click(element: WebElement) {
@@ -191,7 +201,7 @@ abstract class SeleniumBase(
     fun clickButtonInRow(cellText: String, buttonName: String) {
         require('\'' !in cellText) { "Apostrophes are not supported" }
         require('\'' !in buttonName) { "Apostrophes are not supported" }
-        click(By.xpath("//td[text()='$cellText']/..//button[@name='$buttonName']"))
+        click(By.xpath("//*[text()='$cellText']/ancestor-or-self::tr//button[@name='$buttonName']"))
     }
 
 
@@ -317,6 +327,20 @@ abstract class SeleniumBase(
         click("btn-logout")
         wait.until { byName("btn-login").isDisplayed }
     }
+
+    /**
+     * Requires the ACL editor to be already open
+     */
+    protected fun addACE(group: String, vararg role: String) {
+        click("btn-acl-dialog-add-new")
+        openVuetifyDropDown("ace-editor-group")
+        selectVuetifyDropDownItem(group)
+        openVuetifyDropDown("ace-editor-role")
+        selectVuetifyDropDownItem(*role)
+        click("btn-ace-editor-submit")
+    }
+
+    protected fun closeACLEditor() = click("btn-acl-dialog-close")
 
     // endregion
 }
