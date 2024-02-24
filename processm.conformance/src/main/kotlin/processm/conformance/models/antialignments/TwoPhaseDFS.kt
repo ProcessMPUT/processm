@@ -3,12 +3,12 @@ package processm.conformance.models.antialignments
 import processm.conformance.models.alignments.*
 import processm.conformance.models.alignments.cache.Cache
 import processm.conformance.models.alignments.events.EventsSummarizer
-import processm.core.helpers.SameThreadExecutorService
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
 import processm.core.models.commons.ProcessModelState
+import processm.helpers.SameThreadExecutorService
 import java.util.*
 import kotlin.collections.ArrayDeque
 import kotlin.math.max

@@ -2,8 +2,8 @@ package processm.core.esb
 
 import org.jgrapht.alg.cycle.CycleDetector
 import org.jgrapht.graph.DefaultDirectedGraph
-import processm.core.helpers.forEachCatching
-import processm.core.logging.loggedScope
+import processm.helpers.forEachCatching
+import processm.logging.loggedScope
 import java.io.Closeable
 import java.lang.management.ManagementFactory
 import java.util.*

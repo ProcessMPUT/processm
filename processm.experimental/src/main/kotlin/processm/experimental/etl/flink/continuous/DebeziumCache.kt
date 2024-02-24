@@ -5,12 +5,12 @@ import io.debezium.engine.DebeziumEngine
 import io.debezium.engine.format.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import processm.core.logging.loggedScope
 import processm.experimental.etl.flink.continuous.DebeziumCache.Consumer
 import processm.experimental.etl.flink.continuous.DebeziumCache.DELAY_BEFORE_START
 import processm.experimental.etl.flink.continuous.DebeziumCache.Key
 import processm.experimental.etl.flink.continuous.DebeziumCache.register
 import processm.experimental.etl.flink.continuous.DebeziumCache.unregister
+import processm.logging.loggedScope
 import java.io.File
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap

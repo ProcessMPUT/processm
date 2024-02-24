@@ -2,8 +2,6 @@ package processm.experimental.miners.causalnet.heuristicminer
 
 import org.junit.jupiter.api.*
 import processm.core.comparators.CausalNetTraceComparison
-import processm.core.helpers.allPermutations
-import processm.core.helpers.mapToSet
 import processm.core.log.Helpers.logFromModel
 import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.Log
@@ -12,6 +10,8 @@ import processm.core.verifiers.CausalNetVerifier
 import processm.experimental.miners.causalnet.heuristicminer.traceregisters.CompleteTraceRegister
 import processm.experimental.miners.causalnet.heuristicminer.traceregisters.DifferentAdfixTraceRegister
 import processm.experimental.miners.causalnet.heuristicminer.traceregisters.TraceRegister
+import processm.helpers.allPermutations
+import processm.helpers.mapToSet
 import processm.miners.causalnet.heuristicminer.OfflineHeuristicMiner
 import processm.miners.causalnet.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.causalnet.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider

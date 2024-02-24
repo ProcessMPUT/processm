@@ -15,6 +15,7 @@ import org.apache.flink.formats.json.JsonNodeDeserializationSchema
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.util.Collector
+import org.junit.jupiter.api.Tag
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
@@ -48,6 +49,7 @@ class FlinkPoC {
     }
 
     @Test
+    @Tag("slow")
     fun postgres() {
 
         // Postgres Container setup

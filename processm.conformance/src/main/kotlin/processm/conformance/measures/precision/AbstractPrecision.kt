@@ -1,15 +1,14 @@
 package processm.conformance.measures.precision
 
 import processm.conformance.measures.Measure
-import processm.conformance.models.alignments.AStar
 import processm.conformance.models.alignments.Alignment
 import processm.conformance.models.alignments.CompositeAligner
-import processm.core.helpers.Trie
 import processm.core.log.hierarchical.Log
-import processm.core.logging.debug
-import processm.core.logging.logger
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
+import processm.helpers.Trie
+import processm.logging.debug
+import processm.logging.logger
 
 /**
  * A generic implementation of precision. It requires overloading either variant of [availableActivities] in order to function correctly.

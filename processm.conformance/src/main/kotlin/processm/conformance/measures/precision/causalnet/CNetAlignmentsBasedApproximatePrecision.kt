@@ -1,14 +1,14 @@
 package processm.conformance.measures.precision.causalnet
 
 import processm.conformance.models.alignments.Alignment
-import processm.core.helpers.Trie
-import processm.core.helpers.mapToSet
-import processm.core.logging.debug
-import processm.core.logging.logger
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.DecoupledNodeExecution
 import processm.core.models.causalnet.Node
 import processm.core.models.commons.Activity
+import processm.helpers.Trie
+import processm.helpers.mapToSet
+import processm.logging.debug
+import processm.logging.logger
 
 /**
  * An upper bound for precision - it only takes into account these activities that are available according to the given alignments

@@ -4,9 +4,9 @@ import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.MySQLContainer
 import org.testcontainers.images.builder.Transferable
 import org.testcontainers.lifecycle.Startables
-import processm.core.logging.logger
 import processm.dbmodels.models.ConnectionType
 import processm.etl.DBMSEnvironment.Companion.TEST_DATABASES_PATH
+import processm.logging.logger
 import java.io.File
 import java.sql.Connection
 

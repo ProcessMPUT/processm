@@ -1,8 +1,8 @@
 package processm.miners.causalnet.heuristicminer.dependencygraphproviders
 
-import processm.core.helpers.Counter
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Node
+import processm.helpers.Counter
 import processm.miners.causalnet.onlineminer.NodeTrace
 
 /**

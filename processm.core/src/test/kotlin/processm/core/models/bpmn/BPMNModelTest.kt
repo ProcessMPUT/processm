@@ -2,7 +2,7 @@ package processm.core.models.bpmn
 
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
-import processm.core.helpers.mapToSet
+import processm.helpers.mapToSet
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals

@@ -1,14 +1,16 @@
 package processm.conformance.models.alignments
 
+import kotlinx.serialization.Serializable
 import processm.conformance.models.ConformanceModel
-import processm.core.helpers.toSubscript
-import processm.core.helpers.toSuperscript
+import processm.helpers.toSubscript
+import processm.helpers.toSuperscript
 
 /**
  * The alignment of a model and a log as described in e.g.,
  * Sebastiaan J. van Zelst, Alfredo Bolt, and Boudewijn F. van Dongen,
  * Tuning Alignment Computation: An Experimental Evaluation
  */
+@Serializable
 data class Alignment(
     val steps: List<Step>,
     val cost: Int

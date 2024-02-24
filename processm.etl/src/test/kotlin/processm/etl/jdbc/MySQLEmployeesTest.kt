@@ -5,15 +5,15 @@ import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.*
 import processm.core.DBTestHelper
-import processm.core.helpers.mapToSet
 import processm.core.log.*
-import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.ETLConfigurations
 import processm.dbmodels.models.EtlProcessMetadata
 import processm.etl.MySQLEnvironment
+import processm.helpers.mapToSet
+import processm.logging.logger
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.TimeUnit

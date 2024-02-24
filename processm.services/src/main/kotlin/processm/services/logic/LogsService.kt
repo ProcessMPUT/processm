@@ -6,15 +6,15 @@ import de.odysseus.staxon.json.JsonXMLOutputFactory
 import org.apache.commons.io.input.BoundedInputStream
 import processm.core.Brand
 import processm.core.communication.Producer
-import processm.core.helpers.getPropertyIgnoreCase
 import processm.core.log.*
 import processm.core.log.attribute.Attribute.IDENTITY_ID
 import processm.core.log.attribute.toMutableAttributeMap
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.toFlatSequence
-import processm.core.logging.loggedScope
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
+import processm.helpers.getPropertyIgnoreCase
+import processm.logging.loggedScope
 import java.io.BufferedInputStream
 import java.io.InputStream
 import java.io.OutputStream

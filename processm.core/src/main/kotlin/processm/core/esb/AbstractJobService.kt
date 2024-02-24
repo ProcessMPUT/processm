@@ -5,7 +5,7 @@ import org.quartz.JobDetail
 import org.quartz.Scheduler
 import org.quartz.Trigger
 import org.quartz.impl.StdSchedulerFactory
-import processm.core.logging.loggedScope
+import processm.logging.loggedScope
 import kotlin.reflect.KClass
 
 /**

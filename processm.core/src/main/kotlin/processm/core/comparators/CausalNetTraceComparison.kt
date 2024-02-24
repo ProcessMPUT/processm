@@ -1,8 +1,8 @@
 package processm.core.comparators
 
-import processm.core.helpers.mapToSet
 import processm.core.models.causalnet.CausalNet
 import processm.core.verifiers.CausalNetVerifier
+import processm.helpers.mapToSet
 
 /**
  * Compares loop-free traces (i.e., nodes visited in loop-free valid sequences) of [left] and [right]

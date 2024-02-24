@@ -2,8 +2,8 @@ package processm.experimental.helpers.map2d
 
 import com.google.common.collect.HashBasedTable
 import org.junit.jupiter.api.Tag
-import processm.core.helpers.map2d.DoublingMap2D
-import processm.core.helpers.map2d.Map2D
+import processm.helpers.map2d.DoublingMap2D
+import processm.helpers.map2d.Map2D
 import java.io.File
 import kotlin.math.sqrt
 import kotlin.random.Random

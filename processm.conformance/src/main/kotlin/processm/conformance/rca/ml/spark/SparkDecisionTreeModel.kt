@@ -17,8 +17,8 @@ import org.apache.spark.sql.types.StructType
 import processm.conformance.rca.Feature
 import processm.conformance.rca.PropositionalSparseDataset
 import processm.conformance.rca.ml.DecisionTreeModel
-import processm.core.logging.debug
-import processm.core.logging.logger
+import processm.logging.debug
+import processm.logging.logger
 import java.time.Instant
 import kotlin.math.absoluteValue
 

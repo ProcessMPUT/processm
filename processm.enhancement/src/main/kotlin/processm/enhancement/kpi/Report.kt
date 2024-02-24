@@ -8,12 +8,14 @@ import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.*
 import kotlinx.serialization.json.*
 import kotlinx.serialization.modules.*
-import processm.core.helpers.map2d.DoublingMap2D
-import processm.core.helpers.map2d.Map2D
-import processm.core.helpers.stats.Distribution
+import processm.conformance.models.alignments.Alignment
+import processm.core.models.causalnet.DecoupledNodeExecution
 import processm.core.models.commons.Activity
 import processm.core.models.commons.CausalArc
 import processm.core.models.processtree.ProcessTreeActivity
+import processm.helpers.map2d.DoublingMap2D
+import processm.helpers.map2d.Map2D
+import processm.helpers.stats.Distribution
 
 /**
  * KPI report consisting of KPIs at the log, trace, and event scopes.
@@ -46,16 +48,25 @@ data class Report(
      * The event-scope KPIs computed as for [eventKPI], but assigned to [CausalArc]s of the model that are
      * terminating in this particular event.
      */
-    val inboundArcKPI: Map2D<String, CausalArc, Distribution>
+    val inboundArcKPI: Map2D<String, CausalArc, Distribution>,
+
+    /**
+     * Alignments corresponding used to calculate this report.
+     */
+    val alignments: List<Alignment>
 ) {
     companion object {
-        private val reportFormat = Json {
+        /**
+         * A kotlinx/serialization serializer configuration for this class.
+         */
+        val Json = Json {
             allowStructuredMapKeys = true
             serializersModule = SerializersModule {
                 polymorphic(Activity::class) {
                     subclass(processm.core.models.causalnet.Node::class)
                     subclass(processm.core.models.petrinet.Transition::class)
                     subclass(ProcessTreeActivity::class)
+                    subclass(DecoupledNodeExecution::class)
                 }
                 polymorphic(CausalArc::class) {
                     subclass(processm.core.models.causalnet.Dependency::class)
@@ -98,10 +109,10 @@ data class Report(
             }
         }
 
-        fun fromJson(json: String): Report = reportFormat.decodeFromString(serializer(), json)
+        fun fromJson(json: String): Report = Json.decodeFromString(serializer(), json)
     }
 
-    fun toJson(): String = reportFormat.encodeToString(this)
+    fun toJson(): String = Json.encodeToString(this)
 }
 
 

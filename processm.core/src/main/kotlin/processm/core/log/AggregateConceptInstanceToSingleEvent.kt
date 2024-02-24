@@ -1,6 +1,6 @@
 package processm.core.log
 
-import processm.core.helpers.map2d.DoublingMap2D
+import processm.helpers.map2d.DoublingMap2D
 
 /**
  * A transforming stream, aggregating all events in [base] sharing the same [Event.conceptName] and [Event.conceptInstance] within a single trace to a single event.

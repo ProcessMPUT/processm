@@ -1,7 +1,7 @@
 package processm.core.log
 
-import processm.core.helpers.toUUID
 import processm.core.log.attribute.AttributeMap
+import processm.helpers.toUUID
 import java.sql.ResultSet
 import java.util.*
 

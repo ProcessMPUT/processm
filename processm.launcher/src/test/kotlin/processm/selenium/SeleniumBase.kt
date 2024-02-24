@@ -13,7 +13,7 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
 import processm.core.esb.EnterpriseServiceBus
-import processm.core.helpers.loadConfiguration
+import processm.core.loadConfiguration
 import processm.core.persistence.Migrator
 import java.time.Duration
 import kotlin.random.Random

@@ -3,8 +3,10 @@ package processm.enhancement.kpi
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
-import processm.core.helpers.map2d.DoublingMap2D
-import processm.core.helpers.stats.Distribution
+import processm.conformance.models.DeviationType
+import processm.conformance.models.alignments.Alignment
+import processm.conformance.models.alignments.Step
+import processm.core.log.Helpers.event
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Node
 import processm.core.models.commons.Activity
@@ -12,6 +14,8 @@ import processm.core.models.commons.CausalArc
 import processm.core.models.petrinet.Place
 import processm.core.models.petrinet.Transition
 import processm.core.models.processtree.ProcessTreeActivity
+import processm.helpers.map2d.DoublingMap2D
+import processm.helpers.stats.Distribution
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -65,7 +69,28 @@ class ReportTests {
                     VirtualProcessTreeCausalArc(ProcessTreeActivity("z"), ProcessTreeActivity("x")),
                     Distribution(doubleArrayOf(42.0, 69.0))
                 )
-            }
+            },
+            alignments = listOf(
+                Alignment(
+                    steps = listOf(
+                        Step(
+                            Transition("a"),
+                            null,
+                            event("a"),
+                            null,
+                            DeviationType.None
+                        ),
+                        Step(
+                            null,
+                            null,
+                            event("b"),
+                            null,
+                            DeviationType.LogDeviation
+                        )
+                    ),
+                    cost = 1
+                )
+            )
         )
 
         val json = report.toJson()

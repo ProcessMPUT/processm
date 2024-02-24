@@ -36,7 +36,7 @@ export default class PetriNetComponent extends Vue {
   readonly data!: WorkspaceComponent;
 
   @Prop({ default: null })
-  readonly componentMode?: ComponentMode;
+  readonly componentMode!: ComponentMode | null;
 
   @Prop({ default: false })
   readonly updateData = false;

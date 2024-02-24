@@ -185,7 +185,7 @@ export default class WorkspaceArea extends Vue {
   async created() {
     await this.fullRefresh();
     if (this.notifications === undefined) this.notifications = this.workspaceService.observeWorkspace(this.workspaceId, this.refreshComponent);
-    this.notifications.start();
+    await this.notifications.start();
   }
 
   // noinspection JSUnusedGlobalSymbols

@@ -2,10 +2,10 @@ package processm.core.persistence.connection
 
 import org.postgresql.ds.PGSimpleDataSource
 import processm.core.Brand
-import processm.core.helpers.getPropertyIgnoreCase
-import processm.core.helpers.isUUID
-import processm.core.helpers.loadConfiguration
-import processm.core.logging.loggedScope
+import processm.core.loadConfiguration
+import processm.helpers.getPropertyIgnoreCase
+import processm.helpers.isUUID
+import processm.logging.loggedScope
 import java.sql.DriverManager
 import kotlin.properties.Delegates
 

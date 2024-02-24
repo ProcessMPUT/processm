@@ -193,7 +193,7 @@ paths:
               $ref: '#/components/schemas/PasswordChange'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
@@ -1483,7 +1483,6 @@ paths:
           format: uuid
     get:
       tags:
-        - dataStores
         - logs
       summary: Query logs stored in the specified data store
       operationId: submitLogsQuery
@@ -1521,7 +1520,6 @@ paths:
         - bearerAuth: [ ]
     post:
       tags:
-        - dataStores
         - logs
       summary: Upload new log file to the specified data store
       operationId: uploadLogFile
@@ -1975,22 +1973,28 @@ components:
       properties:
         x:
           type: number
+          format: double
         y:
           type: number
+          format: double
         width:
           type: number
+          format: double
         height:
           type: number
+          format: double
     LayoutCollectionMessageBody:
       type: object
       required: [ data ]
       properties:
         data:
           type: object
+          readOnly: true
           additionalProperties:
             $ref: '#/components/schemas/LayoutElement'
     AbstractComponent:
       oneOf:
+        - $ref: '#/components/schemas/Component'
         - $ref: '#/components/schemas/KpiComponent'
         - $ref: '#/components/schemas/AlignerKpiComponent'
         - $ref: '#/components/schemas/CausalNetComponent'
@@ -2003,11 +2007,15 @@ components:
           alignerKpi: '#/components/schemas/AlignerKpiComponent'
           causalNet: '#/components/schemas/CausalNetComponent'
           petriNet: '#/components/schemas/PetriNetComponent'
+          directlyFollowsGraph: '#/components/schemas/DirectlyFollowsGraphComponent'
           bpmn: '#/components/schemas/BPMNComponent'
+          flatLogView: '#/components/schemas/Component'
+          treeLogView: '#/components/schemas/Component'
       type: object
       properties:
         data:
           type: object
+          readOnly: true
     CustomProperty:
       required: [ id, name ]
       properties:
@@ -2069,8 +2077,6 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/KpiComponentData'
-            customizationData:
-              type: object
     AlignerKpiComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -2079,6 +2085,7 @@ components:
             report:
               $ref: '#/components/schemas/AlignerKpiReport'
     AlignerKpiReport:
+      required: [ logKPI, traceKPI, eventKPI, alignments ]
       properties:
         logKPI:
           type: object
@@ -2094,6 +2101,10 @@ components:
             type: object
             additionalProperties:
               $ref: '#/components/schemas/Distribution'
+        alignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Alignment'
     Distribution:
       properties:
         min:
@@ -2124,8 +2135,6 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/AlignerKpiComponentData'
-            customizationData:
-              type: object
     CausalNetComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -2165,7 +2174,11 @@ components:
                   support:
                     type: number
                     format: double
-    ProcessModelCustomizationData:
+            alignments:
+              type: array
+              items:
+                $ref: '#/components/schemas/Alignment'
+    CustomizationData:
       type: object
       properties:
         layout:
@@ -2178,8 +2191,10 @@ components:
                 type: string
               x:
                 type: number
+                format: double
               y:
                 type: number
+                format: double
     CausalNetComponent:
       allOf:
         - $ref: '#/components/schemas/Component'
@@ -2188,7 +2203,7 @@ components:
             data:
               $ref: '#/components/schemas/CausalNetComponentData'
             customizationData:
-              $ref: '#/components/schemas/ProcessModelCustomizationData'
+              $ref: '#/components/schemas/CustomizationData'
     PetriNetComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -2239,7 +2254,7 @@ components:
             data:
               $ref: '#/components/schemas/PetriNetComponentData'
             customizationData:
-              $ref: '#/components/schemas/ProcessModelCustomizationData'
+              $ref: '#/components/schemas/CustomizationData'
     BPMNComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -2254,8 +2269,13 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/BPMNComponentData'
-            customizationData:
-              type: object
+    DirectlyFollowsGraphComponent:
+      allOf:
+        - $ref: '#/components/schemas/Component'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DirectlyFollowsGraphComponentData'
     DirectlyFollowsGraphComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -2270,6 +2290,10 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/DFGEdge'
+            alignments:
+              type: array
+              items:
+                $ref: '#/components/schemas/Alignment'
     DFGNode:
       type: object
       required: [ id, label ]
@@ -2390,7 +2414,8 @@ components:
         query:
           type: string
         refresh:
-          type: number
+          type: integer
+          format: int64
         enabled:
           type: boolean
         batch:
@@ -2432,6 +2457,29 @@ components:
           type: string
         role:
           $ref: '#/components/schemas/OrganizationRole'
+    Alignment:
+      type: object
+      required: [ steps, cost ]
+      properties:
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/Step'
+        cost:
+          type: integer
+    Step:
+      type: object
+      required: [ type ]
+      properties:
+        modelMove:
+          type: object
+        logMove:
+          type: object
+        type:
+          $ref: '#/components/schemas/DeviationType'
+    DeviationType:
+      type: string
+      enum: [ None, LogDeviation, ModelDeviation ]
   responses:
     BadRequest:
       description: Invalid request body

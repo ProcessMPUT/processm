@@ -3,7 +3,7 @@ package processm.miners.causalnet.onlineminer
 import ch.qos.logback.classic.Level
 import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.Log
-import processm.core.logging.logger
+import processm.logging.logger
 import processm.miners.causalnet.onlineminer.replayer.SingleReplayer
 import kotlin.random.Random
 import kotlin.test.Test

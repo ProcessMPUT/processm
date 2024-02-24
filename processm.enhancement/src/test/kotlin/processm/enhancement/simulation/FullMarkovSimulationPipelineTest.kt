@@ -14,9 +14,18 @@ import processm.core.models.processtree.ProcessTrees
 import processm.enhancement.resources.ApplyResourceBasedScheduling
 import processm.enhancement.resources.BasicResource
 import java.time.Duration
+import kotlin.random.Random
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 
 class FullMarkovSimulationPipelineTest {
+
+    lateinit var random: Random
+
+    @BeforeTest
+    fun beforeTest() {
+        random = Random(42)
+    }
 
     @Test
     fun `Petri Net from PM book Fig 3 2`() {
@@ -44,7 +53,7 @@ class FullMarkovSimulationPipelineTest {
         val submitter = BasicResource("Mary", submitterRoles)
         val extraHelp = BasicResource("Tom", submitterRoles)
 
-        val simulation = MarkovSimulation(processModel)
+        val simulation = MarkovSimulation(processModel, random = random)
         val stream = InferTimes(
             ApplyResourceBasedScheduling(
                 simulation,

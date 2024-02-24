@@ -2,7 +2,7 @@
   <v-dialog v-model="value" @click:outside="cancel" max-width="400">
     <v-card>
       <v-card-title class="headline">
-        {{ $t('acl.ace-dialog-title') }}
+        {{ $t("acl.ace-dialog-title") }}
       </v-card-title>
       <v-card-text>
         <v-container>
@@ -46,31 +46,31 @@
 
 <script lang="ts">
 import Vue from "vue";
-import {Component, Inject, Prop, Watch} from "vue-property-decorator";
-import {Group, OrganizationRole} from "@/openapi";
+import { Component, Inject, Prop, Watch } from "vue-property-decorator";
+import { Group, OrganizationRole } from "@/openapi";
 import ACLService from "@/services/ACLService";
 import App from "@/App.vue";
 
 @Component({})
 export default class AceEditor extends Vue {
-  @Prop({default: null})
+  @Prop({ default: null })
   readonly groupId!: string | null;
-  @Prop({default: null})
+  @Prop({ default: null })
   readonly role!: OrganizationRole | null;
-  @Prop({default: false})
+  @Prop({ default: false })
   readonly value!: boolean;
-  @Prop({default: null})
+  @Prop({ default: null })
   readonly urn!: string | null;
 
   @Inject() app!: App;
   @Inject() aclService!: ACLService;
 
   newGroup: Group | null = null;
-  newRole = OrganizationRole.None;
+  newRole: OrganizationRole = OrganizationRole.None;
   readonly roles = [OrganizationRole.None, OrganizationRole.Owner, OrganizationRole.Writer, OrganizationRole.Reader].map((r) => ({
-    'name': this.$t(`users.roles.${r}`),
-    'value': r
-  }))
+    name: this.$t(`users.roles.${r}`),
+    value: r
+  }));
 
   availableGroups: Array<Group> = [];
 

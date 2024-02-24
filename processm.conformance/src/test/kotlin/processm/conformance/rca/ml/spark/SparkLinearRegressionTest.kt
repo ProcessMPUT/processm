@@ -1,7 +1,7 @@
 package processm.conformance.rca.ml.spark
 
-import processm.core.helpers.cartesianProduct
 import processm.core.log.Helpers.assertDoubleEquals
+import processm.helpers.cartesianProduct
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

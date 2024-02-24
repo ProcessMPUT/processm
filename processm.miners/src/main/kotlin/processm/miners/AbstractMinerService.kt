@@ -9,14 +9,14 @@ import org.quartz.*
 import processm.core.communication.Producer
 import processm.core.esb.AbstractJobService
 import processm.core.esb.ServiceJob
-import processm.core.helpers.toUUID
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
-import processm.core.logging.loggedScope
 import processm.core.models.commons.ProcessModel
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.core.querylanguage.Query
 import processm.dbmodels.models.*
+import processm.helpers.toUUID
+import processm.logging.loggedScope
 import java.time.Instant
 import java.util.*
 
@@ -136,7 +136,7 @@ abstract class AbstractMinerService(
         require(type == componentType) { "Expected $componentType, got $type." }
 
         val id = message.getString(WORKSPACE_COMPONENT_ID)
-        val event = message.getString(WORKSPACE_COMPONENT_EVENT)
+        val event = message.getStringProperty(WORKSPACE_COMPONENT_EVENT)
 
         return when (event) {
             CREATE_OR_UPDATE -> listOf(createJob(id.toUUID()!!, calcJob))

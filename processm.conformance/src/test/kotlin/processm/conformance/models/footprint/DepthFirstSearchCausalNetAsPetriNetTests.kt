@@ -1,6 +1,5 @@
 package processm.conformance.models.footprint
 
-import processm.core.helpers.allSubsets
 import processm.core.log.Helpers
 import processm.core.log.hierarchical.toFlatSequence
 import processm.core.models.causalnet.CausalNets.azFlower
@@ -10,6 +9,7 @@ import processm.core.models.causalnet.CausalNets.parallelDecisionsInLoop
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.models.petrinet.converters.toPetriNet
+import processm.helpers.allSubsets
 import kotlin.math.absoluteValue
 import kotlin.test.Ignore
 import kotlin.test.Test

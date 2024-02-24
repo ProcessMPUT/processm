@@ -12,7 +12,7 @@ import org.testcontainers.utility.DockerImageName
 import processm.core.esb.Artemis
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
-import processm.core.logging.logger
+import processm.logging.logger
 import java.sql.DriverManager
 import java.util.*
 import java.util.concurrent.ExecutorCompletionService

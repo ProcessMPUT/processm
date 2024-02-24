@@ -3,7 +3,7 @@ package processm.core.esb
 import jakarta.jms.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import processm.core.logging.logger
+import processm.logging.logger
 import java.util.concurrent.CountDownLatch
 import javax.naming.InitialContext
 import kotlin.reflect.KClass
