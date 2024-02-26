@@ -61,15 +61,25 @@ val EntityID<*>.urn: URN
     get() = URN("urn:processm:db/${this.table.tableName}/${value}")
 
 /**
- * A list of tables [decode] can recognize. Must be expanded if a new class of objects is introduced to ACLs.
+ * A list of tables [toEntityID] can recognize. Must be expanded if a new class of objects is introduced to ACLs.
  */
 private val tables = listOf(Workspaces, DataStores)
 
 /**
  * Decodes the URN returned by [urn] back to [EntityID].
  * Currently, it is assumed that the entity uses UUID as the id.
+ *
+ * The function is limited to the format used by ProcessM and not intended to decode any URN.
+ * In particular, the URN is expected to use the following grammar:
+ *
+ * ```
+ * "urn:processm:db/" object-name "/" object-id
+ * ```
+ *
+ * where `object-name` corresponds to a table name in the ProcessM DB, and `object-id` is an UUID representing
+ * the primary key of an entity in that table.
  */
-fun URN.decode(): EntityID<UUID> {
+fun URN.toEntityID(): EntityID<UUID> {
     val firstSlash = urn.indexOf('/')
     require(firstSlash >= 0)
     val lastSlash = urn.lastIndexOf('/')

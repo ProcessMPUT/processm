@@ -14,7 +14,7 @@ import processm.core.helpers.mapToArray
 import processm.core.helpers.toUUID
 import processm.core.logging.loggedScope
 import processm.core.persistence.connection.transactionMain
-import processm.dbmodels.decode
+import processm.dbmodels.toEntityID
 import processm.dbmodels.models.DataStore
 import processm.dbmodels.models.DataStores
 import processm.dbmodels.models.Workspace
@@ -110,7 +110,7 @@ fun Route.GroupsApi() = loggedScope { logger ->
 
             val objects = transactionMain {
                 groupService.getSoleOwnershipURNs(path.groupId).mapToArray {
-                    val entity = it.decode()
+                    val entity = it.toEntityID()
                     when (entity.table) {
                         is Workspaces ->
                             ApiEntityID(ApiEntityType.workspace, entity.value, Workspace.findById(entity.value)?.name)
