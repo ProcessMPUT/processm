@@ -748,26 +748,17 @@ paths:
                   $ref: '#/components/schemas/Workspace'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/workspaces:
-    parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
     post:
       tags:
         - workspaces
-      summary: Create a new workspace in the context of the specified organization
+      summary: Create a new workspace in the context of the organization specified in the body
       operationId: createWorkspace
       requestBody:
-        description: Workspace details
+        description: New workspace details
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/Workspace'
+              $ref: '#/components/schemas/NewWorkspace'
         required: true
       responses:
         '201':
@@ -1895,6 +1886,15 @@ components:
       properties:
         isValid:
           type: boolean
+    NewWorkspace:
+      type: object
+      required: [ organizationId, name ]
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        name:
+          type: string
     Workspace:
       type: object
       required: [ name ]

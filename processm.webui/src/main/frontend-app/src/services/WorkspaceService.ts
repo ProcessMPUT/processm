@@ -19,7 +19,8 @@ export default class WorkspaceService extends BaseService {
   }
 
   public async createWorkspace(name: string): Promise<Workspace> {
-    const response = await this.workspacesApi.createWorkspace(this.currentOrganizationId, {
+    const response = await this.workspacesApi.createWorkspace({
+      organizationId: this.currentOrganizationId,
       name: name
     });
     const workspace = response.data;

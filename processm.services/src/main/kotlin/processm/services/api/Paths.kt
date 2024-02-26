@@ -284,14 +284,6 @@ object Paths {
     class Workspaces
 
     /**
-     * New workspace linked to the specified organization
-     *
-     * @param organizationId Organization ID
-     */
-    @Location("/organizations/{organizationId}/workspaces")
-    class NewWorkspace(val organizationId: UUID)
-
-    /**
      * Get the whole ACL for the given URN
      */
     @Location("/acl/{urn}")

@@ -58,7 +58,7 @@ class WorkspacesApiTest : BaseApiTest() {
 
     override fun endpointsWithAuthentication() = Stream.of(
         HttpMethod.Get to "/api/workspaces",
-        HttpMethod.Post to "/api/organizations/${UUID.randomUUID()}/workspaces",
+        HttpMethod.Post to "/api/workspaces",
         HttpMethod.Put to "/api/workspaces/${UUID.randomUUID()}",
         HttpMethod.Delete to "/api/workspaces/${UUID.randomUUID()}",
         HttpMethod.Get to "/api/workspaces/${UUID.randomUUID()}/components",
@@ -156,9 +156,9 @@ class WorkspacesApiTest : BaseApiTest() {
             val organizationId = UUID.randomUUID()
 
             withAuthentication(role = OrganizationRole.writer to organizationId) {
-                with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspaces") {
+                with(handleRequest(HttpMethod.Post, "/api/workspaces") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    withSerializedBody(Workspace(""))
+                    withSerializedBody(NewWorkspace(organizationId, ""))
                 }) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
                     assertTrue(
@@ -180,9 +180,9 @@ class WorkspacesApiTest : BaseApiTest() {
 
             withAuthentication(userId, role = OrganizationRole.writer to organizationId) {
                 every { workspaceService.create(workspaceName, userId, organizationId) } returns workspaceId
-                with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspaces") {
+                with(handleRequest(HttpMethod.Post, "/api/workspaces") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    withSerializedBody(Workspace(workspaceName))
+                    withSerializedBody(NewWorkspace(organizationId, workspaceName))
                 }) {
                     assertEquals(HttpStatusCode.Created, response.status())
                     assertEquals(workspaceId, response.deserializeContent<Workspace>().id)
@@ -197,9 +197,9 @@ class WorkspacesApiTest : BaseApiTest() {
             val organizationId = UUID.randomUUID()
 
             withAuthentication() {
-                with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspaces") {
+                with(handleRequest(HttpMethod.Post, "/api/workspaces") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    withSerializedBody(Workspace("Workspace1"))
+                    withSerializedBody(NewWorkspace(organizationId, "Workspace1"))
                 }) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
                 }
@@ -212,7 +212,7 @@ class WorkspacesApiTest : BaseApiTest() {
             val organizationId = UUID.randomUUID()
 
             withAuthentication(role = OrganizationRole.reader to organizationId) {
-                with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspaces")) {
+                with(handleRequest(HttpMethod.Post, "/api/workspaces")) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
                     assertTrue(
                         response.deserializeContent<ErrorMessage>().error

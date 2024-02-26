@@ -23,10 +23,7 @@ import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.RoleType
 import processm.dbmodels.models.WorkspaceComponent
 import processm.dbmodels.models.Workspaces
-import processm.services.api.models.AbstractComponent
-import processm.services.api.models.LayoutCollectionMessageBody
-import processm.services.api.models.OrganizationRole
-import processm.services.api.models.Workspace
+import processm.services.api.models.*
 import processm.services.helpers.ServerSentEvent
 import processm.services.helpers.eventStream
 import processm.services.logic.ACLService
@@ -49,21 +46,21 @@ fun Route.WorkspacesApi() {
     val logger = logger()
 
     authenticate {
-        post<Paths.NewWorkspace> { path ->
+        post<Paths.Workspaces> { path ->
             val principal = call.authentication.principal<ApiUser>()!!
-            val workspace = call.receiveOrNull<Workspace>()
+            val newWorkspace = call.receiveOrNull<NewWorkspace>()
                 ?: throw ApiException("The provided workspace data cannot be parsed")
 
             // The user must be a member of the organization, but does not require any privileges, as the privileges are related only to user and group management
-            principal.ensureUserBelongsToOrganization(path.organizationId, OrganizationRole.none)
+            principal.ensureUserBelongsToOrganization(newWorkspace.organizationId, OrganizationRole.none)
 
-            if (workspace.name.isEmpty()) {
+            if (newWorkspace.name.isEmpty()) {
                 throw ApiException("Workspace name needs to be specified when creating new workspace")
             }
 
-            val workspaceId = workspaceService.create(workspace.name, principal.userId, path.organizationId)
+            val workspaceId = workspaceService.create(newWorkspace.name, principal.userId, newWorkspace.organizationId)
 
-            call.respond(HttpStatusCode.Created, Workspace(workspace.name, workspaceId))
+            call.respond(HttpStatusCode.Created, Workspace(newWorkspace.name, workspaceId))
         }
 
         delete<Paths.Workspace> { path ->
