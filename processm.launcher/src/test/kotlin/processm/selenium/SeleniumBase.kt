@@ -205,7 +205,7 @@ abstract class SeleniumBase(
     // region setup
 
     private fun setupBackend() {
-        if (useManuallyStartedServices) httpPort = 2080
+        if (useManuallyStartedServices) httpPort = 8081
         else {
             httpPort = Random.Default.nextInt(1025, 65535)
             System.setProperty("ktor.deployment.port", httpPort.toString())

@@ -62,7 +62,7 @@ fun Route.ACLApi() {
     authenticate {
         get<Paths.ACL> {
             val principal = call.authentication.principal<ApiUser>()!!
-            val urn = URN(Base64.getDecoder().decode(it.urn).decodeToString())
+            val urn = URN(it.urn)
             principal.ensureCanRead(urn)
             val entries = transactionMain {
                 aclService.getEntries(urn).mapToArray { ace ->
@@ -74,7 +74,7 @@ fun Route.ACLApi() {
 
         post<Paths.ACL> {
             val principal = call.authentication.principal<ApiUser>()!!
-            val urn = URN(Base64.getDecoder().decode(it.urn).decodeToString())
+            val urn = URN(it.urn)
             principal.ensureCanModify(urn)
             val entry = kotlin.runCatching { call.receiveNullable<APIAccessControlEntry>() }.getOrNull()
                 ?: throw ApiException("The provided ACE data cannot be parsed")
@@ -91,7 +91,7 @@ fun Route.ACLApi() {
 
         put<Paths.ACE> {
             val principal = call.authentication.principal<ApiUser>()!!
-            val urn = URN(Base64.getDecoder().decode(it.urn).decodeToString())
+            val urn = URN(it.urn)
             principal.ensureCanModify(urn)
             val groupId = it.groupId
             val role = kotlin.runCatching { call.receiveNullable<OrganizationRole>() }.getOrNull()
@@ -113,7 +113,7 @@ fun Route.ACLApi() {
 
         delete<Paths.ACE> {
             val principal = call.authentication.principal<ApiUser>()!!
-            val urn = URN(Base64.getDecoder().decode(it.urn).decodeToString())
+            val urn = URN(it.urn)
             principal.ensureCanModify(urn)
             val groupId = it.groupId
             transactionMain {
@@ -133,7 +133,7 @@ fun Route.ACLApi() {
 
         get<Paths.AvailableGroups> {
             val principal = call.authentication.principal<ApiUser>()!!
-            val urn = URN(Base64.getDecoder().decode(it.urn).decodeToString())
+            val urn = URN(it.urn)
             principal.ensureCanRead(urn)
             val groups = transactionMain {
                 aclService.getAvailableGroups(urn, principal.userId).mapToArray(Group::toApi)
@@ -143,7 +143,7 @@ fun Route.ACLApi() {
 
         get<Paths.CanModifyACL> {
             val principal = call.authentication.principal<ApiUser>()!!
-            val urn = URN(Base64.getDecoder().decode(it.urn).decodeToString())
+            val urn = URN(it.urn)
             principal.ensureCanModify(urn)
             call.respond(HttpStatusCode.NoContent)
         }

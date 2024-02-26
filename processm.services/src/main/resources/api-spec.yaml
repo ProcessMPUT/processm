@@ -1537,8 +1537,8 @@ paths:
         required: true
         schema:
           type: string
-          format: base64
     get:
+      operationId: getACL
       tags:
         - acl
       responses:
@@ -1557,6 +1557,7 @@ paths:
       security:
         - bearerAuth: [ ]
     post:
+      operationId: addACE
       requestBody:
         content:
           'application/json':
@@ -1573,7 +1574,7 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /acl/{urn}/available-groups:
+  /acl/available-groups/{urn}:
     parameters:
       - name: urn
         in: path
@@ -1581,8 +1582,8 @@ paths:
         required: true
         schema:
           type: string
-          format: base64
     get:
+      operationId: getAvailableGroups
       tags:
         - acl
       responses:
@@ -1600,7 +1601,7 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /acl/{urn}/can-modify:
+  /acl/can-modify/{urn}:
     parameters:
       - name: urn
         in: path
@@ -1608,8 +1609,8 @@ paths:
         required: true
         schema:
           type: string
-          format: base64
     get:
+      operationId: canModify
       tags:
         - acl
       responses:
@@ -1621,7 +1622,7 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /acl/{urn}/ace/{groupId}:
+  /acl/ace/{groupId}/{urn}:
     parameters:
       - name: urn
         in: path
@@ -1629,7 +1630,6 @@ paths:
         required: true
         schema:
           type: string
-          format: base64
       - name: groupId
         in: path
         description: Group ID
@@ -1638,6 +1638,7 @@ paths:
           type: string
           format: uuid
     put:
+      operationId: updateACE
       requestBody:
         content:
           'application/json':
@@ -1655,6 +1656,7 @@ paths:
       security:
         - bearerAuth: [ ]
     delete:
+      operationId: deleteACE
       tags:
         - acl
       responses:

@@ -11,7 +11,7 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class DataStoresACLTest : SeleniumBase() {
+class DataStoresACLTest : SeleniumBase(headless = false, useManuallyStartedServices = true) {
 
     private val email1 = "u1-${UUID.randomUUID()}@example.com"
     private val email2 = "u2-${UUID.randomUUID()}@example.com"
