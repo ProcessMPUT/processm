@@ -288,7 +288,7 @@ object Paths {
      *
      * @param organizationId Organization ID
      */
-    @Location("/organizations/{organizationId}/workspace")
+    @Location("/organizations/{organizationId}/workspaces")
     class NewWorkspace(val organizationId: UUID)
 
     /**

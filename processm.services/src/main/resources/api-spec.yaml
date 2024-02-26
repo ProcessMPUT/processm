@@ -748,7 +748,7 @@ paths:
                   $ref: '#/components/schemas/Workspace'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/workspace:
+  /organizations/{organizationId}/workspaces:
     parameters:
       - name: organizationId
         in: path

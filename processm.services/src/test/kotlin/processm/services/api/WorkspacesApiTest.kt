@@ -58,7 +58,7 @@ class WorkspacesApiTest : BaseApiTest() {
 
     override fun endpointsWithAuthentication() = Stream.of(
         HttpMethod.Get to "/api/workspaces",
-        HttpMethod.Post to "/api/organizations/${UUID.randomUUID()}/workspace",
+        HttpMethod.Post to "/api/organizations/${UUID.randomUUID()}/workspaces",
         HttpMethod.Put to "/api/workspaces/${UUID.randomUUID()}",
         HttpMethod.Delete to "/api/workspaces/${UUID.randomUUID()}",
         HttpMethod.Get to "/api/workspaces/${UUID.randomUUID()}/components",
@@ -156,7 +156,7 @@ class WorkspacesApiTest : BaseApiTest() {
             val organizationId = UUID.randomUUID()
 
             withAuthentication(role = OrganizationRole.writer to organizationId) {
-                with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspace") {
+                with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspaces") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                     withSerializedBody(Workspace(""))
                 }) {
@@ -180,7 +180,7 @@ class WorkspacesApiTest : BaseApiTest() {
 
             withAuthentication(userId, role = OrganizationRole.writer to organizationId) {
                 every { workspaceService.create(workspaceName, userId, organizationId) } returns workspaceId
-                with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspace") {
+                with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspaces") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                     withSerializedBody(Workspace(workspaceName))
                 }) {
@@ -197,7 +197,7 @@ class WorkspacesApiTest : BaseApiTest() {
             val organizationId = UUID.randomUUID()
 
             withAuthentication() {
-                with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspace") {
+                with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspaces") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                     withSerializedBody(Workspace("Workspace1"))
                 }) {
@@ -212,7 +212,7 @@ class WorkspacesApiTest : BaseApiTest() {
             val organizationId = UUID.randomUUID()
 
             withAuthentication(role = OrganizationRole.reader to organizationId) {
-                with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspace")) {
+                with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspaces")) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
                     assertTrue(
                         response.deserializeContent<ErrorMessage>().error
