@@ -1,8 +1,6 @@
 package processm.conformance.measures.precision.causalnet
 
 import processm.conformance.measures.precision.AbstractPrecision
-import processm.core.helpers.HashMapWithDefault
-import processm.core.helpers.Trie
 import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.log.Helpers.logFromModel
 import processm.core.log.Helpers.trace
@@ -12,6 +10,8 @@ import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.models.commons.Activity
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
+import processm.helpers.HashMapWithDefault
+import processm.helpers.Trie
 import kotlin.math.min
 import kotlin.test.Test
 import kotlin.test.assertEquals

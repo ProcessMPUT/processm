@@ -3,9 +3,9 @@ package processm.experimental.etl.flink.artemis
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction
 import org.apache.flink.streaming.api.functions.sink.SinkFunction
-import processm.core.logging.enter
-import processm.core.logging.exit
-import processm.core.logging.logger
+import processm.logging.enter
+import processm.logging.exit
+import processm.logging.logger
 import java.io.Serializable
 import java.util.*
 

@@ -1,6 +1,5 @@
 package processm.conformance.models.alignments
 
-import processm.core.helpers.allSubsets
 import processm.core.log.Helpers
 import processm.core.models.causalnet.CausalNets.azFlower
 import processm.core.models.causalnet.CausalNets.fig312
@@ -8,6 +7,7 @@ import processm.core.models.causalnet.CausalNets.fig316
 import processm.core.models.causalnet.CausalNets.parallelDecisionsInLoop
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
+import processm.helpers.allSubsets
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals

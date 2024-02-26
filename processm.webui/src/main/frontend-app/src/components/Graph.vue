@@ -39,6 +39,7 @@ export default class Graph extends Vue {
     waitForRepaint(() => {
       // get the container size
       const container = this.$refs.graph as HTMLElement;
+      if (container === undefined || self.data === undefined) return;
       const graph = new G6.Graph({
         container: container, // String | HTMLElement, required, the id of DOM element or an HTML node
         width: container.offsetWidth, // Number, required, the width of the graph

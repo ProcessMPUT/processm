@@ -6,8 +6,8 @@ import org.jetbrains.exposed.dao.id.EntityIDFunctionProvider
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.StatementInterceptor
 import org.jetbrains.exposed.sql.transactions.TransactionManager
-import processm.core.helpers.isUUID
-import processm.core.helpers.toUUID
+import processm.helpers.isUUID
+import processm.helpers.toUUID
 import processm.core.models.metadata.URN
 import processm.dbmodels.models.DataStores
 import processm.dbmodels.models.Workspaces

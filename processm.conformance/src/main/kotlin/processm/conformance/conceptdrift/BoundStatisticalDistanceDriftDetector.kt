@@ -8,8 +8,8 @@ import processm.conformance.conceptdrift.numerical.integration.MidpointIntegrato
 import processm.conformance.models.alignments.Alignment
 import processm.conformance.rca.Feature
 import processm.conformance.rca.propositionalize
-import processm.core.logging.debug
-import processm.core.logging.logger
+import processm.logging.debug
+import processm.logging.logger
 import java.util.*
 import kotlin.random.Random
 

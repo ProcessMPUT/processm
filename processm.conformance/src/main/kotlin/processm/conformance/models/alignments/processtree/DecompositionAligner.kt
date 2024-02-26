@@ -1,10 +1,10 @@
 package processm.conformance.models.alignments.processtree
 
 import processm.conformance.models.alignments.*
-import processm.core.helpers.*
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
 import processm.core.models.processtree.*
+import processm.helpers.*
 
 /**
  * An aligner for [ProcessTree]s that calculates alignment using subtree-based decomposition of the given tree.

@@ -2,10 +2,10 @@ package processm.core.log
 
 import processm.core.log.hierarchical.QueryResult
 import processm.core.log.hierarchical.TranslatedQuery
-import processm.core.logging.loggedScope
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import processm.core.querylanguage.Scope
+import processm.logging.loggedScope
 
 /**
  * A facility for the deletion of logs, traces, and events based on a PQL [query].

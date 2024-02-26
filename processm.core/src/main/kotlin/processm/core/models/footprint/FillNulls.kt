@@ -1,7 +1,7 @@
 package processm.core.models.footprint
 
-import processm.core.helpers.map2d.Map2D
 import processm.core.models.commons.Activity
+import processm.helpers.map2d.Map2D
 
 /**
  * Fills nulls in this matrix with the given [order] value.

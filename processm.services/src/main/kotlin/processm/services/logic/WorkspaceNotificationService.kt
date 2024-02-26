@@ -2,15 +2,15 @@ package processm.services.logic
 
 import jakarta.jms.MapMessage
 import jakarta.jms.Message
-import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.runBlocking
 import processm.core.esb.AbstractJMSListener
-import processm.core.helpers.toUUID
 import processm.dbmodels.models.*
+import processm.helpers.toUUID
+import processm.logging.loggedScope
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentLinkedDeque
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.concurrent.read
+import kotlin.concurrent.write
 
 /**
  * A service to receive and distribute notifications about data changes in workflow components.
@@ -19,7 +19,8 @@ import java.util.concurrent.ConcurrentLinkedDeque
  */
 class WorkspaceNotificationService {
 
-    private val clients = ConcurrentHashMap<UUID, ConcurrentLinkedDeque<Channel<UUID>>>()
+    private val clients = HashMap<UUID, ArrayDeque<Channel<UUID>>>()
+    private val lock = ReentrantReadWriteLock()
 
     /**
      * Subscribe the given [channel] to receive notifications about data changes in the components in the workspace
@@ -28,25 +29,29 @@ class WorkspaceNotificationService {
      *
      * If sending a notification fails, the channel is closed and unsubscribed.
      */
-    fun subscribe(workspaceId: UUID, channel: Channel<UUID>) {
-        synchronized(clients) {
-            if (clients.isEmpty())
+    fun subscribe(workspaceId: UUID, channel: Channel<UUID>) = loggedScope { logger ->
+        lock.write {
+            val isEmpty = clients.isEmpty()
+            clients.computeIfAbsent(workspaceId) { ArrayDeque<Channel<UUID>>() }.addLast(channel)
+            if (isEmpty)
                 listener.listen()
-            clients.computeIfAbsent(workspaceId) { ConcurrentLinkedDeque() }.addLast(channel)
         }
     }
 
     /**
      * Unsubscribe the [channel] from receiving notifications for [workspaceId]. The channel is not closed.
      */
-    fun unsubscribe(workspaceId: UUID, channel: Channel<UUID>) = unsubscribe(workspaceId, setOf(channel))
+    fun unsubscribe(workspaceId: UUID, channel: Channel<UUID>) = unsubscribe(workspaceId, listOf(channel))
 
-    fun unsubscribe(workspaceId: UUID, channel: Set<Channel<UUID>>) {
-        synchronized(clients) {
-            val queue = clients[workspaceId]
-            if (queue !== null && queue.removeAll(channel) && queue.isEmpty()) {
-                clients.remove(workspaceId)
+    fun unsubscribe(workspaceId: UUID, channel: Collection<Channel<UUID>>) = loggedScope { logger ->
+        lock.write {
+            clients.computeIfPresent(workspaceId) { _, queue ->
+                queue.removeAll(channel)
+                channel.forEach { it.close() }
+                if (queue.isEmpty()) null
+                else queue
             }
+
             if (clients.isEmpty())
                 listener.close()
         }
@@ -55,20 +60,23 @@ class WorkspaceNotificationService {
     private val listener = Listener()
 
     private inner class Listener :
-        AbstractJMSListener(WORKSPACE_COMPONENTS_TOPIC, null, "WorkspaceNotificationService") {
+        AbstractJMSListener(
+            WORKSPACE_COMPONENTS_TOPIC,
+            "$WORKSPACE_COMPONENT_EVENT = '$DATA_CHANGE'",
+            "WorkspaceNotificationService",
+            false
+        ) {
 
-        override fun onMessage(msg: Message?) {
+        override fun onMessage(msg: Message?) = loggedScope { logger ->
+            logger.error("onMessage $msg")
             if (msg !is MapMessage) return
-            val event = msg.getString(WORKSPACE_COMPONENT_EVENT)
-            if (event != DATA_CHANGE) return
             val componentId = checkNotNull(msg.getString(WORKSPACE_COMPONENT_ID).toUUID())
             val workspaceId = checkNotNull(msg.getString(WORKSPACE_ID).toUUID())
-            val failed = HashSet<Channel<UUID>>()
-            runBlocking(CoroutineName("WorkspaceServices#Listener#onMessage")) {
+            val failed = ArrayList<Channel<UUID>>()
+            lock.read {
                 clients[workspaceId]?.forEach { channel ->
                     val result = channel.trySend(componentId)
                     if (!result.isSuccess) {
-                        channel.close()
                         failed.add(channel)
                     }
                 }

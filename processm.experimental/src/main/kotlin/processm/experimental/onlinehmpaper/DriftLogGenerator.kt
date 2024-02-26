@@ -1,9 +1,9 @@
 package processm.experimental.onlinehmpaper
 
-import processm.core.helpers.mapToSet
 import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
+import processm.helpers.mapToSet
 import kotlin.random.Random
 
 

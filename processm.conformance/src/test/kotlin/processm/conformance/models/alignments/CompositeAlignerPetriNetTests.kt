@@ -6,8 +6,6 @@ import processm.conformance.PetriNets.fig314
 import processm.conformance.PetriNets.fig32
 import processm.conformance.PetriNets.fig34c
 import processm.conformance.PetriNets.fig73
-import processm.core.helpers.allPermutations
-import processm.core.helpers.allSubsets
 import processm.core.log.Helpers
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.CausalNets
@@ -17,6 +15,8 @@ import processm.core.models.causalnet.DecoupledNodeExecution
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.models.petrinet.converters.toPetriNet
+import processm.helpers.allPermutations
+import processm.helpers.allSubsets
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.test.*

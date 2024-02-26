@@ -1,8 +1,6 @@
 package processm.core.log
 
-import processm.core.helpers.parseISO8601
-import processm.core.helpers.toUUID
-import processm.core.log.attribute.*
+import kotlinx.serialization.Serializable
 import processm.core.log.attribute.Attribute.CONCEPT_INSTANCE
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.COST_CURRENCY
@@ -14,6 +12,9 @@ import processm.core.log.attribute.Attribute.ORG_GROUP
 import processm.core.log.attribute.Attribute.ORG_RESOURCE
 import processm.core.log.attribute.Attribute.ORG_ROLE
 import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
+import processm.core.log.attribute.MutableAttributeMap
+import processm.helpers.parseISO8601
+import processm.helpers.toUUID
 import java.time.Instant
 import java.util.*
 
@@ -22,6 +23,7 @@ import java.util.*
  *
  * Captures the event component from the XES metadata structure.
  */
+@Serializable(with = EventSerializer::class)
 open class Event(
     attributesInternal: MutableAttributeMap = MutableAttributeMap()
 ) : TraceOrEventBase(attributesInternal) {
@@ -114,21 +116,21 @@ open class Event(
     }
 
     override fun setCustomAttributes(nameMap: Map<String, String>) {
-        setCustomAttribute(conceptName, CONCEPT_NAME,  nameMap)
-        setCustomAttribute(conceptInstance, CONCEPT_INSTANCE,  nameMap)
+        setCustomAttribute(conceptName, CONCEPT_NAME, nameMap)
+        setCustomAttribute(conceptInstance, CONCEPT_INSTANCE, nameMap)
 
-        setCustomAttribute(costTotal, COST_TOTAL,  nameMap)
-        setCustomAttribute(costCurrency, COST_CURRENCY,  nameMap)
+        setCustomAttribute(costTotal, COST_TOTAL, nameMap)
+        setCustomAttribute(costCurrency, COST_CURRENCY, nameMap)
 
-        setCustomAttribute(identityId, IDENTITY_ID,  nameMap)
+        setCustomAttribute(identityId, IDENTITY_ID, nameMap)
 
-        setCustomAttribute(lifecycleState, LIFECYCLE_STATE,  nameMap)
-        setCustomAttribute(lifecycleTransition, LIFECYCLE_TRANSITION,  nameMap)
+        setCustomAttribute(lifecycleState, LIFECYCLE_STATE, nameMap)
+        setCustomAttribute(lifecycleTransition, LIFECYCLE_TRANSITION, nameMap)
 
-        setCustomAttribute(orgRole, ORG_ROLE,  nameMap)
-        setCustomAttribute(orgGroup, ORG_GROUP,  nameMap)
-        setCustomAttribute(orgResource, ORG_RESOURCE,  nameMap)
+        setCustomAttribute(orgRole, ORG_ROLE, nameMap)
+        setCustomAttribute(orgGroup, ORG_GROUP, nameMap)
+        setCustomAttribute(orgResource, ORG_RESOURCE, nameMap)
 
-        setCustomAttribute(timeTimestamp, TIME_TIMESTAMP,  nameMap)
+        setCustomAttribute(timeTimestamp, TIME_TIMESTAMP, nameMap)
     }
 }

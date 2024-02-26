@@ -1,7 +1,7 @@
 package processm.core.querylanguage
 
 import org.apache.commons.text.StringEscapeUtils
-import processm.core.helpers.toUUID
+import processm.helpers.toUUID
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset

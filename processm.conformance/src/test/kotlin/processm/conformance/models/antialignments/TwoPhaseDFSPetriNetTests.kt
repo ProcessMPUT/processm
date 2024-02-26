@@ -5,9 +5,9 @@ import org.junit.jupiter.params.provider.ValueSource
 import processm.conformance.PetriNets
 import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.Log
-import processm.core.logging.debug
-import processm.core.logging.loggedScope
 import processm.core.models.commons.ProcessModel
+import processm.logging.debug
+import processm.logging.loggedScope
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

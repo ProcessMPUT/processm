@@ -1,8 +1,8 @@
 package processm.core.models.footprint
 
-import processm.core.helpers.map2d.Map2D
 import processm.core.models.commons.ControlStructureType
 import processm.core.models.commons.ProcessModel
+import processm.helpers.map2d.Map2D
 
 /**
  * A footprint matrix consisting of [Order] relations between the activities in the rows and the activities in the columns.

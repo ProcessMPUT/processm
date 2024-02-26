@@ -1,13 +1,13 @@
 package processm.core.log
 
-import processm.core.helpers.HashMapWithDefault
-import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.log.attribute.Attribute.CONCEPT_INSTANCE
 import processm.core.log.attribute.MutableAttributeMap
 import processm.core.models.commons.Activity
 import processm.core.models.petrinet.Marking
 import processm.core.models.petrinet.PetriNetInstance
 import processm.core.models.petrinet.Transition
+import processm.helpers.HashMapWithDefault
+import processm.helpers.map2d.DoublingMap2D
 import java.util.*
 
 /**

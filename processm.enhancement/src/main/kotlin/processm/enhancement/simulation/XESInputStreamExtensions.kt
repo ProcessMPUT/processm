@@ -1,12 +1,12 @@
 package processm.enhancement.simulation
 
-import processm.core.helpers.longSum
-import processm.core.helpers.map2d.DoublingMap2D
-import processm.core.helpers.map2d.Map2D
 import processm.core.log.Event
 import processm.core.log.Log
 import processm.core.log.Trace
 import processm.core.log.XESInputStream
+import processm.helpers.longSum
+import processm.helpers.map2d.DoublingMap2D
+import processm.helpers.map2d.Map2D
 
 /**
  * Calculates the directly-follows graph from this event log represented as a sparse adjacency matrix with absolute

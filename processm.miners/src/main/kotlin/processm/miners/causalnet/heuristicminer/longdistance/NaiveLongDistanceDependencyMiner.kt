@@ -1,9 +1,9 @@
 package processm.miners.causalnet.heuristicminer.longdistance
 
-import processm.core.helpers.Counter
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Node
+import processm.helpers.Counter
 import processm.miners.causalnet.heuristicminer.longdistance.avoidability.AvoidabilityChecker
 import processm.miners.causalnet.heuristicminer.longdistance.avoidability.ValidSequenceBasedAvoidabilityChecker
 

@@ -37,21 +37,22 @@
         <v-icon>close</v-icon>
       </v-btn>
     </div>
-    <div v-if="isDisplayable" class="workspace-component-content-parent">
-      <v-progress-linear
-        :active="Date.parse(componentDetails?.userLastModified ?? '') > Date.parse(componentDetails?.dataLastModified ?? '')"
-        :indeterminate="true"
-        absolute
-        color="secondary accent-4"
-        top
-      ></v-progress-linear>
-      <component :is="componentType" :component-mode="componentMode" :data="componentDetails" :update-data="updateData" class="workspace-component-content" />
+    <div class="workspace-component-content-parent">
+      <v-progress-linear :active="loading" :indeterminate="true" absolute class="progressbar" color="secondary accent-4" top></v-progress-linear>
+      <component
+        :is="componentType"
+        v-if="isDisplayable"
+        :component-mode="componentMode"
+        :data="componentDetails"
+        :update-data="updateData"
+        class="workspace-component-content"
+      />
+      <p v-else class="no-data">{{ $t("workspace.component.no-data") }}</p>
       <div class="last-updated">
         {{ $t("common.last-updated") }}:
         {{ lastModified }}
       </div>
     </div>
-    <p class="no-data" v-else>{{ $t("workspace.component.no-data") }}</p>
   </div>
 </template>
 
@@ -105,20 +106,26 @@ button.v-btn.v-btn.component-name[type="button"] {
   bottom: 0;
   overflow: hidden;
 }
+
+.progressbar {
+  z-index: 2;
+}
 </style>
 
 <script lang="ts">
 import Vue from "vue";
 import Component from "vue-class-component";
 import { Prop } from "vue-property-decorator"; //import CausalNetComponent from "./causal-net/CausalNetComponent.vue";
-import PetriNetComponent from "./petri-net/PetriNetComponent.vue";
-import KpiComponent from "./KpiComponent.vue";
-import BPMNComponent from "./bpmn/BPMNComponent.vue";
 import { WorkspaceComponent as WorkspaceComponentModel } from "@/models/WorkspaceComponent";
-import TreeLogViewComponent from "@/components/workspace/TreeLogViewComponent.vue";
-import FlatLogViewComponent from "@/components/workspace/FlatLogViewComponent.vue";
-import DirectlyFollowsGraphComponent from "@/components/workspace/DirectlyFollowsGraphComponent.vue";
-import CNetComponent from "@/components/workspace/CNetComponent.vue";
+import { ComponentType } from "@/openapi/api";
+
+const PetriNetComponent = () => import("./petri-net/PetriNetComponent.vue");
+const KpiComponent = () => import("./KpiComponent.vue");
+const BPMNComponent = () => import("./bpmn/BPMNComponent.vue");
+const TreeLogViewComponent = () => import("@/components/workspace/TreeLogViewComponent.vue");
+const FlatLogViewComponent = () => import("@/components/workspace/FlatLogViewComponent.vue");
+const DirectlyFollowsGraphComponent = () => import("@/components/workspace/DirectlyFollowsGraphComponent.vue");
+const CNetComponent = () => import("@/components/workspace/CNetComponent.vue");
 
 export enum ComponentMode {
   Static,
@@ -139,7 +146,7 @@ export enum ComponentMode {
 })
 export default class WorkspaceComponent extends Vue {
   @Prop({ default: null })
-  readonly componentDetails?: WorkspaceComponentModel;
+  readonly componentDetails!: WorkspaceComponentModel | null;
   @Prop({ default: false })
   readonly interactive!: boolean;
   @Prop({ default: false })
@@ -153,6 +160,17 @@ export default class WorkspaceComponent extends Vue {
   readonly updateData = false;
 
   private readonly lastModified = this.componentDetails?.dataLastModified ?? this.componentDetails?.userLastModified;
+
+  private get loading(): boolean {
+    switch (this.componentDetails?.type) {
+      case ComponentType.FlatLogView:
+      case ComponentType.TreeLogView:
+      case null:
+        return false;
+      default:
+        return Date.parse(this.componentDetails?.userLastModified ?? "1970-01-01") > Date.parse(this.componentDetails?.dataLastModified ?? "1970-01-01");
+    }
+  }
 
   get isDisplayable(): boolean {
     return this.componentDetails?.data?.isDisplayable ?? false;

@@ -1,14 +1,14 @@
 package processm.conformance.models.alignments
 
 import processm.conformance.models.alignments.petrinet.DecompositionAligner
-import processm.core.helpers.SameThreadExecutorService
-import processm.core.helpers.allSubsets
 import processm.core.log.Helpers.logFromString
 import processm.core.models.causalnet.CausalNets.parallelDecisionsInLoop
 import processm.core.models.causalnet.DecoupledNodeExecution
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.models.petrinet.PetriNet
+import processm.helpers.SameThreadExecutorService
+import processm.helpers.allSubsets
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

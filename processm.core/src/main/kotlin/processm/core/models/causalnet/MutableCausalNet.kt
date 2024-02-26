@@ -1,8 +1,8 @@
 package processm.core.models.causalnet
 
-import processm.core.helpers.mapToSet
 import processm.core.models.metadata.DefaultMutableMetadataHandler
 import processm.core.models.metadata.MutableMetadataHandler
+import processm.helpers.mapToSet
 
 /**
  * The default implementation of a causal net model

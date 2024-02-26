@@ -11,8 +11,8 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
-import processm.core.helpers.mapToArray
 import processm.core.persistence.connection.transactionMain
+import processm.helpers.mapToArray
 import processm.services.api.models.OrganizationMember
 import processm.services.api.models.OrganizationRole
 import processm.services.logic.*

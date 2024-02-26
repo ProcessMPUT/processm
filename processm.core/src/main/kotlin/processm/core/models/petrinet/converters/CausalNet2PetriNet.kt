@@ -2,8 +2,6 @@ package processm.core.models.petrinet.converters
 
 import org.apache.commons.collections4.BidiMap
 import org.apache.commons.collections4.bidimap.DualHashBidiMap
-import processm.core.helpers.map2d.DoublingMap2D
-import processm.core.helpers.optimize
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
@@ -12,6 +10,8 @@ import processm.core.models.petrinet.Marking
 import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.Place
 import processm.core.models.petrinet.Transition
+import processm.helpers.map2d.DoublingMap2D
+import processm.helpers.optimize
 
 /**
  * A converter for [CausalNet] into [PetriNet].

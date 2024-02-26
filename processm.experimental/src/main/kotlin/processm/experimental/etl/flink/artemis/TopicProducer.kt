@@ -7,9 +7,9 @@ import jakarta.jms.TopicSession
 import processm.core.esb.Artemis
 import processm.core.esb.Service
 import processm.core.esb.ServiceStatus
-import processm.core.logging.enter
-import processm.core.logging.exit
-import processm.core.logging.logger
+import processm.logging.enter
+import processm.logging.exit
+import processm.logging.logger
 import javax.naming.InitialContext
 import kotlin.reflect.KClass
 

@@ -10,6 +10,9 @@ value class URN(val urn: String) {
             throw IllegalArgumentException()
     }
 
+    constructor(components: List<String>) :
+            this(components.joinToString(separator = "/"))
+
     override fun toString(): String = urn
 
     companion object {

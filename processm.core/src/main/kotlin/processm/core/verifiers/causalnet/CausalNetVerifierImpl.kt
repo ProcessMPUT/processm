@@ -1,9 +1,9 @@
 package processm.core.verifiers.causalnet
 
-import processm.core.helpers.mapToSet
-import processm.core.helpers.withMemory
-import processm.core.logging.logger
 import processm.core.models.causalnet.*
+import processm.helpers.mapToSet
+import processm.helpers.withMemory
+import processm.logging.logger
 import java.util.*
 import kotlin.math.min
 

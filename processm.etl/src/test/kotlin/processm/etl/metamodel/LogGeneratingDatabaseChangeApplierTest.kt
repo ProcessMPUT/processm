@@ -9,12 +9,12 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.jgrapht.graph.DefaultDirectedGraph
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.TestInstance
-import processm.core.helpers.toLocalDateTime
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import processm.dbmodels.models.*
 import processm.etl.tracker.DatabaseChangeApplier
+import processm.helpers.toLocalDateTime
 import java.time.Instant
 import java.util.*
 import kotlin.test.BeforeTest

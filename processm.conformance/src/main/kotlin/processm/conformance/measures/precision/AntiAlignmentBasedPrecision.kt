@@ -5,10 +5,10 @@ import processm.conformance.models.alignments.AStar
 import processm.conformance.models.alignments.AlignerFactory
 import processm.conformance.models.alignments.events.ConceptNameEventSummarizer
 import processm.conformance.models.antialignments.*
-import processm.core.helpers.SameThreadExecutorService
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.commons.ProcessModel
+import processm.helpers.SameThreadExecutorService
 
 /**
  * The anti-alignment-based precision measure as defined in Definition 7 in B.F. van Dongen,

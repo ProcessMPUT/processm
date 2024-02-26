@@ -1,6 +1,6 @@
 package processm.etl.metamodel
 
-import processm.core.helpers.mapToArray
+import processm.helpers.mapToArray
 import java.sql.Connection
 import java.sql.JDBCType
 import java.sql.PreparedStatement

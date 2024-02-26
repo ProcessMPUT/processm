@@ -1,7 +1,7 @@
 package processm.experimental.helpers.map2d
 
 import com.google.common.collect.Table
-import processm.core.helpers.map2d.Map2D
+import processm.helpers.map2d.Map2D
 
 /**
  * Implementation wrapping [Table] of Guava, which offers very similar functionality.

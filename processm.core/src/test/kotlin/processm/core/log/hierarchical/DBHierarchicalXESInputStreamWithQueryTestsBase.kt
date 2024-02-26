@@ -2,7 +2,6 @@ package processm.core.log.hierarchical
 
 import org.junit.jupiter.api.Tag
 import processm.core.DBTestHelper
-import processm.core.helpers.parseISO8601
 import processm.core.log.Event
 import processm.core.log.XESComponent
 import processm.core.log.attribute.Attribute.CONCEPT_INSTANCE
@@ -18,8 +17,9 @@ import processm.core.log.attribute.Attribute.ORG_RESOURCE
 import processm.core.log.attribute.Attribute.ORG_ROLE
 import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
 import processm.core.log.getStandardToCustomNameMap
-import processm.core.logging.logger
 import processm.core.querylanguage.Query
+import processm.helpers.parseISO8601
+import processm.logging.logger
 import java.util.*
 import kotlin.test.assertTrue
 

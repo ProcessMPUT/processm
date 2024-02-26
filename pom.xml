@@ -43,6 +43,7 @@
         <module>processm.launcher</module>
         <module>processm.experimental</module>
         <module>processm.tools</module>
+        <module>processm.helpers</module>
     </modules>
 
     <properties>
@@ -70,10 +71,10 @@
         <testcontainers.version>1.17.3</testcontainers.version>
         <org.apache.commons.math.version>3.6.1</org.apache.commons.math.version>
         <io.fabric8.docker-maven-plugin.version>0.43.4</io.fabric8.docker-maven-plugin.version>
-        <pooled-jms.version>3.0.0</pooled-jms.version>
-        <org.slf4j.version>1.7.36</org.slf4j.version>
+        <pooled-jms.version>3.1.3</pooled-jms.version>
+        <org.slf4j.version>2.0.12</org.slf4j.version>
         <debezium.version>1.9.4.Final</debezium.version>
-        <logback-classic.version>1.2.11</logback-classic.version>
+        <logback-classic.version>1.4.14</logback-classic.version>
         <!-- Some Spark and Flink dependencies have Scala-dependent version. The variable is for consistency, even though ProcessM does not use Scala -->
         <scala.binary.version>2.12</scala.binary.version>
 
@@ -234,7 +235,7 @@
                 <configuration>
                     <groups>${groups}</groups>
                     <excludedGroups>${excludedGroups}</excludedGroups>
-                    <parallel>classes</parallel>
+                    <parallel>suitesAndClasses</parallel>
                     <useUnlimitedThreads>true</useUnlimitedThreads>
                     <includes>
                         <include>**/*.java</include>

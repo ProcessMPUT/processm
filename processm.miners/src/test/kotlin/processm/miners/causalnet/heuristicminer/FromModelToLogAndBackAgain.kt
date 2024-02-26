@@ -1,15 +1,15 @@
 package processm.miners.causalnet.heuristicminer
 
 import org.opentest4j.AssertionFailedError
-import processm.core.helpers.mapToSet
 import processm.core.log.Helpers.event
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
-import processm.core.logging.logger
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.verifiers.CausalNetVerifier
+import processm.helpers.mapToSet
+import processm.logging.logger
 import processm.miners.causalnet.CausalNetMiner
 import processm.miners.causalnet.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.causalnet.heuristicminer.bindingproviders.hypothesisselector.MostGreedyHypothesisSelector

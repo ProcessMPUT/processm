@@ -1,10 +1,10 @@
 package processm.conformance.models.footprint
 
 import processm.conformance.models.ConformanceModel
-import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.models.footprint.Footprint
 import processm.core.models.footprint.FootprintActivity
 import processm.core.models.footprint.Order
+import processm.helpers.map2d.DoublingMap2D
 
 /**
  * A conformance model based on [Footprint]s.

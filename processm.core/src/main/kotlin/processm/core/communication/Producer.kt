@@ -4,6 +4,7 @@ import jakarta.jms.MapMessage
 import jakarta.jms.Session
 import org.messaginghub.pooled.jms.JmsPoolConnectionFactory
 import processm.core.esb.getTopicConnectionFactory
+import processm.logging.loggedScope
 import javax.naming.InitialContext
 
 /**
@@ -35,7 +36,7 @@ class Producer {
      * @param prepareMessage Message preparation method.
      * @property topic The JMS topic to publish messages to.
      */
-    fun produce(topic: String, prepareMessage: MapMessage.() -> Unit) {
+    fun produce(topic: String, prepareMessage: MapMessage.() -> Unit) = loggedScope { logger ->
         jmsPoolingFactory.createTopicConnection().let { jmsConnection ->
             val jmsSession = jmsConnection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE)
             val jmsTopic = jmsSession.createTopic(topic)

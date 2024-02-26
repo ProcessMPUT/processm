@@ -2,8 +2,10 @@ package processm.core.log.hierarchical
 
 import org.junit.jupiter.api.BeforeAll
 import processm.core.DBTestHelper.dbName
-import processm.core.helpers.hierarchicalCompare
-import processm.core.log.*
+import processm.core.log.AppendingDBXESOutputStream
+import processm.core.log.DBXESOutputStream
+import processm.core.log.Event
+import processm.core.log.XESInputStream
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.persistence.connection.DBCache
