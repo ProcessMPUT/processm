@@ -2,10 +2,10 @@ package processm.core.log
 
 import org.junit.jupiter.api.Tag
 import processm.core.DBTestHelper.dbName
-import processm.core.helpers.zipOrThrow
-import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
+import processm.helpers.zipOrThrow
+import processm.logging.logger
 import java.io.File
 import java.util.zip.GZIPInputStream
 import kotlin.test.Ignore

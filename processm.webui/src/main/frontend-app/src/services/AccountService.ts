@@ -1,7 +1,8 @@
 import Vue from "vue";
 import UserAccount from "@/models/UserAccount";
 import BaseService from "./BaseService";
-import {Organization, ResetPasswordRequest, UserAccountInfo, UserRoleInOrganization} from "@/openapi";
+import { UserAccountInfo, UserRoleInOrganization } from "@/openapi";
+import { AxiosAuthRefreshRequestConfig } from "axios-auth-refresh";
 
 export default class AccountService extends BaseService {
   public async signIn(login: string, password: string) {
@@ -11,7 +12,7 @@ export default class AccountService extends BaseService {
         login: login,
         password: password
       },
-      {skipAuthRefresh: true}
+      { skipAuthRefresh: true } as AxiosAuthRefreshRequestConfig
     );
 
     console.assert(response.status == 201, response.statusText);
@@ -58,7 +59,7 @@ export default class AccountService extends BaseService {
       newPassword: newPassword
     });
 
-    console.assert(response.status == 202, response.statusText);
+    console.assert(response.status == 204, response.statusText);
   }
 
   public async changeLocale(locale: string) {
@@ -84,13 +85,16 @@ export default class AccountService extends BaseService {
   }
 
   public async requestPasswordReset(userEmail: string) {
-    const response = await this.usersApi.resetPasswordRequestPost({email: userEmail});
+    const response = await this.usersApi.resetPasswordRequestPost({ email: userEmail });
 
     console.assert(response.status == 202, response.statusText);
   }
 
   public async resetPassword(token: string, newPassword: string) {
-    const response = await this.usersApi.resetPasswordTokenPost(token, {currentPassword: "", newPassword: newPassword});
+    const response = await this.usersApi.resetPasswordTokenPost(token, {
+      currentPassword: "",
+      newPassword: newPassword
+    });
 
     console.assert(response.status == 200, response.statusText);
   }

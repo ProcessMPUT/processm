@@ -4,9 +4,9 @@ import org.testcontainers.containers.OracleContainer
 import org.testcontainers.images.builder.Transferable
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
-import processm.core.logging.logger
 import processm.dbmodels.models.DataConnector
 import processm.etl.DBMSEnvironment.Companion.TEST_DATABASES_PATH
+import processm.logging.logger
 import java.io.File
 import java.sql.Connection
 import java.util.*

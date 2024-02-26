@@ -2,8 +2,8 @@ package processm.core.log.hierarchical
 
 import org.postgresql.PGStatement
 import org.slf4j.Logger
-import processm.core.logging.logger
-import processm.core.logging.trace
+import processm.logging.logger
+import processm.logging.trace
 import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Statement

@@ -5,10 +5,10 @@ import org.jetbrains.exposed.dao.load
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import processm.core.logging.loggedScope
 import processm.core.models.metadata.URN
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.*
+import processm.logging.loggedScope
 import java.util.*
 
 class GroupService {

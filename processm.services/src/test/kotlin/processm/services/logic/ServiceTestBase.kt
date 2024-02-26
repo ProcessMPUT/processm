@@ -13,7 +13,7 @@ import org.junit.jupiter.api.BeforeAll
 import processm.core.communication.Producer
 import processm.core.communication.email.EMAIL_TOPIC
 import processm.core.esb.Artemis
-import processm.core.helpers.loadConfiguration
+import processm.core.loadConfiguration
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DatabaseChecker
 import processm.core.persistence.connection.transactionMain

@@ -1,10 +1,12 @@
 package processm.services.api
 
-import processm.core.helpers.getPropertyIgnoreCase
+import kotlinx.serialization.Serializable
+import processm.helpers.getPropertyIgnoreCase
 
 /**
  * The system's configuration exposed using API.
  */
+@Serializable
 class Config(
     val loginMessage: String = getPropertyIgnoreCase("processm.webui.loginMessage") ?: "",
     val demoMode: Boolean = getPropertyIgnoreCase("processm.demoMode")?.toBoolean() ?: false

@@ -1,10 +1,10 @@
 package processm.core.models.causalnet.converters
 
-import processm.core.helpers.mapToSet
 import processm.core.models.causalnet.*
 import processm.core.models.metadata.*
 import processm.core.models.processtree.*
 import processm.core.verifiers.CausalNetVerifier
+import processm.helpers.mapToSet
 import java.util.*
 import processm.core.models.processtree.Node as TNode
 

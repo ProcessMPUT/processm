@@ -1,6 +1,5 @@
 package processm.core.log.attribute
 
-import processm.core.helpers.mapToSet
 import processm.core.log.attribute.AttributeMap.Companion.AFTER_SEPARATOR
 import processm.core.log.attribute.AttributeMap.Companion.BEFORE_INT
 import processm.core.log.attribute.AttributeMap.Companion.BEFORE_STRING
@@ -8,6 +7,7 @@ import processm.core.log.attribute.AttributeMap.Companion.INT_MARKER
 import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR
 import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR_CHAR
 import processm.core.log.attribute.AttributeMap.Companion.STRING_MARKER
+import processm.helpers.mapToSet
 import java.time.Instant
 import java.util.*
 
@@ -200,8 +200,8 @@ open class MutableAttributeMap(
      *
      * This function is intended only for deserialization and should be otherwise avoided.
      */
-    fun putFlat(key: String, value: Any) {
-        require(value.isAllowedAttributeValue())
+    fun putFlat(key: String, value: Any?) {
+        require(value.isAllowedAttributeValue()) { "Unsupported type ${value?.javaClass} of value $value" }
         flat[key] = value
     }
 }

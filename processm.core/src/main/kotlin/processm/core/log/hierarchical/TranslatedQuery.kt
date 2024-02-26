@@ -1,16 +1,16 @@
 package processm.core.log.hierarchical
 
-import processm.core.helpers.NestableAutoCloseable
-import processm.core.helpers.mapToArray
-import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR
 import processm.core.log.attribute.Attribute.DB_ID
-import processm.core.logging.enter
-import processm.core.logging.exit
-import processm.core.logging.logger
-import processm.core.logging.trace
+import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.*
 import processm.core.querylanguage.Function
+import processm.helpers.NestableAutoCloseable
+import processm.helpers.mapToArray
+import processm.logging.enter
+import processm.logging.exit
+import processm.logging.logger
+import processm.logging.trace
 import java.sql.Connection
 import java.sql.Timestamp
 import java.time.Instant

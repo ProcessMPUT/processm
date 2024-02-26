@@ -1,6 +1,6 @@
 package processm.core.models.metadata
 
-import processm.core.helpers.stats.DescriptiveStatistics
+import processm.helpers.stats.DescriptiveStatistics
 
 
 /**

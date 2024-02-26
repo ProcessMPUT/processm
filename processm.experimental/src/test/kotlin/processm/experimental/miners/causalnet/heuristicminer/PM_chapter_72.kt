@@ -2,7 +2,6 @@ package processm.experimental.miners.causalnet.heuristicminer
 
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
-import processm.core.helpers.mapToSet
 import processm.core.log.Helpers.event
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
@@ -12,6 +11,7 @@ import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
 import processm.experimental.miners.causalnet.heuristicminer.traceregisters.CompleteTraceRegister
 import processm.experimental.miners.causalnet.heuristicminer.traceregisters.SingleShortestTraceRegister
+import processm.helpers.mapToSet
 import processm.miners.causalnet.CausalNetMiner
 import processm.miners.causalnet.heuristicminer.OfflineHeuristicMiner
 import processm.miners.causalnet.heuristicminer.bindingproviders.CompleteBindingProvider

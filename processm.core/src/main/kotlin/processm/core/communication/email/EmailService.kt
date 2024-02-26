@@ -6,11 +6,11 @@ import org.jetbrains.exposed.sql.select
 import org.quartz.*
 import processm.core.esb.AbstractJobService
 import processm.core.esb.ServiceJob
-import processm.core.helpers.getPropertyIgnoreCase
-import processm.core.helpers.toUUID
 import processm.core.persistence.connection.transactionMain
+import processm.helpers.getPropertyIgnoreCase
+import processm.helpers.toUUID
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 
 const val EMAIL_TOPIC = "email"
 const val EMAIL_ID = "id"

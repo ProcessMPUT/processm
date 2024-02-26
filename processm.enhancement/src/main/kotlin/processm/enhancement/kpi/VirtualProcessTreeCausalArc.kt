@@ -1,9 +1,9 @@
 package processm.enhancement.kpi
 
 import kotlinx.serialization.Serializable
-import processm.core.helpers.cartesianProduct
 import processm.core.models.commons.CausalArc
 import processm.core.models.processtree.*
+import processm.helpers.cartesianProduct
 
 /**
  * An [CausalArc] using [ProcessTreeActivity]. This is not a real structure in a process tree, but rather an abstraction

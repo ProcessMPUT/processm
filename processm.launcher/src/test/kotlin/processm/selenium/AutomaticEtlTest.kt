@@ -6,7 +6,7 @@ import org.openqa.selenium.By
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
-import processm.core.helpers.isUUID
+import processm.helpers.isUUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

@@ -2,18 +2,18 @@ package processm.experimental.miners.causalnet.heuristicminer
 
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
-import processm.core.logging.logger
 import processm.core.models.causalnet.*
+import processm.experimental.miners.causalnet.heuristicminer.traceregisters.DifferentAdfixTraceRegister
+import processm.experimental.miners.causalnet.heuristicminer.traceregisters.TraceRegister
+import processm.logging.logger
+import processm.miners.causalnet.CausalNetMiner
 import processm.miners.causalnet.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.causalnet.heuristicminer.bindingproviders.BindingProvider
 import processm.miners.causalnet.heuristicminer.dependencygraphproviders.BasicDependencyGraphProvider
 import processm.miners.causalnet.heuristicminer.dependencygraphproviders.DependencyGraphProvider
 import processm.miners.causalnet.heuristicminer.longdistance.LongDistanceDependencyMiner
 import processm.miners.causalnet.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
-import processm.experimental.miners.causalnet.heuristicminer.traceregisters.DifferentAdfixTraceRegister
-import processm.experimental.miners.causalnet.heuristicminer.traceregisters.TraceRegister
 import processm.miners.causalnet.onlineminer.BasicTraceToNodeTrace
-import processm.miners.causalnet.CausalNetMiner
 import processm.miners.causalnet.onlineminer.TraceToNodeTrace
 
 /**

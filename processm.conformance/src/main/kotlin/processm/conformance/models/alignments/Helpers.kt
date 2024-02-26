@@ -1,9 +1,9 @@
 package processm.conformance.models.alignments
 
 import processm.conformance.models.DeviationType
-import processm.core.helpers.indexOfFirst
-import processm.core.helpers.zipOrThrow
 import processm.core.log.Event
+import processm.helpers.indexOfFirst
+import processm.helpers.zipOrThrow
 
 /**
  * Merges this list of [Alignment]s using the given list of [events]. The order of steps in all alignments must be

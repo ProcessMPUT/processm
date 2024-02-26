@@ -53,7 +53,7 @@ export default class OrganizationService extends BaseService {
 
   protected async updateClaims() {
     // refresh token to get new permissions
-    await this.prolongExistingSession(undefined, this.usersApi);
+    await this.prolongExistingSession(undefined);
 
     const response = await this.usersApi.getUserOrganizations();
 

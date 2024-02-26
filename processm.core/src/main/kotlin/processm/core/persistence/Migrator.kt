@@ -2,10 +2,10 @@ package processm.core.persistence
 
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.configuration.FluentConfiguration
-import processm.core.helpers.isUUID
-import processm.core.logging.loggedScope
 import processm.core.persistence.connection.DatabaseChecker
 import processm.core.persistence.connection.DatabaseChecker.switchDatabaseURL
+import processm.helpers.isUUID
+import processm.logging.loggedScope
 import java.sql.DriverManager
 
 /**

@@ -1,9 +1,9 @@
 package processm.enhancement.kpi
 
-import processm.core.helpers.mapToSet
 import processm.core.models.processtree.ProcessTree
 import processm.core.models.processtree.ProcessTreeActivity
 import processm.core.models.processtree.SilentActivity
+import processm.helpers.mapToSet
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

@@ -1,11 +1,11 @@
 package processm.core.models.bpmn.converters
 
-import processm.core.helpers.mapToSet
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.MutableCausalNet
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
+import processm.helpers.mapToSet
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals

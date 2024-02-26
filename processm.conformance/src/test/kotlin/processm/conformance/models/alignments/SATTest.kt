@@ -1,10 +1,10 @@
 package processm.conformance.models.alignments
 
 import org.junit.jupiter.api.AfterAll
-import processm.core.helpers.allSubsets
-import processm.core.helpers.mapToSet
 import processm.core.log.Helpers
 import processm.core.models.causalnet.*
+import processm.helpers.allSubsets
+import processm.helpers.mapToSet
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random

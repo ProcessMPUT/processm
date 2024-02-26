@@ -10,15 +10,15 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
-import processm.core.helpers.mapToArray
-import processm.core.helpers.toUUID
-import processm.core.logging.loggedScope
 import processm.core.persistence.connection.transactionMain
-import processm.dbmodels.decode
 import processm.dbmodels.models.DataStore
 import processm.dbmodels.models.DataStores
 import processm.dbmodels.models.Workspace
 import processm.dbmodels.models.Workspaces
+import processm.dbmodels.toEntityID
+import processm.helpers.mapToArray
+import processm.helpers.toUUID
+import processm.logging.loggedScope
 import processm.services.api.models.Group
 import processm.services.api.models.Organization
 import processm.services.api.models.OrganizationRole
@@ -53,7 +53,8 @@ fun Route.GroupsApi() = loggedScope { logger ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(path.organizationId, OrganizationRole.writer)
 
-            val newGroup = call.receiveOrNull<Group>().validateNotNull { "Invalid group." }
+            val newGroup =
+                kotlin.runCatching { call.receiveNullable<Group>() }.getOrNull().validateNotNull { "Invalid group." }
             if (path.organizationId != newGroup.organizationId) {
                 logger.warn("path.organizationId '${path.organizationId}' does not equal newGroup.organizationId '${newGroup.organizationId}'; ignoring the latter.")
             }
@@ -108,7 +109,7 @@ fun Route.GroupsApi() = loggedScope { logger ->
 
             val objects = transactionMain {
                 groupService.getSoleOwnershipURNs(path.groupId).mapToArray {
-                    it.decode().toApi()
+                    it.toEntityID().toApi()
                 }
             }
             call.respond(objects)
@@ -138,7 +139,9 @@ fun Route.GroupsApi() = loggedScope { logger ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(path.organizationId, OrganizationRole.writer)
 
-            val newMemberId = call.receiveOrNull<String>().validateNotNull { "Invalid user id." }.toUUID()!!
+            val newMemberId =
+                kotlin.runCatching { call.receiveNullable<String>() }.getOrNull().validateNotNull { "Invalid user id." }
+                    .toUUID()!!
             groupService.attachUserToGroup(newMemberId, path.groupId)
 
             call.respondCreated(Paths.GroupMember(path.organizationId, path.groupId, newMemberId))

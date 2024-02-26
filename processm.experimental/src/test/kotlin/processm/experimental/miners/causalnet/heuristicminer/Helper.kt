@@ -1,13 +1,13 @@
 package processm.experimental.miners.causalnet.heuristicminer
 
-import processm.core.helpers.mapToSet
 import processm.core.log.Helpers.event
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
-import processm.core.logging.logger
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
 import processm.core.verifiers.CausalNetVerifier
+import processm.helpers.mapToSet
+import processm.logging.logger
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 

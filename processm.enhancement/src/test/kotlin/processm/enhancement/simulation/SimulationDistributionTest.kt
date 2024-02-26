@@ -5,6 +5,8 @@ import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.toFlatSequence
 import processm.core.log.takeTraces
 import processm.enhancement.simulation.Logs.table81
+import kotlin.random.Random
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -18,13 +20,21 @@ class SimulationDistributionTest {
         private const val TOLERANCE = 0.1
     }
 
+    lateinit var random: Random
+
+    @BeforeTest
+    fun beforeTest() {
+        random = Random(42)
+    }
+
     @Test
     fun `Table 8 1 conforming model`() {
         val numTraces = 10000
         val prob = table81.toFlatSequence().getDirectlyFollowsProbabilities()
         val simulation = MarkovSimulation(
             processModel = PetriNets.fig32,
-            activityTransitionsProbabilityWeights = prob
+            activityTransitionsProbabilityWeights = prob,
+            random = random
         )
         val stream = simulation.takeTraces(numTraces)
         val simulatedProb = stream.getDirectlyFollowsProbabilities()

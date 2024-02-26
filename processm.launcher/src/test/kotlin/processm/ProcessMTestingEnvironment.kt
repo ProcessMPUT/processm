@@ -1,5 +1,8 @@
 package processm
 
+import de.odysseus.staxon.json.JsonXMLConfig
+import de.odysseus.staxon.json.JsonXMLConfigBuilder
+import de.odysseus.staxon.json.JsonXMLInputFactory
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
@@ -8,7 +11,7 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.serialization.gson.*
+import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.locations.*
 import io.ktor.utils.io.jvm.javaio.*
 import kotlinx.coroutines.runBlocking
@@ -16,20 +19,21 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
 import processm.core.esb.EnterpriseServiceBus
-import processm.core.helpers.loadConfiguration
+import processm.core.loadConfiguration
 import processm.core.log.XMLXESInputStream
+import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
+import processm.core.log.hierarchical.InMemoryXESProcessing
+import processm.core.log.hierarchical.LogInputStream
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DatabaseChecker
 import processm.etl.PostgreSQLEnvironment
 import processm.etl.metamodel.MetaModelDebeziumWatchingService.Companion.DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY
-import processm.services.LocalDateTimeTypeAdapter
-import processm.services.NonNullableTypeAdapterFactory
+import processm.services.JsonSerializer
 import processm.services.api.Paths
 import processm.services.api.models.*
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.nio.file.Files
-import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.ForkJoinPool
 import java.util.zip.ZipInputStream
@@ -53,12 +57,7 @@ class ProcessMTestingEnvironment {
     val client = HttpClient(CIO) {
         expectSuccess = true
         install(ContentNegotiation) {
-            // TODO: replace with kotlinx/serialization; this requires the OpenAPI generator to add kotlinx/serialization annotations; currently, this is not supported
-            gson(ContentType.Application.Json) {
-                // Correctly serialize/deserialize LocalDateTime
-                registerTypeAdapter(LocalDateTime::class.java, LocalDateTimeTypeAdapter())
-                registerTypeAdapterFactory(NonNullableTypeAdapterFactory())
-            }
+            json(JsonSerializer)
         }
         install(HttpTimeout) {
             requestTimeoutMillis = 300_000
@@ -286,10 +285,25 @@ class ProcessMTestingEnvironment {
             return@post dc
         }
 
-    fun pqlQuery(query: String) = get<Paths.Logs, Array<Any>>({
+    /**
+     * Performs the PQL query. The resulting event log is hierarchical and buffered, so it can be read many times.
+     */
+    @OptIn(InMemoryXESProcessing::class)
+    fun pqlQuery(query: String) = get<Paths.Logs, LogInputStream>({
         parameter("query", query)
     }) {
-        return@get body<Array<Any>>()
+        val config: JsonXMLConfig =
+            JsonXMLConfigBuilder()
+                .autoArray(true)
+                .autoPrimitive(true)
+                .build()
+        val factory = JsonXMLInputFactory(config)
+
+        val channel = bodyAsChannel()
+        val reader = factory.createXMLStreamReader(channel.toInputStream())
+        val logStream = HoneyBadgerHierarchicalXESInputStream(XMLXESInputStream(reader))
+
+        return@get logStream
     }
 
     fun pqlQueryXES(query: String) = get<Paths.Logs, XMLXESInputStream>({

@@ -2,7 +2,6 @@ package processm.miners.causalnet.heuristicminer
 
 import org.junit.jupiter.api.Assumptions
 import processm.core.comparators.CausalNetTraceComparison
-import processm.core.helpers.mapToSet
 import processm.core.log.Helpers.event
 import processm.core.log.Helpers.logFromModel
 import processm.core.log.Helpers.logFromString
@@ -13,6 +12,7 @@ import processm.core.models.metadata.BasicMetadata
 import processm.core.models.metadata.SingleDoubleMetadata
 import processm.core.verifiers.CausalNetVerifier
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
+import processm.helpers.mapToSet
 import processm.miners.causalnet.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.causalnet.heuristicminer.bindingproviders.hypothesisselector.MostGreedyHypothesisSelector
 import processm.miners.causalnet.heuristicminer.bindingproviders.hypothesisselector.MostParsimoniousHypothesisSelector

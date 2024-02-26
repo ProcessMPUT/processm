@@ -10,9 +10,9 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
-import processm.core.helpers.mapToArray
-import processm.core.logging.loggedScope
 import processm.core.persistence.connection.transactionMain
+import processm.helpers.mapToArray
+import processm.logging.loggedScope
 import processm.services.api.models.*
 import processm.services.logic.*
 import java.time.Duration
@@ -27,7 +27,7 @@ fun Route.UsersApi() {
 
     post<Paths.UsersSession> {
         loggedScope { logger ->
-            val credentials = call.receiveOrNull<UserCredentials>()
+            val credentials = runCatching { call.receiveNullable<UserCredentials>() }.getOrNull()
 
             when {
                 credentials != null -> {
@@ -90,7 +90,7 @@ fun Route.UsersApi() {
 
     post<Paths.Users> {
         loggedScope { logger ->
-            val accountInfo = call.receiveOrNull<AccountRegistrationInfo>()
+            val accountInfo = runCatching { call.receiveNullable<AccountRegistrationInfo>() }.getOrNull()
                 ?: throw ApiException("The provided account details cannot be parsed")
             val locale = call.request.acceptLanguageItems().getOrNull(0)
 
@@ -119,7 +119,7 @@ fun Route.UsersApi() {
 
     post<Paths.ResetPasswordRequest> {
         loggedScope { logger ->
-            val request = call.receiveOrNull<ResetPasswordRequest>()
+            val request = runCatching { call.receiveNullable<ResetPasswordRequest>() }.getOrNull()
                 ?: throw ApiException("The provided information cannot be parsed")
             try {
                 accountService.sendPasswordResetEmail(request.email)
@@ -135,7 +135,8 @@ fun Route.UsersApi() {
         loggedScope {
             val token = path.token
             val request =
-                call.receiveOrNull<PasswordChange>() ?: throw ApiException("The provided information cannot be parsed")
+                runCatching { call.receiveNullable<PasswordChange>() }.getOrNull()
+                    ?: throw ApiException("The provided information cannot be parsed")
             if (accountService.resetPasswordWithToken(token, request.newPassword))
                 call.respond(HttpStatusCode.OK)
             else
@@ -163,15 +164,15 @@ fun Route.UsersApi() {
                 patch {
                     loggedScope { logger ->
                         val principal = call.authentication.principal<ApiUser>()!!
-                        val passwordData = call.receiveOrNull<PasswordChange>()
+                        val passwordData = runCatching { call.receiveNullable<PasswordChange>() }.getOrNull()
                             ?: throw ApiException("The provided password data cannot be parsed")
 
                         if (accountService.changePassword(
                                 principal.userId, passwordData.currentPassword, passwordData.newPassword
                             )
                         ) {
-                            logger.info("The user ${principal.userId} has successfully changed his password")
-                            call.respond(HttpStatusCode.OK)
+                            logger.info("The user ${principal.userId} has successfully changed his/her password")
+                            call.respond(HttpStatusCode.NoContent)
                         } else {
                             call.respond(
                                 HttpStatusCode.Forbidden, ErrorMessage("The current password could not be changed")
@@ -183,7 +184,7 @@ fun Route.UsersApi() {
             route("/locale") {
                 patch {
                     val principal = call.authentication.principal<ApiUser>()!!
-                    val localeData = call.receiveOrNull<LocaleChange>()
+                    val localeData = runCatching { call.receiveNullable<LocaleChange>() }.getOrNull()
                         ?: throw ApiException("The provided locale data cannot be parsed")
 
                     accountService.changeLocale(principal.userId, localeData.locale)

@@ -1,12 +1,12 @@
 package processm.core.models.bpmn.converters
 
-import processm.core.helpers.allSubsets
-import processm.core.helpers.ifNullOrEmpty
 import processm.core.models.bpmn.BPMNModel
 import processm.core.models.bpmn.BPMNProcess
 import processm.core.models.bpmn.jaxb.TCollaboration
 import processm.core.models.bpmn.jaxb.TProcess
 import processm.core.models.causalnet.*
+import processm.helpers.allSubsets
+import processm.helpers.ifNullOrEmpty
 
 internal class BPMNModel2CausalNet(val model: BPMNModel) {
 

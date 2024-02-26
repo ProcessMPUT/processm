@@ -1,8 +1,8 @@
 package processm.core.models.petrinet
 
 import kotlinx.serialization.Serializable
-import processm.core.helpers.SerializableUUID
 import processm.core.models.commons.Activity
+import processm.helpers.SerializableUUID
 import java.util.*
 
 

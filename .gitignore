@@ -10,3 +10,4 @@ processm.core/gen/
 /processm-docker-image.tar
 *dependency-reduced-pom.xml
 debezium*.dat
+/processm.webui/src/main/frontend-app/tsconfig.tsbuildinfo

@@ -1,7 +1,5 @@
 package processm.enhancement.simulation
 
-import processm.core.helpers.map2d.DoublingMap2D
-import processm.core.helpers.map2d.Map2D
 import processm.core.log.*
 import processm.core.log.attribute.Attribute
 import processm.core.log.attribute.Attribute.CONCEPT_INSTANCE
@@ -10,6 +8,8 @@ import processm.core.log.attribute.Attribute.IDENTITY_ID
 import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
+import processm.helpers.map2d.DoublingMap2D
+import processm.helpers.map2d.Map2D
 import java.util.*
 import kotlin.random.Random
 
@@ -19,13 +19,14 @@ import kotlin.random.Random
  * @param processModel the process model to generate traces for.
  * @param activityTransitionsProbabilityWeights for every pair of activities, it defines a weight
  * which is proportional to the probability that the transition between activities occurs.
+ * @param random generator.
  */
 class MarkovSimulation(
     private val processModel: ProcessModel,
-    private val activityTransitionsProbabilityWeights: Map2D<String, String, Double> = DoublingMap2D()
+    private val activityTransitionsProbabilityWeights: Map2D<String, String, Double> = DoublingMap2D(),
+    private val random: Random = Random.Default
 ) : XESInputStream {
 
-    private val random = Random.Default
     private val processModelInstance = processModel.createInstance()
 
     /**

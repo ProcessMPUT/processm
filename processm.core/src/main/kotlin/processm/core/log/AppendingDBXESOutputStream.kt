@@ -9,7 +9,8 @@ import java.util.*
  * the identity:id attribute set. The anonymous traces with identity:id unset will not be appended and instead a new
  * trace will be created.
  */
-class AppendingDBXESOutputStream(connection: Connection) : DBXESOutputStream(connection, true) {
+class AppendingDBXESOutputStream(connection: Connection, batchSize: Int = DBXESOutputStream.batchSize) :
+    DBXESOutputStream(connection, true, batchSize) {
     override fun write(component: XESComponent) {
         if (component is Log) {
             val existingLogId = getLogId(component)

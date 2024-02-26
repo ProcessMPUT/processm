@@ -10,9 +10,9 @@ import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.transactions.transaction
-import processm.core.helpers.mapToSet
 import processm.core.models.metadata.*
 import processm.core.persistence.DBConnectionPool
+import processm.helpers.mapToSet
 import java.util.*
 
 internal class DAOModel(id: EntityID<Int>) : IntEntity(id) {

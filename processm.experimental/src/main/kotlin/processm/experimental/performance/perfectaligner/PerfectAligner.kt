@@ -2,11 +2,11 @@ package processm.experimental.performance.perfectaligner
 
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
-import processm.core.logging.debug
-import processm.core.logging.logger
 import processm.core.models.causalnet.Binding
 import processm.core.models.causalnet.CausalNet
 import processm.experimental.helpers.BitIntSet
+import processm.logging.debug
+import processm.logging.logger
 import processm.miners.causalnet.onlineminer.BasicTraceToNodeTrace
 import processm.miners.causalnet.onlineminer.TraceToNodeTrace
 import java.util.*

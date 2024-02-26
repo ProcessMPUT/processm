@@ -1,13 +1,13 @@
 package processm.conformance.measures.precision
 
 import processm.conformance.measures.Measure
-import processm.core.helpers.Trie
 import processm.core.log.hierarchical.Log
-import processm.core.logging.logger
-import processm.core.logging.trace
 import processm.core.models.commons.Activity
 import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.PetriNetInstance
+import processm.helpers.Trie
+import processm.logging.logger
+import processm.logging.trace
 
 /**
  * An approximate precision for [PetriNet]s following Jorge Munoz-Gama, Josep Carmona: A Fresh Look at Precision in Process Conformance. BPM 2010: 211-226

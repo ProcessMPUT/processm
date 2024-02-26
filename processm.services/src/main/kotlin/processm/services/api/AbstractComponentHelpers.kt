@@ -1,9 +1,5 @@
 package processm.services.api
 
-import com.google.gson.Gson
-import processm.core.helpers.mapToArray
-import processm.core.helpers.toLocalDateTime
-import processm.core.logging.loggedScope
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.Node
 import processm.core.models.dfg.DirectlyFollowsGraph
@@ -17,8 +13,12 @@ import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
 import processm.dbmodels.models.load
+import processm.helpers.mapToArray
+import processm.helpers.toLocalDateTime
+import processm.logging.loggedScope
 import processm.miners.causalnet.ALGORITHM_HEURISTIC_MINER
 import processm.miners.causalnet.ALGORITHM_INDUCTIVE_MINER
+import processm.services.JsonSerializer
 import processm.services.api.models.*
 import java.util.*
 
@@ -60,23 +60,21 @@ private fun ComponentTypeDto.toComponentType(): ComponentType = when (this) {
 /**
  * Deserializes layout information for the component.
  */
-// TODO: replace GSON with kotlinx/serialization
 private fun WorkspaceComponent.getLayout(): LayoutElement? =
-    if (!layoutData.isNullOrEmpty()) Gson().fromJson(layoutData, LayoutElement::class.java)
+    if (!layoutData.isNullOrEmpty()) JsonSerializer.decodeFromString<LayoutElement>(layoutData!!)
     else null
 
 
 /**
  * Deserializes the customization data for the component.
  */
-// TODO: replace GSON with kotlinx/serialization
-private fun WorkspaceComponent.getCustomizationData(): ProcessModelCustomizationData? {
+private fun WorkspaceComponent.getCustomizationData(): CustomizationData? {
     if (customizationData.isNullOrBlank())
         return null
 
     return when (componentType) {
         ComponentTypeDto.CausalNet, ComponentTypeDto.PetriNet ->
-            Gson().fromJson(customizationData, ProcessModelCustomizationData::class.java)
+            customizationData?.let { JsonSerializer.decodeFromString<CustomizationData>(it) }
 
         else -> TODO("Customization data is not implemented for type $componentType.")
     }
@@ -89,10 +87,14 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
     try {
         when (componentType) {
             ComponentTypeDto.CausalNet -> {
-                val cnet = DBSerializer.fetch(
-                    DBCache.get(dataStoreId.toString()).database,
-                    requireNotNull(data) { "Missing C-net id" }.toInt()
-                )
+                val cnet = data?.let {
+                    DBSerializer.fetch(
+                        DBCache.get(dataStoreId.toString()).database,
+                        it.toInt()
+                    )
+                } ?: return null.apply {
+                    logger.debug("Missing C-net id for component $id.")
+                }
                 val nodes = ArrayList<Node>().apply {
                     add(cnet.start)
                     cnet.activities.filterTo(this) { it != cnet.start && it != cnet.end }
@@ -197,6 +199,10 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                 null
             }
 
+            ComponentTypeDto.AlignerKpi -> {
+                null
+            }
+
             else -> TODO("Data conversion is not implemented for type $componentType.")
         }
     } catch (e: Throwable) {
@@ -230,8 +236,7 @@ private fun PetriNetComponentData.toPetriNet(): PetriNet {
 fun WorkspaceComponent.updateData(data: String) = loggedScope { logger ->
     when (componentType) {
         ComponentTypeDto.PetriNet -> {
-            // TODO: replace GSON with kotlinx/serialization
-            val petriNet = Gson().fromJson(data, PetriNetComponentData::class.java).toPetriNet()
+            val petriNet = JsonSerializer.decodeFromString<PetriNetComponentData>(data).toPetriNet()
             processm.core.models.petrinet.DBSerializer.update(
                 DBCache.get(dataStoreId.toString()).database,
                 UUID.fromString(this.data),

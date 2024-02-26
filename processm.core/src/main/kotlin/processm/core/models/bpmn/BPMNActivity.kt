@@ -1,11 +1,11 @@
 package processm.core.models.bpmn
 
-import processm.core.helpers.allSubsets
-import processm.core.logging.logger
 import processm.core.models.bpmn.jaxb.TActivity
 import processm.core.models.bpmn.jaxb.TCallActivity
 import processm.core.models.bpmn.jaxb.TFlowNode
 import processm.core.models.bpmn.jaxb.TSequenceFlow
+import processm.helpers.allSubsets
+import processm.logging.logger
 
 /**
  * A wrapper for [TActivity]. Only its base class is public.

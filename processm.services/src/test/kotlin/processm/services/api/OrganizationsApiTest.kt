@@ -5,9 +5,9 @@ import io.mockk.*
 import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
 import org.koin.test.mock.declareMock
-import processm.core.helpers.mapToSet
 import processm.dbmodels.models.*
 import processm.dbmodels.urn
+import processm.helpers.mapToSet
 import processm.services.api.models.ErrorMessage
 import processm.services.api.models.OrganizationMember
 import processm.services.api.models.OrganizationRole

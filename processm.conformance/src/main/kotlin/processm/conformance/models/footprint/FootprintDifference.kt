@@ -1,7 +1,7 @@
 package processm.conformance.models.footprint
 
-import processm.core.helpers.map2d.Map2D
 import processm.core.models.footprint.FootprintActivity
+import processm.helpers.map2d.Map2D
 
 /**
  * Represents a difference between two [Footprint]s.

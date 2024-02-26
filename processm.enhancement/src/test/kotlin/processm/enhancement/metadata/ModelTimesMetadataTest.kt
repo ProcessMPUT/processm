@@ -2,7 +2,6 @@ package processm.enhancement.metadata
 
 import processm.conformance.alignment
 import processm.core.DBTestHelper
-import processm.core.helpers.mapToSet
 import processm.core.log.InferConceptInstanceFromStandardLifecycle
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.toFlatSequence
@@ -16,6 +15,7 @@ import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.converters.toPetriNet
 import processm.core.models.processtree.ProcessTree
 import processm.core.querylanguage.Query
+import processm.helpers.mapToSet
 import java.time.Duration
 import kotlin.test.Test
 import kotlin.test.assertEquals

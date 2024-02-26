@@ -10,18 +10,18 @@
           <v-row>
             <v-col>
               <xes-data-table
-                  :items="items"
-                  :headers="headers"
-                  :is-fold="false"
-                  :loading="isLoadingData"
-                  :is-expanded="false"
-                  :keep-tree-expand="false"
-                  :empty-text="$t('common.no-data')"
-                  :disable-pagination="false"
-                  :items-per-page-options="[1, 5, -1]"
-                  :selectable="false"
-                  children-prop="_children"
-                  id-prop="_id"
+                :disable-pagination="false"
+                :empty-text="$t('common.no-data')"
+                :headers="headers"
+                :is-expanded="false"
+                :is-fold="false"
+                :items="items"
+                :items-per-page-options="[1, 5, -1]"
+                :keep-tree-expand="false"
+                :loading="isLoadingData"
+                :selectable="false"
+                children-prop="_children"
+                id-prop="_id"
               />
             </v-col>
           </v-row>
@@ -51,35 +51,35 @@
 
 <script lang="ts">
 import Vue from "vue";
-import {waitForRepaint} from "@/utils/waitForRepaint";
-import {Component, Inject, Prop, Watch} from "vue-property-decorator";
+import { waitForRepaint } from "@/utils/waitForRepaint";
+import { Component, Inject, Prop, Watch } from "vue-property-decorator";
 import LogsService from "@/services/LogsService";
 import DataStoreService from "@/services/DataStoreService";
-import XesProcessor, {LogItem} from "@/utils/XesProcessor";
-import XesDataTable from "@/components/XesDataTable.vue";
+import XesProcessor, { LogItem } from "@/utils/XesProcessor";
 import App from "@/App.vue";
 
+const XesDataTable = () => import("@/components/XesDataTable.vue");
+
 @Component({
-  components: {XesDataTable}
+  components: { XesDataTable }
 })
 export default class PQL extends Vue {
   @Inject() app!: App;
   @Inject() logsService!: LogsService;
   @Inject() dataStoreService!: DataStoreService;
   private readonly xesProcessor = new XesProcessor();
-  @Prop({default: false})
+  @Prop({ default: false })
   readonly value!: boolean;
   @Prop()
   private dataStoreId?: string;
   @Prop()
-  private query?: string
+  private query?: string;
 
   isLoadingData = false;
   isUploading = false;
   isDownloading = false;
   headers = new Array<string>();
   items = new Array<LogItem>();
-
 
   cancel() {
     this.$emit("cancelled");
@@ -88,7 +88,7 @@ export default class PQL extends Vue {
   @Watch("value")
   componentVisibilityChanged(isVisible: boolean) {
     if (!isVisible) return;
-    this.submit()
+    this.submit();
   }
 
   async submit() {
@@ -97,29 +97,20 @@ export default class PQL extends Vue {
     try {
       this.headers = [];
       this.items = [];
-      if (this.dataStoreId == null)
-        throw new Error(this.$t("xes-preview-dialog.no-data-store").toString());
+      if (this.dataStoreId == null) throw new Error(this.$t("xes-preview-dialog.no-data-store").toString());
 
       this.isLoadingData = true;
 
       this.app.info(this.$t("xes-preview-dialog.executing-query").toString(), -1);
       let start = new Date().getTime();
-      const queryResults = await this.logsService.submitUserQuery(
-          this.dataStoreId,
-          this.query
-      );
+      const queryResults = await this.logsService.submitUserQuery(this.dataStoreId, this.query);
 
       const executionTime = new Date().getTime() - start;
-      this.app.info(this.$t("xes-preview-dialog.query-executed", {'executionTime': executionTime}).toString(), -1)
+      this.app.info(this.$t("xes-preview-dialog.query-executed", { executionTime: executionTime }).toString(), -1);
       start = new Date().getTime();
 
       await waitForRepaint(async () => {
-        const {
-          headers,
-          logItems
-        } = this.xesProcessor.extractHierarchicalLogItemsFromAllScopes(
-            queryResults
-        );
+        const { headers, logItems } = this.xesProcessor.extractHierarchicalLogItemsFromAllScopes(queryResults);
         this.headers = headers;
 
         for (const item of logItems) {
@@ -129,7 +120,12 @@ export default class PQL extends Vue {
         }
 
         const formattingTime = new Date().getTime() - start;
-        this.app.info(this.$t("xes-preview-dialog.results-retrieved", {'executionTime': executionTime, 'formattingTime': formattingTime}).toString())
+        this.app.info(
+          this.$t("xes-preview-dialog.results-retrieved", {
+            executionTime: executionTime,
+            formattingTime: formattingTime
+          }).toString()
+        );
       });
     } catch (err) {
       this.app.error(err?.response?.data?.error ?? err);

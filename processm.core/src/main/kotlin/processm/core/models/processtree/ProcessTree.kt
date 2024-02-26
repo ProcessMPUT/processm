@@ -1,9 +1,9 @@
 package processm.core.models.processtree
 
-import processm.core.helpers.mapToArray
 import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.DefaultMutableMetadataHandler
 import processm.core.models.metadata.MetadataHandler
+import processm.helpers.mapToArray
 
 /**
  * Process Tree model with `root` reference

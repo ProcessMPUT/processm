@@ -6,10 +6,10 @@ import processm.conformance.PetriNets.fig32
 import processm.conformance.PetriNets.fig34c
 import processm.conformance.PetriNets.fig73
 import processm.conformance.PetriNets.parallelFlowers
-import processm.core.helpers.allPermutations
 import processm.core.log.Helpers.event
 import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.Trace
+import processm.helpers.allPermutations
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

@@ -2,9 +2,9 @@ package processm.core.esb
 
 import jakarta.jms.TopicConnectionFactory
 import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ
-import processm.core.logging.enter
-import processm.core.logging.exit
-import processm.core.logging.logger
+import processm.logging.enter
+import processm.logging.exit
+import processm.logging.logger
 import java.util.concurrent.Semaphore
 import javax.naming.Context
 

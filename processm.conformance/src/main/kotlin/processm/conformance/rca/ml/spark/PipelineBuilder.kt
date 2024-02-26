@@ -7,7 +7,7 @@ import org.apache.spark.ml.param.shared.HasOutputCols
 import org.apache.spark.sql.types.StructField
 import org.apache.spark.sql.types.StructType
 import processm.conformance.rca.ml.spark.SparkHelpers.isLabel
-import processm.core.helpers.mapToArray
+import processm.helpers.mapToArray
 import java.util.*
 
 /**

@@ -14,6 +14,10 @@
     "user-profile": "Ustawienia konta",
     "sign-out": "Wyloguj"
   },
+  "alignments-dialog": {
+    "title": "Wyrównania dla {name}",
+    "page-hint": "Odtwarza każdy ślad z dziennika zdarzeń na modelu i wskazuje zgodne i odbiegające ruchy."
+  },
   "workspace": {
     "default-name": "Przestrzeń robocza",
     "tooltip": {
@@ -33,6 +37,7 @@
       "select": "Wybierz komponent",
       "no-data": "Brak danych do wyświetlenia",
       "dfg": {
+        "alignments-table": "Pokaż tabelę wyrównań",
         "support": "Wsparcie"
       },
       "edit": {
@@ -55,6 +60,8 @@
     },
     "flat-log-view": "Tabelaryczny widok logu",
     "flat-log": {
+      "log-deviation": "Zdarzenie w dzienniku niepasujące do modelu procesu",
+      "model-deviation": "Aktywność w modelu niepasująca do zdarzenia w dzienniku",
       "no-data": "(brak danych)"
     }
   },
@@ -172,7 +179,8 @@
   },
   "user-profile": {
     "language": "Język",
-    "change-password": "Zmień hasło"
+    "change-password": "Zmień hasło",
+    "password-changed": "Hasło zostało zmienione."
   },
   "organizations": {
     "attach": "Dołącz organizację jako pod-organizację",

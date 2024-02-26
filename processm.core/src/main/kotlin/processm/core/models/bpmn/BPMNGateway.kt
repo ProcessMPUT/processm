@@ -1,9 +1,9 @@
 package processm.core.models.bpmn
 
-import processm.core.helpers.allSubsets
 import processm.core.models.bpmn.jaxb.*
 import processm.core.models.commons.ControlStructure
 import processm.core.models.commons.ControlStructureType
+import processm.helpers.allSubsets
 
 /**
  * A wrapper for [TGateway].

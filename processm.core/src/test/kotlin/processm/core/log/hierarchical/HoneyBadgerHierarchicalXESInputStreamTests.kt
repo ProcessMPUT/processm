@@ -1,7 +1,6 @@
 package processm.core.log.hierarchical
 
 import org.openjdk.jol.info.GraphLayout
-import processm.core.helpers.hierarchicalCompare
 import processm.core.log.XMLXESInputStream
 import java.io.File
 import java.util.zip.GZIPInputStream

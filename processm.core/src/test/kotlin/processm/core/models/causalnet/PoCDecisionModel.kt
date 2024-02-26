@@ -1,10 +1,10 @@
 package processm.core.models.causalnet
 
-import processm.core.helpers.Counter
 import processm.core.log.hierarchical.Trace
 import processm.core.models.commons.Decision
 import processm.core.models.commons.DecisionLearner
 import processm.core.models.commons.DecisionModel
+import processm.helpers.Counter
 
 data class Row(val trace: Trace, val seqdecisions: Sequence<Decision>)
 
