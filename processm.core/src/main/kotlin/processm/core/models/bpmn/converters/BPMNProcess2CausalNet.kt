@@ -1,11 +1,11 @@
 package processm.core.models.bpmn.converters
 
-import processm.core.helpers.Counter
-import processm.core.helpers.allSubsets
 import processm.core.models.bpmn.BPMNActivity
 import processm.core.models.bpmn.BPMNFlowNode
 import processm.core.models.bpmn.BPMNProcess
 import processm.core.models.causalnet.*
+import processm.helpers.Counter
+import processm.helpers.allSubsets
 
 
 private fun MutableCausalNet.addDependencies(deps: Iterable<Dependency>) {

@@ -4,7 +4,7 @@ import org.w3c.dom.Document
 import org.w3c.dom.NodeList
 import processm.core.log.extension.Extension
 import processm.core.log.extension.XesExtensionAttribute
-import processm.core.logging.logger
+import processm.logging.logger
 import java.io.File
 import java.io.InputStream
 import java.net.HttpURLConnection

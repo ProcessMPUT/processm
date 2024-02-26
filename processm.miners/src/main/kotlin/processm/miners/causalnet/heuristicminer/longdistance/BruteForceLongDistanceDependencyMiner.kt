@@ -1,7 +1,7 @@
 package processm.miners.causalnet.heuristicminer.longdistance
 
-import processm.core.helpers.allSubsets
 import processm.core.models.causalnet.Node
+import processm.helpers.allSubsets
 import processm.miners.causalnet.heuristicminer.longdistance.avoidability.AvoidabilityChecker
 import java.util.*
 import kotlin.math.max

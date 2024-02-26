@@ -56,13 +56,17 @@ export default class WorkspaceService extends BaseService {
   }
 
   public async addComponent(workspaceId: string, component: WorkspaceComponent) {
-    const response = await this.workspacesApi.addOrUpdateWorkspaceComponent(workspaceId, component.id, component);
+    const payload = Object.assign({}, component) as { data?: any };
+    delete payload.data;
+    const response = await this.workspacesApi.addOrUpdateWorkspaceComponent(workspaceId, component.id, payload as AbstractComponent);
 
     return response.status == 204;
   }
 
   public async updateComponent(workspaceId: string, componentId: string, component: WorkspaceComponent) {
-    const response = await this.workspacesApi.addOrUpdateWorkspaceComponent(workspaceId, componentId, component);
+    const payload = Object.assign({}, component) as { data?: any };
+    delete payload.data;
+    const response = await this.workspacesApi.addOrUpdateWorkspaceComponent(workspaceId, componentId, payload as AbstractComponent);
 
     return response.status == 204;
   }
@@ -102,7 +106,7 @@ export default class WorkspaceService extends BaseService {
   public observeWorkspace(workspaceId: string, callback: (componentId: string) => void) {
     const observer = new WorkspaceObserver(this.defaultApiPath, workspaceId, callback);
     observer.reauthenticate = async () => {
-      await this.prolongExistingSession(undefined, this.usersApi);
+      await this.prolongExistingSession(undefined);
       return true;
     };
     return observer;

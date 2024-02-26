@@ -1,6 +1,6 @@
 package processm.experimental.helpers.map2d
 
-import processm.core.helpers.map2d.Map2D
+import processm.helpers.map2d.Map2D
 import java.util.*
 
 /**

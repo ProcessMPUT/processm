@@ -1,8 +1,7 @@
 package processm.services.api
 
-import com.google.common.reflect.TypeToken
-import com.google.gson.GsonBuilder
 import io.ktor.http.*
+import io.ktor.server.application.*
 import io.ktor.server.config.*
 import io.ktor.server.testing.*
 import io.ktor.util.pipeline.*
@@ -12,8 +11,9 @@ import io.mockk.*
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
+import kotlinx.serialization.encodeToString
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.Table
 import org.junit.jupiter.api.TestInstance
@@ -26,13 +26,11 @@ import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.Organizations
 import processm.dbmodels.models.RoleType
 import processm.dbmodels.models.Users
-import processm.services.LocalDateTimeTypeAdapter
-import processm.services.NonNullableTypeAdapterFactory
+import processm.services.JsonSerializer
 import processm.services.api.models.AuthenticationResult
 import processm.services.api.models.OrganizationRole
 import processm.services.apiModule
 import processm.services.logic.*
-import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.stream.Stream
@@ -58,17 +56,6 @@ fun acl(block: ACLDSL.() -> Unit): List<Triple<RoleType, Table, UUID>> = with(AC
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class BaseApiTest : KoinTest {
-    companion object {
-        val gson by lazy {
-            // TODO: replace GSON with kotlinx/serialization
-            val gsonBuilder = GsonBuilder()
-            // Correctly serialize/deserialize LocalDateTime
-            gsonBuilder.registerTypeAdapter(LocalDateTime::class.java, LocalDateTimeTypeAdapter())
-            gsonBuilder.registerTypeAdapterFactory(NonNullableTypeAdapterFactory())
-            gsonBuilder.create()
-        }
-    }
-
     protected abstract fun endpointsWithAuthentication(): Stream<Pair<HttpMethod, String>?>
     protected abstract fun endpointsWithNoImplementation(): Stream<Pair<HttpMethod, String>?>
     private val mocksMap = ConcurrentHashMap<KClass<*>, Any>()
@@ -131,7 +118,7 @@ abstract class BaseApiTest : KoinTest {
         testLogic(this)
     }
 
-    protected fun TestApplicationEngine.withAuthentication(
+    protected inline fun TestApplicationEngine.withAuthentication(
         userId: UUID = UUID.randomUUID(),
         login: String = "user@example.com",
         password: String = "pass",
@@ -214,7 +201,7 @@ abstract class BaseApiTest : KoinTest {
         }
 
         // Based on https://youtrack.jetbrains.com/issue/KTOR-3290/Improve-support-for-testing-Server-Sent-Events-SSE
-        fun handleSse(
+        suspend fun handleSse(
             uri: String,
             setup: TestApplicationRequest.() -> Unit = {},
             callback: suspend TestApplicationCall.(incoming: ByteReadChannel) -> Unit
@@ -232,7 +219,7 @@ abstract class BaseApiTest : KoinTest {
                 engine.pipeline.execute(call)
             }
 
-            runBlocking(call.coroutineContext) {
+            withContext(call.coroutineContext) {
                 // responseChannelDeferred is internal, so we wait like this.
                 // Ref: https://github.com/ktorio/ktor/blob/c5877a22c91fd693ea6dcd0b4e1924f05d3b6825/ktor-server/ktor-server-test-host/jvm/src/io/ktor/server/testing/TestApplicationEngine.kt#L225-L230
                 var responseChannel: ByteReadChannel?
@@ -258,11 +245,11 @@ abstract class BaseApiTest : KoinTest {
     }
 
     protected inline fun <reified T> TestApplicationResponse.deserializeContent(): T =
-        gson.fromJson(content, object : TypeToken<T>() {}.type)
+        JsonSerializer.decodeFromString(requireNotNull(content))
 
-    protected inline fun <T : Any> TestApplicationRequest.withSerializedBody(requestBody: T) {
+    protected inline fun <reified T : Any> TestApplicationRequest.withSerializedBody(requestBody: T) {
         addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-        setBody(gson.toJson(requestBody))
+        setBody(JsonSerializer.encodeToString(requestBody))
     }
 
 }

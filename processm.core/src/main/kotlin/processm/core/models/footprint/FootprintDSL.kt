@@ -1,6 +1,6 @@
 package processm.core.models.footprint
 
-import processm.core.helpers.map2d.DoublingMap2D
+import processm.helpers.map2d.DoublingMap2D
 
 /**
  * This is the main method of domain specific language for the initialization of the [Footprint] matrix.

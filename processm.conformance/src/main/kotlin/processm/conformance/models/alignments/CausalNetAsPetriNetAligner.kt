@@ -3,12 +3,12 @@ package processm.conformance.models.alignments
 import processm.conformance.models.alignments.events.EventsSummarizer
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
-import processm.core.logging.debug
-import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.core.models.commons.ProcessModel
 import processm.core.models.petrinet.Transition
 import processm.core.models.petrinet.converters.CausalNet2PetriNet
+import processm.logging.debug
+import processm.logging.logger
 import java.util.concurrent.ExecutorService
 
 class CausalNetAsPetriNetAligner(private val base: Aligner, private val converter: CausalNet2PetriNet) :

@@ -5,9 +5,7 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import processm.core.esb.Service
 import processm.core.esb.ServiceStatus
-import processm.core.logging.enter
-import processm.core.logging.exit
-import processm.core.logging.logger
+import processm.logging.loggedScope
 import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random
@@ -25,18 +23,12 @@ class WebServicesHost : Service {
     override var status = ServiceStatus.Unknown
         private set
 
-    override fun register() {
-        logger().enter()
-
+    override fun register() = loggedScope {
         status = ServiceStatus.Stopped
-
-        logger().exit()
     }
 
-    override fun start() {
-        logger().enter()
-
-        logger().debug("Starting HTTP server")
+    override fun start() = loggedScope { logger ->
+        logger.debug("Starting HTTP server")
         // A work-around, because it seems ktor reads properties once into a its own static cache
         val args = System.getProperty("ktor.deployment.port")?.let { port ->
             arrayOf("-port=$port")
@@ -45,16 +37,17 @@ class WebServicesHost : Service {
             env = commandLineEnvironment(args)
         } catch (e: IllegalArgumentException) {
             if (!e.message!!.contains("-sslKeyStore")) throw e
-            logger().warn("SSL certificate is not given, generating a self-signed certificate. Use -sslKeyStore= command line option to set certificate file.")
+            logger.warn("SSL certificate is not given, generating a self-signed certificate. Use -sslKeyStore= command line option to set certificate file.")
             val certFile = File.createTempFile("ProcessM_SSL", ".jks").apply {
                 parentFile.mkdirs()
                 deleteOnExit()
             }
             val keyPassword = (1..100).map {
-                Random.nextInt(Char.MIN_VALUE.code, Char.MAX_VALUE.code).toChar()
+                Random.nextInt(' '.code, '~'.code).toChar()
             }.joinToString("")
+                .trim() // commandLineEnvironment() trims the password internally, so we must not use blank characters at the ends
 
-            logger().debug("Generating certificate and writing into file ${certFile.canonicalPath}")
+            logger.debug("Generating certificate and writing into file ${certFile.canonicalPath}")
             generateCertificate(certFile, keyAlias = "ssl", keyPassword = keyPassword)
 
             env = commandLineEnvironment(
@@ -75,25 +68,21 @@ class WebServicesHost : Service {
         engine.start()
         status = ServiceStatus.Started
 
-        logger().info(
+        logger.info(
             "HTTP server started on port ${engine.environment.config.property("ktor.deployment.sslPort").getString()}"
         )
-        logger().exit()
     }
 
-    override fun stop() {
-        logger().enter()
-
-        logger().info(
+    override fun stop() = loggedScope { logger ->
+        logger.info(
             "Stopping HTTP server on port ${engine.environment.config.property("ktor.deployment.sslPort").getString()}"
         )
         engine.stop(3, 30, TimeUnit.SECONDS)
         env.stop()
         status = ServiceStatus.Stopped
 
-        logger().info(
+        logger.info(
             "HTTP server stopped on port ${engine.environment.config.property("ktor.deployment.sslPort").getString()}"
         )
-        logger().exit()
     }
 }

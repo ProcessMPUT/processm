@@ -1,12 +1,12 @@
 package processm.core.log
 
-import processm.core.helpers.toUUID
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.IDENTITY_ID
 import processm.core.log.attribute.Attribute.LIFECYCLE_MODEL
 import processm.core.log.attribute.AttributeMap
 import processm.core.log.attribute.MutableAttributeMap
 import processm.core.log.attribute.unmodifiableView
+import processm.helpers.toUUID
 import java.util.*
 
 /**

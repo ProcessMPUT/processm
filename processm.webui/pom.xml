@@ -51,6 +51,7 @@
                         <goals>
                             <goal>install-node-and-npm</goal>
                         </goals>
+                        <phase>initialize</phase>
                         <configuration>
                             <nodeVersion>v18.18.0</nodeVersion>
                             <npmVersion>9.8.1</npmVersion>
@@ -62,6 +63,7 @@
                         <goals>
                             <goal>npm</goal>
                         </goals>
+                        <phase>generate-sources</phase>
                     </execution>
 
                     <execution>
@@ -69,6 +71,7 @@
                         <goals>
                             <goal>npm</goal>
                         </goals>
+                        <phase>generate-sources</phase>
                         <configuration>
                             <arguments>run generate-api-sources</arguments>
                         </configuration>
@@ -79,6 +82,7 @@
                         <goals>
                             <goal>npm</goal>
                         </goals>
+                        <phase>compile</phase>
                         <configuration>
                             <arguments>run build -- --dest ../../../target/classes/frontend-dist --mode ${outputType}</arguments>
                         </configuration>

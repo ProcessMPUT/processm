@@ -1,10 +1,10 @@
 package processm.core.models.petrinet.converters
 
-import processm.core.helpers.mapToSet
 import processm.core.models.causalnet.*
 import processm.core.models.petrinet.PetriNetInstance
 import processm.core.models.petrinet.Transition
 import processm.core.models.petrinet.TransitionExecution
+import processm.helpers.mapToSet
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

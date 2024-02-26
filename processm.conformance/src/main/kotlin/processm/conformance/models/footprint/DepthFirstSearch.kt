@@ -1,12 +1,12 @@
 package processm.conformance.models.footprint
 
 import processm.conformance.models.alignments.cache.Cache
-import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.log.XESInputStream
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
 import processm.core.models.commons.ProcessModelState
 import processm.core.models.footprint.*
+import processm.helpers.map2d.DoublingMap2D
 
 /**
  * A comparator for [Footprint]s of [model] and a log that builds the [modelFootprint] using depth-first-search in

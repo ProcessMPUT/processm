@@ -8,12 +8,12 @@ import processm.conformance.models.antialignments.AntiAligner
 import processm.conformance.models.antialignments.AntiAlignment
 import processm.conformance.models.antialignments.TwoPhaseDFS
 import processm.conformance.models.antialignments.size
-import processm.core.helpers.SameThreadExecutorService
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
 import processm.core.models.commons.ProcessModelState
+import processm.helpers.SameThreadExecutorService
 import kotlin.math.hypot
 
 /**

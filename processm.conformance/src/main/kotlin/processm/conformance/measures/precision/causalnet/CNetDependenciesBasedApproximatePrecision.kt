@@ -1,12 +1,12 @@
 package processm.conformance.measures.precision.causalnet
 
-import processm.core.helpers.Counter
-import processm.core.helpers.mapToSet
-import processm.core.logging.debug
-import processm.core.logging.logger
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
 import processm.core.models.commons.Activity
+import processm.helpers.Counter
+import processm.helpers.mapToSet
+import processm.logging.debug
+import processm.logging.logger
 
 
 /**

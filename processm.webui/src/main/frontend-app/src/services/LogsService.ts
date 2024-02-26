@@ -1,6 +1,7 @@
 import { Log } from "@/models/Xes";
 import BaseService from "./BaseService";
 import DuplicateKeysJsonParser from "@/utils/DuplicateKeysJsonParser";
+import { AxiosRequestConfig } from "axios";
 
 export default class LogsService extends BaseService {
   private readonly jsonParser = new DuplicateKeysJsonParser();
@@ -14,7 +15,7 @@ export default class LogsService extends BaseService {
   }
 
   public async submitUserQuery(dataStoreId: string, query?: string, accept: "application/json" | "application/zip" = "application/json"): Promise<Array<Log>> {
-    let options;
+    let options: AxiosRequestConfig;
     if (accept == "application/json")
       options = {
         responseType: "text",

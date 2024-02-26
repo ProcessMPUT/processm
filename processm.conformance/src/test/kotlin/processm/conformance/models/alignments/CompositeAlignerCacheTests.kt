@@ -3,12 +3,12 @@ package processm.conformance.models.alignments
 import processm.conformance.models.alignments.cache.CachingAlignerFactory
 import processm.conformance.models.alignments.cache.DefaultAlignmentCache
 import processm.conformance.models.alignments.petrinet.DecompositionAligner
-import processm.core.helpers.SameThreadExecutorService
 import processm.core.log.Helpers
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.models.petrinet.converters.toPetriNet
+import processm.helpers.SameThreadExecutorService
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

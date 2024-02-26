@@ -2,10 +2,13 @@ package processm.miners.causalnet.onlineminer
 
 import org.apache.commons.collections4.multiset.HashMultiSet
 import processm.core.log.hierarchical.Log
-import processm.core.logging.debug
-import processm.core.logging.logger
 import processm.core.models.causalnet.*
-import processm.core.models.metadata.*
+import processm.core.models.metadata.BasicMetadata
+import processm.core.models.metadata.DefaultMetadataProvider
+import processm.core.models.metadata.MetadataSubject
+import processm.core.models.metadata.SingleDoubleMetadata
+import processm.logging.debug
+import processm.logging.logger
 import processm.miners.causalnet.CausalNetMiner
 import processm.miners.causalnet.onlineminer.replayer.Replayer
 import processm.miners.causalnet.onlineminer.replayer.SingleReplayer

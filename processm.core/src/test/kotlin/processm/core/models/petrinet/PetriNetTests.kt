@@ -1,7 +1,7 @@
 package processm.core.models.petrinet
 
-import processm.core.helpers.mapToSet
 import processm.core.models.commons.ControlStructureType.*
+import processm.helpers.mapToSet
 import kotlin.test.*
 
 class PetriNetTests {

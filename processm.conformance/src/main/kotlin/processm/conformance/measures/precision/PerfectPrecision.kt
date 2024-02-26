@@ -1,10 +1,10 @@
 package processm.conformance.measures.precision
 
-import processm.core.helpers.Trie
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
 import processm.core.models.commons.ProcessModelState
+import processm.helpers.Trie
 
 
 /**

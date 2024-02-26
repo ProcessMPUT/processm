@@ -1,11 +1,11 @@
 package processm.enhancement.kpi
 
-import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.log.Event
 import processm.core.log.hierarchical.Log
 import processm.enhancement.kpi.timeseries.ARIMA
 import processm.enhancement.kpi.timeseries.ARIMAModel
 import processm.enhancement.kpi.timeseries.identifyARIMAModel
+import processm.helpers.map2d.DoublingMap2D
 
 /**
  * [VerticalARIMAPredictor] assumes that events with the same value of [classifier] form (for each KPI separately) a timeseries

@@ -1,10 +1,10 @@
 package processm.miners.causalnet.heuristicminer.bindingproviders
 
-import processm.core.helpers.allSubsets
-import processm.core.helpers.allSubsetsUpToSize
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Node
+import processm.helpers.allSubsets
+import processm.helpers.allSubsetsUpToSize
 
 abstract class AbstractBindingProvider : BindingProvider {
 

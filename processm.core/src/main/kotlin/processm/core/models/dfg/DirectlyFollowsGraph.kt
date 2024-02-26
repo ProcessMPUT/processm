@@ -1,10 +1,10 @@
 package processm.core.models.dfg
 
 import jakarta.transaction.NotSupportedException
-import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.log.hierarchical.LogInputStream
 import processm.core.models.commons.*
 import processm.core.models.processtree.ProcessTreeActivity
+import processm.helpers.map2d.DoublingMap2D
 import java.util.concurrent.ConcurrentHashMap
 
 /**

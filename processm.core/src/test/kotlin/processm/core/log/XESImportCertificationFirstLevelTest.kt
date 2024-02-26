@@ -2,7 +2,7 @@ package processm.core.log
 
 import io.mockk.every
 import io.mockk.spyk
-import processm.core.helpers.parseISO8601
+import processm.helpers.parseISO8601
 import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals

@@ -1,12 +1,12 @@
 package processm.core.log
 
-import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
 import processm.core.models.metadata.BasicMetadata.LEAD_TIME
 import processm.core.models.metadata.BasicMetadata.SERVICE_TIME
 import processm.core.models.metadata.BasicMetadata.SUSPENSION_TIME
 import processm.core.models.metadata.BasicMetadata.WAITING_TIME
+import processm.helpers.map2d.DoublingMap2D
 import java.time.Duration
 import java.time.Instant
 

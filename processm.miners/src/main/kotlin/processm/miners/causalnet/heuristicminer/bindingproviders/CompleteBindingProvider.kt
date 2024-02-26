@@ -1,9 +1,9 @@
 package processm.miners.causalnet.heuristicminer.bindingproviders
 
-import processm.core.helpers.HierarchicalIterable
-import processm.core.helpers.mapToSet
-import processm.core.logging.logger
 import processm.core.models.causalnet.*
+import processm.helpers.HierarchicalIterable
+import processm.helpers.mapToSet
+import processm.logging.logger
 import processm.miners.causalnet.heuristicminer.bindingproviders.hypothesisselector.ReplayTraceHypothesisSelector
 import processm.miners.causalnet.onlineminer.replayer.ReplayTrace
 

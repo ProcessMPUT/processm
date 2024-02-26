@@ -1,16 +1,17 @@
 package processm.etl.jdbc
 
 import oracle.jdbc.OracleTypes
-import processm.core.helpers.forceToUUID
-import processm.core.helpers.toUUID
 import processm.core.log.*
-import processm.core.log.attribute.*
 import processm.core.log.attribute.Attribute.IDENTITY_ID
-import processm.core.logging.logger
+import processm.core.log.attribute.MutableAttributeMap
+import processm.core.log.attribute.mutableAttributeMapOf
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.toMap
 import processm.etl.helpers.getConnection
+import processm.helpers.forceToUUID
+import processm.helpers.toUUID
+import processm.logging.logger
 import java.sql.ResultSet
 import java.sql.SQLFeatureNotSupportedException
 import java.sql.Types

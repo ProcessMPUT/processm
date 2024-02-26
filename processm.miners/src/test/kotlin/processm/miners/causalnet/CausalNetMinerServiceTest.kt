@@ -8,7 +8,6 @@ import org.junit.jupiter.params.provider.ValueSource
 import processm.core.DBTestHelper
 import processm.core.communication.Producer
 import processm.core.esb.Artemis
-import processm.core.helpers.toUUID
 import processm.core.log.hierarchical.LogInputStream
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.CausalNets
@@ -18,6 +17,7 @@ import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
+import processm.helpers.toUUID
 import processm.miners.causalnet.onlineminer.OnlineMiner
 import processm.miners.processtree.inductiveminer.OnlineInductiveMiner
 import java.lang.Thread.sleep

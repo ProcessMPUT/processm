@@ -9,11 +9,11 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.Route
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.koin.ktor.ext.inject
-import processm.core.helpers.mapToArray
 import processm.core.models.metadata.URN
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.Group
 import processm.dbmodels.models.RoleType
+import processm.helpers.mapToArray
 import processm.services.api.models.OrganizationRole
 import processm.services.logic.ACLService
 import processm.services.logic.ValidationException
@@ -76,7 +76,7 @@ fun Route.ACLApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             val urn = URN(Base64.getDecoder().decode(it.urn).decodeToString())
             principal.ensureCanModify(urn)
-            val entry = call.receiveOrNull<APIAccessControlEntry>()
+            val entry = kotlin.runCatching { call.receiveNullable<APIAccessControlEntry>() }.getOrNull()
                 ?: throw ApiException("The provided ACE data cannot be parsed")
             try {
                 aclService.addEntry(urn, entry.groupId, entry.role.toRoleType())
@@ -94,7 +94,7 @@ fun Route.ACLApi() {
             val urn = URN(Base64.getDecoder().decode(it.urn).decodeToString())
             principal.ensureCanModify(urn)
             val groupId = it.groupId
-            val role = call.receiveOrNull<OrganizationRole>()
+            val role = kotlin.runCatching { call.receiveNullable<OrganizationRole>() }.getOrNull()
                 ?: throw ApiException("The provided ACE data cannot be parsed")
             transactionMain {
                 if (role.toRoleType() > leastRoleToModifyACL && isLastAbleToModify(urn, groupId))

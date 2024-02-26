@@ -2,11 +2,10 @@ package processm.enhancement.kpi
 
 import processm.conformance.rca.ml.LinearRegressionModel
 import processm.conformance.rca.ml.spark.SparkLinearRegression
-import processm.core.helpers.map2d.DoublingMap2D
-import processm.core.helpers.stats.Distribution
 import processm.core.log.Event
 import processm.core.log.hierarchical.Log
-import java.util.HashMap
+import processm.helpers.map2d.DoublingMap2D
+import processm.helpers.stats.Distribution
 
 /**
  * [Predictor] based on a [SparkLinearRegression]. A separate model is built for each pair `(eventKey, attributeKey)`, where

@@ -1,6 +1,6 @@
 package processm.core.esb
 
-import processm.core.logging.logger
+import processm.logging.logger
 import java.net.URL
 import kotlin.test.Test
 import kotlin.test.assertTrue

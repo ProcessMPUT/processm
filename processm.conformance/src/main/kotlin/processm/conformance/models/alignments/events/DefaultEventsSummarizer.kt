@@ -1,8 +1,8 @@
 package processm.conformance.models.alignments.events
 
-import processm.core.helpers.asList
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
+import processm.helpers.asList
 
 /**
  * An [EventsSummarizer] assuming that every piece of information is important

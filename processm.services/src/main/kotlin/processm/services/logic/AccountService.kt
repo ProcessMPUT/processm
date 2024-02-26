@@ -11,13 +11,13 @@ import processm.core.communication.email.EMAIL_ID
 import processm.core.communication.email.EMAIL_TOPIC
 import processm.core.communication.email.Email
 import processm.core.communication.email.fromMessage
-import processm.core.helpers.getPropertyIgnoreCase
-import processm.core.logging.loggedScope
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.afterCommit
 import processm.dbmodels.ieq
 import processm.dbmodels.ilike
 import processm.dbmodels.models.*
+import processm.helpers.getPropertyIgnoreCase
+import processm.logging.loggedScope
 import processm.services.helpers.Patterns
 import java.time.Duration
 import java.time.Instant

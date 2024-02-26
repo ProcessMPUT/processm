@@ -206,7 +206,7 @@ export default class DataStoreService extends BaseService {
   }
 
   public async changeEtlProcessActivationState(dataStoreId: string, etlProcessId: string, isActive: boolean) {
-    const response = await this.dataStoresApi.patchEtlProcess(dataStoreId, etlProcessId, { isActive: isActive });
+    const response = await this.dataStoresApi.patchEtlProcess(dataStoreId, etlProcessId, { isActive: isActive } as AbstractEtlProcess);
 
     return response.status == 204;
   }
@@ -225,7 +225,7 @@ export default class DataStoreService extends BaseService {
     };
     const response = await this.dataStoresApi.createSamplingJdbcEtlProcess(dataStoreId, data);
 
-    return response.data;
+    return response.data as AbstractEtlProcess;
   }
 
   public async getEtlProcessInfo(dataStoreId: string, etlProcessId: string): Promise<EtlProcessInfo> {

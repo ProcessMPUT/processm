@@ -2,9 +2,6 @@ package processm.miners.causalnet.heuristicminer.bindingproviders
 
 import io.mockk.every
 import io.mockk.mockkConstructor
-import processm.core.helpers.Counter
-import processm.core.helpers.allPermutations
-import processm.core.helpers.mapToSet
 import processm.core.log.Helpers.logFromModel
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
@@ -12,6 +9,9 @@ import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.Log
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
+import processm.helpers.Counter
+import processm.helpers.allPermutations
+import processm.helpers.mapToSet
 import processm.miners.causalnet.heuristicminer.OfflineHeuristicMiner
 import processm.miners.causalnet.heuristicminer.dependencygraphproviders.BasicDependencyGraphProvider
 import processm.miners.causalnet.heuristicminer.longdistance.VoidLongDistanceDependencyMiner

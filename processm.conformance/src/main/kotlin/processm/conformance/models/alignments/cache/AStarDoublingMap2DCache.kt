@@ -1,7 +1,7 @@
 package processm.conformance.models.alignments.cache
 
-import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.models.commons.ProcessModelState
+import processm.helpers.map2d.DoublingMap2D
 
 @Deprecated("Unused")
 internal class AStarDoublingMap2DCache : AStarVisitedCache {

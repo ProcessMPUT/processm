@@ -1,12 +1,12 @@
 package processm.conformance.models.alignments
 
-import processm.core.helpers.mapToSet
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.CausalNetState
 import processm.core.models.commons.ProcessModelState
 import processm.core.models.petrinet.Marking
 import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.Place
+import processm.helpers.mapToSet
 import java.util.*
 import kotlin.math.max
 

@@ -12,7 +12,7 @@ import processm.conformance.rca.ml.DecisionTreeClassifier
 import processm.conformance.rca.ml.spark.SparkHelpers.hasMissingValues
 import processm.conformance.rca.ml.spark.SparkHelpers.isLabel
 import processm.conformance.rca.ml.spark.SparkHelpers.toSpark
-import processm.core.helpers.mapToArray
+import processm.helpers.mapToArray
 
 class SparkDecisionTreeClassifier : DecisionTreeClassifier {
     companion object {

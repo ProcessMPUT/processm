@@ -9,8 +9,6 @@ import processm.conformance.PetriNets.sequence
 import processm.conformance.models.alignments.AStar
 import processm.conformance.models.alignments.cache.CachingAlignerFactory
 import processm.conformance.models.alignments.cache.DefaultAlignmentCache
-import processm.core.helpers.allPermutations
-import processm.core.helpers.allSubsets
 import processm.core.log.Helpers
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.CausalNets
@@ -20,6 +18,8 @@ import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.models.petrinet.converters.toPetriNet
 import processm.core.models.petrinet.petrinet
+import processm.helpers.allPermutations
+import processm.helpers.allSubsets
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals
