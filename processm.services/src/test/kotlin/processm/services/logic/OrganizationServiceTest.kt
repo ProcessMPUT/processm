@@ -99,8 +99,8 @@ class OrganizationServiceTest : ServiceTestBase() {
         val public = createOrganization(name = "public", isPrivate = false)
         val private = createOrganization(name = "private", isPrivate = true)
 
-        val response = organizationService.getAll(true)
-        assertEquals(response.size, 1)
+        val response = organizationService.getAll(null).toList()
+        assertEquals(1, response.size)
         assertEquals(public.id, response[0].id)
         assertEquals("public", response[0].name)
         assertEquals(false, response[0].isPrivate)
@@ -108,23 +108,23 @@ class OrganizationServiceTest : ServiceTestBase() {
 
     @Test
     fun `returns all organizations only if public and private organizations requested`(): Unit = withCleanTables(
-        AccessControlList, Groups, Organizations
+        AccessControlList, Groups, Users, Organizations
     ) {
         val public = createOrganization(name = "public", isPrivate = false)
         val private = createOrganization(name = "private", isPrivate = true)
+        val user = createUser(organizationId = private.id.value).id.value
+        attachUserToOrganization(user, private.id.value, RoleType.None)
 
-        val response = organizationService.getAll(false)
-        assertEquals(response.size, 2)
-        assertEquals(public.id, response[0].id)
-        assertEquals("public", response[0].name)
-        assertEquals(false, response[0].isPrivate)
-        assertEquals(private.id, response[1].id)
-        assertEquals("private", response[1].name)
-        assertEquals(true, response[1].isPrivate)
+        val response = organizationService.getAll(user).toList()
+        assertEquals(2, response.size)
+        assertTrue { public in response }
+        assertTrue { private in response }
     }
 
     @Test
-    fun `attach a subOrganization`() {
+    fun `attach a subOrganization`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
         val grandparent = createOrganization(name = "grandparent", isPrivate = false).id.value
         val parent = createOrganization(name = "parent", isPrivate = false).id.value
         val child = createOrganization(name = "child", isPrivate = true).id.value
@@ -136,17 +136,23 @@ class OrganizationServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `organizations hierarchy is acyclic`() {
+    fun `organizations hierarchy is acyclic`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
         val grandparent = createOrganization(name = "grandparent", isPrivate = false).id.value
         val parent = createOrganization(name = "parent", isPrivate = false).id.value
         val child = createOrganization(name = "child", isPrivate = true).id.value
         organizationService.attachSubOrganization(parent, child)
         organizationService.attachSubOrganization(grandparent, parent)
+        // I honestly don't get why this commit seems to be necessary
+        commit()
         assertThrows<ValidationException> { organizationService.attachSubOrganization(child, grandparent) }
     }
 
     @Test
-    fun `cannot reattach`() {
+    fun `cannot reattach`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
         val grandparent = createOrganization(name = "grandparent", isPrivate = false).id.value
         val parent = createOrganization(name = "parent", isPrivate = false).id.value
         val child = createOrganization(name = "child", isPrivate = true).id.value
@@ -156,7 +162,9 @@ class OrganizationServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `move the child to the top`() {
+    fun `move the child to the top`(): Unit = withCleanTables(
+        Groups, Organizations
+    ) {
         val grandparent = createOrganization(name = "grandparent", isPrivate = false).id.value
         val parent = createOrganization(name = "parent", isPrivate = false).id.value
         val child = createOrganization(name = "child", isPrivate = true).id.value
@@ -170,13 +178,17 @@ class OrganizationServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `cannot detach a solitary organization`() {
+    fun `cannot detach a solitary organization`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
         val org = createOrganization(name = "org", isPrivate = false).id.value
         assertThrows<ValidationException> { organizationService.detachSubOrganization(org) }
     }
 
     @Test
-    fun `get subOrganizations`() {
+    fun `get subOrganizations`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
         val grandparent = createOrganization(name = "grandparent", isPrivate = false).id.value
         val parent = createOrganization(name = "parent", isPrivate = false, parentOrganizationId = grandparent).id.value
         val child = createOrganization(name = "child", isPrivate = true, parentOrganizationId = parent).id.value
@@ -195,20 +207,26 @@ class OrganizationServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `delete organization`() {
+    fun `delete organization`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
         val org = createOrganization("test")
         organizationService.remove(org.id.value)
     }
 
     @Test
-    fun `delete sub-organization`() {
+    fun `delete sub-organization`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
         val parent = createOrganization(name = "parent", isPrivate = false).id.value
         val child = createOrganization(name = "child", isPrivate = true, parentOrganizationId = parent).id.value
         organizationService.remove(child)
     }
 
     @Test
-    fun `delete an organization with a child`() {
+    fun `delete an organization with a child`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
         val parent = createOrganization(name = "parent", isPrivate = false).id.value
         val child = createOrganization(name = "child", isPrivate = true, parentOrganizationId = parent).id.value
         organizationService.remove(parent)
@@ -216,7 +234,9 @@ class OrganizationServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `delete an organization with a group and an ACL entry`() {
+    fun `delete an organization with a group and an ACL entry`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
         val org = createOrganization(name = "org", isPrivate = false).id.value
         val group = groupService.create("group", organizationId = org).id.value
         val urn = URN("urn:processm:test/${UUID.randomUUID()}")

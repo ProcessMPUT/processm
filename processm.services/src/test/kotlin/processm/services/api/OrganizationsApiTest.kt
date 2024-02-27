@@ -324,22 +324,27 @@ class OrganizationsApiTest : BaseApiTest() {
 
     @Test
     fun `responds with 200 to the get of organization list`() = withConfiguredTestApplication {
+        val userId = UUID.randomUUID()
         val orgIds = listOf(UUID.randomUUID(), UUID.randomUUID())
         val organizationService = declareMock<OrganizationService> {
-            every { getAll(true) } returns listOf(
-                mockk<Organization> {
-                    every { id } returns EntityID(orgIds[0], Organizations)
-                    every { name } returns "OrgA"
-                    every { isPrivate } returns false
-                    every { parentOrganization } returns null
-                },
-                mockk<Organization> {
-                    every { id } returns EntityID(orgIds[1], Organizations)
-                    every { name } returns "OrgB"
-                    every { isPrivate } returns false
-                    every { parentOrganization } returns null
-                }
-            )
+            every { getAll(userId) } returns
+                    mockk {
+                        every { iterator() } returns
+                                listOf(
+                                    mockk<Organization> {
+                                        every { id } returns EntityID(orgIds[0], Organizations)
+                                        every { name } returns "OrgA"
+                                        every { isPrivate } returns false
+                                        every { parentOrganization } returns null
+                                    },
+                                    mockk<Organization> {
+                                        every { id } returns EntityID(orgIds[1], Organizations)
+                                        every { name } returns "OrgB"
+                                        every { isPrivate } returns false
+                                        every { parentOrganization } returns null
+                                    }
+                                ).iterator()
+                    }
 
             every { get(orgIds[0]) } returns mockk {
                 every { id } returns EntityID(orgIds[0], Organizations)
@@ -348,7 +353,7 @@ class OrganizationsApiTest : BaseApiTest() {
                 every { parentOrganization } returns null
             }
         }
-        withAuthentication(role = OrganizationRole.owner to orgIds[0]) {
+        withAuthentication(userId = userId, role = OrganizationRole.owner to orgIds[0]) {
             with(handleRequest(HttpMethod.Get, "/api/organizations")) {
                 assertEquals(HttpStatusCode.OK, response.status())
 
@@ -357,7 +362,7 @@ class OrganizationsApiTest : BaseApiTest() {
                 assertTrue(orgs.any { org -> orgIds[0] == org.id && "OrgA" == org.name && !org.isPrivate })
                 assertTrue(orgs.any { org -> orgIds[1] == org.id && "OrgB" == org.name && !org.isPrivate })
 
-                verify(exactly = 1) { organizationService.getAll(true) }
+                verify(exactly = 1) { organizationService.getAll(userId) }
             }
         }
     }

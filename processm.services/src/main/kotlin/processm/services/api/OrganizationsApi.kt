@@ -12,6 +12,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
 import processm.core.persistence.connection.transactionMain
+import processm.dbmodels.models.Organization
 import processm.dbmodels.toEntityID
 import processm.helpers.mapToArray
 import processm.services.api.models.OrganizationMember
@@ -26,16 +27,12 @@ fun Route.OrganizationsApi() {
     authenticate {
         // region Organizations
         get<Paths.Organizations> { _ ->
-            val principal = call.authentication.principal<ApiUser>()
+            val principal = call.authentication.principal<ApiUser>()!!
             // This method is available to authorized users only
             // Access control: only non-private organizations are available to every authorized user
             principal.validateNotNull(Reason.Unauthorized)
 
-            val rawOrganizations = organizationService.getAll(true) +
-                    principal!!.organizations.keys.map { organizationService.get(it) }
-            val organizations = rawOrganizations.mapTo(HashSet()) { org ->
-                org.toApi()
-            }
+            val organizations = organizationService.getAll(principal.userId).map(Organization::toApi)
 
             call.respond(organizations)
         }

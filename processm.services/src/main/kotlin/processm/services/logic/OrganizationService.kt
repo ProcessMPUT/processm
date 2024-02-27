@@ -230,13 +230,21 @@ class OrganizationService(
     }
 
     /**
-     * Gets all organizations.
+     * Gets all organizations. All public organizations are returned. If [userId] is not `null`, all private organizations
+     * the user identified by [userId] is a member of, are returned as well.
      */
-    fun getAll(publicOnly: Boolean): List<Organization> = transactionMain {
-        val result = if (!publicOnly) Organization.all()
-        else Organization.find { Organizations.isPrivate eq false }
-        result.forEach { it.load(Organization::parentOrganization) }
-        result.toList()
+    fun getAll(userId: UUID?): SizedIterable<Organization> = transactionMain {
+        val condition = userId?.let { (UsersRolesInOrganizations.userId eq userId) } ?: booleanLiteral(false)
+        Organization.wrapRows(
+            Organizations
+                .join(
+                    UsersRolesInOrganizations,
+                    JoinType.LEFT,
+                    Organizations.id,
+                    UsersRolesInOrganizations.organizationId
+                )
+                .select { (Organizations.isPrivate eq false) or condition }
+        ).onEach { it.load(Organization::parentOrganization) }
     }
 
     private fun Transaction.getOrganization(organizationId: UUID): Organization =
