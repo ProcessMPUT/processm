@@ -202,9 +202,11 @@ class OrganizationService(
     }
 
     /**
-     * Deletes organization with the given [id].
+     * Deletes organization with the given [id]. All child organization become independent,
+     * all ACL entries referring to the groups of the organization are removed, and the groups are removed as well.
      *
-     * @throws ValidationException if there are objects that would lose all their owners once the organization is removed, i.e., if [getSoleOwnershipURNs] returns an non-empty list
+     * @throws ValidationException if there are objects that would lose all their owners once the organization is removed,
+     * i.e., if [getSoleOwnershipURNs] returns a non-empty list.
      */
     fun remove(id: UUID): Unit = transactionMain {
         getSoleOwnershipURNs(id).isEmpty().validate(Reason.UnprocessableResource)

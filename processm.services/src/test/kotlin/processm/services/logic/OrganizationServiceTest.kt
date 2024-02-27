@@ -2,6 +2,7 @@ package processm.services.logic
 
 import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.assertThrows
+import processm.core.models.metadata.URN
 import processm.dbmodels.models.*
 import processm.dbmodels.urn
 import java.util.*
@@ -215,10 +216,16 @@ class OrganizationServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `cannot delete an organization with a group`() {
-        TODO()
+    fun `delete an organization with a group and an ACL entry`() {
+        val org = createOrganization(name = "org", isPrivate = false).id.value
+        val group = groupService.create("group", organizationId = org).id.value
+        val urn = URN("urn:processm:test/${UUID.randomUUID()}")
+        aclService.addEntry(urn, group, RoleType.Reader)
+        organizationService.remove(org)
+        assertThrows<ValidationException> { groupService.getGroup(group) }
+        assertThrows<ValidationException> { organizationService.get(org) }
+        assertTrue { aclService.getEntries(urn).isEmpty() }
     }
-
 
     @Test
     fun `getSoleOwnershipURNs - user's ownership is not organization's ownership`(): Unit =
