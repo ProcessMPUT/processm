@@ -344,5 +344,24 @@ abstract class SeleniumBase(
 
     protected fun closeACLEditor() = click("btn-acl-dialog-close")
 
+    protected fun addNewUserToOrganization(email: String, role: String) {
+        click("btn-add-new-user")
+        with(checkNotNull(wait.until { driver.findElements(By.id("newOrgMemberForm"))?.firstOrNull() })) {
+            with(checkNotNull(wait.until { findElements(By.xpath(".//div[@role='combobox']"))?.firstOrNull() })) {
+                click { this }
+                with(checkNotNull(wait.until { findElements(By.xpath(".//input[@type='text']"))?.firstOrNull() })) {
+                    sendKeys(email)
+                }
+            }
+            openVuetifyDropDown("new-role")
+            selectVuetifyDropDownItem(role)
+        }
+        click("btn-commit-add-member")
+        acknowledgeSnackbar("info")
+        wait.until {
+            driver.findElements(By.xpath("//td[text()[contains(.,'$email')]]")).isNotEmpty()
+        }
+    }
+
     // endregion
 }
