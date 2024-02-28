@@ -210,8 +210,9 @@ class OrganizationService(
      */
     fun remove(id: UUID): Unit = transactionMain {
         getSoleOwnershipURNs(id).isEmpty().validate(Reason.UnprocessableResource)
+        val parentId = Organization.findById(id)?.parentOrganization?.id
         Organizations.update(where = { Organizations.parentOrganizationId eq id }) {
-            it[parentOrganizationId] = null
+            it[parentOrganizationId] = parentId
         }
         AccessControlList.deleteWhere {
             group_id inSubQuery Groups.slice(Groups.id).select { Groups.organizationId eq id }
@@ -243,7 +244,9 @@ class OrganizationService(
                     Organizations.id,
                     UsersRolesInOrganizations.organizationId
                 )
+                .slice(Organizations.columns)
                 .select { (Organizations.isPrivate eq false) or condition }
+                .withDistinct()
         ).onEach { it.load(Organization::parentOrganization) }
     }
 

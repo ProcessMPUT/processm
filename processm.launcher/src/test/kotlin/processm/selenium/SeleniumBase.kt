@@ -24,6 +24,8 @@ import kotlin.test.assertNotNull
 val <T : PostgreSQLContainer<T>?> PostgreSQLContainer<T>.port: Int
     get() = getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT)
 
+fun WebElement.hasCSSClass(clazz: String): Boolean =
+    getAttribute("class").split(Regex("\\s+")).any { it.equals(clazz, true) }
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Tag("e2e")
@@ -67,13 +69,18 @@ abstract class SeleniumBase(
     protected var recorder: VideoRecorder? = null
 
     // region Selenium helpers
-    fun byName(name: String) = driver.findElement(By.name(name))
+    fun byName(name: String) = checkNotNull(wait.until { driver.findElement(By.name(name)) })
 
-    fun byXpath(xpath: String) = driver.findElement(By.xpath(xpath))
+    fun byXpath(xpath: String) = checkNotNull(wait.until { driver.findElement(By.xpath(xpath)) })
 
     fun byText(text: String): WebElement {
         require('\'' !in text) { "Apostrophes are currently not supported" }
-        return driver.findElement(By.xpath("//*[text()='$text']"))
+        return byXpath("//*[text()='$text']")
+    }
+
+    fun byPartialText(text: String): WebElement {
+        require('\'' !in text) { "Apostrophes are currently not supported" }
+        return byXpath("//*[contains(text(),'$text')]")
     }
 
     fun typeIn(name: String, value: String, replace: Boolean = true) = typeIn(byName(name), value, replace)
@@ -310,10 +317,15 @@ abstract class SeleniumBase(
         acknowledgeSnackbar("info")
     }
 
-    protected fun login(email: String, password: String) {
+    protected fun login(email: String, password: String, org: String? = null) {
         typeIn("username", email)
         typeIn("password", password)
         click("btn-login")
+        if (org !== null) {
+            openVuetifyDropDown("combo-organization")
+            selectVuetifyDropDownItem(org)
+            click("btn-select-organization")
+        }
         wait.until { driver.findElements(By.name("btn-profile")).isNotEmpty() }
         with(byName("btn-profile")) {
             wait.until { isDisplayed }

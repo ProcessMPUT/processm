@@ -12,7 +12,7 @@
           <v-icon>group_work</v-icon>
         </v-tab>
 
-        <v-tab href="#organizations">
+        <v-tab href="#organizations" id="tab-organizations">
           {{ $t("users.organizations") }}
           <v-icon>groups3</v-icon>
         </v-tab>

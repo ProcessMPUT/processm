@@ -12,23 +12,23 @@
             </v-alert>
             <v-form id="loginForm" ref="loginForm" v-model="isValidForm" @submit.prevent="authenticate">
               <v-text-field
-                  :label="$t('common.email')"
-                  v-model="username"
-                  name="username"
-                  prepend-icon="person"
-                  type="text"
-                  :rules="[(v) => /.+@.+\..+/.test(v) || $t('login-form.validation.email-format')]"
+                :label="$t('common.email')"
+                v-model="username"
+                name="username"
+                prepend-icon="person"
+                type="text"
+                :rules="[(v) => /.+@.+\..+/.test(v) || $t('login-form.validation.email-format')]"
               ></v-text-field>
 
               <v-text-field
-                  id="password"
-                  :label="$t('login-form.password')"
-                  v-model="password"
-                  name="password"
-                  prepend-icon="lock"
-                  type="password"
-                  :rules="[(v) => !!v || $t('login-form.validation.password-empty')]"
-                  @keypress.enter="authenticate"
+                id="password"
+                :label="$t('login-form.password')"
+                v-model="password"
+                name="password"
+                prepend-icon="lock"
+                type="password"
+                :rules="[(v) => !!v || $t('login-form.validation.password-empty')]"
+                @keypress.enter="authenticate"
               ></v-text-field>
               <v-layout>
                 <v-btn v-if="!config.demoMode" name="btn-register" color="primary" text to="register">
@@ -59,14 +59,15 @@
           </v-toolbar>
           <v-card-text>
             {{ this.$t("users.select-organization") }}:
-            <v-select v-model="selectedOrganizationId" item-value="id" :items="organizations"
-                      item-text="name"></v-select>
+            <v-select v-model="selectedOrganizationId" item-value="id" :items="organizations" item-text="name" name="combo-organization"></v-select>
           </v-card-text>
 
           <v-card-actions>
             <v-spacer></v-spacer>
 
-            <v-btn color="primary" @click="organizationSelected">{{ this.$t("common.submit") }}</v-btn>
+            <v-btn color="primary" @click="organizationSelected" name="btn-select-organization">
+              {{ this.$t("common.submit") }}
+            </v-btn>
           </v-card-actions>
         </v-card>
       </template>
@@ -76,10 +77,10 @@
 
 <script lang="ts">
 import Vue from "vue";
-import {Component, Inject} from "vue-property-decorator";
+import { Component, Inject } from "vue-property-decorator";
 import AccountService from "@/services/AccountService";
 import ConfigService from "@/services/ConfigService";
-import {Config, Organization, UserRoleInOrganization} from "@/openapi";
+import { Config, Organization, UserRoleInOrganization } from "@/openapi";
 import App from "@/App.vue";
 
 @Component
@@ -114,7 +115,7 @@ export default class Login extends Vue {
 
     try {
       await this.accountService.signIn(this.username, this.password);
-      const {language} = await this.accountService.getAccountDetails();
+      const { language } = await this.accountService.getAccountDetails();
       this.setLanguage(language);
       const organizations = await this.accountService.getUserOrganizations();
       this.setCurrentOrganization(organizations);
@@ -131,7 +132,7 @@ export default class Login extends Vue {
   }
 
   private goHome() {
-    this.$router.push({name: "home"});
+    this.$router.push({ name: "home" });
   }
 
   setCurrentOrganization(userOrganizations: UserRoleInOrganization[]) {

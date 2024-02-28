@@ -32,7 +32,9 @@ fun Route.OrganizationsApi() {
             // Access control: only non-private organizations are available to every authorized user
             principal.validateNotNull(Reason.Unauthorized)
 
-            val organizations = organizationService.getAll(principal.userId).map(Organization::toApi)
+            val organizations = transactionMain {
+                organizationService.getAll(principal.userId).map(Organization::toApi)
+            }
 
             call.respond(organizations)
         }

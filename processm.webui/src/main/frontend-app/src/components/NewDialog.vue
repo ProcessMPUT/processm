@@ -10,6 +10,7 @@
             <v-row>
               <v-col>
                 <v-text-field
+                    name="text-new-name"
                     v-model="newName"
                     :label="$t('new-dialog.new-name-placeholder')"
                     :rules="[
@@ -35,6 +36,7 @@
             text
             :disabled="!isNewNameValid"
             @click.stop="save"
+            name="btn-new-dialog-submit"
         >
           {{ $t("common.save") }}
         </v-btn>

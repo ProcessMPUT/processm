@@ -4,7 +4,7 @@
       <v-toolbar flat>
         <v-toolbar-title> {{ $t("users.organizations") }}</v-toolbar-title>
         <v-spacer></v-spacer>
-        <v-btn color="primary" @click.stop="createNewDialog = true">
+        <v-btn color="primary" @click.stop="createNewDialog = true" name="btn-create-organization">
           {{ $t("common.add-new") }}
         </v-btn>
       </v-toolbar>
@@ -14,7 +14,7 @@
         <template v-slot:prepend="{ item }">
           <v-tooltip bottom>
             <template v-slot:activator="{ on, attrs }">
-              <v-btn icon @click.stop="togglePrivate(item)" v-bind="attrs" v-on="on">
+              <v-btn icon @click.stop="togglePrivate(item)" v-bind="attrs" v-on="on" :disabled="!item.canEdit" name="btn-toggle-private">
                 <v-icon v-if="item.organization.isPrivate">lock</v-icon>
                 <v-icon v-else>lock_open</v-icon>
               </v-btn>
@@ -26,7 +26,14 @@
         <template v-slot:append="{ item }">
           <v-tooltip bottom>
             <template v-slot:activator="{ on, attrs }">
-              <v-btn icon v-if="item.organization.parentOrganizationId !== undefined && item.canDetach" @click.stop="detach(item)" v-bind="attrs" v-on="on">
+              <v-btn
+                icon
+                v-if="item.organization.parentOrganizationId !== undefined && item.canDetach"
+                @click.stop="detach(item)"
+                v-bind="attrs"
+                v-on="on"
+                name="btn-detach"
+              >
                 <v-icon>arrow_upward</v-icon>
               </v-btn>
             </template>
@@ -34,7 +41,7 @@
           </v-tooltip>
           <v-tooltip bottom>
             <template v-slot:activator="{ on, attrs }">
-              <v-btn icon @click.stop="beginAttach(item)" v-if="item.canAttach" v-bind="attrs" v-on="on">
+              <v-btn icon @click.stop="beginAttach(item)" v-if="item.canAttach" v-bind="attrs" v-on="on" name="btn-begin-attach">
                 <v-icon>arrow_downward</v-icon>
               </v-btn>
             </template>
@@ -42,7 +49,7 @@
           </v-tooltip>
           <v-tooltip bottom>
             <template v-slot:activator="{ on, attrs }">
-              <v-btn icon v-if="item.canRemove" v-bind="attrs" v-on="on">
+              <v-btn icon v-if="item.canRemove" v-bind="attrs" v-on="on" name="btn-remove">
                 <v-icon small @click="remove(item)">delete_forever</v-icon>
               </v-btn>
             </template>
@@ -50,7 +57,7 @@
           </v-tooltip>
           <v-tooltip bottom>
             <template v-slot:activator="{ on, attrs }">
-              <v-btn icon v-if="item.canAttachTo" v-bind="attrs" v-on="on">
+              <v-btn icon v-if="item.canAttachTo" v-bind="attrs" v-on="on" name="btn-create-suborganization">
                 <v-icon small @click="beginCreate(item)">add</v-icon>
               </v-btn>
             </template>
@@ -58,7 +65,7 @@
           </v-tooltip>
           <v-tooltip bottom>
             <template v-slot:activator="{ on, attrs }">
-              <v-btn icon v-if="item.canLogin && item.organization.id != $sessionStorage.currentOrganization.id" v-bind="attrs" v-on="on">
+              <v-btn icon v-if="item.canLogin && item.organization.id != $sessionStorage.currentOrganization.id" v-bind="attrs" v-on="on" name="btn-login">
                 <v-icon small @click="login(item)">input</v-icon>
               </v-btn>
             </template>
@@ -66,7 +73,11 @@
           </v-tooltip>
         </template>
         <template v-slot:label="{ item }">
-          <v-btn v-if="orgToAttach !== null && item.organization.id != orgToAttach.id && item.canAttachTo" @click.stop="endAttach(item)">
+          <v-btn
+            v-if="orgToAttach !== null && item.organization.id != orgToAttach.id && item.canAttachTo"
+            @click.stop="endAttach(item)"
+            style="text-transform: none"
+          >
             {{ item.organization.name }}
           </v-btn>
           <v-text-field
@@ -225,7 +236,12 @@ export default class OrganizationList extends Vue {
     }
     for (const org of organizations) {
       if (org.id !== undefined && org.parentOrganizationId !== undefined) {
-        items[org.parentOrganizationId].children.push(items[org.id]);
+        if (org.parentOrganizationId in items) {
+          items[org.parentOrganizationId].children.push(items[org.id]);
+        } else {
+          // It may be the case an organization has a parent that is inaccessible for the current user
+          org.parentOrganizationId = undefined;
+        }
       }
     }
     this.organizations = Object.values(items)
@@ -293,13 +309,14 @@ export default class OrganizationList extends Vue {
       }
       await this.organizationService.removeOrganization(this.organizationIdToRemove!);
       this.app.success(this.$t("common.removal.success").toString());
-      await this.load();
     } catch (e) {
-      this.app.error(e);
+      console.error(e);
+      this.app.error(this.$t("common.removal.failure").toString());
     } finally {
       this.organizationIdToRemove = undefined;
       this.objectRemovalDialog = false;
       this.objectsToRemove = [];
+      await this.load();
     }
   }
 
@@ -316,7 +333,7 @@ export default class OrganizationList extends Vue {
       await this.load();
       this.app.success(this.$t("common.creating.success").toString());
     } catch (e) {
-      this.app.error(this.$t("common.creating.error").toString());
+      this.app.error(this.$t("common.creating.failure").toString());
     } finally {
       this.createNewDialog = false;
       this.orgToAttach = null;
@@ -330,7 +347,7 @@ export default class OrganizationList extends Vue {
       await this.load();
       this.app.success(this.$t("common.saving.success").toString());
     } catch (e) {
-      this.app.error(this.$t("common.saving.error").toString());
+      this.app.error(this.$t("common.saving.failure").toString());
     }
   }
 
@@ -342,7 +359,7 @@ export default class OrganizationList extends Vue {
       await this.load();
       this.app.success(this.$t("common.saving.success").toString());
     } catch (e) {
-      this.app.error(this.$t("common.saving.error").toString());
+      this.app.error(this.$t("common.saving.failure").toString());
     }
   }
 

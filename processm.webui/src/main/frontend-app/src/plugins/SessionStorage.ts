@@ -46,9 +46,9 @@ class SessionStorage {
     static set userOrganizations(userOrganizations: UserRoleInOrganization[]) {
         let orgId: string | undefined = undefined;
         if (this.sessionExists && this.session !== undefined && this.userOrganizations?.length > this.currentOrganizationIndex)
-            orgId = this.currentOrganization.id;
+            orgId = this.currentOrganization?.id;
         this.session.set(this.UserOrganizationsKey, userOrganizations);
-        if (orgId !== undefined && this.currentOrganization.id != orgId)
+        if (orgId !== undefined && this.currentOrganization?.id != orgId)
             this.switchToOrganization(orgId);
     }
 
@@ -60,8 +60,8 @@ class SessionStorage {
         this.session.set(this.CurrentOrganizationIndexKey, organizationIndex);
     }
 
-    static get currentOrganization(): Organization {
-        return this.userOrganizations[this.currentOrganizationIndex].organization;
+    static get currentOrganization(): Organization|undefined {
+        return this.userOrganizations[this.currentOrganizationIndex]?.organization;
     }
 
     static set defaultDataStoreId(dataStoreId: string) {
