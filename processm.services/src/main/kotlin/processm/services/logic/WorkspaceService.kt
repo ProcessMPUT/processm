@@ -72,22 +72,19 @@ class WorkspaceService(
             return@transactionMain workspace.id.value
         }
 
-    fun update(userId: UUID, workspace: ApiWorkspace) =
+    fun update(workspaceId: UUID, newName: String) =
         transactionMain {
-            workspace.id.validateNotNull { "Workspace id must not be null." }
-            aclService.checkAccess(userId, Workspaces, workspace.id, RoleType.Writer)
 
-            with(Workspace[workspace.id]) {
-                name = workspace.name
+            with(Workspace[workspaceId]) {
+                name = newName
             }
         }
 
     /**
      * Removes the specified [workspaceId].
      */
-    fun remove(workspaceId: UUID, userId: UUID): Unit = loggedScope { logger ->
+    fun remove(workspaceId: UUID): Unit = loggedScope { logger ->
         transactionMain {
-            aclService.checkAccess(userId, Workspaces, workspaceId, RoleType.Owner)
 
             Workspace.findById(workspaceId)
                 .validateNotNull(Reason.ResourceNotFound) { "Workspace $workspaceId is not found." }
@@ -111,12 +108,10 @@ class WorkspaceService(
     }
 
     /**
-     * Returns the specified component [componentId] from the workspace [workspaceId].
+     * Returns the specified component [componentId].
      */
-    fun getComponent(componentId: UUID, userId: UUID, workspaceId: UUID): WorkspaceComponent =
+    fun getComponent(componentId: UUID): WorkspaceComponent =
         transactionMain {
-            aclService.checkAccess(userId, Workspaces, workspaceId, RoleType.Reader)
-
             WorkspaceComponent.find {
                 (WorkspaceComponents.id eq componentId) and (WorkspaceComponents.deleted eq false)
             }.single()
@@ -125,10 +120,8 @@ class WorkspaceService(
     /**
      * Returns all components in the specified [workspaceId].
      */
-    fun getComponents(workspaceId: UUID, userId: UUID): List<WorkspaceComponent> =
+    fun getComponents(workspaceId: UUID): List<WorkspaceComponent> =
         transactionMain {
-            aclService.checkAccess(userId, Workspaces, workspaceId, RoleType.Reader)
-
             WorkspaceComponent.find {
                 (WorkspaceComponents.workspaceId eq workspaceId) and (WorkspaceComponents.deleted eq false)
             }.toList()
@@ -136,12 +129,10 @@ class WorkspaceService(
 
     /**
      * Adds or updates the specified [workspaceComponentId]. If particular parameter: [name], [componentType], [customizationData] is not specified, then it's not added/updated.
-     * Throws [ValidationException] if the specified [userId] has insufficient permissions.
      */
     fun addOrUpdateComponent(
         workspaceComponentId: UUID,
         workspaceId: UUID,
-        userId: UUID,
         name: String?,
         query: String?,
         dataStore: UUID?,
@@ -151,8 +142,6 @@ class WorkspaceService(
         data: String? = null,
         customProperties: Array<CustomProperty>
     ): Unit = transactionMain {
-        aclService.checkAccess(userId, Workspaces, workspaceId, RoleType.Writer)
-
         val componentAlreadyExists = WorkspaceComponents
             .select { (WorkspaceComponents.id eq workspaceComponentId) and (WorkspaceComponents.deleted eq false) }
             .limit(1)
@@ -194,15 +183,11 @@ class WorkspaceService(
 
     /**
      * Removes the specified [workspaceComponentId].s
-     * Throws [ValidationException] if the specified [userId] has insufficient permissions or [workspaceComponentId] doesn't exist.
+     * Throws [ValidationException] if the specified [workspaceComponentId] doesn't exist.
      */
     fun removeComponent(
         workspaceComponentId: UUID,
-        workspaceId: UUID,
-        userId: UUID,
     ): Unit = transactionMain {
-        aclService.checkAccess(userId, Workspaces, workspaceId, RoleType.Writer)
-
         WorkspaceComponent.findById(workspaceComponentId)
             .validateNotNull(Reason.ResourceNotFound) { "Workspace component is not found." }
             .apply { triggerEvent(producer, DELETE) }
@@ -210,16 +195,12 @@ class WorkspaceService(
     }
 
     /**
-     * Update layout information related to the specified components inside [workspaceId].
-     * Throws [ValidationException] if the specified [userId] has insufficient permissions or a component doesn't exist.
+     * Update layout information related to the specified components.
+     * Throws [ValidationException] if a component doesn't exist.
      */
     fun updateLayout(
-        workspaceId: UUID,
-        userId: UUID,
         layout: Map<UUID, String>
     ): Unit = transactionMain {
-        aclService.checkAccess(userId, Workspaces, workspaceId, RoleType.Reader)
-
         BatchUpdateStatement(WorkspaceComponents).apply {
             layout.forEach { (componentId, layoutData) ->
                 addBatch(EntityID(componentId, WorkspaceComponents))

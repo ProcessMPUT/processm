@@ -19,7 +19,8 @@ export default class WorkspaceService extends BaseService {
   }
 
   public async createWorkspace(name: string): Promise<Workspace> {
-    const response = await this.workspacesApi.createWorkspace(this.currentOrganizationId, {
+    const response = await this.workspacesApi.createWorkspace({
+      organizationId: this.currentOrganizationId,
       name: name
     });
     const workspace = response.data;
@@ -32,19 +33,19 @@ export default class WorkspaceService extends BaseService {
   }
 
   public async updateWorkspace(workspace: Workspace): Promise<boolean> {
-    const response = await this.workspacesApi.updateWorkspace(this.currentOrganizationId, workspace.id, workspace);
+    const response = await this.workspacesApi.updateWorkspace(workspace.id, workspace);
 
     return response.status == 204;
   }
 
   public async removeWorkspace(workspaceId: string): Promise<void> {
-    const response = await this.workspacesApi.deleteWorkspace(this.currentOrganizationId, workspaceId, {
+    const response = await this.workspacesApi.deleteWorkspace(workspaceId, {
       validateStatus: (status: number) => [204, 404].indexOf(status) >= 0
     });
   }
 
   public async getComponent(workspaceId: string, componentId: string): Promise<WorkspaceComponent> {
-    const response = await this.workspacesApi.getWorkspaceComponent(this.currentOrganizationId, workspaceId, componentId);
+    const response = await this.workspacesApi.getWorkspaceComponent(workspaceId, componentId);
     const apiComponent = response.data;
 
     if (apiComponent.id == null) {
@@ -57,12 +58,7 @@ export default class WorkspaceService extends BaseService {
   public async addComponent(workspaceId: string, component: WorkspaceComponent) {
     const payload = Object.assign({}, component) as { data?: any };
     delete payload.data;
-    const response = await this.workspacesApi.addOrUpdateWorkspaceComponent(
-      this.currentOrganizationId,
-      workspaceId,
-      component.id,
-      payload as AbstractComponent
-    );
+    const response = await this.workspacesApi.addOrUpdateWorkspaceComponent(workspaceId, component.id, payload as AbstractComponent);
 
     return response.status == 204;
   }
@@ -70,19 +66,19 @@ export default class WorkspaceService extends BaseService {
   public async updateComponent(workspaceId: string, componentId: string, component: WorkspaceComponent) {
     const payload = Object.assign({}, component) as { data?: any };
     delete payload.data;
-    const response = await this.workspacesApi.addOrUpdateWorkspaceComponent(this.currentOrganizationId, workspaceId, componentId, payload as AbstractComponent);
+    const response = await this.workspacesApi.addOrUpdateWorkspaceComponent(workspaceId, componentId, payload as AbstractComponent);
 
     return response.status == 204;
   }
 
   public async getComponentData(workspaceId: string, componentId: string): Promise<unknown> {
-    const response = await this.workspacesApi.getWorkspaceComponentData(this.currentOrganizationId, workspaceId, componentId);
+    const response = await this.workspacesApi.getWorkspaceComponentData(workspaceId, componentId);
 
     return response.data;
   }
 
   public async getWorkspaceComponents(workspaceId: string) {
-    const response = await this.workspacesApi.getWorkspaceComponents(this.currentOrganizationId, workspaceId);
+    const response = await this.workspacesApi.getWorkspaceComponents(workspaceId);
 
     return response.data.reduce((components: WorkspaceComponent[], apiComponent: AbstractComponent) => {
       if (apiComponent.id != null) {
@@ -94,13 +90,13 @@ export default class WorkspaceService extends BaseService {
   }
 
   public async updateLayout(workspaceId: string, updatedLayoutElements: Record<string, LayoutElement>) {
-    const response = await this.workspacesApi.updateWorkspaceLayout(this.currentOrganizationId, workspaceId, { data: updatedLayoutElements });
+    const response = await this.workspacesApi.updateWorkspaceLayout(workspaceId, { data: updatedLayoutElements });
 
     return response.status == 204;
   }
 
   public async removeComponent(workspaceId: string, componentId: string): Promise<void> {
-    const response = await this.workspacesApi.removeWorkspaceComponent(this.currentOrganizationId, workspaceId, componentId);
+    const response = await this.workspacesApi.removeWorkspaceComponent(workspaceId, componentId);
   }
 
   private get currentOrganizationId() {
@@ -108,7 +104,7 @@ export default class WorkspaceService extends BaseService {
   }
 
   public observeWorkspace(workspaceId: string, callback: (componentId: string) => void) {
-    const observer = new WorkspaceObserver(this.defaultApiPath, this.currentOrganizationId, workspaceId, callback);
+    const observer = new WorkspaceObserver(this.defaultApiPath, workspaceId, callback);
     observer.reauthenticate = async () => {
       await this.prolongExistingSession(undefined);
       return true;

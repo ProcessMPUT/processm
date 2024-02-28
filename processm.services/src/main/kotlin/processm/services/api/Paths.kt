@@ -236,81 +236,74 @@ object Paths {
     class ResetPassword(val token: UUID)
 
     /**
-     * Get, update or remove the specified workspace in the context of the specified organization
+     * Get, update or remove the specified workspace
      *
-     * @param organizationId Organization ID
      * @param workspaceId Workspace ID
      */
-    @Location("/organizations/{organizationId}/workspaces/{workspaceId}")
-    class Workspace(val organizationId: UUID, val workspaceId: UUID)
+    @Location("/workspaces/{workspaceId}")
+    class Workspace(val workspaceId: UUID)
 
     /**
-     * Get or update the specified component in the specified workspace in the context of the specified organization
+     * Get or update the specified component in the specified workspace
      *
-     * @param organizationId Organization ID
      * @param workspaceId Workspace ID
      * @param componentId Component ID
      */
-    @Location("/organizations/{organizationId}/workspaces/{workspaceId}/components/{componentId}")
-    class WorkspaceComponent(val organizationId: UUID, val workspaceId: UUID, val componentId: UUID)
+    @Location("/workspaces/{workspaceId}/components/{componentId}")
+    class WorkspaceComponent(val workspaceId: UUID, val componentId: UUID)
 
     /**
-     * Get data of the specified component in the specified workspace in the context of the specified organization
+     * Get data of the specified component in the specified workspace
      *
-     * @param organizationId Organization ID
      * @param workspaceId Workspace ID
      * @param componentId Component ID
      */
-    @Location("/organizations/{organizationId}/workspaces/{workspaceId}/components/{componentId}/data")
-    class WorkspaceComponentData(val organizationId: UUID, val workspaceId: UUID, val componentId: UUID)
+    @Location("/workspaces/{workspaceId}/components/{componentId}/data")
+    class WorkspaceComponentData(val workspaceId: UUID, val componentId: UUID)
 
     /**
-     * Get all components available to the calling user in the specified workspace in the context of the specified organization
+     * Get all components available to the calling user in the specified workspace
      *
-     * @param organizationId Organization ID
      * @param workspaceId Workspace ID
      */
-    @Location("/organizations/{organizationId}/workspaces/{workspaceId}/components")
-    class WorkspaceComponents(val organizationId: UUID, val workspaceId: UUID)
+    @Location("/workspaces/{workspaceId}/components")
+    class WorkspaceComponents(val workspaceId: UUID)
 
     /**
      * Update size and position of the specified components
      *
-     * @param organizationId Organization ID
      * @param workspaceId Workspace ID
      */
-    @Location("/organizations/{organizationId}/workspaces/{workspaceId}/layout")
-    class WorkspaceLayout(val organizationId: UUID, val workspaceId: UUID)
+    @Location("/workspaces/{workspaceId}/layout")
+    class WorkspaceLayout(val workspaceId: UUID)
 
     /**
-     * Get all workspaces available to the calling user in the context of the specified organization
-     *
-     * @param organizationId Organization ID
+     * Get all workspaces available to the calling user
      */
-    @Location("/organizations/{organizationId}/workspaces")
-    class Workspaces(val organizationId: UUID)
+    @Location("/workspaces")
+    class Workspaces
 
     /**
      * Get the whole ACL for the given URN
      */
-    @Location("/acl/{urn}")
-    class ACL(val urn: String)
+    @Location("/acl/{urn...}")
+    class ACL(val urn: List<String>)
 
     /**
      * Modify/delete the entry related to the given groupId in the ACL for the given URN
      */
-    @Location("/acl/{urn}/ace/{groupId}")
-    class ACE(val urn: String, val groupId: UUID)
+    @Location("/acl/ace/{groupId}/{urn...}")
+    class ACE(val urn: List<String>, val groupId: UUID)
 
     /**
      * List groups that could be plausibly added to the ACL for the given URN by the current user
      */
-    @Location("/acl/{urn}/available-groups")
-    class AvailableGroups(val urn: String)
+    @Location("/acl/available-groups/{urn...}")
+    class AvailableGroups(val urn: List<String>)
 
     /**
      * 204 if the current user can modify the ACL for the given URN, 403 otherwise
      */
-    @Location("/acl/{urn}/can-modify")
-    class CanModifyACL(val urn: String)
+    @Location("/acl/can-modify/{urn...}")
+    class CanModifyACL(val urn: List<String>)
 }

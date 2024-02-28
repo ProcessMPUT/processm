@@ -15,6 +15,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import kotlinx.serialization.encodeToString
 import org.jetbrains.exposed.dao.id.EntityID
+import org.jetbrains.exposed.sql.Table
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -23,18 +24,35 @@ import org.koin.test.mock.MockProvider
 import org.koin.test.mock.declareMock
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.Organizations
+import processm.dbmodels.models.RoleType
 import processm.dbmodels.models.Users
 import processm.services.JsonSerializer
 import processm.services.api.models.AuthenticationResult
 import processm.services.api.models.OrganizationRole
 import processm.services.apiModule
-import processm.services.logic.AccountService
-import processm.services.logic.toDB
+import processm.services.logic.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.stream.Stream
 import kotlin.reflect.KClass
 import kotlin.test.*
+
+class ACLDSL {
+    val entries = ArrayList<Triple<RoleType, Table, UUID>>()
+
+    operator fun RoleType.times(other: Table) = this to other
+    operator fun Pair<RoleType, Table>.times(other: UUID): ACLDSL {
+        entries.add(Triple(this.first, this.second, other))
+        return this@ACLDSL
+    }
+
+    operator fun ACLDSL.plus(acl: ACLDSL) = acl
+}
+
+fun acl(block: ACLDSL.() -> Unit): List<Triple<RoleType, Table, UUID>> = with(ACLDSL()) {
+    block()
+    return entries
+}
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class BaseApiTest : KoinTest {
@@ -105,6 +123,7 @@ abstract class BaseApiTest : KoinTest {
         login: String = "user@example.com",
         password: String = "pass",
         role: Pair<OrganizationRole, UUID>? = OrganizationRole.owner to UUID.randomUUID(),
+        acl: Iterable<Triple<RoleType, Table, UUID>> = emptyList(),
         callback: JwtAuthenticationTrackingEngine.() -> Unit
     ) {
         val accountService = declareMock<AccountService>()
@@ -119,6 +138,25 @@ abstract class BaseApiTest : KoinTest {
                         every { organization.id } returns EntityID(role.second, Organizations)
                         every { this@mockk.role } returns transactionMain { role.first.toDB() }
                     })
+        val aclService = declareMock<ACLService>()
+        val tableSlot = slot<Table>()
+        val uuidSlot = slot<UUID>()
+        val roleSlot = slot<RoleType>()
+        val userIdSlot = slot<UUID>()
+        every {
+            aclService.checkAccess(capture(userIdSlot), capture(tableSlot), capture(uuidSlot), capture(roleSlot))
+        } answers {
+            if (userIdSlot.captured == userId) {
+                for (ace in acl) {
+                    if (ace.second == tableSlot.captured && ace.third == uuidSlot.captured) {
+                        val allowedRoles = RoleType.values().filterTo(HashSet()) { it.ordinal >= ace.first.ordinal }
+                        if (roleSlot.captured in allowedRoles)
+                            return@answers
+                    }
+                }
+            }
+            throw ValidationException(Reason.Forbidden, "Forbidden")
+        }
 
         callback(JwtAuthenticationTrackingEngine(this, login, password))
     }

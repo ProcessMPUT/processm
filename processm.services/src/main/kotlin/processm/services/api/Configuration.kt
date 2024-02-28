@@ -46,6 +46,7 @@ internal fun ApplicationStatusPageConfiguration(): StatusPagesConfig.() -> Unit 
                 Reason.ResourceFormatInvalid -> HttpStatusCode.BadRequest
                 Reason.UnprocessableResource -> HttpStatusCode.UnprocessableEntity
                 Reason.Unauthorized -> HttpStatusCode.Unauthorized
+                Reason.Forbidden -> HttpStatusCode.Forbidden
             }
             logger.trace(cause.message)
             call.respond(responseStatusCode, ErrorMessage(cause.userMessage))

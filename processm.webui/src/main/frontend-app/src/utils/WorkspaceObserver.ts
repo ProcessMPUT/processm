@@ -20,12 +20,13 @@ export class WorkspaceObserver {
 
   private eventSource: EventSourcePolyfill | undefined;
 
+
   /**
    * Call it using async new WorkspaceObserver
    */
-  constructor(apiPath: string, organizationId: string, workspaceId: string, callback: (componentId: string) => void) {
+  constructor(apiPath: string, workspaceId: string, callback: (componentId: string) => void) {
     this.url = WorkspacesApiAxiosParamCreator()
-      .getWorkspace(organizationId, workspaceId)
+      .getWorkspace(workspaceId)
       .then((r) => apiPath + r.url);
     this.callback = callback;
   }

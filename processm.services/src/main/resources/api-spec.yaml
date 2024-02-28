@@ -731,15 +731,7 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/workspaces:
-    parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
+  /workspaces:
     get:
       tags:
         - workspaces
@@ -759,14 +751,14 @@ paths:
     post:
       tags:
         - workspaces
-      summary: Create a new workspace in the context of the specified organization
+      summary: Create a new workspace in the context of the organization specified in the body
       operationId: createWorkspace
       requestBody:
-        description: Workspace details
+        description: New workspace details
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/Workspace'
+              $ref: '#/components/schemas/NewWorkspace'
         required: true
       responses:
         '201':
@@ -779,15 +771,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/workspaces/{workspaceId}:
+  /workspaces/{workspaceId}:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: workspaceId
         in: path
         description: Workspace ID
@@ -848,15 +833,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/workspaces/{workspaceId}/components:
+  /workspaces/{workspaceId}/components:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: workspaceId
         in: path
         description: Workspace ID
@@ -885,15 +863,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/workspaces/{workspaceId}/components/{componentId}:
+  /workspaces/{workspaceId}/components/{componentId}:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: workspaceId
         in: path
         description: Workspace ID
@@ -968,15 +939,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/workspaces/{workspaceId}/components/{componentId}/data:
+  /workspaces/{workspaceId}/components/{componentId}/data:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: workspaceId
         in: path
         description: Workspace ID
@@ -1010,15 +974,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/workspaces/{workspaceId}/layout:
+  /workspaces/{workspaceId}/layout:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: workspaceId
         in: path
         description: Workspace ID
@@ -1580,8 +1537,8 @@ paths:
         required: true
         schema:
           type: string
-          format: base64
     get:
+      operationId: getACL
       tags:
         - acl
       responses:
@@ -1600,6 +1557,7 @@ paths:
       security:
         - bearerAuth: [ ]
     post:
+      operationId: addACE
       requestBody:
         content:
           'application/json':
@@ -1616,7 +1574,7 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /acl/{urn}/available-groups:
+  /acl/available-groups/{urn}:
     parameters:
       - name: urn
         in: path
@@ -1624,8 +1582,8 @@ paths:
         required: true
         schema:
           type: string
-          format: base64
     get:
+      operationId: getAvailableGroups
       tags:
         - acl
       responses:
@@ -1643,7 +1601,7 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /acl/{urn}/can-modify:
+  /acl/can-modify/{urn}:
     parameters:
       - name: urn
         in: path
@@ -1651,8 +1609,8 @@ paths:
         required: true
         schema:
           type: string
-          format: base64
     get:
+      operationId: canModify
       tags:
         - acl
       responses:
@@ -1664,7 +1622,7 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /acl/{urn}/ace/{groupId}:
+  /acl/ace/{groupId}/{urn}:
     parameters:
       - name: urn
         in: path
@@ -1672,7 +1630,6 @@ paths:
         required: true
         schema:
           type: string
-          format: base64
       - name: groupId
         in: path
         description: Group ID
@@ -1681,6 +1638,7 @@ paths:
           type: string
           format: uuid
     put:
+      operationId: updateACE
       requestBody:
         content:
           'application/json':
@@ -1698,6 +1656,7 @@ paths:
       security:
         - bearerAuth: [ ]
     delete:
+      operationId: deleteACE
       tags:
         - acl
       responses:
@@ -1927,6 +1886,15 @@ components:
       properties:
         isValid:
           type: boolean
+    NewWorkspace:
+      type: object
+      required: [ organizationId, name ]
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        name:
+          type: string
     Workspace:
       type: object
       required: [ name ]
