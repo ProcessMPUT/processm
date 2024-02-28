@@ -201,6 +201,7 @@
     "users": "Użytkownicy",
     "user": "Użytkownik",
     "you": "Ty",
+    "unknown-email": "Podany adres e-mail nie odpowiada znanemu użytkownikowi",
     "roles": {
       "owner": "Właściciel",
       "reader": "Czytelnik",

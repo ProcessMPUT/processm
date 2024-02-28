@@ -10,7 +10,7 @@ value class URN(val urn: String) {
             throw IllegalArgumentException()
     }
 
-    constructor(components: List<String>) :
+    constructor(components: Iterable<String>) :
             this(components.joinToString(separator = "/"))
 
     override fun toString(): String = urn
