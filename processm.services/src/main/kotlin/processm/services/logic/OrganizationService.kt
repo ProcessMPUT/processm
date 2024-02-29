@@ -1,9 +1,11 @@
 package processm.services.logic
 
+import org.jetbrains.exposed.dao.load
 import org.jetbrains.exposed.dao.with
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inSubQuery
+import processm.core.models.metadata.URN
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.ieq
 import processm.dbmodels.models.*
@@ -174,16 +176,50 @@ class OrganizationService(
         getOrganization(id).update()
     }
 
+    fun getSoleOwnershipURNs(organizationId: UUID): List<URN> = transactionMain {
+        val owner = RoleType.Owner.role.id
+        val acl1 = AccessControlList.alias("acl1")
+        val g1 = Groups.alias("g1")
+        val acl2 = AccessControlList.alias("acl2")
+        val g2 = Groups.alias("g2")
+        acl1
+            .join(g1, JoinType.INNER, acl1[AccessControlList.group_id], g1[Groups.id])
+            .slice(acl1[AccessControlList.urn.column])
+            .select {
+                (acl1[AccessControlList.role_id] eq owner) and
+                        (g1[Groups.organizationId] eq organizationId) and
+                        notExists(acl2
+                            .join(g2, JoinType.INNER, acl2[AccessControlList.group_id], g2[Groups.id])
+                            .select {
+                                (g2[Groups.organizationId] neq organizationId or g2[Groups.organizationId].isNull()) and
+                                        (acl2[AccessControlList.role_id] eq owner) and
+                                        (acl1[AccessControlList.urn.column] eq acl2[AccessControlList.urn.column])
+                            })
+            }
+            .withDistinct()
+            .map { URN(it[acl1[AccessControlList.urn.column]]) }
+
+    }
+
     /**
-     * Deletes organization with the given [id].
+     * Deletes organization with the given [id]. All child organization become independent,
+     * all ACL entries referring to the groups of the organization are removed, and the groups are removed as well.
+     *
+     * @throws ValidationException if there are objects that would lose all their owners once the organization is removed,
+     * i.e., if [getSoleOwnershipURNs] returns a non-empty list.
      */
     fun remove(id: UUID): Unit = transactionMain {
+        getSoleOwnershipURNs(id).isEmpty().validate(Reason.UnprocessableResource)
+        val parentId = Organization.findById(id)?.parentOrganization?.id
+        Organizations.update(where = { Organizations.parentOrganizationId eq id }) {
+            it[parentOrganizationId] = parentId
+        }
+        AccessControlList.deleteWhere {
+            group_id inSubQuery Groups.slice(Groups.id).select { Groups.organizationId eq id }
+        }
+        Groups.deleteWhere { organizationId eq id }
         Organizations.deleteWhere {
             Organizations.id eq id
-        }
-
-        Groups.deleteWhere {
-            (Groups.organizationId eq id) and (Groups.isImplicit eq true)
         }
     }
 
@@ -195,16 +231,62 @@ class OrganizationService(
     }
 
     /**
-     * Gets all organizations.
+     * Gets all organizations. All public organizations are returned. If [userId] is not `null`, all private organizations
+     * the user identified by [userId] is a member of, are returned as well.
      */
-    fun getAll(publicOnly: Boolean): List<Organization> = transactionMain {
-        val result = if (!publicOnly) Organization.all()
-        else Organization.find { Organizations.isPrivate eq false }
-        result.toList()
+    fun getAll(userId: UUID?): SizedIterable<Organization> = transactionMain {
+        val condition = userId?.let { (UsersRolesInOrganizations.userId eq userId) } ?: booleanLiteral(false)
+        Organization.wrapRows(
+            Organizations
+                .join(
+                    UsersRolesInOrganizations,
+                    JoinType.LEFT,
+                    Organizations.id,
+                    UsersRolesInOrganizations.organizationId
+                )
+                .slice(Organizations.columns)
+                .select { (Organizations.isPrivate eq false) or condition }
+                .withDistinct()
+        ).onEach { it.load(Organization::parentOrganization) }
     }
 
     private fun Transaction.getOrganization(organizationId: UUID): Organization =
         Organization
             .findById(organizationId)
             .validateNotNull(Reason.ResourceNotFound, "The organization $organizationId does not exist.")
+            .load(Organization::parentOrganization)
+
+    fun attachSubOrganization(organizationId: UUID, subOrganizationId: UUID) {
+        transactionMain {
+            organizationId.validateNot(subOrganizationId) { "The organization cannot be attached as its own child." }
+            val organization = Organization.findById(organizationId)
+                .validateNotNull(Reason.ResourceNotFound, "The organization $organizationId does not exist.")
+            val subOrganization = Organization.findById(subOrganizationId)
+                .validateNotNull(Reason.ResourceNotFound, "The organization $subOrganizationId does not exist.")
+            subOrganization.parentOrganization.validateNull { "The organization $subOrganizationId already has a parent organization" }
+            val expr = OrganizationsDescendants.subOrganizationId.count()
+            OrganizationsDescendants
+                .slice(expr)
+                .select {
+                    (OrganizationsDescendants.subOrganizationId eq organizationId) and (OrganizationsDescendants.superOrganizationId eq subOrganizationId)
+                }.firstNotNullOf { row -> row[expr] }
+                .validate(0) { "The organization $organizationId is already a descendant of $subOrganizationId" }
+            subOrganization.parentOrganization = organization
+        }
+    }
+
+    fun detachSubOrganization(organizationId: UUID) {
+        transactionMain {
+            val organization = Organization.findById(organizationId)
+                .validateNotNull(Reason.ResourceNotFound, "The organization $organizationId does not exist.")
+            organization.parentOrganization.validateNotNull { "The organization $organizationId is already a top-level organization" }
+            organization.parentOrganization = null
+        }
+    }
+
+    fun getSubOrganizations(organizationId: UUID): List<Organization> = transactionMain {
+        return@transactionMain Organization.wrapRows(OrganizationsDescendants
+            .join(Organizations, JoinType.INNER, OrganizationsDescendants.subOrganizationId, Organizations.id)
+            .select { OrganizationsDescendants.superOrganizationId eq organizationId }).toList()
+    }
 }

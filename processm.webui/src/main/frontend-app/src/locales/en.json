@@ -182,6 +182,14 @@
     "change-password": "Change password",
     "password-changed": "The password has been changed."
   },
+  "organizations": {
+    "attach": "Attach the organization as a sub-organization",
+    "detach": "Detach the organization from its parent organization",
+    "moved": "Organization moved successfully.",
+    "switch-to-private": "Public organization. Switch to private.",
+    "switch-to-public": "Private organization. Switch to public.",
+    "login": "Login to the organization"
+  },
   "users": {
     "exclude-member": "Exclude from organization",
     "groups": "Groups",
@@ -193,14 +201,19 @@
     "implicit": "Implicit",
     "member-included": "Member included in organization",
     "member-excluded": "Member excluded from organization",
-    "organizations": "Organizations",
+    "no-organization-error": "You are not a member of any organization",
     "organization": "Organization",
+    "organizations": "Organizations",
+    "organization-remove-objects": "Groups of this organization are the sole owner of the following objects. Do you want to remove them to remove the organization?",
     "page-title": "Users",
+    "remove-objects": "This group is the sole owner of the following objects. Do you want to remove them to remove the group?",
     "role": "Role",
+    "select-organization": "Select organization",
     "shared": "Shared",
     "users": "Users",
     "user": "User",
     "you": "You",
+    "unknown-email": "The specified e-mail address does not correspond to a known user",
     "roles": {
       "owner": "Owner",
       "reader": "Reader",
@@ -210,6 +223,13 @@
   },
   "xes-data-table": {
     "logs-removal-confirmation": "Do you want to permanently remove {count} logs?"
+  },
+  "new-dialog": {
+    "dialog-title": "@:common.add-new",
+    "new-name-placeholder": "@:rename-dialog.new-name-placeholder",
+    "validation": {
+      "name-empty": "@:rename-dialog.validation.name-empty"
+    }
   },
   "rename-dialog": {
     "dialog-title": "Rename",
@@ -355,6 +375,10 @@
     "saving": {
       "success": "Successfully saved",
       "failure": "Failed to save"
+    },
+    "creating": {
+      "success": "Successfully created",
+      "failure": "Failed to create"
     },
     "activate": "Activate",
     "deactivate": "Deactivate",

@@ -12,7 +12,7 @@
 
       <v-divider></v-divider>
 
-      <v-list-item :to="{ name: 'home' }" exact color="primary">
+      <v-list-item :to="{ name: 'home' }" exact color="primary" name="goto-home">
         <v-list-item-action>
           <v-icon>dashboard</v-icon>
         </v-list-item-action>

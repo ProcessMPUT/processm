@@ -37,9 +37,12 @@ class WebServicesHostTest {
         for (i in 0..2) {
             host.start()
             var response = client.get(baseURIs).bodyAsText()
-            assertTrue(response.startsWith("<!DOCTYPE html>"))
+            try {
+                assertTrue(response.startsWith("<!DOCTYPE html>"))
+            } finally {
+                host.stop()
+            }
 
-            host.stop()
             assertFails {
                 response = client.get(baseURIs).bodyAsText()
             }

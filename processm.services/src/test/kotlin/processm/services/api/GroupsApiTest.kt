@@ -7,6 +7,7 @@ import org.jetbrains.exposed.sql.SizedCollection
 import org.junit.jupiter.api.TestInstance
 import org.koin.test.mock.declareMock
 import processm.dbmodels.models.*
+import processm.dbmodels.urn
 import processm.services.api.models.ErrorMessage
 import processm.services.api.models.Group
 import processm.services.api.models.OrganizationRole
@@ -285,6 +286,7 @@ class GroupsApiTest : BaseApiTest() {
                 every { id } returns EntityID(organizationId, Organizations)
                 every { name } returns "org1"
                 every { isPrivate } returns false
+                every { parentOrganization } returns null
             }
             every { groupService.getSubgroups(groupId) } returns listOf(
                 mockk {
@@ -351,6 +353,7 @@ class GroupsApiTest : BaseApiTest() {
                     every { id } returns EntityID(orgId, Organizations)
                     every { name } returns "org1"
                     every { isPrivate } returns false
+                    every { parentOrganization } returns null
                 }
                 with(handleRequest(HttpMethod.Get, "/api/organizations/$orgId/groups/$groupId/subgroups")) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
@@ -376,6 +379,7 @@ class GroupsApiTest : BaseApiTest() {
                 every { id } returns EntityID(organizationId, Organizations)
                 every { name } returns "org1"
                 every { isPrivate } returns false
+                every { parentOrganization } returns null
             }
             every { groupService.getGroup(groupId) } returns mockk {
                 every { id } returns EntityID(groupId, Groups)
@@ -410,6 +414,7 @@ class GroupsApiTest : BaseApiTest() {
                     every { id } returns EntityID(orgId, Organizations)
                     every { name } returns "org1"
                     every { isPrivate } returns false
+                    every { parentOrganization } returns null
                 }
                 with(handleRequest(HttpMethod.Get, "/api/organizations/$orgId/groups/$groupId")) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
@@ -435,6 +440,7 @@ class GroupsApiTest : BaseApiTest() {
                 every { id } returns EntityID(organizationId, Organizations)
                 every { name } returns "org1"
                 every { isPrivate } returns false
+                every { parentOrganization } returns null
             }
             every { groupService.getGroup(groupId) } throws ValidationException(
                 Reason.ResourceNotFound,
@@ -670,4 +676,25 @@ class GroupsApiTest : BaseApiTest() {
                 }
             }
         }
+
+    @Test
+    fun `responds with 200 to listing group sole ownership`() = withConfiguredTestApplication {
+        val organizationId = UUID.randomUUID()
+        val groupId = UUID.randomUUID()
+        val e1 = EntityID(UUID.randomUUID(), Workspaces)
+        val e2 = EntityID(UUID.randomUUID(), DataStores)
+        declareMock<GroupService> {
+            every { getSoleOwnershipURNs(groupId) } returns listOf(e1.urn, e2.urn)
+        }
+
+        withAuthentication(role = OrganizationRole.owner to organizationId) {
+            with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId/groups/$groupId/sole-ownership")) {
+                assertEquals(HttpStatusCode.OK, response.status())
+                val objects = response.deserializeContent<Array<ApiEntityID>>()
+                assertEquals(2, objects.size)
+                assertEquals(ApiEntityID(ApiEntityType.workspace, e1.value), objects[0])
+                assertEquals(ApiEntityID(ApiEntityType.dataStore, e2.value), objects[1])
+            }
+        }
+    }
 }

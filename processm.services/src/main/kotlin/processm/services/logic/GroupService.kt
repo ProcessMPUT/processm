@@ -1,9 +1,11 @@
 package processm.services.logic
 
 import org.jetbrains.exposed.dao.id.EntityID
+import org.jetbrains.exposed.dao.load
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import processm.core.models.metadata.URN
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.*
 import processm.logging.loggedScope
@@ -44,6 +46,9 @@ class GroupService {
 
     fun detachUserFromGroup(userId: UUID, groupId: UUID): Unit = loggedScope { logger ->
         transactionMain {
+            val group = Group.findById(groupId).validateNotNull(Reason.ResourceNotFound)
+            group.isShared.validateNot { "Cannot detach a user from a shared group" }
+            group.isImplicit.validateNot { "Cannot detach a user from their implicit group" }
             UsersInGroups.deleteWhere {
                 (UsersInGroups.userId eq userId) and (UsersInGroups.groupId eq groupId)
             }.validate(1, Reason.ResourceNotFound) { "The specified user or group is not found." }
@@ -92,6 +97,7 @@ class GroupService {
      */
     fun getGroup(groupId: UUID): Group = transactionMain {
         Group.findById(groupId).validateNotNull(Reason.ResourceNotFound) { "The specified group does not exist." }
+            .load(Group::members)
     }
 
     /**
@@ -129,12 +135,39 @@ class GroupService {
     }
 
     /**
-     * Deletes a group with [id].
-     * @throws ValidationException if the group does not exist.
+     * Returns a list of [URN]s such that the group identified by the given [groupId] is their sole owner (i.e.,
+     * the only entry in the ACL of that URN with [RoleType.Owner] refers to this group)
+     */
+    fun getSoleOwnershipURNs(groupId: UUID): List<URN> = transactionMain {
+        val owner = RoleType.Owner.role.id
+        val acl1 = AccessControlList.alias("acl1")
+        val acl2 = AccessControlList.alias("acl2")
+        acl1
+            .slice(acl1[AccessControlList.urn.column])
+            .select {
+                (acl1[AccessControlList.role_id] eq owner) and
+                        (acl1[AccessControlList.group_id] eq groupId) and
+                        notExists(acl2.select {
+                            (acl2[AccessControlList.group_id] neq groupId) and
+                                    (acl2[AccessControlList.role_id] eq owner) and
+                                    (acl1[AccessControlList.urn.column] eq acl2[AccessControlList.urn.column])
+                        })
+            }
+            .map { URN(it[acl1[AccessControlList.urn.column]]) }
+    }
+
+    /**
+     * Deletes a group with [id]. Removes all the related ACLs and all the objects that the group was the sole owner.
+     * @throws ValidationException if the group does not exist, is an implicit group or a shared group, or is a sole owner of an object.
      */
     fun remove(id: UUID): Unit = transactionMain {
+        getSoleOwnershipURNs(id).isEmpty()
+            .validate(Reason.UnprocessableResource) { "The group is a sole owner of an object" }
+        AccessControlList.deleteWhere { group_id eq id }
+        UsersInGroups.deleteWhere { groupId eq id }
         Groups.deleteWhere {
-            Groups.id eq id
+            (Groups.id eq id) and (isShared eq false) and (isImplicit eq false)
         }.validate(1, Reason.ResourceNotFound) { "Group is not found." }
     }
 }
+

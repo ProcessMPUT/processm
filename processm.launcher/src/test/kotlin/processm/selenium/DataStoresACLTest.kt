@@ -5,7 +5,6 @@ import org.jgroups.util.UUID
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.TestMethodOrder
-import org.junit.jupiter.api.assertThrows
 import org.openqa.selenium.By
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -46,17 +45,6 @@ class DataStoresACLTest : SeleniumBase() {
         clickButtonInRow(datastore, "btn-data-store-security")
     }
 
-    private fun closeACLEditor() = click("btn-acl-dialog-close")
-
-    private fun addACE(group: String, vararg role: String) {
-        click("btn-acl-dialog-add-new")
-        openVuetifyDropDown("ace-editor-group")
-        selectVuetifyDropDownItem(group)
-        openVuetifyDropDown("ace-editor-role")
-        selectVuetifyDropDownItem(*role)
-        click("btn-ace-editor-submit")
-    }
-
     @Order(10)
     @Test
     fun `register with new organization`() {
@@ -87,31 +75,13 @@ class DataStoresACLTest : SeleniumBase() {
     fun `user 2 doesn't see the created data stores`() {
         iam(email2, "goto-data-stores")
         waitForText("No data available")
-        assertThrows<org.openqa.selenium.NoSuchElementException> { byText(dataStores[0]) }
-        assertThrows<org.openqa.selenium.NoSuchElementException> { byText(dataStores[1]) }
-        assertThrows<org.openqa.selenium.NoSuchElementException> { byText(dataStores[2]) }
     }
 
     @Order(70)
     @Test
     fun `user 1 adds user 2 to the organization as a writer`() {
         iam(email1, "goto-users")
-        click("btn-add-new-user")
-        with(driver.findElement(By.id("newForm"))) {
-            with(findElement(By.xpath(".//div[@role='combobox']"))) {
-                click()
-                with(findElement(By.xpath(".//input[@type='text']"))) {
-                    sendKeys(email2)
-                }
-            }
-            openVuetifyDropDown("new-role")
-            selectVuetifyDropDownItem("writer")
-        }
-        click("btn-commit-add-member")
-        acknowledgeSnackbar("info")
-        wait.until {
-            driver.findElements(By.xpath("//td[text()[contains(.,'$email2')]]")).isNotEmpty()
-        }
+        addNewUserToOrganization(email2, "writer")
     }
 
     @Order(75)

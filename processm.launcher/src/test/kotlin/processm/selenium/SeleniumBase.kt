@@ -19,13 +19,17 @@ import processm.SharedMainDB
 import processm.core.esb.EnterpriseServiceBus
 import processm.core.loadConfiguration
 import processm.core.persistence.Migrator
+import processm.core.persistence.connection.DatabaseChecker
 import java.time.Duration
 import kotlin.random.Random
+import kotlin.test.assertNotNull
 
 
 val <T : PostgreSQLContainer<T>?> PostgreSQLContainer<T>.port: Int
     get() = getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT)
 
+fun WebElement.hasCSSClass(clazz: String): Boolean =
+    getAttribute("class").split(Regex("\\s+")).any { it.equals(clazz, true) }
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Tag("e2e")
@@ -59,26 +63,35 @@ abstract class SeleniumBase(
     protected var recorder: VideoRecorder? = null
 
     // region Selenium helpers
-    fun byName(name: String) = driver.findElement(By.name(name))
+    fun byName(name: String) = checkNotNull(wait.until { driver.findElement(By.name(name)) })
 
-    fun byXpath(xpath: String) = driver.findElement(By.xpath(xpath))
+    fun byXpath(xpath: String) = checkNotNull(wait.until { driver.findElement(By.xpath(xpath)) })
 
     fun byText(text: String): WebElement {
         require('\'' !in text) { "Apostrophes are currently not supported" }
-        return driver.findElement(By.xpath("//*[text()='$text']"))
+        return byXpath("//*[text()='$text']")
     }
 
-    fun typeIn(name: String, value: String, replace: Boolean = true) {
+    fun byPartialText(text: String): WebElement {
+        require('\'' !in text) { "Apostrophes are currently not supported" }
+        return byXpath("//*[contains(text(),'$text')]")
+    }
+
+    fun typeIn(name: String, value: String, replace: Boolean = true) = typeIn(byName(name), value, replace)
+
+    fun typeIn(element: WebElement, value: String, replace: Boolean = true) {
         val n = 10
         repeat(n) { ctr ->
             try {
-                with(byName(name)) {
+                with(element) {
                     wait.until { isDisplayed }
                     wait.until { isEnabled }
-                    if (replace)
+                    if (replace) {
+                        sendKeys(Keys.END)
                         while (getAttribute("value") != "") {
                             sendKeys(Keys.BACK_SPACE);
                         }
+                    }
                     sendKeys(value)
                     recorder?.take()
                 }
@@ -90,6 +103,12 @@ abstract class SeleniumBase(
                     throw e
             }
         }
+    }
+
+    fun click(getter: (WebDriver) -> WebElement?) {
+        val element = wait.until(getter)
+        assertNotNull(element)
+        click(element)
     }
 
     fun click(element: WebElement) {
@@ -133,7 +152,8 @@ abstract class SeleniumBase(
         }
     }
 
-    fun click(by: By) = click(checkNotNull(wait.until { driver.findElements(by).singleOrNull() }))
+    fun click(by: By) =
+        click(checkNotNull(wait.until { driver.findElements(by).singleOrNull { it.isDisplayed && it.isEnabled } }))
 
     fun click(name: String) = click(By.name(name))
 
@@ -160,7 +180,7 @@ abstract class SeleniumBase(
     @Deprecated("This function is inherently brittle, as it (more often than not) relies on a translatable piece of text. Eventually, it should be replaced with something more robust.")
     fun selectVuetifyDropDownItem(vararg text: String) {
         val attributes = text.joinToString(separator = " or ") { "text()='$it'" }
-        click(byXpath("""//div[$attributes]"""))
+        click(By.xpath("""//div[@role='listbox']//div[$attributes]"""))
         recorder?.take()
     }
 
@@ -186,7 +206,7 @@ abstract class SeleniumBase(
     fun clickButtonInRow(cellText: String, buttonName: String) {
         require('\'' !in cellText) { "Apostrophes are not supported" }
         require('\'' !in buttonName) { "Apostrophes are not supported" }
-        click(By.xpath("//td[text()='$cellText']/..//button[@name='$buttonName']"))
+        click(By.xpath("//*[text()='$cellText']/ancestor-or-self::tr//button[@name='$buttonName']"))
     }
 
 
@@ -208,7 +228,7 @@ abstract class SeleniumBase(
             esb = EnterpriseServiceBus()
             loadConfiguration(true)
             System.setProperty(
-                "PROCESSM.CORE.PERSISTENCE.CONNECTION.URL",
+                DatabaseChecker.databaseConnectionURLProperty,
                 SharedMainDB.createNewMainDb()
             )
             Migrator.reloadConfiguration()
@@ -278,10 +298,15 @@ abstract class SeleniumBase(
         acknowledgeSnackbar("info")
     }
 
-    protected fun login(email: String, password: String) {
+    protected fun login(email: String, password: String, org: String? = null) {
         typeIn("username", email)
         typeIn("password", password)
         click("btn-login")
+        if (org !== null) {
+            openVuetifyDropDown("combo-organization")
+            selectVuetifyDropDownItem(org)
+            click("btn-select-organization")
+        }
         wait.until { driver.findElements(By.name("btn-profile")).isNotEmpty() }
         with(byName("btn-profile")) {
             wait.until { isDisplayed }
@@ -296,6 +321,39 @@ abstract class SeleniumBase(
         click("btn-profile")
         click("btn-logout")
         wait.until { byName("btn-login").isDisplayed }
+    }
+
+    /**
+     * Requires the ACL editor to be already open
+     */
+    protected fun addACE(group: String, vararg role: String) {
+        click("btn-acl-dialog-add-new")
+        openVuetifyDropDown("ace-editor-group")
+        selectVuetifyDropDownItem(group)
+        openVuetifyDropDown("ace-editor-role")
+        selectVuetifyDropDownItem(*role)
+        click("btn-ace-editor-submit")
+    }
+
+    protected fun closeACLEditor() = click("btn-acl-dialog-close")
+
+    protected fun addNewUserToOrganization(email: String, role: String) {
+        click("btn-add-new-user")
+        with(checkNotNull(wait.until { driver.findElements(By.id("newOrgMemberForm"))?.firstOrNull() })) {
+            with(checkNotNull(wait.until { findElements(By.xpath(".//div[@role='combobox']"))?.firstOrNull() })) {
+                click { this }
+                with(checkNotNull(wait.until { findElements(By.xpath(".//input[@type='text']"))?.firstOrNull() })) {
+                    sendKeys(email)
+                }
+            }
+            openVuetifyDropDown("new-role")
+            selectVuetifyDropDownItem(role)
+        }
+        click("btn-commit-add-member")
+        acknowledgeSnackbar("info")
+        wait.until {
+            driver.findElements(By.xpath("//td[text()[contains(.,'$email')]]")).isNotEmpty()
+        }
     }
 
     // endregion

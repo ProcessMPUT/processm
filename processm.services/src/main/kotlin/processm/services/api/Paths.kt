@@ -39,6 +39,14 @@ object Paths {
     class GroupMembers(val organizationId: UUID, val groupId: UUID)
 
     /**
+     * Objects the group is a sole owner of
+     *
+     * @param groupId Group ID
+     */
+    @Location("/organizations/{organizationId}/groups/{groupId}/sole-ownership")
+    class GroupSoleOwnership(val organizationId: UUID, val groupId: UUID)
+
+    /**
      * Groups og the current user&#39;s organization
      *
      */
@@ -79,6 +87,12 @@ object Paths {
     @Location("/organizations/{organizationId}")
     class Organization(val organizationId: UUID)
 
+    @Location("/organizations/{organizationId}/suborganizations/{subOrganizationId}")
+    class SubOrganization(val organizationId: UUID, val subOrganizationId: UUID)
+
+    @Location("/organizations/{organizationId}/suborganizations")
+    class SubOrganizations(val organizationId: UUID)
+
     /**
      * Groups associated with the specified organization.
      *
@@ -94,6 +108,14 @@ object Paths {
      */
     @Location("/organizations/{organizationId}/members")
     class OrganizationMembers(val organizationId: UUID)
+
+    /**
+     * Objects the groups of the organization are the sole owners of
+     *
+     * @param organizationId Organization ID
+     */
+    @Location("/organizations/{organizationId}/sole-ownership")
+    class OrganizationSoleOwnership(val organizationId: UUID)
 
     /**
      * List of organizations

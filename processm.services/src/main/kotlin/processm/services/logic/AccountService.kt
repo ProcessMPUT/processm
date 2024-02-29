@@ -4,6 +4,7 @@ import com.kosprov.jargon2.api.Jargon2.*
 import jakarta.mail.Message
 import jakarta.mail.Session
 import jakarta.mail.internet.MimeMessage
+import org.jetbrains.exposed.dao.load
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import processm.core.communication.Producer
@@ -140,7 +141,10 @@ class AccountService(private val groupService: GroupService, private val produce
      * Throws [ValidationException] if the specified [userId] doesn't exist.
      */
     fun getRolesAssignedToUser(userId: UUID): List<UserRoleInOrganization> = transactionMain {
-        getUser(userId).rolesInOrganizations.toList()
+        getUser(userId).rolesInOrganizations.toList().onEach {
+            it.load(UserRoleInOrganization::organization)
+            it.load(UserRoleInOrganization::role)
+        }
     }
 
     /**

@@ -1,11 +1,12 @@
 package processm.services.logic
 
+import org.jetbrains.exposed.dao.id.EntityID
+import org.junit.jupiter.api.assertThrows
+import processm.core.models.metadata.URN
 import processm.dbmodels.models.*
+import processm.dbmodels.urn
 import java.util.*
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class OrganizationServiceTest : ServiceTestBase() {
     @Test
@@ -98,8 +99,8 @@ class OrganizationServiceTest : ServiceTestBase() {
         val public = createOrganization(name = "public", isPrivate = false)
         val private = createOrganization(name = "private", isPrivate = true)
 
-        val response = organizationService.getAll(true)
-        assertEquals(response.size, 1)
+        val response = organizationService.getAll(null).toList()
+        assertEquals(1, response.size)
         assertEquals(public.id, response[0].id)
         assertEquals("public", response[0].name)
         assertEquals(false, response[0].isPrivate)
@@ -107,18 +108,250 @@ class OrganizationServiceTest : ServiceTestBase() {
 
     @Test
     fun `returns all organizations only if public and private organizations requested`(): Unit = withCleanTables(
-        AccessControlList, Groups, Organizations
+        AccessControlList, Groups, Users, Organizations
     ) {
         val public = createOrganization(name = "public", isPrivate = false)
         val private = createOrganization(name = "private", isPrivate = true)
+        val user = createUser(organizationId = private.id.value).id.value
+        attachUserToOrganization(user, private.id.value, RoleType.None)
 
-        val response = organizationService.getAll(false)
-        assertEquals(response.size, 2)
-        assertEquals(public.id, response[0].id)
-        assertEquals("public", response[0].name)
-        assertEquals(false, response[0].isPrivate)
-        assertEquals(private.id, response[1].id)
-        assertEquals("private", response[1].name)
-        assertEquals(true, response[1].isPrivate)
+        val response = organizationService.getAll(user).toList()
+        assertEquals(2, response.size)
+        assertTrue { public in response }
+        assertTrue { private in response }
     }
+
+    @Test
+    fun `attach a subOrganization`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
+        val grandparent = createOrganization(name = "grandparent", isPrivate = false).id.value
+        val parent = createOrganization(name = "parent", isPrivate = false).id.value
+        val child = createOrganization(name = "child", isPrivate = true).id.value
+        organizationService.attachSubOrganization(parent, child)
+        organizationService.attachSubOrganization(grandparent, parent)
+        assertNull(organizationService.get(grandparent).parentOrganization)
+        assertEquals(grandparent, organizationService.get(parent).parentOrganization?.id?.value)
+        assertEquals(parent, organizationService.get(child).parentOrganization?.id?.value)
+    }
+
+    @Test
+    fun `organizations hierarchy is acyclic`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
+        val grandparent = createOrganization(name = "grandparent", isPrivate = false).id.value
+        val parent = createOrganization(name = "parent", isPrivate = false).id.value
+        val child = createOrganization(name = "child", isPrivate = true).id.value
+        organizationService.attachSubOrganization(parent, child)
+        organizationService.attachSubOrganization(grandparent, parent)
+        // I honestly don't get why this commit seems to be necessary
+        commit()
+        assertThrows<ValidationException> { organizationService.attachSubOrganization(child, grandparent) }
+    }
+
+    @Test
+    fun `cannot reattach`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
+        val grandparent = createOrganization(name = "grandparent", isPrivate = false).id.value
+        val parent = createOrganization(name = "parent", isPrivate = false).id.value
+        val child = createOrganization(name = "child", isPrivate = true).id.value
+        organizationService.attachSubOrganization(grandparent, parent)
+        organizationService.attachSubOrganization(parent, child)
+        assertThrows<ValidationException> { organizationService.attachSubOrganization(grandparent, child) }
+    }
+
+    @Test
+    fun `move the child to the top`(): Unit = withCleanTables(
+        Groups, Organizations
+    ) {
+        val grandparent = createOrganization(name = "grandparent", isPrivate = false).id.value
+        val parent = createOrganization(name = "parent", isPrivate = false).id.value
+        val child = createOrganization(name = "child", isPrivate = true).id.value
+        organizationService.attachSubOrganization(parent, child)
+        organizationService.detachSubOrganization(child)
+        assertNull(organizationService.get(child).parentOrganization)
+        organizationService.attachSubOrganization(grandparent, parent)
+        organizationService.attachSubOrganization(child, grandparent)
+        assertEquals(child, organizationService.get(grandparent).parentOrganization?.id?.value)
+        assertEquals(grandparent, organizationService.get(parent).parentOrganization?.id?.value)
+    }
+
+    @Test
+    fun `cannot detach a solitary organization`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
+        val org = createOrganization(name = "org", isPrivate = false).id.value
+        assertThrows<ValidationException> { organizationService.detachSubOrganization(org) }
+    }
+
+    @Test
+    fun `get subOrganizations`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
+        val grandparent = createOrganization(name = "grandparent", isPrivate = false).id.value
+        val parent = createOrganization(name = "parent", isPrivate = false, parentOrganizationId = grandparent).id.value
+        val child = createOrganization(name = "child", isPrivate = true, parentOrganizationId = parent).id.value
+        with(organizationService.getSubOrganizations(grandparent)) {
+            assertEquals(2, size)
+            assertTrue { any { it.id.value == parent } }
+            assertTrue { any { it.id.value == child } }
+        }
+        with(organizationService.getSubOrganizations(parent)) {
+            assertEquals(1, size)
+            assertTrue { any { it.id.value == child } }
+        }
+        with(organizationService.getSubOrganizations(child)) {
+            assertTrue { isEmpty() }
+        }
+    }
+
+    @Test
+    fun `delete organization`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
+        val org = createOrganization("test")
+        organizationService.remove(org.id.value)
+    }
+
+    @Test
+    fun `delete sub-organization`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
+        val parent = createOrganization(name = "parent", isPrivate = false).id.value
+        val child = createOrganization(name = "child", isPrivate = true, parentOrganizationId = parent).id.value
+        organizationService.remove(child)
+    }
+
+    @Test
+    fun `delete an organization with a child`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
+        val parent = createOrganization(name = "parent", isPrivate = false).id.value
+        val child = createOrganization(name = "child", isPrivate = true, parentOrganizationId = parent).id.value
+        organizationService.remove(parent)
+        assertNull(organizationService.get(child).parentOrganization)
+    }
+
+    @Test
+    fun `delete an organization with a group and an ACL entry`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
+        val org = createOrganization(name = "org", isPrivate = false).id.value
+        val group = groupService.create("group", organizationId = org).id.value
+        val urn = URN("urn:processm:test/${UUID.randomUUID()}")
+        aclService.addEntry(urn, group, RoleType.Reader)
+        organizationService.remove(org)
+        assertThrows<ValidationException> { groupService.getGroup(group) }
+        assertThrows<ValidationException> { organizationService.get(org) }
+        assertTrue { aclService.getEntries(urn).isEmpty() }
+    }
+
+    @Test
+    fun `getSoleOwnershipURNs - user's ownership is not organization's ownership`(): Unit =
+        withCleanTables(AccessControlList, Groups, UsersInGroups, Workspaces) {
+            val org = createOrganization()
+            val user = createUser(organizationId = org.id.value)
+            EntityID(createWorkspace("W1", user.id.value, org.id.value), Workspaces).urn
+            assertTrue { organizationService.getSoleOwnershipURNs(org.id.value).isEmpty() }
+        }
+
+    @Test
+    fun `getSoleOwnershipURNs - ownership shared between user and shared group`(): Unit =
+        withCleanTables(AccessControlList, Groups, UsersInGroups, Workspaces) {
+            val org = createOrganization()
+            val user = createUser(organizationId = org.id.value)
+            val w1 = EntityID(createWorkspace("W1", user.id.value, org.id.value), Workspaces).urn
+            aclService.updateEntry(w1, org.sharedGroup.id.value, RoleType.Owner)
+            assertTrue { organizationService.getSoleOwnershipURNs(org.id.value).isEmpty() }
+        }
+
+    @Test
+    fun `getSoleOwnershipURNs - shared group is the sole owner`(): Unit =
+        withCleanTables(AccessControlList, Groups, UsersInGroups, Workspaces) {
+            val org = createOrganization()
+            val user = createUser(organizationId = org.id.value)
+            val w1 = EntityID(createWorkspace("W1", user.id.value, org.id.value), Workspaces).urn
+            val w2 = EntityID(createWorkspace("W2", user.id.value, org.id.value), Workspaces).urn
+            aclService.updateEntry(w1, org.sharedGroup.id.value, RoleType.Owner)
+            aclService.removeEntry(w1, user.privateGroup.id.value)
+            with(organizationService.getSoleOwnershipURNs(org.id.value)) {
+                assertEquals(1, size)
+                assertTrue { w1 in this }
+                assertTrue { w2 !in this }
+            }
+        }
+
+    @Test
+    fun `getSoleOwnershipURNs - two groups from the same organization`(): Unit =
+        withCleanTables(AccessControlList, Groups, UsersInGroups, Workspaces) {
+            val org = createOrganization().id.value
+            val user = createUser(organizationId = org)
+            val group1 = createGroup(organizationId = org).value
+            val group2 = createGroup(organizationId = org).value
+            val w1 = EntityID(createWorkspace("W1", user.id.value, org), Workspaces).urn
+            val w2 = EntityID(createWorkspace("W2", user.id.value, org), Workspaces).urn
+            aclService.removeEntries(w1)
+            aclService.removeEntries(w2)
+            aclService.addEntry(w1, group1, RoleType.Owner)
+            aclService.addEntry(w1, group2, RoleType.Owner)
+            aclService.addEntry(w2, group2, RoleType.Owner)
+            with(organizationService.getSoleOwnershipURNs(org)) {
+                assertEquals(2, size)
+                assertTrue { w1 in this }
+                assertTrue { w2 in this }
+            }
+        }
+
+    @Test
+    fun `getSoleOwnershipURNs - two groups from different organizations`(): Unit =
+        withCleanTables(AccessControlList, Groups, UsersInGroups, Workspaces) {
+            val org1 = createOrganization().id.value
+            val org2 = createOrganization().id.value
+            val user = createUser(organizationId = org1)
+            val group1 = createGroup(organizationId = org1).value
+            val group2 = createGroup(organizationId = org2).value
+            val w1 = EntityID(createWorkspace("W1", user.id.value, org1), Workspaces).urn
+            val w2 = EntityID(createWorkspace("W2", user.id.value, org1), Workspaces).urn
+            aclService.removeEntries(w1)
+            aclService.removeEntries(w2)
+            aclService.addEntry(w1, group1, RoleType.Owner)
+            aclService.addEntry(w1, group2, RoleType.Owner)
+            aclService.addEntry(w2, group2, RoleType.Owner)
+            assertTrue { organizationService.getSoleOwnershipURNs(org1).isEmpty() }
+            with(organizationService.getSoleOwnershipURNs(org2)) {
+                assertEquals(1, size)
+                assertTrue { w1 !in this }
+                assertTrue { w2 in this }
+            }
+        }
+
+    @Test
+    fun `getSoleOwnershipURNs - two groups from different organizations both can read both`(): Unit =
+        withCleanTables(AccessControlList, Groups, UsersInGroups, Workspaces) {
+            val org1 = createOrganization().id.value
+            val org2 = createOrganization().id.value
+            val user = createUser(organizationId = org1)
+            val group1 = createGroup(organizationId = org1).value
+            val group2 = createGroup(organizationId = org2).value
+            val w1 = EntityID(createWorkspace("W1", user.id.value, org1), Workspaces).urn
+            val w2 = EntityID(createWorkspace("W2", user.id.value, org1), Workspaces).urn
+            aclService.removeEntries(w1)
+            aclService.removeEntries(w2)
+            aclService.addEntry(w1, group1, RoleType.Owner)
+            aclService.addEntry(w2, group1, RoleType.Reader)
+            aclService.addEntry(w1, group2, RoleType.Reader)
+            aclService.addEntry(w2, group2, RoleType.Owner)
+            with(organizationService.getSoleOwnershipURNs(org1)) {
+                assertEquals(1, size)
+                assertTrue { w1 in this }
+                assertTrue { w2 !in this }
+            }
+            with(organizationService.getSoleOwnershipURNs(org2)) {
+                assertEquals(1, size)
+                assertTrue { w1 !in this }
+                assertTrue { w2 in this }
+            }
+        }
+
 }

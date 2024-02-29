@@ -12,6 +12,8 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
 import processm.core.persistence.connection.transactionMain
+import processm.dbmodels.models.Organization
+import processm.dbmodels.toEntityID
 import processm.helpers.mapToArray
 import processm.services.api.models.OrganizationMember
 import processm.services.api.models.OrganizationRole
@@ -25,20 +27,13 @@ fun Route.OrganizationsApi() {
     authenticate {
         // region Organizations
         get<Paths.Organizations> { _ ->
-            val principal = call.authentication.principal<ApiUser>()
+            val principal = call.authentication.principal<ApiUser>()!!
             // This method is available to authorized users only
             // Access control: only non-private organizations are available to every authorized user
             principal.validateNotNull(Reason.Unauthorized)
 
-            val rawOrganizations = organizationService.getAll(true) +
-                    principal!!.organizations.keys.map { organizationService.get(it) }
-            val organizations = rawOrganizations.mapTo(HashSet()) { org ->
-                assert(!org.isPrivate)
-                ApiOrganization(
-                    id = org.id.value,
-                    name = org.name,
-                    isPrivate = org.isPrivate
-                )
+            val organizations = transactionMain {
+                organizationService.getAll(principal.userId).map(Organization::toApi)
             }
 
             call.respond(organizations)
@@ -52,9 +47,9 @@ fun Route.OrganizationsApi() {
                 name = newOrganization.name,
                 isPrivate = newOrganization.isPrivate,
                 ownerUserId = principal.userId
-            )
+            ).toApi()
 
-            call.respondCreated(Paths.Organization(newOrg.id.value))
+            call.respond(HttpStatusCode.Created, newOrg)
         }
 
         get<Paths.Organization> { path ->
@@ -89,6 +84,46 @@ fun Route.OrganizationsApi() {
 
             call.respond(HttpStatusCode.NoContent)
         }
+
+        get<Paths.SubOrganizations> { path ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(path.organizationId, OrganizationRole.reader)
+            val organizations = organizationService.getSubOrganizations(path.organizationId)
+            call.respond(organizations.map { it.toApi() })
+        }
+
+        post<Paths.SubOrganization> { path ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(path.organizationId, OrganizationRole.writer)
+            principal.ensureUserBelongsToOrganization(path.subOrganizationId, OrganizationRole.owner)
+
+            organizationService.attachSubOrganization(path.organizationId, path.subOrganizationId)
+
+            call.respond(HttpStatusCode.NoContent)
+        }
+
+        delete<Paths.SubOrganization> { path ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            // One of the two permissions is sufficient - hence the try-catch
+            try {
+                principal.ensureUserBelongsToOrganization(path.organizationId, OrganizationRole.writer)
+            } catch (e: ApiException) {
+                principal.ensureUserBelongsToOrganization(path.subOrganizationId, OrganizationRole.owner)
+            }
+
+            transactionMain {
+
+                organizationService.get(path.subOrganizationId).parentOrganization?.id?.value?.validate(
+                    path.organizationId,
+                    message = "The organization ${path.subOrganizationId} is not a direct sub-organization of the organization ${path.organizationId}"
+                )
+
+                organizationService.detachSubOrganization(path.subOrganizationId)
+            }
+
+            call.respond(HttpStatusCode.NoContent)
+        }
+
         // end region
 
         // region Organization members
@@ -159,6 +194,23 @@ fun Route.OrganizationsApi() {
 
             call.respond(HttpStatusCode.OK, organizationGroups)
         }
+        // endregion
+
+        // region Objects
+
+        get<Paths.OrganizationSoleOwnership> { path ->
+            val principal = call.authentication.principal<ApiUser>()!!
+
+            principal.ensureUserBelongsToOrganization(path.organizationId)
+
+            val objects = transactionMain {
+                organizationService.getSoleOwnershipURNs(path.organizationId).mapToArray {
+                    it.toEntityID().toApi()
+                }
+            }
+            call.respond(objects)
+        }
+
         // endregion
     }
 }

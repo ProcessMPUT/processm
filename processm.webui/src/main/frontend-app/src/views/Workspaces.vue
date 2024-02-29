@@ -16,7 +16,7 @@
       >
         <v-menu top offset-y>
           <template #activator="{ on }">
-            <v-btn tile color="primary lighten-1" v-on="on">
+            <v-btn tile color="primary lighten-1" v-on="on" name="btn-workspace-hamburger">
               <v-icon>more_vert</v-icon>
             </v-btn>
           </template>
@@ -40,7 +40,7 @@
               >
               <v-list-item-title>{{ $t("common.rename") }}</v-list-item-title>
             </v-list-item>
-            <v-list-item @click.stop="aclDialogDisplayed = true">
+            <v-list-item @click.stop="aclDialogDisplayed = true" name="btn-workspace-security">
               <v-list-item-icon>
                 <v-icon>security</v-icon>
               </v-list-item-icon>
@@ -48,10 +48,10 @@
             </v-list-item>
           </v-list>
         </v-menu>
-        <v-tab v-for="workspace in workspaces" :key="workspace.index">{{
+        <v-tab v-for="workspace in workspaces" :key="workspace.index" :id="`workspace-tab-${workspace.id}`" >{{
           workspace.name
         }}</v-tab>
-        <v-btn tile color="primary lighten-1" @click="createWorkspace">
+        <v-btn tile color="primary lighten-1" @click="createWorkspace" name="btn-create-workspace">
           <v-icon>add_box</v-icon>
         </v-btn>
       </v-tabs>
