@@ -14,6 +14,7 @@ const val DATASTORE = "datastore"
 const val TYPE = "type"
 const val ACTIVATE = "activate"
 const val DEACTIVATE = "deactivate"
+const val TRIGGER = "trigger"
 const val ID = "id"
 
 object ETLConfigurations : UUIDTable("etl_configurations") {

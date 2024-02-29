@@ -15,7 +15,7 @@ private val jmsConnFactory = jmsContext.getTopicConnectionFactory()
 /**
  * Publishes in the [JDBC_ETL_TOPIC] JMS queue the changes made to this object.
  */
-fun ETLConfiguration.notifyUsers() {
+fun ETLConfiguration.notifyUsers(type: String? = null) {
     var jmsConnection: TopicConnection? = null
     var jmsSession: TopicSession? = null
     var jmsPublisher: TopicPublisher? = null
@@ -28,7 +28,7 @@ fun ETLConfiguration.notifyUsers() {
         message.setString(DATASTORE, this.db.name)
         message.setString(
             TYPE,
-            if (deleted || !enabled || (batch && lastEventExternalId !== null)) DEACTIVATE else ACTIVATE
+            type ?: (if (deleted || !enabled || (batch && lastEventExternalId !== null)) DEACTIVATE else ACTIVATE)
         )
         message.setString(ID, id.toString())
         jmsPublisher.publish(message)

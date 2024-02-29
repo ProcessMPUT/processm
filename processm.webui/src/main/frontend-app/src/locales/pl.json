@@ -86,7 +86,8 @@
     },
     "jdbc-etl-process": {
       "title": "Dodaj ręczny proces ETL",
-      "description": "Ręcznie zdefiniuj zapytanie, które zwraca istotne zdarzenia w formie wierszy wyniku"
+      "description": "Ręcznie zdefiniuj zapytanie, które zwraca istotne zdarzenia w formie wierszy wyniku",
+      "trigger": "Wykonaj proces jednorazowo w najwcześniejszym możliwym momencie."
     },
     "upload-xes-file": {
       "title": "Załaduj dziennik zdarzeń XES",
