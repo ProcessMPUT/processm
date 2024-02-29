@@ -1,6 +1,6 @@
 package processm.core.models.causalnet
 
-import processm.core.helpers.mapToSet
+import processm.helpers.mapToSet
 
 /**
  * Constructs a Causal Net using a Domain Specific Language (DSL) defined by [CausalNetDSL].

@@ -4,8 +4,8 @@ import processm.conformance.rca.Feature
 import processm.conformance.rca.Label
 import processm.conformance.rca.PropositionalSparseDataset
 import processm.conformance.rca.ml.DecisionTreeModel
-import processm.core.helpers.mapToSet
 import processm.core.log.Helpers.assertDoubleEquals
+import processm.helpers.mapToSet
 import java.time.Instant
 import kotlin.test.*
 

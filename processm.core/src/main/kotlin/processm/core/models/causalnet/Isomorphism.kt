@@ -1,8 +1,7 @@
 package processm.core.models.causalnet
 
-import processm.core.helpers.mapToSet
+import processm.helpers.mapToSet
 import java.util.*
-import kotlin.collections.ArrayList
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set

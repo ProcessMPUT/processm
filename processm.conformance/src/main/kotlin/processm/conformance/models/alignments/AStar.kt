@@ -2,8 +2,6 @@ package processm.conformance.models.alignments
 
 import processm.conformance.models.DeviationType
 import processm.conformance.models.alignments.cache.Cache
-import processm.core.helpers.asCollection
-import processm.core.helpers.ternarylogic.Ternary
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.CausalNet
@@ -12,6 +10,8 @@ import processm.core.models.commons.ProcessModel
 import processm.core.models.commons.ProcessModelInstance
 import processm.core.models.commons.ProcessModelState
 import processm.core.models.petrinet.PetriNet
+import processm.helpers.asCollection
+import processm.helpers.ternarylogic.Ternary
 import java.util.*
 
 

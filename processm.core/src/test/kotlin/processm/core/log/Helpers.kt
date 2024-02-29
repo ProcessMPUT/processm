@@ -1,15 +1,15 @@
 package processm.core.log
 
-import processm.core.helpers.identityMap
-import processm.core.log.attribute.*
 import processm.core.log.attribute.Attribute.CONCEPT_INSTANCE
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
+import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.commons.Activity
 import processm.core.verifiers.CausalNetVerifier
+import processm.helpers.identityMap
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.test.assertEquals

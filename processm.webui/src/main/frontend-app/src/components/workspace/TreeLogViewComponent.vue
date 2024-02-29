@@ -49,7 +49,8 @@ import { ComponentMode } from "./WorkspaceComponent.vue";
 import LogsService from "@/services/LogsService";
 import { waitForRepaint } from "@/utils/waitForRepaint";
 import App from "@/App.vue";
-import XesDataTable from "@/components/XesDataTable.vue";
+
+const XesDataTable = () => import("@/components/XesDataTable.vue");
 
 @Component({ components: { XesDataTable } })
 export default class TreeLogViewComponent extends Vue {

@@ -1,15 +1,15 @@
 package processm.miners.causalnet.heuristicminer
 
-import processm.core.helpers.mapToSet
 import processm.core.log.hierarchical.Log
-import processm.core.logging.logger
-import processm.core.logging.trace
 import processm.core.models.causalnet.*
 import processm.core.models.metadata.BasicMetadata
 import processm.core.models.metadata.DefaultMetadataProvider
 import processm.core.models.metadata.MetadataSubject
 import processm.core.models.metadata.SingleDoubleMetadata
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
+import processm.helpers.mapToSet
+import processm.logging.logger
+import processm.logging.trace
 import processm.miners.causalnet.CausalNetMiner
 import processm.miners.causalnet.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.causalnet.heuristicminer.bindingproviders.BindingProvider

@@ -11,7 +11,7 @@ import io.ktor.server.plugins.hsts.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.util.logging.*
-import processm.core.logging.loggedScope
+import processm.logging.loggedScope
 import processm.services.api.models.ErrorMessage
 import processm.services.logic.Reason
 import processm.services.logic.ValidationException
@@ -46,6 +46,7 @@ internal fun ApplicationStatusPageConfiguration(): StatusPagesConfig.() -> Unit 
                 Reason.ResourceFormatInvalid -> HttpStatusCode.BadRequest
                 Reason.UnprocessableResource -> HttpStatusCode.UnprocessableEntity
                 Reason.Unauthorized -> HttpStatusCode.Unauthorized
+                Reason.Forbidden -> HttpStatusCode.Forbidden
             }
             logger.trace(cause.message)
             call.respond(responseStatusCode, ErrorMessage(cause.userMessage))

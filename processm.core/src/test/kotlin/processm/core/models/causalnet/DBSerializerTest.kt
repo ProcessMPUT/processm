@@ -1,11 +1,11 @@
 package processm.core.models.causalnet
 
 import processm.core.DBTestHelper.dbName
-import processm.core.helpers.mapToSet
 import processm.core.models.metadata.BasicMetadata
 import processm.core.models.metadata.DefaultMetadataProvider
 import processm.core.models.metadata.SingleDoubleMetadata
 import processm.core.persistence.connection.DBCache
+import processm.helpers.mapToSet
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

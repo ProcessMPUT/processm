@@ -1,6 +1,6 @@
 package processm.enhancement.kpi
 
-import processm.core.helpers.stats.Distribution
+import processm.helpers.stats.Distribution
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals

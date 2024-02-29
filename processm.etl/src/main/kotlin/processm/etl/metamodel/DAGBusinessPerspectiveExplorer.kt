@@ -8,10 +8,10 @@ import org.jgrapht.alg.cycle.SzwarcfiterLauerSimpleCycles
 import org.jgrapht.graph.AbstractBaseGraph
 import org.jgrapht.graph.AsSubgraph
 import org.jgrapht.graph.DefaultDirectedGraph
-import processm.core.helpers.mapToSet
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.DataModel
 import processm.dbmodels.models.Relationship
+import processm.helpers.mapToSet
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.pow

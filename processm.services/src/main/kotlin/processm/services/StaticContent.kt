@@ -3,7 +3,7 @@ package processm.services
 import io.ktor.server.application.*
 import io.ktor.server.http.content.*
 import io.ktor.server.routing.*
-import processm.core.logging.loggedScope
+import processm.logging.loggedScope
 import java.io.File
 
 fun Application.staticContentModule() {

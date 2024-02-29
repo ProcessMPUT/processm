@@ -1,7 +1,7 @@
 package processm.core.verifiers.causalnet
 
-import processm.core.helpers.mapToSet
 import processm.core.models.causalnet.*
+import processm.helpers.mapToSet
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

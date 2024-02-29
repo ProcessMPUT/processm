@@ -17,7 +17,7 @@ import org.openqa.selenium.support.ui.WebDriverWait
 import org.testcontainers.containers.PostgreSQLContainer
 import processm.SharedMainDB
 import processm.core.esb.EnterpriseServiceBus
-import processm.core.helpers.loadConfiguration
+import processm.core.loadConfiguration
 import processm.core.persistence.Migrator
 import java.time.Duration
 import kotlin.random.Random

@@ -24,6 +24,17 @@ module.exports = {
   },
 
   configureWebpack: {
-    devtool: "source-map",
+    cache: { type: "filesystem" },
+    // https://webpack.js.org/configuration/devtool/
+    devtool: process.env.NODE_ENV === "development" ? "source-map" : undefined,
+    parallelism: 128,
+    performance: {
+      hints: "warning",
+    },
+    resolve: {
+      fallback: {
+        stream: require.resolve("stream-browserify"),
+      },
+    },
   },
 };

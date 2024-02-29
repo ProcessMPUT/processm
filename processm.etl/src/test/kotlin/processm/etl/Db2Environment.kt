@@ -6,10 +6,10 @@ import org.testcontainers.ext.ScriptUtils
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.shaded.org.apache.commons.io.IOUtils
 import org.testcontainers.utility.DockerImageName
-import processm.core.logging.logger
 import processm.dbmodels.models.DataConnector
 import processm.etl.DBMSEnvironment.Companion.TEST_DATABASES_PATH
 import processm.etl.Db2Environment.Companion.groupInserts
+import processm.logging.logger
 import java.nio.charset.StandardCharsets
 import java.util.*
 

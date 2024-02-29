@@ -93,30 +93,10 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val org = organizationService.create("Org1", false)
         val workspaceId = workspaceService.create("Workspace1", user.id.value, org.id.value)
 
-        workspaceService.remove(workspaceId, user.id.value)
+        workspaceService.remove(workspaceId)
 
         val workspaces = workspaceService.getUserWorkspaces(user.id.value)
         assertEquals(0, workspaces.size)
-    }
-
-    @Test
-    fun `user workspace removal fails if user has insufficient permissions`(): Unit = withCleanTables(
-        AccessControlList, UsersInGroups, Users, Groups, Organizations,
-        WorkspaceComponents, Workspaces
-    ) {
-        val user = createUser()
-        val organizationId = createOrganization().id.value
-        val workspaceId = createWorkspace("Workspace1", user.id.value, organizationId)
-        val workspaceId2 = createWorkspace("Workspace2", user.id.value, organizationId)
-        aclService.updateEntry(Workspaces, workspaceId2, user.privateGroup.id.value, RoleType.Reader)
-
-        val exception =
-            assertFailsWith<ValidationException>("The specified workspace does not exist or the user has insufficient permissions to it") {
-                workspaceService.remove(workspaceId2, user.id.value)
-            }
-        assertEquals(Reason.Unauthorized, exception.reason)
-        assertTrue { Workspaces.select { Workspaces.id eq workspaceId }.any() }
-        assertTrue { Workspaces.select { Workspaces.id eq workspaceId2 }.any() }
     }
 
     @Test
@@ -130,9 +110,9 @@ class WorkspaceServiceTest : ServiceTestBase() {
 
         val exception =
             assertFailsWith<ValidationException>("The specified workspace does not exist or the user has insufficient permissions to it") {
-                workspaceService.remove(UUID.randomUUID(), UUID.randomUUID())
+                workspaceService.remove(UUID.randomUUID())
             }
-        assertEquals(Reason.Unauthorized, exception.reason)
+        assertEquals(Reason.ResourceNotFound, exception.reason)
         assertTrue { Workspaces.select { Workspaces.id eq workspaceId }.any() }
     }
 
@@ -150,7 +130,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val componentId2 = createWorkspaceComponent("Component2", workspaceId2, componentType = ComponentTypeDto.Kpi)
         val componentId3 = createWorkspaceComponent("Component3", workspaceId1, componentType = ComponentTypeDto.Kpi)
 
-        val workspaceComponents = workspaceService.getComponents(workspaceId1, user.id.value)
+        val workspaceComponents = workspaceService.getComponents(workspaceId1)
 
         assertEquals(2, workspaceComponents.size)
         assertTrue { workspaceComponents.any { it.id.value == componentId1.value } }
@@ -176,7 +156,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
             data = componentId.toString()
         )
 
-        val workspaceComponents = workspaceService.getComponents(workspaceId, user.id.value)
+        val workspaceComponents = workspaceService.getComponents(workspaceId)
 
         assertEquals(2, workspaceComponents.size)
         assertTrue { workspaceComponents.any { it.id.value == componentWithExistingId.value } }
@@ -202,7 +182,6 @@ class WorkspaceServiceTest : ServiceTestBase() {
         workspaceService.addOrUpdateComponent(
             componentId.value,
             workspaceId,
-            user.id.value,
             newComponentName,
             newDataQuery,
             newDataStore,
@@ -246,7 +225,6 @@ class WorkspaceServiceTest : ServiceTestBase() {
         workspaceService.addOrUpdateComponent(
             componentId.value,
             workspaceId,
-            userId,
             name = null,
             query = null,
             dataStore = null,
@@ -264,45 +242,6 @@ class WorkspaceServiceTest : ServiceTestBase() {
                         (WorkspaceComponents.customizationData eq oldComponentCustomizationData)
             }.any()
         }
-    }
-
-    @Test
-    fun `workspace component field update fails if user has insufficient permissions`(): Unit = withCleanTables(
-        AccessControlList, UsersInGroups, Users, Groups, Organizations,
-        WorkspaceComponents, Workspaces
-    ) {
-        val oldComponentName = "oldName"
-        val oldComponentType = ComponentTypeDto.Kpi
-        val oldComponentCustomizationData = """{"data":"new"}"""
-        val oldDataQuery = "query"
-        val organizationId = createOrganization().id.value
-        val user = createUser()
-        val user2 = createUser(userEmail = "user2@example.com")
-        val workspaceId = createWorkspace("Workspace1", user.id.value, organizationId)
-        aclService.addEntry(Workspaces, workspaceId, user2.privateGroup.id.value, RoleType.Reader)
-        val componentId = createWorkspaceComponent(
-            oldComponentName,
-            workspaceId,
-            query = oldDataQuery,
-            componentType = oldComponentType,
-            customizationData = oldComponentCustomizationData
-        )
-
-        val exception =
-            assertFailsWith<ValidationException>("The specified workspace component does not exist or the user has insufficient permissions to it") {
-                workspaceService.addOrUpdateComponent(
-                    componentId.value,
-                    workspaceId,
-                    user2.id.value,
-                    name = null,
-                    query = null,
-                    dataStore = null,
-                    componentType = null,
-                    customizationData = null,
-                    customProperties = emptyArray()
-                )
-            }
-        assertEquals(Reason.Unauthorized, exception.reason)
     }
 
     @Test
@@ -324,7 +263,6 @@ class WorkspaceServiceTest : ServiceTestBase() {
         workspaceService.addOrUpdateComponent(
             componentId,
             workspaceId,
-            userId,
             name = componentName,
             query = dataQuery,
             dataStore = dataStore,
@@ -355,41 +293,12 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val componentId = createWorkspaceComponent(workspaceId = workspaceId)
         every { producer.produce(any(), any()) } just runs
 
-        workspaceService.removeComponent(
-            componentId.value,
-            workspaceId,
-            userId
-        )
+        workspaceService.removeComponent(componentId.value)
 
         assertTrue {
             WorkspaceComponent.find {
                 WorkspaceComponents.id eq componentId
             }.all { it.deleted }
-        }
-    }
-
-    @Test
-    fun `component removal fails if user has insufficient permissions`(): Unit = withCleanTables(
-        AccessControlList, UsersInGroups, Users, Groups, Organizations,
-        WorkspaceComponents, Workspaces
-    ) {
-        val organizationId = createOrganization().id.value
-        val user = createUser()
-        val user2 = createUser(userEmail = "user2@example.com")
-        val workspaceId = createWorkspace("Workspace1", user.id.value, organizationId)
-        aclService.addEntry(Workspaces, workspaceId, user2.privateGroup.id.value, RoleType.Reader)
-        val componentId = createWorkspaceComponent(workspaceId = workspaceId)
-
-        val exception =
-            assertFailsWith<ValidationException>("The specified workspace component does not exist or the user has insufficient permissions to it") {
-                workspaceService.removeComponent(componentId.value, workspaceId, user2.id.value)
-            }
-
-        assertEquals(Reason.Unauthorized, exception.reason)
-        assertTrue {
-            WorkspaceComponents.select {
-                WorkspaceComponents.id eq componentId
-            }.any()
         }
     }
 
@@ -404,9 +313,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
 
         val exception =
             assertFailsWith<ValidationException>("The specified workspace component does not exist or the user has insufficient permissions to it") {
-                workspaceService.removeComponent(
-                    UUID.randomUUID(), workspaceId, userId
-                )
+                workspaceService.removeComponent(UUID.randomUUID())
             }
 
         assertEquals(Reason.ResourceNotFound, exception.reason)

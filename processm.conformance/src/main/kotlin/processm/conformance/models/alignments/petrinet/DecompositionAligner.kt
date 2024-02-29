@@ -4,14 +4,14 @@ import processm.conformance.models.DeviationType
 import processm.conformance.models.alignments.*
 import processm.conformance.models.alignments.cache.CachingAlignerFactory
 import processm.conformance.models.alignments.cache.DefaultAlignmentCache
-import processm.core.helpers.*
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
-import processm.core.logging.debug
-import processm.core.logging.logger
-import processm.core.logging.trace
 import processm.core.models.commons.Activity
 import processm.core.models.petrinet.*
+import processm.helpers.*
+import processm.logging.debug
+import processm.logging.logger
+import processm.logging.trace
 import java.util.concurrent.*
 
 /**

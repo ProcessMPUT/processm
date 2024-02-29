@@ -1,10 +1,10 @@
 package processm.core.models.bpmn
 
-import processm.core.helpers.allSubsets
 import processm.core.models.bpmn.jaxb.TBoundaryEvent
 import processm.core.models.bpmn.jaxb.TEndEvent
 import processm.core.models.bpmn.jaxb.TEvent
 import processm.core.models.bpmn.jaxb.TFlowNode
+import processm.helpers.allSubsets
 
 /**
  * A wrapper for [TEvent]. Only its base class is public.

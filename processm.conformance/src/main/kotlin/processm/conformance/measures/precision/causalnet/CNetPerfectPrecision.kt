@@ -1,11 +1,11 @@
 package processm.conformance.measures.precision.causalnet
 
-import processm.core.helpers.Trie
-import processm.core.logging.debug
-import processm.core.logging.logger
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.commons.Activity
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
+import processm.helpers.Trie
+import processm.logging.debug
+import processm.logging.logger
 
 /**
  * An exact implementation of precision for [CausalNet]s, possibly computationally very expensive

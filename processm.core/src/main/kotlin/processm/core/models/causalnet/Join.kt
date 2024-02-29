@@ -1,6 +1,6 @@
 package processm.core.models.causalnet
 
-import processm.core.helpers.mapToSet
+import processm.helpers.mapToSet
 
 /**
  * A binding between dependencies incoming into a node in a causal net.

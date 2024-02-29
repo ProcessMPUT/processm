@@ -7,7 +7,6 @@ import org.junit.jupiter.api.*
 import processm.core.DBTestHelper
 import processm.core.log.*
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
-import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
@@ -16,6 +15,7 @@ import processm.dbmodels.etl.jdbc.ETLConfigurations
 import processm.dbmodels.models.EtlProcessMetadata
 import processm.etl.DBMSEnvironment
 import processm.etl.MSSQLEnvironment
+import processm.logging.logger
 import java.sql.Date
 import java.sql.Timestamp
 import java.time.Instant

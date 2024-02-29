@@ -24,7 +24,7 @@
     <dependencies>
         <dependency>
             <groupId>${project.parent.groupId}</groupId>
-            <artifactId>core</artifactId>
+            <artifactId>helpers</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
@@ -167,6 +167,12 @@
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+        </dependency>
+
     </dependencies>
 
     <build>

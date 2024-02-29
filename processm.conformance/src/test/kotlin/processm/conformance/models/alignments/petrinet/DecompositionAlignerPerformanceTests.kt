@@ -10,12 +10,9 @@ import processm.conformance.PetriNets.fig73
 import processm.conformance.PetriNets.parallelFlowers
 import processm.conformance.models.alignments.AStar
 import processm.conformance.models.alignments.CompositeAligner
-import processm.core.helpers.allPermutations
-import processm.core.helpers.allSubsets
 import processm.core.log.Helpers
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
-import processm.core.logging.logger
 import processm.core.models.causalnet.CausalNets
 import processm.core.models.causalnet.CausalNets.fig312
 import processm.core.models.causalnet.CausalNets.fig316
@@ -24,6 +21,9 @@ import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.converters.toPetriNet
+import processm.helpers.allPermutations
+import processm.helpers.allSubsets
+import processm.logging.logger
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random

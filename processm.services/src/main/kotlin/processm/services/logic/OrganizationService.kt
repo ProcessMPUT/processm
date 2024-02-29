@@ -4,11 +4,11 @@ import org.jetbrains.exposed.dao.with
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inSubQuery
-import processm.core.logging.debug
-import processm.core.logging.loggedScope
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.ieq
 import processm.dbmodels.models.*
+import processm.logging.debug
+import processm.logging.loggedScope
 import java.util.*
 
 class OrganizationService(

@@ -12,7 +12,6 @@ import org.junit.jupiter.api.TestInstance
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
-import processm.core.helpers.mapToSet
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.persistence.Migrator
 import processm.core.querylanguage.Query
@@ -25,6 +24,7 @@ import processm.etl.metamodel.AutomaticEtlProcessExecutor
 import processm.etl.metamodel.DAGBusinessPerspectiveDefinition
 import processm.etl.metamodel.LogGeneratingDatabaseChangeApplier
 import processm.etl.metamodel.buildMetaModel
+import processm.helpers.mapToSet
 import java.io.File
 import java.net.URI
 import java.nio.file.Files

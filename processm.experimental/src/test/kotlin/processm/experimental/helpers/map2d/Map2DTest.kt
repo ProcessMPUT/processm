@@ -2,8 +2,11 @@ package processm.experimental.helpers.map2d
 
 import com.google.common.collect.HashBasedTable
 import com.google.common.collect.TreeBasedTable
-import processm.core.helpers.map2d.Map2D
-import kotlin.test.*
+import processm.helpers.map2d.Map2D
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 
 interface Map2DTest<T : Map2D<Int, Int, Int>> {
 

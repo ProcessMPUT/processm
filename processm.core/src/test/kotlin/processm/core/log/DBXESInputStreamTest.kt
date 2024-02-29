@@ -3,7 +3,6 @@ package processm.core.log
 import org.junit.jupiter.api.Tag
 import processm.core.DBTestHelper
 import processm.core.DBTestHelper.dbName
-import processm.core.helpers.parseISO8601
 import processm.core.log.attribute.Attribute.IDENTITY_ID
 import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
 import processm.core.log.attribute.Attribute.ORG_GROUP
@@ -13,6 +12,7 @@ import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.log.hierarchical.toFlatSequence
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
+import processm.helpers.parseISO8601
 import java.io.File
 import java.util.*
 import kotlin.test.*

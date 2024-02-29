@@ -1,8 +1,8 @@
 package processm.core.log
 
 import processm.core.DBTestHelper.dbName
-import processm.core.helpers.hierarchicalCompare
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
+import processm.core.log.hierarchical.hierarchicalCompare
 import processm.core.log.hierarchical.toFlatSequence
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query

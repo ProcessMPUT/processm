@@ -193,7 +193,7 @@ paths:
               $ref: '#/components/schemas/PasswordChange'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
@@ -731,15 +731,7 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/workspaces:
-    parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
+  /workspaces:
     get:
       tags:
         - workspaces
@@ -759,14 +751,14 @@ paths:
     post:
       tags:
         - workspaces
-      summary: Create a new workspace in the context of the specified organization
+      summary: Create a new workspace in the context of the organization specified in the body
       operationId: createWorkspace
       requestBody:
-        description: Workspace details
+        description: New workspace details
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/Workspace'
+              $ref: '#/components/schemas/NewWorkspace'
         required: true
       responses:
         '201':
@@ -779,15 +771,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/workspaces/{workspaceId}:
+  /workspaces/{workspaceId}:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: workspaceId
         in: path
         description: Workspace ID
@@ -848,15 +833,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/workspaces/{workspaceId}/components:
+  /workspaces/{workspaceId}/components:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: workspaceId
         in: path
         description: Workspace ID
@@ -885,15 +863,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/workspaces/{workspaceId}/components/{componentId}:
+  /workspaces/{workspaceId}/components/{componentId}:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: workspaceId
         in: path
         description: Workspace ID
@@ -968,15 +939,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/workspaces/{workspaceId}/components/{componentId}/data:
+  /workspaces/{workspaceId}/components/{componentId}/data:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: workspaceId
         in: path
         description: Workspace ID
@@ -1010,15 +974,8 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /organizations/{organizationId}/workspaces/{workspaceId}/layout:
+  /workspaces/{workspaceId}/layout:
     parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: workspaceId
         in: path
         description: Workspace ID
@@ -1483,7 +1440,6 @@ paths:
           format: uuid
     get:
       tags:
-        - dataStores
         - logs
       summary: Query logs stored in the specified data store
       operationId: submitLogsQuery
@@ -1521,7 +1477,6 @@ paths:
         - bearerAuth: [ ]
     post:
       tags:
-        - dataStores
         - logs
       summary: Upload new log file to the specified data store
       operationId: uploadLogFile
@@ -1582,8 +1537,8 @@ paths:
         required: true
         schema:
           type: string
-          format: base64
     get:
+      operationId: getACL
       tags:
         - acl
       responses:
@@ -1602,6 +1557,7 @@ paths:
       security:
         - bearerAuth: [ ]
     post:
+      operationId: addACE
       requestBody:
         content:
           'application/json':
@@ -1618,7 +1574,7 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /acl/{urn}/available-groups:
+  /acl/available-groups/{urn}:
     parameters:
       - name: urn
         in: path
@@ -1626,8 +1582,8 @@ paths:
         required: true
         schema:
           type: string
-          format: base64
     get:
+      operationId: getAvailableGroups
       tags:
         - acl
       responses:
@@ -1645,7 +1601,7 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /acl/{urn}/can-modify:
+  /acl/can-modify/{urn}:
     parameters:
       - name: urn
         in: path
@@ -1653,8 +1609,8 @@ paths:
         required: true
         schema:
           type: string
-          format: base64
     get:
+      operationId: canModify
       tags:
         - acl
       responses:
@@ -1666,7 +1622,7 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /acl/{urn}/ace/{groupId}:
+  /acl/ace/{groupId}/{urn}:
     parameters:
       - name: urn
         in: path
@@ -1674,7 +1630,6 @@ paths:
         required: true
         schema:
           type: string
-          format: base64
       - name: groupId
         in: path
         description: Group ID
@@ -1683,6 +1638,7 @@ paths:
           type: string
           format: uuid
     put:
+      operationId: updateACE
       requestBody:
         content:
           'application/json':
@@ -1700,6 +1656,7 @@ paths:
       security:
         - bearerAuth: [ ]
     delete:
+      operationId: deleteACE
       tags:
         - acl
       responses:
@@ -1929,6 +1886,15 @@ components:
       properties:
         isValid:
           type: boolean
+    NewWorkspace:
+      type: object
+      required: [ organizationId, name ]
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        name:
+          type: string
     Workspace:
       type: object
       required: [ name ]
@@ -1975,22 +1941,28 @@ components:
       properties:
         x:
           type: number
+          format: double
         y:
           type: number
+          format: double
         width:
           type: number
+          format: double
         height:
           type: number
+          format: double
     LayoutCollectionMessageBody:
       type: object
       required: [ data ]
       properties:
         data:
           type: object
+          readOnly: true
           additionalProperties:
             $ref: '#/components/schemas/LayoutElement'
     AbstractComponent:
       oneOf:
+        - $ref: '#/components/schemas/Component'
         - $ref: '#/components/schemas/KpiComponent'
         - $ref: '#/components/schemas/AlignerKpiComponent'
         - $ref: '#/components/schemas/CausalNetComponent'
@@ -2003,11 +1975,15 @@ components:
           alignerKpi: '#/components/schemas/AlignerKpiComponent'
           causalNet: '#/components/schemas/CausalNetComponent'
           petriNet: '#/components/schemas/PetriNetComponent'
+          directlyFollowsGraph: '#/components/schemas/DirectlyFollowsGraphComponent'
           bpmn: '#/components/schemas/BPMNComponent'
+          flatLogView: '#/components/schemas/Component'
+          treeLogView: '#/components/schemas/Component'
       type: object
       properties:
         data:
           type: object
+          readOnly: true
     CustomProperty:
       required: [ id, name ]
       properties:
@@ -2069,8 +2045,6 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/KpiComponentData'
-            customizationData:
-              type: object
     AlignerKpiComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -2079,6 +2053,7 @@ components:
             report:
               $ref: '#/components/schemas/AlignerKpiReport'
     AlignerKpiReport:
+      required: [ logKPI, traceKPI, eventKPI, alignments ]
       properties:
         logKPI:
           type: object
@@ -2094,6 +2069,10 @@ components:
             type: object
             additionalProperties:
               $ref: '#/components/schemas/Distribution'
+        alignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Alignment'
     Distribution:
       properties:
         min:
@@ -2124,8 +2103,6 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/AlignerKpiComponentData'
-            customizationData:
-              type: object
     CausalNetComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -2165,7 +2142,11 @@ components:
                   support:
                     type: number
                     format: double
-    ProcessModelCustomizationData:
+            alignments:
+              type: array
+              items:
+                $ref: '#/components/schemas/Alignment'
+    CustomizationData:
       type: object
       properties:
         layout:
@@ -2178,8 +2159,10 @@ components:
                 type: string
               x:
                 type: number
+                format: double
               y:
                 type: number
+                format: double
     CausalNetComponent:
       allOf:
         - $ref: '#/components/schemas/Component'
@@ -2188,7 +2171,7 @@ components:
             data:
               $ref: '#/components/schemas/CausalNetComponentData'
             customizationData:
-              $ref: '#/components/schemas/ProcessModelCustomizationData'
+              $ref: '#/components/schemas/CustomizationData'
     PetriNetComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -2239,7 +2222,7 @@ components:
             data:
               $ref: '#/components/schemas/PetriNetComponentData'
             customizationData:
-              $ref: '#/components/schemas/ProcessModelCustomizationData'
+              $ref: '#/components/schemas/CustomizationData'
     BPMNComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -2254,8 +2237,13 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/BPMNComponentData'
-            customizationData:
-              type: object
+    DirectlyFollowsGraphComponent:
+      allOf:
+        - $ref: '#/components/schemas/Component'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DirectlyFollowsGraphComponentData'
     DirectlyFollowsGraphComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -2270,6 +2258,10 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/DFGEdge'
+            alignments:
+              type: array
+              items:
+                $ref: '#/components/schemas/Alignment'
     DFGNode:
       type: object
       required: [ id, label ]
@@ -2390,7 +2382,8 @@ components:
         query:
           type: string
         refresh:
-          type: number
+          type: integer
+          format: int64
         enabled:
           type: boolean
         batch:
@@ -2432,6 +2425,29 @@ components:
           type: string
         role:
           $ref: '#/components/schemas/OrganizationRole'
+    Alignment:
+      type: object
+      required: [ steps, cost ]
+      properties:
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/Step'
+        cost:
+          type: integer
+    Step:
+      type: object
+      required: [ type ]
+      properties:
+        modelMove:
+          type: object
+        logMove:
+          type: object
+        type:
+          $ref: '#/components/schemas/DeviationType'
+    DeviationType:
+      type: string
+      enum: [ None, LogDeviation, ModelDeviation ]
   responses:
     BadRequest:
       description: Invalid request body

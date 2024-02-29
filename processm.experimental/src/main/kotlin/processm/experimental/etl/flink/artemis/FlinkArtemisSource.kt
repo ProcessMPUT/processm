@@ -4,9 +4,9 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.streaming.api.functions.source.SourceFunction
 import processm.core.esb.ServiceStatus
-import processm.core.logging.enter
-import processm.core.logging.exit
-import processm.core.logging.logger
+import processm.logging.enter
+import processm.logging.exit
+import processm.logging.logger
 import java.io.Serializable
 
 class FlinkArtemisSource<T : Serializable>(val topic: String, val productedType: TypeInformation<T>) :

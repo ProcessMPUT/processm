@@ -4,10 +4,10 @@ import ch.qos.logback.classic.Level
 import processm.core.log.Helpers.logFromModel
 import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.Log
-import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.core.models.metadata.BasicMetadata
 import processm.core.models.metadata.SingleDoubleMetadata
+import processm.logging.logger
 import processm.miners.causalnet.onlineminer.replayer.SingleReplayer
 import kotlin.math.max
 import kotlin.math.min

@@ -1,6 +1,6 @@
 package processm.miners.causalnet.heuristicminer.bindingproviders.hypothesisselector
 
-import processm.core.logging.logger
+import processm.logging.logger
 import processm.miners.causalnet.onlineminer.replayer.ReplayTrace
 
 /**

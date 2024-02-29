@@ -33,9 +33,15 @@
             <version>${org.apache.commons.math.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>33.0.0-jre</version>
+        </dependency>
+        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-params</artifactId>
             <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>${project.parent.groupId}</groupId>

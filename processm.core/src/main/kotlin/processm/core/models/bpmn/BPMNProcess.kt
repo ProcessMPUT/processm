@@ -1,8 +1,8 @@
 package processm.core.models.bpmn
 
 import jakarta.xml.bind.JAXBElement
-import processm.core.logging.logger
 import processm.core.models.bpmn.jaxb.*
+import processm.logging.logger
 import java.util.*
 import javax.xml.namespace.QName
 

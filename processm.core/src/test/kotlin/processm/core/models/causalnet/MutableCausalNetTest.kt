@@ -1,7 +1,7 @@
 package processm.core.models.causalnet
 
-import processm.core.helpers.mapToSet
 import processm.core.models.commons.ControlStructureType.*
+import processm.helpers.mapToSet
 import kotlin.test.*
 
 class MutableCausalNetTest {

@@ -2,8 +2,6 @@ package processm.experimental.performance
 
 import ch.qos.logback.classic.Level
 import org.slf4j.LoggerFactory.getLogger
-import processm.core.helpers.HashMapWithDefault
-import processm.core.helpers.mapToSet
 import processm.core.log.Event
 import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.log.XMLXESInputStream
@@ -30,6 +28,8 @@ import processm.experimental.performance.CausalNets.model2
 import processm.experimental.performance.CausalNets.model3
 import processm.experimental.performance.CausalNets.model6
 import processm.experimental.performance.CausalNets.model7
+import processm.helpers.HashMapWithDefault
+import processm.helpers.mapToSet
 import processm.miners.causalnet.heuristicminer.OfflineHeuristicMiner
 import processm.miners.causalnet.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.causalnet.heuristicminer.longdistance.VoidLongDistanceDependencyMiner

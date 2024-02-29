@@ -1,10 +1,10 @@
 package processm.core.verifiers
 
-import processm.core.helpers.mapToSet
 import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
 import processm.core.models.causalnet.causalnet
+import processm.helpers.mapToSet
 import kotlin.test.*
 
 class CausalNetVerifierTest {

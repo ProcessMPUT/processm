@@ -17,30 +17,17 @@
                 outlined
               >
                 <template #selection="data">
-                  <span
-                    v-bind:class="[
-                      'flag-icon flag-icon-' + $t('flag', data.item.value),
-                      'mr-2'
-                    ]"
-                  />
+                  <span v-bind:class="['flag-icon flag-icon-' + $t('flag', data.item.value), 'mr-2']" />
                   {{ $t("language-name", data.item.value) }}
                 </template>
                 <template #item="data">
-                  <span
-                    v-bind:class="[
-                      'flag-icon flag-icon-' + $t('flag', data.item.value),
-                      'mr-2'
-                    ]"
-                  />
+                  <span v-bind:class="['flag-icon flag-icon-' + $t('flag', data.item.value), 'mr-2']" />
                   {{ $t("language-name", data.item.value) }}
                 </template>
               </v-select>
             </v-row>
             <v-layout>
-              <v-btn
-                color="primary lighten-2"
-                @click.stop="passwordChangeDialog = true"
-              >
+              <v-btn color="primary lighten-2" @click.stop="passwordChangeDialog = true">
                 {{ $t("user-profile.change-password") }}
               </v-btn>
               <v-spacer></v-spacer>
@@ -49,11 +36,7 @@
         </v-card-text>
       </v-card>
     </v-layout>
-    <password-change-dialog
-      v-model="passwordChangeDialog"
-      @cancelled="passwordChangeDialog = false"
-      @submitted="submitNewPassword"
-    />
+    <password-change-dialog v-model="passwordChangeDialog" @cancelled="passwordChangeDialog = false" @submitted="submitNewPassword" />
   </v-container>
 </template>
 
@@ -70,6 +53,7 @@ import Vue from "vue";
 import { Component, Inject } from "vue-property-decorator";
 import PasswordChangeDialog from "@/components/PasswordChangeDialog.vue";
 import AccountService from "@/services/AccountService";
+import App from "@/App.vue";
 
 @Component({
   components: { PasswordChangeDialog },
@@ -82,6 +66,7 @@ import AccountService from "@/services/AccountService";
   }
 })
 export default class UserProfile extends Vue {
+  @Inject() app!: App;
   @Inject() accountService!: AccountService;
   selectedLocale = "";
   passwordChangeDialog = false;
@@ -99,7 +84,7 @@ export default class UserProfile extends Vue {
         await this.accountService.changeLocale(locale);
       } catch (error) {
         console.error(error);
-        //TODO: display the error on the global snackbar
+        this.app.error(error);
       }
     }
   }
@@ -108,9 +93,10 @@ export default class UserProfile extends Vue {
     try {
       await this.accountService.changePassword(currentPassword, newPassword);
       this.passwordChangeDialog = false;
+      this.app.success(this.$t("user-profile.password-changed").toString());
     } catch (error) {
       console.error(error);
-      //TODO: display the error on the global snackbar
+      this.app.error(error);
     }
   }
 }

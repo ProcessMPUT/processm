@@ -1,8 +1,6 @@
 package processm.core.log.hierarchical
 
-import processm.core.helpers.toUUID
 import processm.core.log.*
-import processm.core.log.attribute.*
 import processm.core.log.attribute.Attribute.CONCEPT_INSTANCE
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.COST_CURRENCY
@@ -17,13 +15,14 @@ import processm.core.log.attribute.Attribute.ORG_ROLE
 import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
 import processm.core.log.attribute.Attribute.XES_FEATURES
 import processm.core.log.attribute.Attribute.XES_VERSION
-import processm.core.log.attribute.AttributeMap.Companion.LIST_TAG
-import processm.core.logging.enter
-import processm.core.logging.exit
-import processm.core.logging.logger
-import processm.core.logging.trace
+import processm.core.log.attribute.MutableAttributeMap
 import processm.core.querylanguage.Query
 import processm.core.querylanguage.Scope
+import processm.helpers.toUUID
+import processm.logging.enter
+import processm.logging.exit
+import processm.logging.logger
+import processm.logging.trace
 import java.lang.ref.Cleaner
 import java.lang.ref.SoftReference
 import java.sql.ResultSet

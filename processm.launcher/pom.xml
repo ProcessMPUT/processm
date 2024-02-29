@@ -17,7 +17,7 @@
     <name>ProcessM Launcher</name>
 
     <properties>
-        <ktor.client.version>2.0.3</ktor.client.version>
+        <ktor.client.version>2.3.8</ktor.client.version>
     </properties>
 
     <build>
@@ -94,6 +94,11 @@
         <!-- Dependencies to processm modules are required in order to detect and load services from these modules -->
         <dependency>
             <groupId>${project.parent.groupId}</groupId>
+            <artifactId>helpers</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.parent.groupId}</groupId>
             <artifactId>core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
@@ -123,6 +128,12 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
+            <groupId>${project.parent.groupId}</groupId>
+            <artifactId>webui</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
             <groupId>io.ktor</groupId>
             <artifactId>ktor-client-core-jvm</artifactId>
             <version>${ktor.client.version}</version>
@@ -139,15 +150,6 @@
             <artifactId>ktor-client-content-negotiation-jvm</artifactId>
             <version>${ktor.client.version}</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.ktor</groupId>
-            <artifactId>ktor-serialization-gson-jvm</artifactId>
-            <version>${ktor.client.version}</version>
-            <!-- Although processm.launcher uses ktor-serialization-gson-jvm only in tests, processm.services requires
-            it at runtime. Setting scope: test here overrides the inherited from processm.services scope: compile, and
-            thus we set it to "compile" inconsistently with the other ktor-client-* dependencies. -->
-            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlinx</groupId>
