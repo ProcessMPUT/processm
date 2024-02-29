@@ -299,7 +299,7 @@ export default class UserGroupList extends Vue {
   async refreshGroups() {
     try {
       this.loading = true;
-      const groups = await this.groupService.getUserGroups(this.organization.id!);
+      const groups = await this.groupService.getUserGroups(this.organization?.id!);
       this.groups = groups.map((g) => Object.assign({ focus: false, dirty: false, members: undefined }, g));
     } catch (e) {
       this.app.error(e);
@@ -315,7 +315,7 @@ export default class UserGroupList extends Vue {
   async addGroup() {
     try {
       console.assert(this.newName != "", "newName: " + this.newName);
-      await this.groupService.createGroup(this.organization.id!, this.newName);
+      await this.groupService.createGroup(this.organization?.id!, this.newName);
       this.refreshGroups();
       this.newDialog = false;
       this.resetNewDialog();
@@ -341,7 +341,7 @@ export default class UserGroupList extends Vue {
     try {
       console.assert(group.id !== undefined);
       this.groupIdToRemove = group.id!;
-      const entities = await this.groupService.getSoleOwnershipObjects(this.organization.id!, group.id!);
+      const entities = await this.groupService.getSoleOwnershipObjects(this.organization?.id!, group.id!);
       if (entities.length > 0) {
         this.objectsToRemove = entities;
         this.objectRemovalDialog = true;
@@ -364,7 +364,7 @@ export default class UserGroupList extends Vue {
             break;
         }
       }
-      await this.groupService.removeGroup(this.organization.id!, this.groupIdToRemove!);
+      await this.groupService.removeGroup(this.organization?.id!, this.groupIdToRemove!);
       this.groups = this.groups.filter((item) => item.id != this.groupIdToRemove);
       this.app.info(this.$t("users.group-removed").toString());
     } catch (e) {

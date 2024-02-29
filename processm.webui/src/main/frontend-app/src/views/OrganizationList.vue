@@ -365,7 +365,7 @@ export default class OrganizationList extends Vue {
 
   async login(item: OrganizationTreeItem) {
     const orgId = item.organization?.id!;
-    if (this.$sessionStorage.currentOrganization.id != orgId) {
+    if (this.$sessionStorage.currentOrganization?.id != orgId) {
       this.$sessionStorage.switchToOrganization(orgId);
       // Refresh page for all components to take the new organization into account
       this.$router.go(0);
