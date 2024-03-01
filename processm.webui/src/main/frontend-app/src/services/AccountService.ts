@@ -41,7 +41,10 @@ export default class AccountService extends BaseService {
     console.assert(response.status == 201, response.statusText);
   }
 
-  public async getAccountDetails(): Promise<UserAccount> {
+  /**
+   * Named in such a way to reflect the side effect of modifying $sessionStorage.userInfo
+   */
+  public async updateUserInfo(): Promise<UserAccount> {
     const response = await this.usersApi.getUserAccountDetails();
 
     if (response.status != 200) {
@@ -66,8 +69,10 @@ export default class AccountService extends BaseService {
     const response = await this.usersApi.changeUserLocale({
       locale: locale
     });
-
-    console.assert(response.status == 204, response.statusText);
+    if (response.status == 200) {
+      const accountDetails = response.data;
+      return (Vue.prototype.$sessionStorage.userInfo = new UserAccount(accountDetails.email, accountDetails.locale));
+    } else return undefined;
   }
 
   public async getUserOrganizations(): Promise<UserRoleInOrganization[]> {

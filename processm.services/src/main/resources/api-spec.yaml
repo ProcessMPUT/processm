@@ -217,6 +217,10 @@ paths:
       responses:
         '200':
           description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/UserAccountInfo'
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':

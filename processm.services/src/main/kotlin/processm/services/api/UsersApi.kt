@@ -188,7 +188,16 @@ fun Route.UsersApi() {
                         ?: throw ApiException("The provided locale data cannot be parsed")
 
                     accountService.changeLocale(principal.userId, localeData.locale)
-                    call.respond(HttpStatusCode.NoContent)
+                    val userAccount = accountService.getUser(principal.userId)
+
+                    call.respond(
+                        HttpStatusCode.OK,
+                        UserAccountInfo(
+                            id = userAccount.id.value,
+                            email = userAccount.email,
+                            locale = userAccount.locale
+                        )
+                    )
                 }
             }
         }

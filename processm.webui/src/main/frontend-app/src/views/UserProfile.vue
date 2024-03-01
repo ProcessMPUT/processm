@@ -72,7 +72,7 @@ export default class UserProfile extends Vue {
   passwordChangeDialog = false;
 
   mounted() {
-    this.selectedLocale = this.$i18n.locale; // .$i18n.locale;
+    this.selectedLocale = this.$i18n.locale;
   }
 
   async updateLocale() {
@@ -81,10 +81,11 @@ export default class UserProfile extends Vue {
 
       try {
         const locale = this.$t("code", this.selectedLocale).toString();
-        await this.accountService.changeLocale(locale);
+        const result = await this.accountService.changeLocale(locale);
+        if (result === undefined) this.app.error(this.$t("common.saving.failure").toString());
       } catch (error) {
         console.error(error);
-        this.app.error(error);
+        this.app.error(this.$t("common.saving.failure").toString());
       }
     }
   }

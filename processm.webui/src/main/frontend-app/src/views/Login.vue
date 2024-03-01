@@ -102,6 +102,9 @@ export default class Login extends Vue {
   selectedOrganizationId: string | null = null;
 
   async mounted() {
+    // Manually call to resetLocale to overwrite the locale of the user that just logged out
+    // Since there's no user at this point, the login page will display in the first available language in the order of preference of the web browser
+    this.app.resetLocale();
     const c = await this.configService.getConfig();
     Object.assign(this.config, c);
   }
@@ -115,8 +118,9 @@ export default class Login extends Vue {
 
     try {
       await this.accountService.signIn(this.username, this.password);
-      const { language } = await this.accountService.getAccountDetails();
-      this.setLanguage(language);
+
+      await this.accountService.updateUserInfo();
+      this.app.resetLocale();
       const organizations = await this.accountService.getUserOrganizations();
       this.setCurrentOrganization(organizations);
     } catch (error) {
