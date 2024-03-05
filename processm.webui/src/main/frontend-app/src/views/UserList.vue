@@ -34,7 +34,7 @@
           <v-card>
             <v-card-title>{{ $t("common.add-new") }}</v-card-title>
             <v-card-text>
-              <v-form id="newForm" ref="newForm" v-model="isNewValid" @submit.prevent="addMember">
+              <v-form id="newOrgMemberForm" ref="newOrgMemberForm" v-model="isNewValid" @submit.prevent="addMember">
                 <combo-box-with-search
                   :label="$t('common.email')"
                   :rules="[(v) => /^([a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6})*$/.test(v) || $t('registration-form.validation.email-format')]"
@@ -50,7 +50,6 @@
               <v-btn color="primary darken-1" text @click="newDialog = false">
                 {{ $t("common.cancel") }}
               </v-btn>
-
               <v-btn :disabled="!isNewValid" color="primary darken-1" form="newForm" type="submit" name="btn-commit-add-member">
                 {{ $t("common.save") }}
               </v-btn>
@@ -149,7 +148,7 @@ export default class UserList extends Vue {
   async addMember() {
     // we have to wait for the blur event on the combo box
     // https://stackoverflow.com/a/63899307/1016631
-    ((this.$refs.newForm as Vue).$el as HTMLElement).focus();
+    ((this.$refs.newOrgMemberForm as Vue).$el as HTMLElement).focus();
     await waitForRepaint(async () => {
       try {
         console.assert(this.newUser != "", "newUser: " + this.newUser);

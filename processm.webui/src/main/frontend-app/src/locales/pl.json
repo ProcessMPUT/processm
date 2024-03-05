@@ -195,11 +195,13 @@
     "member-excluded": "Usunięto członka z organizacji",
     "organizations": "Organizacje",
     "page-title": "Użytkownicy",
+    "remove-objects": "Ta grupa jest jedynym właścicielem następujących obiektów. Czy chcesz je usunąć w celu usunięcia grupy?",
     "role": "Rola",
     "shared": "Współdzielona",
     "users": "Użytkownicy",
     "user": "Użytkownik",
     "you": "Ty",
+    "unknown-email": "Podany adres e-mail nie odpowiada znanemu użytkownikowi",
     "roles": {
       "owner": "Właściciel",
       "reader": "Czytelnik",

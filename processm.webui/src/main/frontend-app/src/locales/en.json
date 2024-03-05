@@ -196,11 +196,13 @@
     "organizations": "Organizations",
     "organization": "Organization",
     "page-title": "Users",
+    "remove-objects": "This group is the sole owner of the following objects. Do you want to remove them to remove the group?",
     "role": "Role",
     "shared": "Shared",
     "users": "Users",
     "user": "User",
     "you": "You",
+    "unknown-email": "The specified e-mail address does not correspond to a known user",
     "roles": {
       "owner": "Owner",
       "reader": "Reader",

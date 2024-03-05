@@ -1187,6 +1187,38 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
+  /organizations/{organizationId}/groups/{groupId}/sole-ownership:
+    parameters:
+      - name: organizationId
+        in: path
+        required: true
+        description: The id of the organization
+        schema:
+          type: string
+          format: uuid
+      - name: groupId
+        in: path
+        description: Group ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - groups
+      summary: Get objects the group is the sole owner of
+      operationId: getGroupSoleOwnership
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EntityID'
+      security:
+        - bearerAuth: [ ]
   /organizations/{organizationId}/groups/{groupId}/members/{userId}:
     parameters:
       - name: organizationId
@@ -1692,6 +1724,9 @@ components:
     OrganizationRole:
       type: string
       enum: [ owner, writer, reader, none ]
+    EntityType:
+      type: string
+      enum: [ workspace, dataStore ]
     ComponentType:
       type: string
       enum: [ kpi, alignerKpi, treeLogView, flatLogView, causalNet, petriNet, bpmn, directlyFollowsGraph ]
@@ -2425,6 +2460,17 @@ components:
           type: string
         role:
           $ref: '#/components/schemas/OrganizationRole'
+    EntityID:
+      type: object
+      required: [ type, id ]
+      properties:
+        type:
+          $ref: '#/components/schemas/EntityType'
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
     Alignment:
       type: object
       required: [ steps, cost ]

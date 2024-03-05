@@ -39,6 +39,14 @@ object Paths {
     class GroupMembers(val organizationId: UUID, val groupId: UUID)
 
     /**
+     * Objects the group is a sole owner of
+     *
+     * @param groupId Group ID
+     */
+    @Location("/organizations/{organizationId}/groups/{groupId}/sole-ownership")
+    class GroupSoleOwnership(val organizationId: UUID, val groupId: UUID)
+
+    /**
      * Groups og the current user&#39;s organization
      *
      */
