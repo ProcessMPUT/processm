@@ -1394,7 +1394,7 @@ paths:
         schema:
           type: string
           format: uuid
-    post:
+    put:
       tags:
         - organizations
       summary: Attach the specified organization as a sub-organization of the other
@@ -1531,7 +1531,7 @@ paths:
     get:
       tags:
         - organizations
-      summary: Get objects the groups of the organization are the sole owners of
+      summary: Get identifiers of the objects such that the groups of the organization are the sole owners of
       operationId: getOrganizationSoleOwnership
       responses:
         '200':

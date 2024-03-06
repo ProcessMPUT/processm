@@ -5,6 +5,7 @@ import org.jgroups.util.UUID
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.TestMethodOrder
+import org.junit.jupiter.api.assertThrows
 import org.openqa.selenium.By
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -75,6 +76,9 @@ class DataStoresACLTest : SeleniumBase() {
     fun `user 2 doesn't see the created data stores`() {
         iam(email2, "goto-data-stores")
         waitForText("No data available")
+        assertThrows<org.openqa.selenium.NoSuchElementException> {
+            driver.findElement(By.xpath("//*[text()='${dataStores[0]}' or text()='${dataStores[1]}' or text()='${dataStores[2]}']"))
+        }
     }
 
     @Order(70)
