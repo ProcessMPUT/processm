@@ -110,7 +110,7 @@ object Paths {
     class OrganizationMembers(val organizationId: UUID)
 
     /**
-     * Objects the groups of the organization are the sole owners of
+     * Get identifiers of the objects such that the groups of the organization are the sole owners of
      *
      * @param organizationId Organization ID
      */
