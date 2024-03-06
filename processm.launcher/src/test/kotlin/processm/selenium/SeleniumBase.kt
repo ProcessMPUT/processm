@@ -2,7 +2,6 @@ package processm.selenium
 
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.TestInstance
 import org.openqa.selenium.*
 import org.openqa.selenium.chrome.ChromeDriver
@@ -28,7 +27,6 @@ fun WebElement.hasCSSClass(clazz: String): Boolean =
     getAttribute("class").split(Regex("\\s+")).any { it.equals(clazz, true) }
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Tag("e2e")
 abstract class SeleniumBase(
     /**
      * Set to true to take screenshots from time to time, and place them in a newly-created directory
