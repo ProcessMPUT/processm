@@ -68,4 +68,12 @@ abstract class I18nTest(language: String) : SeleniumBase(language = language) {
         waitForText(loginFormDefaultLanguage)
         assertNoText(loginFormTargetLanguage)
     }
+
+    @Test
+    @Order(60)
+    fun `login and the language changes`() {
+        login(email, password)
+        byPartialText(workspacesTargetLanguage)
+        assertNoText(workspacesDefaultLanguage)
+    }
 }
