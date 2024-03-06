@@ -10,7 +10,7 @@
 
       <v-list dense rounded>
         <v-subheader>{{ username }}</v-subheader>
-        <v-list-item :to="'profile'" color="primary">
+        <v-list-item :to="'profile'" color="primary" name="btn-settings">
           <v-list-item-icon>
             <v-icon>settings</v-icon>
           </v-list-item-icon>

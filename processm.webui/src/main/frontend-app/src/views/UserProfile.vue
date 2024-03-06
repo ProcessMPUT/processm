@@ -15,6 +15,7 @@
                 @change="updateLocale"
                 dense
                 outlined
+                name="combo-selected-locale"
               >
                 <template #selection="data">
                   <span v-bind:class="['flag-icon flag-icon-' + $t('flag', data.item.value), 'mr-2']" />
