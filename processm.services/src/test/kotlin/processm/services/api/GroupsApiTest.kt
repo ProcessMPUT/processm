@@ -286,6 +286,7 @@ class GroupsApiTest : BaseApiTest() {
                 every { id } returns EntityID(organizationId, Organizations)
                 every { name } returns "org1"
                 every { isPrivate } returns false
+                every { parentOrganization } returns null
             }
             every { groupService.getSubgroups(groupId) } returns listOf(
                 mockk {
@@ -352,6 +353,7 @@ class GroupsApiTest : BaseApiTest() {
                     every { id } returns EntityID(orgId, Organizations)
                     every { name } returns "org1"
                     every { isPrivate } returns false
+                    every { parentOrganization } returns null
                 }
                 with(handleRequest(HttpMethod.Get, "/api/organizations/$orgId/groups/$groupId/subgroups")) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
@@ -377,6 +379,7 @@ class GroupsApiTest : BaseApiTest() {
                 every { id } returns EntityID(organizationId, Organizations)
                 every { name } returns "org1"
                 every { isPrivate } returns false
+                every { parentOrganization } returns null
             }
             every { groupService.getGroup(groupId) } returns mockk {
                 every { id } returns EntityID(groupId, Groups)
@@ -411,6 +414,7 @@ class GroupsApiTest : BaseApiTest() {
                     every { id } returns EntityID(orgId, Organizations)
                     every { name } returns "org1"
                     every { isPrivate } returns false
+                    every { parentOrganization } returns null
                 }
                 with(handleRequest(HttpMethod.Get, "/api/organizations/$orgId/groups/$groupId")) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
@@ -436,6 +440,7 @@ class GroupsApiTest : BaseApiTest() {
                 every { id } returns EntityID(organizationId, Organizations)
                 every { name } returns "org1"
                 every { isPrivate } returns false
+                every { parentOrganization } returns null
             }
             every { groupService.getGroup(groupId) } throws ValidationException(
                 Reason.ResourceNotFound,

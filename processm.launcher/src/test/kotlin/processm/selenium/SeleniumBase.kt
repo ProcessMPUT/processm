@@ -2,7 +2,6 @@ package processm.selenium
 
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.TestInstance
 import org.openqa.selenium.*
 import org.openqa.selenium.chrome.ChromeDriver
@@ -15,6 +14,7 @@ import org.testcontainers.utility.DockerImageName
 import processm.core.esb.EnterpriseServiceBus
 import processm.core.loadConfiguration
 import processm.core.persistence.Migrator
+import processm.core.persistence.connection.DatabaseChecker
 import java.time.Duration
 import kotlin.random.Random
 import kotlin.test.assertNotNull
@@ -23,9 +23,10 @@ import kotlin.test.assertNotNull
 val <T : PostgreSQLContainer<T>?> PostgreSQLContainer<T>.port: Int
     get() = getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT)
 
+fun WebElement.hasCSSClass(clazz: String): Boolean =
+    getAttribute("class").split(Regex("\\s+")).any { it.equals(clazz, true) }
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Tag("e2e")
 abstract class SeleniumBase(
     /**
      * Set to true to take screenshots from time to time, and place them in a newly-created directory
@@ -66,13 +67,18 @@ abstract class SeleniumBase(
     protected var recorder: VideoRecorder? = null
 
     // region Selenium helpers
-    fun byName(name: String) = driver.findElement(By.name(name))
+    fun byName(name: String) = checkNotNull(wait.until { driver.findElement(By.name(name)) })
 
-    fun byXpath(xpath: String) = driver.findElement(By.xpath(xpath))
+    fun byXpath(xpath: String) = checkNotNull(wait.until { driver.findElement(By.xpath(xpath)) })
 
     fun byText(text: String): WebElement {
         require('\'' !in text) { "Apostrophes are currently not supported" }
-        return driver.findElement(By.xpath("//*[text()='$text']"))
+        return byXpath("//*[text()='$text']")
+    }
+
+    fun byPartialText(text: String): WebElement {
+        require('\'' !in text) { "Apostrophes are currently not supported" }
+        return byXpath("//*[contains(text(),'$text')]")
     }
 
     fun typeIn(name: String, value: String, replace: Boolean = true) = typeIn(byName(name), value, replace)
@@ -148,7 +154,8 @@ abstract class SeleniumBase(
         }
     }
 
-    fun click(by: By) = click(checkNotNull(wait.until { driver.findElements(by).singleOrNull() }))
+    fun click(by: By) =
+        click(checkNotNull(wait.until { driver.findElements(by).singleOrNull { it.isDisplayed && it.isEnabled } }))
 
     fun click(name: String) = click(By.name(name))
 
@@ -175,7 +182,7 @@ abstract class SeleniumBase(
     @Deprecated("This function is inherently brittle, as it (more often than not) relies on a translatable piece of text. Eventually, it should be replaced with something more robust.")
     fun selectVuetifyDropDownItem(vararg text: String) {
         val attributes = text.joinToString(separator = " or ") { "text()='$it'" }
-        click(byXpath("""//div[$attributes]"""))
+        click(By.xpath("""//div[@role='listbox']//div[$attributes]"""))
         recorder?.take()
     }
 
@@ -225,7 +232,7 @@ abstract class SeleniumBase(
                 override fun run() {
                     loadConfiguration(true)
                     System.setProperty(
-                        "PROCESSM.CORE.PERSISTENCE.CONNECTION.URL",
+                        DatabaseChecker.databaseConnectionURLProperty,
                         "${mainDbContainer.jdbcUrl}&user=${mainDbContainer.username}&password=${mainDbContainer.password}"
                     )
                     Migrator.reloadConfiguration()
@@ -308,10 +315,15 @@ abstract class SeleniumBase(
         acknowledgeSnackbar("info")
     }
 
-    protected fun login(email: String, password: String) {
+    protected fun login(email: String, password: String, org: String? = null) {
         typeIn("username", email)
         typeIn("password", password)
         click("btn-login")
+        if (org !== null) {
+            openVuetifyDropDown("combo-organization")
+            selectVuetifyDropDownItem(org)
+            click("btn-select-organization")
+        }
         wait.until { driver.findElements(By.name("btn-profile")).isNotEmpty() }
         with(byName("btn-profile")) {
             wait.until { isDisplayed }
@@ -341,6 +353,25 @@ abstract class SeleniumBase(
     }
 
     protected fun closeACLEditor() = click("btn-acl-dialog-close")
+
+    protected fun addNewUserToOrganization(email: String, role: String) {
+        click("btn-add-new-user")
+        with(checkNotNull(wait.until { driver.findElements(By.id("newOrgMemberForm"))?.firstOrNull() })) {
+            with(checkNotNull(wait.until { findElements(By.xpath(".//div[@role='combobox']"))?.firstOrNull() })) {
+                click { this }
+                with(checkNotNull(wait.until { findElements(By.xpath(".//input[@type='text']"))?.firstOrNull() })) {
+                    sendKeys(email)
+                }
+            }
+            openVuetifyDropDown("new-role")
+            selectVuetifyDropDownItem(role)
+        }
+        click("btn-commit-add-member")
+        acknowledgeSnackbar("info")
+        wait.until {
+            driver.findElements(By.xpath("//td[text()[contains(.,'$email')]]")).isNotEmpty()
+        }
+    }
 
     // endregion
 }

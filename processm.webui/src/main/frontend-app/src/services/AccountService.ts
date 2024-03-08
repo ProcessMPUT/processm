@@ -1,7 +1,7 @@
 import Vue from "vue";
 import UserAccount from "@/models/UserAccount";
 import BaseService from "./BaseService";
-import { Organization, UserAccountInfo } from "@/openapi";
+import { UserAccountInfo, UserRoleInOrganization } from "@/openapi";
 import { AxiosAuthRefreshRequestConfig } from "axios-auth-refresh";
 
 export default class AccountService extends BaseService {
@@ -70,7 +70,7 @@ export default class AccountService extends BaseService {
     console.assert(response.status == 204, response.statusText);
   }
 
-  public async getUserOrganizations(): Promise<Organization[]> {
+  public async getUserOrganizations(): Promise<UserRoleInOrganization[]> {
     const response = await this.usersApi.getUserOrganizations();
 
     console.assert(response.status == 200, response.statusText);

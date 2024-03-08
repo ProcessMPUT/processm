@@ -6,16 +6,15 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
 import org.koin.test.mock.declareMock
 import processm.dbmodels.models.*
+import processm.dbmodels.urn
+import processm.helpers.mapToSet
 import processm.services.api.models.ErrorMessage
 import processm.services.api.models.OrganizationMember
 import processm.services.api.models.OrganizationRole
 import processm.services.logic.*
 import java.util.*
 import java.util.stream.Stream
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class OrganizationsApiTest : BaseApiTest() {
@@ -28,7 +27,10 @@ class OrganizationsApiTest : BaseApiTest() {
         HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/members",
         HttpMethod.Post to "/api/organizations/${UUID.randomUUID()}/members",
         HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}/members/${UUID.randomUUID()}",
-        HttpMethod.Patch to "/api/organizations/${UUID.randomUUID()}/members/${UUID.randomUUID()}"
+        HttpMethod.Patch to "/api/organizations/${UUID.randomUUID()}/members/${UUID.randomUUID()}",
+        HttpMethod.Put to "/api/organizations/${UUID.randomUUID()}/suborganizations/${UUID.randomUUID()}",
+        HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}/suborganizations/${UUID.randomUUID()}",
+        HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/suborganizations",
     )
 
     override fun endpointsWithNoImplementation() = Stream.empty<Pair<HttpMethod, String>>()
@@ -322,28 +324,36 @@ class OrganizationsApiTest : BaseApiTest() {
 
     @Test
     fun `responds with 200 to the get of organization list`() = withConfiguredTestApplication {
+        val userId = UUID.randomUUID()
         val orgIds = listOf(UUID.randomUUID(), UUID.randomUUID())
         val organizationService = declareMock<OrganizationService> {
-            every { getAll(true) } returns listOf(
-                mockk<Organization> {
-                    every { id } returns EntityID(orgIds[0], Organizations)
-                    every { name } returns "OrgA"
-                    every { isPrivate } returns false
-                },
-                mockk<Organization> {
-                    every { id } returns EntityID(orgIds[1], Organizations)
-                    every { name } returns "OrgB"
-                    every { isPrivate } returns false
-                }
-            )
+            every { getAll(userId) } returns
+                    mockk {
+                        every { iterator() } returns
+                                listOf(
+                                    mockk<Organization> {
+                                        every { id } returns EntityID(orgIds[0], Organizations)
+                                        every { name } returns "OrgA"
+                                        every { isPrivate } returns false
+                                        every { parentOrganization } returns null
+                                    },
+                                    mockk<Organization> {
+                                        every { id } returns EntityID(orgIds[1], Organizations)
+                                        every { name } returns "OrgB"
+                                        every { isPrivate } returns false
+                                        every { parentOrganization } returns null
+                                    }
+                                ).iterator()
+                    }
 
             every { get(orgIds[0]) } returns mockk {
                 every { id } returns EntityID(orgIds[0], Organizations)
                 every { name } returns "OrgA"
                 every { isPrivate } returns false
+                every { parentOrganization } returns null
             }
         }
-        withAuthentication(role = OrganizationRole.owner to orgIds[0]) {
+        withAuthentication(userId = userId, role = OrganizationRole.owner to orgIds[0]) {
             with(handleRequest(HttpMethod.Get, "/api/organizations")) {
                 assertEquals(HttpStatusCode.OK, response.status())
 
@@ -352,7 +362,7 @@ class OrganizationsApiTest : BaseApiTest() {
                 assertTrue(orgs.any { org -> orgIds[0] == org.id && "OrgA" == org.name && !org.isPrivate })
                 assertTrue(orgs.any { org -> orgIds[1] == org.id && "OrgB" == org.name && !org.isPrivate })
 
-                verify(exactly = 1) { organizationService.getAll(true) }
+                verify(exactly = 1) { organizationService.getAll(userId) }
             }
         }
     }
@@ -364,6 +374,9 @@ class OrganizationsApiTest : BaseApiTest() {
         val organizationService = declareMock<OrganizationService> {
             every { create("my org", false, ownerUserId = ownerId) } returns mockk {
                 every { id } returns EntityID(organizationId, Organizations)
+                every { name } returns "my org"
+                every { isPrivate } returns false
+                every { parentOrganization } returns null
             }
         }
         withAuthentication(userId = ownerId) {
@@ -371,9 +384,11 @@ class OrganizationsApiTest : BaseApiTest() {
                 withSerializedBody(ApiOrganization(name = "my org", isPrivate = false))
             }) {
                 assertEquals(HttpStatusCode.Created, response.status())
-                val uri = response.headers["Location"]
-                assertNotNull(uri)
-                assertEquals(organizationId.toString(), uri.substringAfterLast('/'))
+                val org = response.deserializeContent<processm.services.api.models.Organization>()
+                assertEquals(organizationId, org.id)
+                assertNull(org.parentOrganizationId)
+                assertFalse(org.isPrivate)
+                assertEquals("my org", org.name)
 
                 verify(exactly = 1) { organizationService.create("my org", false, ownerUserId = ownerId) }
             }
@@ -541,4 +556,297 @@ class OrganizationsApiTest : BaseApiTest() {
                 }
             }
         }
+
+    @Test
+    fun `responds with 204 to attaching an organization as a suborganization`() = withConfiguredTestApplication {
+        val organizationId = UUID.randomUUID()
+        val subOrganizationId = UUID.randomUUID()
+        val organizationService = declareMock<OrganizationService> {
+            every { attachSubOrganization(organizationId, subOrganizationId) } just runs
+            every { get(organizationId) } returns mockk {
+                every { parentOrganization } returns null
+            }
+            every { get(subOrganizationId) } returns mockk {
+                every { parentOrganization } returns null
+            }
+        }
+        withAuthentication(
+            roles = arrayOf(OrganizationRole.writer to organizationId, OrganizationRole.owner to subOrganizationId)
+        ) {
+            with(
+                handleRequest(
+                    HttpMethod.Put,
+                    "/api/organizations/$organizationId/suborganizations/$subOrganizationId"
+                )
+            ) {
+                assertEquals(HttpStatusCode.NoContent, response.status())
+
+                verify(exactly = 1) { organizationService.attachSubOrganization(organizationId, subOrganizationId) }
+            }
+        }
+    }
+
+    @Test
+    fun `responds with 403 to attaching an organization as a suborganization to a reader in the parent`() =
+        withConfiguredTestApplication {
+            val organizationId = UUID.randomUUID()
+            val subOrganizationId = UUID.randomUUID()
+            val organizationService = declareMock<OrganizationService> {
+                every { attachSubOrganization(organizationId, subOrganizationId) } just runs
+                every { get(organizationId) } returns mockk {
+                    every { parentOrganization } returns null
+                }
+                every { get(subOrganizationId) } returns mockk {
+                    every { parentOrganization } returns null
+                }
+            }
+            withAuthentication(
+                roles = arrayOf(OrganizationRole.reader to organizationId, OrganizationRole.owner to subOrganizationId)
+            ) {
+                with(
+                    handleRequest(
+                        HttpMethod.Put,
+                        "/api/organizations/$organizationId/suborganizations/$subOrganizationId"
+                    )
+                ) {
+                    assertEquals(HttpStatusCode.Forbidden, response.status())
+
+                    verify(exactly = 0) { organizationService.attachSubOrganization(organizationId, subOrganizationId) }
+                }
+            }
+        }
+
+
+    @Test
+    fun `responds with 403 to attaching an organization as a suborganization to a writer in the child`() =
+        withConfiguredTestApplication {
+            val organizationId = UUID.randomUUID()
+            val subOrganizationId = UUID.randomUUID()
+            val organizationService = declareMock<OrganizationService> {
+                every { attachSubOrganization(organizationId, subOrganizationId) } just runs
+                every { get(organizationId) } returns mockk {
+                    every { parentOrganization } returns null
+                }
+                every { get(subOrganizationId) } returns mockk {
+                    every { parentOrganization } returns null
+                }
+            }
+            withAuthentication(
+                roles = arrayOf(OrganizationRole.owner to organizationId, OrganizationRole.writer to subOrganizationId)
+            ) {
+                with(
+                    handleRequest(
+                        HttpMethod.Put,
+                        "/api/organizations/$organizationId/suborganizations/$subOrganizationId"
+                    )
+                ) {
+                    assertEquals(HttpStatusCode.Forbidden, response.status())
+
+                    verify(exactly = 0) { organizationService.attachSubOrganization(organizationId, subOrganizationId) }
+                }
+            }
+        }
+
+    @Test
+    fun `responds with 204 to deattaching a suborganization by a writer in the parent`() =
+        withConfiguredTestApplication {
+            val organizationId = UUID.randomUUID()
+            val subOrganizationId = UUID.randomUUID()
+            val parent = mockk<Organization> {
+                every { id } returns EntityID(organizationId, Organizations)
+                every { parentOrganization } returns null
+            }
+            val organizationService = declareMock<OrganizationService> {
+                every { detachSubOrganization(subOrganizationId) } just runs
+                every { get(organizationId) } returns parent
+                every { get(subOrganizationId) } returns mockk {
+                    every { parentOrganization } returns parent
+                }
+            }
+            withAuthentication(
+                roles = arrayOf(OrganizationRole.writer to organizationId)
+            ) {
+                with(
+                    handleRequest(
+                        HttpMethod.Delete,
+                        "/api/organizations/$organizationId/suborganizations/$subOrganizationId"
+                    )
+                ) {
+                    assertEquals(HttpStatusCode.NoContent, response.status())
+
+                    verify(exactly = 1) { organizationService.detachSubOrganization(subOrganizationId) }
+                }
+            }
+        }
+
+    @Test
+    fun `responds with 403 to deattaching a suborganization by a reader in the parent`() =
+        withConfiguredTestApplication {
+            val organizationId = UUID.randomUUID()
+            val subOrganizationId = UUID.randomUUID()
+            val parent = mockk<Organization> {
+                every { id } returns EntityID(organizationId, Organizations)
+                every { parentOrganization } returns null
+            }
+            val organizationService = declareMock<OrganizationService> {
+                every { detachSubOrganization(subOrganizationId) } just runs
+                every { get(organizationId) } returns parent
+                every { get(subOrganizationId) } returns mockk {
+                    every { parentOrganization } returns parent
+                }
+            }
+            withAuthentication(
+                roles = arrayOf(OrganizationRole.reader to organizationId)
+            ) {
+                with(
+                    handleRequest(
+                        HttpMethod.Delete,
+                        "/api/organizations/$organizationId/suborganizations/$subOrganizationId"
+                    )
+                ) {
+                    assertEquals(HttpStatusCode.Forbidden, response.status())
+
+                    verify(exactly = 0) { organizationService.detachSubOrganization(subOrganizationId) }
+                }
+            }
+        }
+
+
+    @Test
+    fun `responds with 204 to deattaching a suborganization by an owner in the child`() =
+        withConfiguredTestApplication {
+            val organizationId = UUID.randomUUID()
+            val subOrganizationId = UUID.randomUUID()
+            val parent = mockk<Organization> {
+                every { id } returns EntityID(organizationId, Organizations)
+                every { parentOrganization } returns null
+            }
+            val organizationService = declareMock<OrganizationService> {
+                every { detachSubOrganization(subOrganizationId) } just runs
+                every { get(organizationId) } returns parent
+                every { get(subOrganizationId) } returns mockk {
+                    every { parentOrganization } returns parent
+                }
+            }
+            withAuthentication(
+                roles = arrayOf(OrganizationRole.owner to subOrganizationId)
+            ) {
+                with(
+                    handleRequest(
+                        HttpMethod.Delete,
+                        "/api/organizations/$organizationId/suborganizations/$subOrganizationId"
+                    )
+                ) {
+                    assertEquals(HttpStatusCode.NoContent, response.status())
+
+                    verify(exactly = 1) { organizationService.detachSubOrganization(subOrganizationId) }
+                }
+            }
+        }
+
+    @Test
+    fun `responds with 400 to deattaching a suborganization by a writer in another organization`() =
+        withConfiguredTestApplication {
+            val organizationId = UUID.randomUUID()
+            val otherOrganizationId = UUID.randomUUID()
+            val subOrganizationId = UUID.randomUUID()
+            val parent = mockk<Organization> {
+                every { id } returns EntityID(organizationId, Organizations)
+                every { parentOrganization } returns null
+            }
+            val organizationService = declareMock<OrganizationService> {
+                every { detachSubOrganization(subOrganizationId) } just runs
+                every { get(organizationId) } returns parent
+                every { get(subOrganizationId) } returns mockk {
+                    every { parentOrganization } returns parent
+                }
+            }
+            withAuthentication(
+                roles = arrayOf(OrganizationRole.owner to otherOrganizationId)
+            ) {
+                with(
+                    handleRequest(
+                        HttpMethod.Delete,
+                        "/api/organizations/$otherOrganizationId/suborganizations/$subOrganizationId"
+                    )
+                ) {
+                    assertEquals(HttpStatusCode.BadRequest, response.status())
+
+                    verify(exactly = 0) { organizationService.detachSubOrganization(subOrganizationId) }
+                }
+            }
+        }
+
+    @Test
+    fun `responds with 200 to reading suborganizations`() =
+        withConfiguredTestApplication {
+            val organizationId = UUID.randomUUID()
+            val parent = mockk<Organization> {
+                every { id } returns EntityID(organizationId, Organizations)
+                every { parentOrganization } returns null
+            }
+            val suborgs = listOf(
+                mockk<Organization>(relaxed = true) {
+                    every { id } returns EntityID(UUID.randomUUID(), Organizations)
+                    every { parentOrganization } returns parent
+                },
+                mockk<Organization>(relaxed = true) {
+                    every { id } returns EntityID(UUID.randomUUID(), Organizations)
+                    every { parentOrganization } returns parent
+                },
+            )
+            val organizationService = declareMock<OrganizationService> {
+                every { getSubOrganizations(organizationId) } returns suborgs
+            }
+            withAuthentication(
+                role = OrganizationRole.reader to organizationId
+            ) {
+                with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId/suborganizations")) {
+                    assertEquals(HttpStatusCode.OK, response.status())
+
+                    verify(exactly = 1) { organizationService.getSubOrganizations(organizationId) }
+
+                    val result = response.deserializeContent<List<ApiOrganization>>()
+                    assertEquals(suborgs.size, result.size)
+                    assertEquals(suborgs.mapToSet { it.id.value }, result.mapToSet { it.id })
+                }
+            }
+        }
+
+    @Test
+    fun `fail to read suborganizations without a role`() =
+        withConfiguredTestApplication {
+            val organizationId = UUID.randomUUID()
+            val organizationService = declareMock<OrganizationService> {
+            }
+            withAuthentication(
+                role = OrganizationRole.none to organizationId
+            ) {
+                with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId/suborganizations")) {
+                    assertEquals(HttpStatusCode.Forbidden, response.status())
+
+                    verify(exactly = 0) { organizationService.getSubOrganizations(organizationId) }
+                }
+            }
+        }
+
+    @Test
+    fun `responds with 200 to listing organization sole ownership`() = withConfiguredTestApplication {
+        val organizationId = UUID.randomUUID()
+        val e1 = EntityID(UUID.randomUUID(), Workspaces)
+        val e2 = EntityID(UUID.randomUUID(), DataStores)
+        declareMock<OrganizationService> {
+            every { getSoleOwnershipURNs(organizationId) } returns listOf(e1.urn, e2.urn)
+        }
+
+        withAuthentication(role = OrganizationRole.owner to organizationId) {
+            with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId/sole-ownership")) {
+                assertEquals(HttpStatusCode.OK, response.status())
+                val objects = response.deserializeContent<Array<ApiEntityID>>()
+                assertEquals(2, objects.size)
+                assertEquals(ApiEntityID(ApiEntityType.workspace, e1.value), objects[0])
+                assertEquals(ApiEntityID(ApiEntityType.dataStore, e2.value), objects[1])
+            }
+        }
+    }
 }

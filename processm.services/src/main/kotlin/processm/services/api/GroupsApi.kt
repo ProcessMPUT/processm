@@ -27,8 +27,6 @@ import processm.services.logic.*
 import processm.services.respondCreated
 import java.util.*
 
-typealias ApiEntityID = processm.services.api.models.EntityID
-typealias ApiEntityType = processm.services.api.models.EntityType
 
 fun Route.GroupsApi() = loggedScope { logger ->
     val groupService by inject<GroupService>()
@@ -111,16 +109,7 @@ fun Route.GroupsApi() = loggedScope { logger ->
 
             val objects = transactionMain {
                 groupService.getSoleOwnershipURNs(path.groupId).mapToArray {
-                    val entity = it.toEntityID()
-                    when (entity.table) {
-                        is Workspaces ->
-                            ApiEntityID(ApiEntityType.workspace, entity.value, Workspace.findById(entity.value)?.name)
-
-                        is DataStores ->
-                            ApiEntityID(ApiEntityType.dataStore, entity.value, DataStore.findById(entity.value)?.name)
-
-                        else -> error("Unsupported table `${entity.table.tableName}`")
-                    }
+                    it.toEntityID().toApi()
                 }
             }
             call.respond(objects)

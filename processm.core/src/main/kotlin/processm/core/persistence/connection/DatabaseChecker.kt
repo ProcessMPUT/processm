@@ -10,6 +10,7 @@ import java.sql.DriverManager
 import kotlin.properties.Delegates
 
 object DatabaseChecker {
+    const val databaseConnectionURLProperty = "PROCESSM.CORE.PERSISTENCE.CONNECTION.URL"
     const val reservedConnectionsPropertyName = "PROCESSM.CORE.PERSISTENCE.CONNECTION.RESERVED"
     const val jdbcPostgresqlStart = "jdbc:postgresql://"
     lateinit var baseConnectionURL: String
@@ -72,7 +73,7 @@ object DatabaseChecker {
      */
     private fun readDatabaseConnectionURL(): String {
         loadConfiguration()
-        return checkNotNull(getPropertyIgnoreCase("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL")) {
+        return checkNotNull(getPropertyIgnoreCase(databaseConnectionURLProperty)) {
             "Database connection string is not set. Set the property processm.core.persistence.connection.URL."
         }
     }

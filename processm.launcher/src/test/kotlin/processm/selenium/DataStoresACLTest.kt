@@ -76,31 +76,16 @@ class DataStoresACLTest : SeleniumBase() {
     fun `user 2 doesn't see the created data stores`() {
         iam(email2, "goto-data-stores")
         waitForText("No data available")
-        assertThrows<org.openqa.selenium.NoSuchElementException> { byText(dataStores[0]) }
-        assertThrows<org.openqa.selenium.NoSuchElementException> { byText(dataStores[1]) }
-        assertThrows<org.openqa.selenium.NoSuchElementException> { byText(dataStores[2]) }
+        assertThrows<org.openqa.selenium.NoSuchElementException> {
+            driver.findElement(By.xpath("//*[text()='${dataStores[0]}' or text()='${dataStores[1]}' or text()='${dataStores[2]}']"))
+        }
     }
 
     @Order(70)
     @Test
     fun `user 1 adds user 2 to the organization as a writer`() {
         iam(email1, "goto-users")
-        click("btn-add-new-user")
-        with(driver.findElement(By.id("newForm"))) {
-            with(findElement(By.xpath(".//div[@role='combobox']"))) {
-                click()
-                with(findElement(By.xpath(".//input[@type='text']"))) {
-                    sendKeys(email2)
-                }
-            }
-            openVuetifyDropDown("new-role")
-            selectVuetifyDropDownItem("writer")
-        }
-        click("btn-commit-add-member")
-        acknowledgeSnackbar("info")
-        wait.until {
-            driver.findElements(By.xpath("//td[text()[contains(.,'$email2')]]")).isNotEmpty()
-        }
+        addNewUserToOrganization(email2, "writer")
     }
 
     @Order(75)
