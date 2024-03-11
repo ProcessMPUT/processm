@@ -390,6 +390,8 @@
     },
     "in": "w",
     "search": "Szukaj",
-    "security": "Bezpieczeństwo"
+    "security": "Bezpieczeństwo",
+    "yes": "Tak",
+    "no": "Nie"
   }
 }

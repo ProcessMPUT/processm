@@ -124,7 +124,6 @@ class DataStoresACLTest : SeleniumBase() {
         iam(email2, "goto-data-stores")
         for (dataStoreId in dataStores) {
             clickButtonInRow(dataStoreId, "btn-delete-data-store")
-            // FIXME This contains language dependent string. It may break once #188 is resolved.
             val element = wait.until {
                 driver.findElements(By.xpath("//div[@role='dialog']//button//*[text()[contains(.,'Yes')]]"))
                     .firstOrNull { it.isDisplayed }

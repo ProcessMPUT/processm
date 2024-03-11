@@ -614,7 +614,9 @@ export default class DataStoreConfiguration extends Vue {
         dataConnectorName: dataConnector.name
       })}`,
       {
-        title: `${this.$t("common.warning")}`
+        title: `${this.$t("common.warning")}`,
+        buttonTrueText: this.$t("common.yes").toString(),
+        buttonFalseText: this.$t("common.no").toString()
       }
     );
 
@@ -654,7 +656,9 @@ export default class DataStoreConfiguration extends Vue {
         etlProcessName: etlProcess.name
       })}`,
       {
-        title: `${this.$t("common.warning")}`
+        title: `${this.$t("common.warning")}`,
+        buttonTrueText: this.$t("common.yes").toString(),
+        buttonFalseText: this.$t("common.no").toString()
       }
     );
 
@@ -703,7 +707,9 @@ export default class DataStoreConfiguration extends Vue {
           etlProcessName: etlProcess.name
         })}`,
         {
-          title: `${this.$t("common.warning")}`
+          title: `${this.$t("common.warning")}`,
+          buttonTrueText: this.$t("common.yes").toString(),
+          buttonFalseText: this.$t("common.no").toString()
         }
       ));
 
