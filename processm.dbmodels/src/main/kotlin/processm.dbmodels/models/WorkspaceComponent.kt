@@ -31,6 +31,9 @@ const val CREATE_OR_UPDATE = "create_or_update"
 
 const val DELETE = "delete"
 
+/**
+ * Event triggered when the system changed the component data.
+ */
 const val DATA_CHANGE = "data_change"
 
 object WorkspaceComponents : UUIDTable("workspace_components") {

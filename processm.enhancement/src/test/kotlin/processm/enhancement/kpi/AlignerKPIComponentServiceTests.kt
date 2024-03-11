@@ -1,12 +1,15 @@
 package processm.enhancement.kpi
 
+import jakarta.jms.Message
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Timeout
 import processm.core.DBTestHelper
 import processm.core.communication.Producer
+import processm.core.esb.AbstractJMSListener
 import processm.core.esb.Artemis
 import processm.core.esb.ServiceStatus
 import processm.core.log.attribute.Attribute.COST_TOTAL
@@ -17,14 +20,29 @@ import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.*
 import java.util.*
+import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
 import kotlin.test.*
 
-class AlignerKPIServiceTests {
+@Timeout(5L, unit = TimeUnit.SECONDS)
+class AlignerKPIComponentServiceTests {
     companion object {
 
         val dataStore = UUID.fromString(DBTestHelper.dbName)
         val logUUID = DBTestHelper.JournalReviewExtra
         val artemis = Artemis()
+        val alignerKPIService = AlignerKPIService()
+        val workspaceNotificationMutex = Semaphore(1)
+        val workspaceNotificationService = object : AbstractJMSListener(
+            WORKSPACE_COMPONENTS_TOPIC,
+            "$WORKSPACE_COMPONENT_EVENT = '$DATA_CHANGE'",
+            "test",
+            false
+        ) {
+            override fun onMessage(message: Message?) {
+                workspaceNotificationMutex.release()
+            }
+        }
         var perfectCNetId: Long = -1L
         var mainstreamCNetId: Long = -1L
 
@@ -36,14 +54,29 @@ class AlignerKPIServiceTests {
 
             artemis.register()
             artemis.start()
+            alignerKPIService.register()
+            alignerKPIService.start()
+
+            workspaceNotificationService.listen()
         }
 
         @JvmStatic
         @AfterAll
         fun tearDown() {
+            workspaceNotificationService.listen()
+            alignerKPIService.stop()
             artemis.stop()
             DBSerializer.delete(DBCache.get(dataStore.toString()).database, perfectCNetId.toInt())
             DBSerializer.delete(DBCache.get(dataStore.toString()).database, mainstreamCNetId.toInt())
+        }
+
+        @BeforeTest
+        fun before() {
+            workspaceNotificationMutex.drainPermits()
+        }
+
+        private fun waitForDataChange() {
+            workspaceNotificationMutex.acquire()
         }
 
 
@@ -231,15 +264,15 @@ class AlignerKPIServiceTests {
             "select l:*, t:*, e:name, max(e:timestamp)-min(e:timestamp) where l:id=$logUUID group by e:name, e:instance",
             perfectCNetId
         )
-        val alignerKpiService = AlignerKPIService()
+        val alignerKpiComponentService = AlignerKPIComponentService()
         try {
-            alignerKpiService.register()
-            alignerKpiService.start()
-            assertEquals(ServiceStatus.Started, alignerKpiService.status)
+            alignerKpiComponentService.register()
+            alignerKpiComponentService.start()
+            assertEquals(ServiceStatus.Started, alignerKpiComponentService.status)
 
-            Thread.sleep(1000L) // wait for calculation
+            waitForDataChange()
         } finally {
-            alignerKpiService.stop()
+            alignerKpiComponentService.stop()
         }
 
         transactionMain {
@@ -293,20 +326,20 @@ class AlignerKPIServiceTests {
 
     @Test
     fun `run service then create KPI component based on the mainstream model`() {
-        val alignerKpiService = AlignerKPIService()
+        val alignerKpiComponentService = AlignerKPIComponentService()
         try {
-            alignerKpiService.register()
-            alignerKpiService.start()
-            assertEquals(ServiceStatus.Started, alignerKpiService.status)
+            alignerKpiComponentService.register()
+            alignerKpiComponentService.start()
+            assertEquals(ServiceStatus.Started, alignerKpiComponentService.status)
 
             createKPIComponent(
                 "select l:*, t:*, e:name, max(e:timestamp)-min(e:timestamp) where l:id=$logUUID group by e:name, e:instance",
                 mainstreamCNetId
             )
 
-            Thread.sleep(1000L) // wait for calculation
+            waitForDataChange()
         } finally {
-            alignerKpiService.stop()
+            alignerKpiComponentService.stop()
         }
 
         transactionMain {
@@ -364,15 +397,16 @@ class AlignerKPIServiceTests {
     @Test
     fun `create invalid KPI`() {
         createKPIComponent("just invalid query", mainstreamCNetId)
-        val alignerKpiService = AlignerKPIService()
+        val alignerKpiComponentService = AlignerKPIComponentService()
         try {
-            alignerKpiService.register()
-            alignerKpiService.start()
-            assertEquals(ServiceStatus.Started, alignerKpiService.status)
+            alignerKpiComponentService.register()
+            alignerKpiComponentService.start()
+            assertEquals(ServiceStatus.Started, alignerKpiComponentService.status)
 
-            Thread.sleep(1000L) // wait for calculation
+
+            waitForDataChange()
         } finally {
-            alignerKpiService.stop()
+            alignerKpiComponentService.stop()
         }
 
         transactionMain {
@@ -390,13 +424,13 @@ class AlignerKPIServiceTests {
     @Test
     fun `create invalid KPI then fix it`() {
         createKPIComponent("just invalid query", mainstreamCNetId)
-        val alignerKpiService = AlignerKPIService()
+        val alignerKpiComponentService = AlignerKPIComponentService()
         try {
-            alignerKpiService.register()
-            alignerKpiService.start()
-            assertEquals(ServiceStatus.Started, alignerKpiService.status)
+            alignerKpiComponentService.register()
+            alignerKpiComponentService.start()
+            assertEquals(ServiceStatus.Started, alignerKpiComponentService.status)
 
-            Thread.sleep(1000L) // wait for calculation
+            waitForDataChange()
 
             transactionMain {
                 val component = WorkspaceComponent.find {
@@ -407,9 +441,9 @@ class AlignerKPIServiceTests {
             }.triggerEvent(Producer())
 
 
-            Thread.sleep(1000L) // wait for calculation
+            waitForDataChange()
         } finally {
-            alignerKpiService.stop()
+            alignerKpiComponentService.stop()
         }
 
         transactionMain {
