@@ -196,7 +196,7 @@ abstract class SeleniumBase(
             if (partial)
                 fun(element: String): String { return "contains(text(), '$element')" }
             else
-                fun(element: String): String { return "text()='$element" }
+                fun(element: String): String { return "text()='$element'" }
         val attributes = text.joinToString(separator = " or ", transform = transform)
         click(By.xpath("""//div[@role='listbox']//div[$attributes]"""))
         recorder?.take()
