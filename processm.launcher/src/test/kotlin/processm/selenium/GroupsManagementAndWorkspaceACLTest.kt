@@ -71,7 +71,7 @@ class GroupsManagementAndWorkspaceACLTest : SeleniumBase() {
         click(By.id(workspaceId))
         click("btn-workspace-hamburger")
         click("btn-workspace-security")
-        addACE(group1a, "Właściciel", "Owner")
+        addACE(group1a, "Owner")
         closeACLEditor()
     }
 
@@ -121,7 +121,7 @@ class GroupsManagementAndWorkspaceACLTest : SeleniumBase() {
         click(By.id(workspaceId))
         click("btn-workspace-hamburger")
         click("btn-workspace-security")
-        addACE(group2, "Właściciel", "Owner")
+        addACE(group2, "Owner")
         clickButtonInRow(email, "btn-remove-ace")
         // The editor disappears on its own, hence it is not necessary to close it
         acknowledgeSnackbar("error")

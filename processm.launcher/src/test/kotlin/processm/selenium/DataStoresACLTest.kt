@@ -94,7 +94,7 @@ class DataStoresACLTest : SeleniumBase() {
         iam(email1, "goto-data-stores")
         for (ds in dataStores) {
             openACLEditor(ds)
-            addACE(organization, "Reader", "Czytelnik")
+            addACE(organization, "Reader")
             closeACLEditor()
         }
     }
@@ -150,7 +150,7 @@ class DataStoresACLTest : SeleniumBase() {
     fun `user 1 adds user 2 to datastore0 as an owner and removes their own access`() {
         iam(email1, "goto-data-stores")
         openACLEditor(dataStores[0])
-        addACE(email2, "Owner", "Właściciel")
+        addACE(email2, "Owner")
         clickButtonInRow(email1, "btn-remove-ace")
         // The editor disappears on its own, hence it is not necessary to close it
         openACLEditor(dataStores[0])
@@ -162,7 +162,7 @@ class DataStoresACLTest : SeleniumBase() {
     fun `user 1 adds user 2 to datastore1 as a writer but fails to remove their own access`() {
         iam(email1, "goto-data-stores")
         openACLEditor(dataStores[1])
-        addACE(email2, "Writer", "Pisarz")
+        addACE(email2, "Writer")
         clickButtonInRow(email1, "btn-remove-ace")
         acknowledgeSnackbar("error")
         closeACLEditor()
@@ -173,10 +173,10 @@ class DataStoresACLTest : SeleniumBase() {
     fun `user 1 adds user 2 to datastore2 as an owner and edits to a reader`() {
         iam(email1, "goto-data-stores")
         openACLEditor(dataStores[2])
-        addACE(email2, "Owner", "Właściciel")
+        addACE(email2, "Owner")
         clickButtonInRow(email2, "btn-edit-ace")
         openVuetifyDropDown("ace-editor-role")
-        selectVuetifyDropDownItem("Reader", "Czytelnik")
+        selectVuetifyDropDownItem("Reader")
         click("btn-ace-editor-submit")
         closeACLEditor()
     }

@@ -199,7 +199,7 @@ class OrganizationsTest : SeleniumBase() {
         click("btn-create-workspace")
         click("btn-workspace-hamburger")
         click("btn-workspace-security")
-        addACE(privateOrg2, "Właściciel", "Owner")
+        addACE(privateOrg2, "Owner")
         clickButtonInRow(email2, "btn-remove-ace")
         closeACLEditor()
     }
