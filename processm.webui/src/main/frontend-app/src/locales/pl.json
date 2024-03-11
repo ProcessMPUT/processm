@@ -207,7 +207,7 @@
     "organizations": "Organizacje",
     "organization-remove-objects": "Grupy tej organizacji są jedynymi właścicielami następujących obiektów. Czy chcesz je usunąć w celu usunięcia organizacji?",
     "page-title": "Użytkownicy",
-    "remove-objects": "Ta grupa is jedynym właścicielem następujących obiektów. Czy chcesz je usunąć w celu usunięcia grupy?",
+    "remove-objects": "Ta grupa jest jedynym właścicielem następujących obiektów. Czy chcesz je usunąć w celu usunięcia grupy?",
     "role": "Rola",
     "select-organization": "Wybierz organizację",
     "shared": "Współdzielona",

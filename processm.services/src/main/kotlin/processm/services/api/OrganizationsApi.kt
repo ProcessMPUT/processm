@@ -92,7 +92,7 @@ fun Route.OrganizationsApi() {
             call.respond(organizations.map { it.toApi() })
         }
 
-        post<Paths.SubOrganization> { path ->
+        put<Paths.SubOrganization> { path ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(path.organizationId, OrganizationRole.writer)
             principal.ensureUserBelongsToOrganization(path.subOrganizationId, OrganizationRole.owner)
