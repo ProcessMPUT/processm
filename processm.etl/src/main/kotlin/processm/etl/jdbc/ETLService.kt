@@ -69,6 +69,27 @@ class ETLService : AbstractJobService(QUARTZ_CONFIG, JDBC_ETL_TOPIC, null) {
                 emptyList()
             }
 
+            TRIGGER -> loggedScope { logger ->
+                val key = JobKey.jobKey(id, datastore)
+                if (scheduler.checkExists(key)) {
+                    logger.debug("Triggering an existing job {}", key)
+                    scheduler.triggerJob(key)
+                    emptyList()
+                } else {
+                    logger.debug("Triggering a non-existing job {}", key)
+                    val job = JobBuilder
+                        .newJob(ETLJob::class.java)
+                        .withIdentity(id, datastore)
+                        .build()
+                    val trigger = TriggerBuilder
+                        .newTrigger()
+                        .withIdentity(id, datastore)
+                        .startNow()
+                        .build()
+                    listOf(job to trigger)
+                }
+            }
+
             else -> throw IllegalArgumentException("Unrecognized type: $type.")
         }
     }
@@ -105,7 +126,7 @@ class ETLService : AbstractJobService(QUARTZ_CONFIG, JDBC_ETL_TOPIC, null) {
             val key = context.jobDetail.key
             val id = key.name
             val datastore = key.group
-            var name:String = "unknown"
+            var name: String = "unknown"
             try {
                 transaction(DBCache.get(datastore).database) {
                     config = ETLConfiguration[id.toUUID()!!]

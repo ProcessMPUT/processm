@@ -244,4 +244,10 @@ export default class DataStoreService extends BaseService {
       validateStatus: (status: number) => [204, 404].indexOf(status) >= 0
     });
   }
+
+  public async triggerEtlProcess(dataStoreId: string, etlProcessId: string): Promise<void> {
+    await this.dataStoresApi.triggerEtlProcess(dataStoreId, etlProcessId, {
+      validateStatus: (status: number) => status == 204
+    });
+  }
 }

@@ -697,6 +697,20 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
+    post:
+      tags:
+        - dataStores
+      summary: Schedule the ETL process for immediate execution. Valid only for JDBC processes.
+      operationId: triggerEtlProcess
+      responses:
+        '204':
+          description: Successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: [ ]
   /data-stores/{dataStoreId}/sampling-etl-processes/:
     parameters:
       - name: dataStoreId

@@ -86,7 +86,8 @@
     },
     "jdbc-etl-process": {
       "title": "Add JDBC ETL process",
-      "description": "Manually define a query that yields relevant events as result rows"
+      "description": "Manually define a query that yields relevant events as result rows",
+      "trigger": "Execute the process once at the earliest possible moment"
     },
     "upload-xes-file": {
       "title": "Upload XES event log",
