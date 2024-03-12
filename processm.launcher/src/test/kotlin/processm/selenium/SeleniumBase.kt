@@ -191,6 +191,7 @@ abstract class SeleniumBase(
     }
 
     fun selectVuetifyDropDownItem(vararg text: String, partial: Boolean = false) {
+        require(text.all { '\'' !in it }) { "Apostrophes are currently not supported" }
         val transform =
             if (partial)
                 fun(element: String): String { return "contains(text(), '$element')" }
