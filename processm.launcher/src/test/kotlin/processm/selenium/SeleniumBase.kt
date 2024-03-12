@@ -51,7 +51,7 @@ abstract class SeleniumBase(
      * official documentation, however, it seems it should be formatted as a comma-separated list of language codes
      * following BCP 47.
      */
-    protected val language: String? = "en-GB"
+    protected val language: String? = "en-US"
 ) : TestCaseAsAClass() {
 
     /**
