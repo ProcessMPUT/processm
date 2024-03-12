@@ -1,0 +1,12 @@
+{
+  "language-name": "日本語",
+  "code": "ja",
+  "flag": "jp",
+  "navigation": {
+    "menu": "メニュー"
+  },
+  "login-form": {
+    "login": "ログイン",
+    "password": "パスワード"
+  }
+}
