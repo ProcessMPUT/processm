@@ -31,17 +31,23 @@ import processm.logging.logger
 import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 import kotlin.test.*
 
+@OptIn(ExperimentalContracts::class)
 private fun <T> waitUntilNotNull(n: Int = 10, sleep: Long = 500, block: () -> T?): T? {
-    for (i in 0..n) {
-        val value = block()
-        if (value !== null)
-            return value
-        else
+    contract {
+        callsInPlace(block, InvocationKind.AT_LEAST_ONCE)
+    }
+    repeat(n) { i ->
+        block()?.let { return@waitUntilNotNull it }
+        if (i < n - 1)
             Thread.sleep(sleep)
     }
     return null
+
 }
 
 @Tag("ETL")
@@ -630,11 +636,17 @@ OFFSET ?::bigint
 
             config.notifyUsers(TRIGGER)
 
-            Thread.sleep(5000L)
+            val count = waitUntilNotNull {
+                val stream = q(config.logIdentityId)
+                val count = stream.toFlatSequence().count()
+                if (count == 6)
+                    return@waitUntilNotNull count
+                else
+                    return@waitUntilNotNull null
+            }
 
-            val stream = q(config.logIdentityId)
             // one event per run: two due to the schedule and one due to the manual refresh
-            assertEquals(1 + 2 + 3, stream.toFlatSequence().count())
+            assertEquals(1 + 2 + 3, count)
         } finally {
             service.stop()
         }

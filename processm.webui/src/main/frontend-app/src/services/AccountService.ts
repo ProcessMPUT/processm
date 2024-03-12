@@ -42,7 +42,8 @@ export default class AccountService extends BaseService {
   }
 
   /**
-   * Named in such a way to reflect the side effect of modifying $sessionStorage.userInfo
+   * Retrieve the user's email and locale from the server. The retrieved value is returned and, as a side effect,
+   * stored in `$sessionStorage.userInfo`.
    */
   public async updateUserInfo(): Promise<UserAccount> {
     const response = await this.usersApi.getUserAccountDetails();

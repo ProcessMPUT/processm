@@ -458,13 +458,21 @@ class UsersApiTest : BaseApiTest() {
         val accountService = declareMock<AccountService>()
 
         every { accountService.changeLocale(userId = any(), locale = "pl_PL") } just runs
+        every { accountService.getUser(any()) } returns mockk {
+            every { id } returns EntityID(UUID.randomUUID(), Users)
+            every { email } returns "email@example.com"
+            every { locale } returns "pl-PL"
+        }
 
         withAuthentication {
             with(handleRequest(HttpMethod.Patch, "/api/users/me/locale") {
                 addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                 withSerializedBody(LocaleChange("pl_PL"))
             }) {
-                assertEquals(HttpStatusCode.NoContent, response.status())
+                assertEquals(HttpStatusCode.OK, response.status())
+                with(response.deserializeContent<UserAccountInfo>()) {
+                    assertEquals("pl-PL", locale)
+                }
             }
         }
 
