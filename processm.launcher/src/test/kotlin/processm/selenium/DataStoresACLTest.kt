@@ -85,7 +85,7 @@ class DataStoresACLTest : SeleniumBase() {
     @Test
     fun `user 1 adds user 2 to the organization as a writer`() {
         iam(email1, "goto-users")
-        addNewUserToOrganization(email2, "writer")
+        addNewUserToOrganization(email2, "Writer")
     }
 
     @Order(75)
