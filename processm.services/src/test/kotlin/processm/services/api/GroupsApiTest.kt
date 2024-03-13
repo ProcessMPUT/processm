@@ -60,6 +60,7 @@ class GroupsApiTest : BaseApiTest() {
                     every { name } returns "Group1"
                     every { this@mockk.organizationId } returns mockk {
                         every { id } returns EntityID(organizationId, Organizations)
+                        every { name } returns "Org"
                     }
                     every { isImplicit } returns false
                     every { isShared } returns true
@@ -69,6 +70,7 @@ class GroupsApiTest : BaseApiTest() {
                     every { name } returns "Group2"
                     every { this@mockk.organizationId } returns mockk {
                         every { id } returns EntityID(organizationId, Organizations)
+                        every { name } returns "Org"
                     }
                     every { isImplicit } returns false
                     every { isShared } returns false
@@ -296,6 +298,7 @@ class GroupsApiTest : BaseApiTest() {
                     every { isShared } returns false
                     every { this@mockk.organizationId } returns mockk {
                         every { id } returns EntityID(organizationId, Organizations)
+                        every { name } returns "Org"
                     }
                 },
                 mockk {
@@ -305,6 +308,7 @@ class GroupsApiTest : BaseApiTest() {
                     every { isShared } returns false
                     every { this@mockk.organizationId } returns mockk {
                         every { id } returns EntityID(organizationId, Organizations)
+                        every { name } returns "Org"
                     }
                 }
             )
@@ -388,6 +392,7 @@ class GroupsApiTest : BaseApiTest() {
                 every { isShared } returns true
                 every { this@mockk.organizationId } returns mockk {
                     every { id } returns EntityID(organizationId, Organizations)
+                    every { name } returns "Org"
                 }
             }
 

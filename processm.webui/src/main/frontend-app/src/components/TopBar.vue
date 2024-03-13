@@ -14,13 +14,12 @@
           <v-list-item-icon>
             <v-icon>settings</v-icon>
           </v-list-item-icon>
-          <v-list-item-content>{{
-              $t("topbar.user-profile")
-            }}
-          </v-list-item-content>
+          <v-list-item-content>{{ $t("topbar.user-profile") }} </v-list-item-content>
         </v-list-item>
         <v-list-item @click.stop="signOut" name="btn-logout">
-          <v-list-item-icon><v-icon>logout</v-icon></v-list-item-icon>
+          <v-list-item-icon>
+            <v-icon>logout</v-icon>
+          </v-list-item-icon>
           <v-list-item-content>{{ $t("topbar.sign-out") }}</v-list-item-content>
         </v-list-item>
         <v-list-group v-model="organizationsExpanded" prepend-icon="groups3">
@@ -30,14 +29,19 @@
             </v-list-item-content>
           </template>
           <v-list-item-group v-model="currentOrganization" mandatory>
-            <v-list-item
-                v-for="(roleInOrganization, i) in this.$sessionStorage.userOrganizations"
-                :key="i"
-                :value="i"
-            >
+            <v-list-item v-for="(roleInOrganization, i) in this.$sessionStorage.userOrganizations" :key="i" :value="i">
               <v-list-item-icon></v-list-item-icon>
-              <v-list-item-content v-text="roleInOrganization.organization.name"
-                                   @click="changeOrganization(i)"></v-list-item-content>
+              <v-tooltip bottom>
+                <template v-slot:activator="{ on, attrs }">
+                  <v-list-item-content
+                    v-text="roleInOrganization.organization.name"
+                    @click="changeOrganization(i)"
+                    v-bind="attrs"
+                    v-on="on"
+                  ></v-list-item-content>
+                </template>
+                <span>{{ $t("users.unique-organization-id") }}: {{ roleInOrganization.organization.id }}</span>
+              </v-tooltip>
             </v-list-item>
           </v-list-item-group>
         </v-list-group>
@@ -48,7 +52,7 @@
 
 <script lang="ts">
 import Vue from "vue";
-import {Component, Inject} from "vue-property-decorator";
+import { Component, Inject } from "vue-property-decorator";
 import AccountService from "@/services/AccountService";
 
 @Component
@@ -67,9 +71,7 @@ export default class TopBar extends Vue {
       return;
     }
 
-    await this.accountService
-        .signOut()
-        .finally(() => this.$router.push({name: "login"}));
+    await this.accountService.signOut().finally(() => this.$router.push({ name: "login" }));
   }
 
   changeOrganization(i: number) {

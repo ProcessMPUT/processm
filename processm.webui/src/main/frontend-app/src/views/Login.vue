@@ -59,7 +59,16 @@
           </v-toolbar>
           <v-card-text>
             {{ this.$t("users.select-organization") }}:
-            <v-select v-model="selectedOrganizationId" item-value="id" :items="organizations" item-text="name" name="combo-organization"></v-select>
+            <v-select v-model="selectedOrganizationId" item-value="id" :items="organizations" item-text="name" name="combo-organization">
+              <template v-slot:item="{ parent, item, on, attrs }">
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <span v-bind="attrs" v-on="on">{{ item.name }}</span>
+                  </template>
+                  <span>{{ $t("users.unique-organization-id") }}: {{ item.id }}</span>
+                </v-tooltip>
+              </template>
+            </v-select>
           </v-card-text>
 
           <v-card-actions>

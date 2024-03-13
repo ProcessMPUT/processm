@@ -76,6 +76,14 @@
           @change="item.dirty = true"
           @focus="item.focus = true"
         >
+          <template v-slot:prepend>
+            <v-tooltip bottom>
+              <template v-slot:activator="{ on, attrs }">
+                <span v-bind="attrs" v-on="on" style="font-size: x-small; color: #7f7f7f">{{ item.id.substr(0, 8) }}</span>
+              </template>
+              <span>{{ $t("users.unique-group-id") }}: {{ item.id }}</span>
+            </v-tooltip>
+          </template>
           <template v-slot:append>
             <v-tooltip bottom>
               <template v-slot:activator="{ on, attrs }">
@@ -159,7 +167,12 @@
       </template>
 
       <template v-slot:item.organizationId="{ item }">
-        {{ organizations.find((o) => o.id === item.organizationId)?.name ?? item.organizationId }}
+        <v-tooltip bottom>
+          <template v-slot:activator="{ on, attrs }">
+            <span v-bind="attrs" v-on="on">{{ organizations.find((o) => o.id === item.organizationId)?.name ?? item.organizationId }}</span>
+          </template>
+          <span>{{ $t("users.unique-organization-id") }}: {{ item.organizationId }}</span>
+        </v-tooltip>
       </template>
 
       <template v-slot:item.actions="{ item, index }">

@@ -50,7 +50,8 @@ fun Group.toApi() = ApiGroup(
     name = name ?: "(no name)",
     organizationId = organizationId?.id?.value,
     isImplicit = isImplicit,
-    isShared = isShared
+    isShared = isShared,
+    organizationName = organizationId?.name
 )
 
 fun UserRoleInOrganization.toApi() = ApiUserRoleInOrganization(

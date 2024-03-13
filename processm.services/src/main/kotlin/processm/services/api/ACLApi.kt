@@ -66,7 +66,12 @@ fun Route.ACLApi() {
             principal.ensureCanRead(urn)
             val entries = transactionMain {
                 aclService.getEntries(urn).mapToArray { ace ->
-                    APIAccessControlEntry(ace.group.id.value, ace.role.toApi(), ace.group.name)
+                    APIAccessControlEntry(
+                        ace.group.id.value,
+                        ace.role.toApi(),
+                        ace.group.name,
+                        ace.group.organizationId?.toApi()
+                    )
                 }
             }
             call.respond(HttpStatusCode.OK, entries);
