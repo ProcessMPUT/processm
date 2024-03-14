@@ -198,7 +198,7 @@ abstract class SeleniumBase(
             else
                 fun(element: String): String { return "text()='$element'" }
         val attributes = text.joinToString(separator = " or ", transform = transform)
-        click(By.xpath("""//div[@role='listbox']//div[$attributes]"""))
+        click(By.xpath("""//div[@role='listbox']//*[$attributes]"""))
         recorder?.take()
     }
 
