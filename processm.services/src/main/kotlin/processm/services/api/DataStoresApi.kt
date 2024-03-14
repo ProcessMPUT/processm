@@ -12,9 +12,9 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.Route
 import org.antlr.v4.runtime.RecognitionException
 import org.koin.ktor.ext.inject
+import processm.dbmodels.models.RoleType
 import processm.helpers.mapToArray
 import processm.helpers.toLocalDateTime
-import processm.dbmodels.models.RoleType
 import processm.services.api.models.*
 import processm.services.logic.DataStoreService
 import processm.services.logic.LogsService
@@ -273,7 +273,7 @@ fun Route.DataStoresApi() {
                 RoleType.Reader
             )
             val connectionProperties = runCatching { call.receiveNullable<DataConnector>() }.getOrNull()?.properties
-                    ?: throw ApiException("The provided data connector configuration cannot be parsed")
+                ?: throw ApiException("The provided data connector configuration cannot be parsed")
             val connectionString = connectionProperties[connectionStringPropertyName]
 
             try {
@@ -401,6 +401,17 @@ fun Route.DataStoresApi() {
                 etlProcessData.isActive
             )
 
+            call.respond(HttpStatusCode.NoContent)
+        }
+
+        post<Paths.EtlProcess> { path ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            dataStoreService.assertUserHasSufficientPermissionToDataStore(
+                principal.userId,
+                path.dataStoreId,
+                RoleType.Reader
+            )
+            dataStoreService.triggerEtlProcess(path.dataStoreId, path.etlProcessId)
             call.respond(HttpStatusCode.NoContent)
         }
 

@@ -5,6 +5,7 @@ import org.jgroups.util.UUID
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.TestMethodOrder
+import org.junit.jupiter.api.assertThrows
 import org.openqa.selenium.By
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -75,13 +76,16 @@ class DataStoresACLTest : SeleniumBase() {
     fun `user 2 doesn't see the created data stores`() {
         iam(email2, "goto-data-stores")
         waitForText("No data available")
+        assertThrows<org.openqa.selenium.NoSuchElementException> {
+            driver.findElement(By.xpath("//*[text()='${dataStores[0]}' or text()='${dataStores[1]}' or text()='${dataStores[2]}']"))
+        }
     }
 
     @Order(70)
     @Test
     fun `user 1 adds user 2 to the organization as a writer`() {
         iam(email1, "goto-users")
-        addNewUserToOrganization(email2, "writer")
+        addNewUserToOrganization(email2, "Writer")
     }
 
     @Order(75)
@@ -90,7 +94,7 @@ class DataStoresACLTest : SeleniumBase() {
         iam(email1, "goto-data-stores")
         for (ds in dataStores) {
             openACLEditor(ds)
-            addACE(organization, "Reader", "Czytelnik")
+            addACE(organization, "Reader")
             closeACLEditor()
         }
     }
@@ -120,7 +124,6 @@ class DataStoresACLTest : SeleniumBase() {
         iam(email2, "goto-data-stores")
         for (dataStoreId in dataStores) {
             clickButtonInRow(dataStoreId, "btn-delete-data-store")
-            // FIXME This contains language dependent string. It may break once #188 is resolved.
             val element = wait.until {
                 driver.findElements(By.xpath("//div[@role='dialog']//button//*[text()[contains(.,'Yes')]]"))
                     .firstOrNull { it.isDisplayed }
@@ -147,7 +150,7 @@ class DataStoresACLTest : SeleniumBase() {
     fun `user 1 adds user 2 to datastore0 as an owner and removes their own access`() {
         iam(email1, "goto-data-stores")
         openACLEditor(dataStores[0])
-        addACE(email2, "Owner", "Właściciel")
+        addACE(email2, "Owner")
         clickButtonInRow(email1, "btn-remove-ace")
         // The editor disappears on its own, hence it is not necessary to close it
         openACLEditor(dataStores[0])
@@ -159,7 +162,7 @@ class DataStoresACLTest : SeleniumBase() {
     fun `user 1 adds user 2 to datastore1 as a writer but fails to remove their own access`() {
         iam(email1, "goto-data-stores")
         openACLEditor(dataStores[1])
-        addACE(email2, "Writer", "Pisarz")
+        addACE(email2, "Writer")
         clickButtonInRow(email1, "btn-remove-ace")
         acknowledgeSnackbar("error")
         closeACLEditor()
@@ -170,10 +173,10 @@ class DataStoresACLTest : SeleniumBase() {
     fun `user 1 adds user 2 to datastore2 as an owner and edits to a reader`() {
         iam(email1, "goto-data-stores")
         openACLEditor(dataStores[2])
-        addACE(email2, "Owner", "Właściciel")
+        addACE(email2, "Owner")
         clickButtonInRow(email2, "btn-edit-ace")
         openVuetifyDropDown("ace-editor-role")
-        selectVuetifyDropDownItem("Reader", "Czytelnik")
+        selectVuetifyDropDownItem("Reader")
         click("btn-ace-editor-submit")
         closeACLEditor()
     }
@@ -184,7 +187,7 @@ class DataStoresACLTest : SeleniumBase() {
         iam(email2, "goto-data-stores")
         openACLEditor(dataStores[0])
         wait.until {
-            driver.findElements(By.xpath("//td[text()='$email2']/../td[text()[contains(.,'Owner')] or text()[contains(.,'Właściciel')]]"))
+            driver.findElements(By.xpath("//tr[td[*[text()='$email2']]]//*[contains(text(),'Owner')]"))
                 ?.singleOrNull()?.isDisplayed
         }
         closeACLEditor()

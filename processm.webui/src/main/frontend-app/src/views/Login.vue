@@ -59,7 +59,16 @@
           </v-toolbar>
           <v-card-text>
             {{ this.$t("users.select-organization") }}:
-            <v-select v-model="selectedOrganizationId" item-value="id" :items="organizations" item-text="name" name="combo-organization"></v-select>
+            <v-select v-model="selectedOrganizationId" item-value="id" :items="organizations" item-text="name" name="combo-organization">
+              <template v-slot:item="{ parent, item, on, attrs }">
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <span v-bind="attrs" v-on="on">{{ item.name }}</span>
+                  </template>
+                  <span>{{ $t("users.unique-organization-id") }}: {{ item.id }}</span>
+                </v-tooltip>
+              </template>
+            </v-select>
           </v-card-text>
 
           <v-card-actions>
@@ -102,6 +111,9 @@ export default class Login extends Vue {
   selectedOrganizationId: string | null = null;
 
   async mounted() {
+    // Manually call to resetLocale to overwrite the locale of the user that just logged out
+    // Since there's no user at this point, the login page will display in the first available language in the order of preference of the web browser
+    this.app.resetLocale();
     const c = await this.configService.getConfig();
     Object.assign(this.config, c);
   }
@@ -115,8 +127,9 @@ export default class Login extends Vue {
 
     try {
       await this.accountService.signIn(this.username, this.password);
-      const { language } = await this.accountService.getAccountDetails();
-      this.setLanguage(language);
+
+      await this.accountService.updateUserInfo();
+      this.app.resetLocale();
       const organizations = await this.accountService.getUserOrganizations();
       this.setCurrentOrganization(organizations);
     } catch (error) {

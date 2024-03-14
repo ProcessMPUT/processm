@@ -2,6 +2,7 @@ package processm.etl.jdbc
 
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.deleteAll
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.statements.jdbc.JdbcConnectionImpl
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.AfterAll
@@ -12,16 +13,17 @@ import processm.core.esb.Artemis
 import processm.core.esb.ServiceStatus
 import processm.core.log.DBLogCleaner
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
+import processm.core.log.hierarchical.toFlatSequence
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.core.querylanguage.Query
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.ETLConfigurations
+import processm.dbmodels.etl.jdbc.TRIGGER
 import processm.dbmodels.models.DataStore
 import processm.dbmodels.models.EtlProcessMetadata
 import processm.dbmodels.models.EtlProcessesMetadata
-import processm.dbmodels.models.Organization
 import processm.etl.DBMSEnvironment
 import processm.etl.PostgreSQLEnvironment
 import processm.helpers.toUUID
@@ -29,7 +31,24 @@ import processm.logging.logger
 import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 import kotlin.test.*
+
+@OptIn(ExperimentalContracts::class)
+private fun <T> waitUntilNotNull(n: Int = 10, sleep: Long = 500, block: () -> T?): T? {
+    contract {
+        callsInPlace(block, InvocationKind.AT_LEAST_ONCE)
+    }
+    repeat(n) { i ->
+        block()?.let { return@waitUntilNotNull it }
+        if (i < n - 1)
+            Thread.sleep(sleep)
+    }
+    return null
+
+}
 
 @Tag("ETL")
 @Timeout(60, unit = TimeUnit.SECONDS)
@@ -301,6 +320,7 @@ OFFSET ?::bigint
                         assertEquals(1, log.traces.count())
                         assertEquals(1, log.traces.first().events.count())
                     }
+
                     "repeat" -> {
                         assertEquals(1, stream.count())
                         val log = stream.first()
@@ -332,7 +352,8 @@ OFFSET ?::bigint
         // verify what was imported
         transaction(DBCache.get(dataStoreId).database) {
             val config = ETLConfiguration.find {
-                ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name.eq("new batch ETL") }.first().id
+                ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name.eq("new batch ETL") }
+                    .first().id
             }.first()
             val stream = q(config.logIdentityId)
 
@@ -365,7 +386,8 @@ OFFSET ?::bigint
         // verify what was imported
         transaction(DBCache.get(dataStoreId).database) {
             val config = ETLConfiguration.find {
-                ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name.eq("new continuous ETL") }.first().id
+                ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name.eq("new continuous ETL") }
+                    .first().id
             }.first()
             val stream = q(config.logIdentityId)
 
@@ -389,7 +411,8 @@ OFFSET ?::bigint
 
             transaction(DBCache.get(dataStoreId).database) {
                 val config = ETLConfiguration.find {
-                    ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name.eq("repeat") }.first().id
+                    ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name.eq("repeat") }
+                        .first().id
                 }.first()
                 config.enabled = false
                 config
@@ -405,7 +428,8 @@ OFFSET ?::bigint
         // verify what was imported
         transaction(DBCache.get(dataStoreId).database) {
             val config = ETLConfiguration.find {
-                ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name.eq("repeat") }.first().id
+                ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name.eq("repeat") }
+                    .first().id
             }.first()
             val stream = q(config.logIdentityId)
 
@@ -554,6 +578,79 @@ OFFSET ?::bigint
             println(error.message)
             assertTrue("syntax" in error.message)
         }
+    }
+
+
+    @Test
+    fun `manually trigger a disabled ETL process`() {
+        val service = ETLService()
+        try {
+            service.register()
+            assertEquals(ServiceStatus.Stopped, service.status)
+
+            val config = transaction(DBCache.get(dataStoreId).database) {
+
+                ETLConfiguration.wrapRow(ETLConfigurations.innerJoin(EtlProcessesMetadata).select {
+                    EtlProcessesMetadata.name eq "never run"
+                }.single())
+            }
+            // make sure nothing was imported yet
+            assertEquals(0, q(config.logIdentityId).count())
+
+            service.start()
+            assertEquals(ServiceStatus.Started, service.status)
+
+            config.notifyUsers(TRIGGER)
+
+            val lastExecutionTime = waitUntilNotNull {
+                transaction(DBCache.get(dataStoreId).database) {
+                    EtlProcessMetadata.find { EtlProcessesMetadata.name eq "never run" }
+                        .firstOrNull()?.lastExecutionTime
+                }
+            }
+
+            assertNotNull(lastExecutionTime)
+        } finally {
+            service.stop()
+        }
+        assertEquals(ServiceStatus.Stopped, service.status)
+    }
+
+    @Test
+    fun `manually trigger an enabled ETL process with refresh`() {
+        val service = ETLService()
+        try {
+            service.register()
+            assertEquals(ServiceStatus.Stopped, service.status)
+
+            // make sure nothing was imported yet
+            val config = transaction(DBCache.get(dataStoreId).database) {
+                ETLConfiguration.wrapRow(ETLConfigurations.innerJoin(EtlProcessesMetadata).select {
+                    EtlProcessesMetadata.name eq "repeat"
+                }.single())
+            }
+            assertEquals(0, q(config.logIdentityId).count())
+
+            service.start()
+            assertEquals(ServiceStatus.Started, service.status)
+
+            config.notifyUsers(TRIGGER)
+
+            val count = waitUntilNotNull {
+                val stream = q(config.logIdentityId)
+                val count = stream.toFlatSequence().count()
+                if (count == 6)
+                    return@waitUntilNotNull count
+                else
+                    return@waitUntilNotNull null
+            }
+
+            // one event per run: two due to the schedule and one due to the manual refresh
+            assertEquals(1 + 2 + 3, count)
+        } finally {
+            service.stop()
+        }
+        assertEquals(ServiceStatus.Stopped, service.status)
     }
 
     private fun q(identityId: UUID) =

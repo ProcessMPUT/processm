@@ -288,6 +288,14 @@
                   </template>
                   <span>{{ item.isActive ? $t("common.deactivate") : $t("common.activate") }}</span>
                 </v-tooltip>
+                <v-tooltip bottom v-if="canBeTriggered(item)">
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on" name="btn-trigger-jdbc-etl-process">
+                      <v-icon small @click="trigger(item)">replay</v-icon>
+                    </v-btn>
+                  </template>
+                  <span>{{ $t("data-stores.jdbc-etl-process.trigger") }}</span>
+                </v-tooltip>
                 <v-tooltip bottom>
                   <template v-slot:activator="{ on, attrs }">
                     <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
@@ -387,7 +395,7 @@ import { capitalize } from "@/utils/StringCaseConverter";
 import App from "@/App.vue";
 import JdbcEtlProcessDialog from "@/components/etl/JdbcEtlProcessDialog.vue";
 import ProcessDetailsDialog from "@/components/etl/ProcessDetailsDialog.vue";
-import { EtlProcess, EtlProcessType } from "@/openapi";
+import { EtlProcess, EtlProcessType, JdbcEtlProcess } from "@/openapi";
 import LogTable from "@/components/LogTable.vue";
 
 const XesDataTable = () => import("@/components/XesDataTable.vue");
@@ -606,7 +614,9 @@ export default class DataStoreConfiguration extends Vue {
         dataConnectorName: dataConnector.name
       })}`,
       {
-        title: `${this.$t("common.warning")}`
+        title: `${this.$t("common.warning")}`,
+        buttonTrueText: this.$t("common.yes").toString(),
+        buttonFalseText: this.$t("common.no").toString()
       }
     );
 
@@ -646,7 +656,9 @@ export default class DataStoreConfiguration extends Vue {
         etlProcessName: etlProcess.name
       })}`,
       {
-        title: `${this.$t("common.warning")}`
+        title: `${this.$t("common.warning")}`,
+        buttonTrueText: this.$t("common.yes").toString(),
+        buttonFalseText: this.$t("common.no").toString()
       }
     );
 
@@ -659,6 +671,18 @@ export default class DataStoreConfiguration extends Vue {
     } catch (error) {
       this.displayFailedRemovalMessage();
     }
+  }
+
+  async trigger(etlProcess: EtlProcess) {
+    if (this.dataStoreId == null) return;
+    await this.dataStoreService.triggerEtlProcess(this.dataStoreId, etlProcess.id!);
+  }
+
+  canBeTriggered(etlProcess: EtlProcess) {
+    if (etlProcess.type != EtlProcessType.Jdbc) return false;
+    const cfg = (etlProcess as JdbcEtlProcess)?.configuration;
+    if (cfg === undefined) return true;
+    return !(cfg.batch && cfg.lastEventExternalId !== undefined);
   }
 
   closeConfiguration() {
@@ -683,7 +707,9 @@ export default class DataStoreConfiguration extends Vue {
           etlProcessName: etlProcess.name
         })}`,
         {
-          title: `${this.$t("common.warning")}`
+          title: `${this.$t("common.warning")}`,
+          buttonTrueText: this.$t("common.yes").toString(),
+          buttonFalseText: this.$t("common.no").toString()
         }
       ));
 

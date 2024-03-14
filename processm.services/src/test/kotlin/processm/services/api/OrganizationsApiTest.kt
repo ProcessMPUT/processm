@@ -28,7 +28,7 @@ class OrganizationsApiTest : BaseApiTest() {
         HttpMethod.Post to "/api/organizations/${UUID.randomUUID()}/members",
         HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}/members/${UUID.randomUUID()}",
         HttpMethod.Patch to "/api/organizations/${UUID.randomUUID()}/members/${UUID.randomUUID()}",
-        HttpMethod.Post to "/api/organizations/${UUID.randomUUID()}/suborganizations/${UUID.randomUUID()}",
+        HttpMethod.Put to "/api/organizations/${UUID.randomUUID()}/suborganizations/${UUID.randomUUID()}",
         HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}/suborganizations/${UUID.randomUUID()}",
         HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/suborganizations",
     )
@@ -575,7 +575,7 @@ class OrganizationsApiTest : BaseApiTest() {
         ) {
             with(
                 handleRequest(
-                    HttpMethod.Post,
+                    HttpMethod.Put,
                     "/api/organizations/$organizationId/suborganizations/$subOrganizationId"
                 )
             ) {
@@ -605,7 +605,7 @@ class OrganizationsApiTest : BaseApiTest() {
             ) {
                 with(
                     handleRequest(
-                        HttpMethod.Post,
+                        HttpMethod.Put,
                         "/api/organizations/$organizationId/suborganizations/$subOrganizationId"
                     )
                 ) {
@@ -636,7 +636,7 @@ class OrganizationsApiTest : BaseApiTest() {
             ) {
                 with(
                     handleRequest(
-                        HttpMethod.Post,
+                        HttpMethod.Put,
                         "/api/organizations/$organizationId/suborganizations/$subOrganizationId"
                     )
                 ) {

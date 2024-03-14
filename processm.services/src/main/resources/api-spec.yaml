@@ -217,6 +217,10 @@ paths:
       responses:
         '200':
           description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/UserAccountInfo'
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
@@ -688,6 +692,20 @@ paths:
         - dataStores
       summary: Remove the specified ETL process
       operationId: deleteEtlProcess
+      responses:
+        '204':
+          description: Successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: [ ]
+    post:
+      tags:
+        - dataStores
+      summary: Schedule the ETL process for immediate execution. Valid only for JDBC processes.
+      operationId: triggerEtlProcess
       responses:
         '204':
           description: Successful operation
@@ -1376,7 +1394,7 @@ paths:
         schema:
           type: string
           format: uuid
-    post:
+    put:
       tags:
         - organizations
       summary: Attach the specified organization as a sub-organization of the other
@@ -1513,7 +1531,7 @@ paths:
     get:
       tags:
         - organizations
-      summary: Get objects the groups of the organization are the sole owners of
+      summary: Get identifiers of the objects such that the groups of the organization are the sole owners of
       operationId: getOrganizationSoleOwnership
       responses:
         '200':
@@ -2420,6 +2438,8 @@ components:
         organizationId:
           type: string
           format: uuid
+        organizationName:
+          type: string
     Organization:
       type: object
       required: [ name, isPrivate ]
@@ -2534,6 +2554,8 @@ components:
           format: uuid
         groupName:
           type: string
+        organization:
+          $ref: '#/components/schemas/Organization'
         role:
           $ref: '#/components/schemas/OrganizationRole'
     EntityID:

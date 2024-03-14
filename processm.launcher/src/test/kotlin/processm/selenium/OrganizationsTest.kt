@@ -171,7 +171,7 @@ class OrganizationsTest : SeleniumBase() {
         expandRow(checkNotNull(wait.until { getTreeRow(subOrg1) }))
         click { getTreeRow(subOrg2)?.findElements(By.name("btn-login"))?.firstOrNull() }
         click(By.id("tab-users"))
-        addNewUserToOrganization(email2, "owner")
+        addNewUserToOrganization(email2, "Owner")
     }
 
     @Order(270)
@@ -199,7 +199,7 @@ class OrganizationsTest : SeleniumBase() {
         click("btn-create-workspace")
         click("btn-workspace-hamburger")
         click("btn-workspace-security")
-        addACE(privateOrg2, "Właściciel", "Owner")
+        addACE(privateOrg2, "Owner")
         clickButtonInRow(email2, "btn-remove-ace")
         closeACLEditor()
     }

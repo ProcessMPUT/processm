@@ -7,8 +7,8 @@ import io.ktor.http.*
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.assertThrows
 import org.openqa.selenium.*
 import org.openqa.selenium.chrome.ChromeDriver
 import org.openqa.selenium.chrome.ChromeOptions
@@ -32,7 +32,6 @@ fun WebElement.hasCSSClass(clazz: String): Boolean =
     getAttribute("class").split(Regex("\\s+")).any { it.equals(clazz, true) }
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Tag("e2e")
 abstract class SeleniumBase(
     /**
      * Set to true to take screenshots from time to time, and place them in a newly-created directory
@@ -49,7 +48,14 @@ abstract class SeleniumBase(
     /**
      * If true, the web browser is run in a headless mode.
      */
-    protected val headless: Boolean = true
+    protected val headless: Boolean = true,
+    /**
+     * The default language for the ProcessM UI. It is passed to the driver via the preference key `intl.accept_languages`
+     * to the driver, and then to the server via the Accept-Language header. The preference key seems to be lacking in
+     * official documentation, however, it seems it should be formatted as a comma-separated list of language codes
+     * following BCP 47.
+     */
+    protected val language: String? = "en-US"
 ) : TestCaseAsAClass() {
 
     /**
@@ -76,6 +82,9 @@ abstract class SeleniumBase(
         require('\'' !in text) { "Apostrophes are currently not supported" }
         return byXpath("//*[contains(text(),'$text')]")
     }
+
+    fun assertNoText(text: String) =
+        assertThrows<NoSuchElementException> { driver.findElement(By.xpath("//*[contains(text(),'$text')]")) }
 
     fun typeIn(name: String, value: String, replace: Boolean = true) = typeIn(byName(name), value, replace)
 
@@ -177,10 +186,15 @@ abstract class SeleniumBase(
         recorder?.take()
     }
 
-    @Deprecated("This function is inherently brittle, as it (more often than not) relies on a translatable piece of text. Eventually, it should be replaced with something more robust.")
-    fun selectVuetifyDropDownItem(vararg text: String) {
-        val attributes = text.joinToString(separator = " or ") { "text()='$it'" }
-        click(By.xpath("""//div[@role='listbox']//div[$attributes]"""))
+    fun selectVuetifyDropDownItem(vararg text: String, partial: Boolean = false) {
+        require(text.all { '\'' !in it }) { "Apostrophes are currently not supported" }
+        val transform =
+            if (partial)
+                fun(element: String): String { return "contains(text(), '$element')" }
+            else
+                fun(element: String): String { return "text()='$element'" }
+        val attributes = text.joinToString(separator = " or ", transform = transform)
+        click(By.xpath("""//div[@role='listbox']//*[$attributes]"""))
         recorder?.take()
     }
 
@@ -254,6 +268,8 @@ abstract class SeleniumBase(
         driver = ChromeDriver(ChromeOptions().apply {
             addArguments("--window-size=1920,1080")
             if (headless) addArguments("--headless=new")
+            if (language !== null)
+                setExperimentalOption("prefs", mapOf("intl.accept_languages" to language))
         })
         driver.manage().timeouts().implicitlyWait(Duration.ofMillis(1000))
         if (recordSlideshow) recorder = VideoRecorder(driver)

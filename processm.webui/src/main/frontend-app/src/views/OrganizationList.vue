@@ -22,6 +22,12 @@
             <span v-if="item.organization.isPrivate">{{ $t("organizations.switch-to-public") }}</span>
             <span v-else>{{ $t("organizations.switch-to-private") }}</span>
           </v-tooltip>
+          <v-tooltip bottom>
+            <template v-slot:activator="{ on, attrs }">
+              <span v-bind="attrs" v-on="on" style="font-size: x-small; color: #7f7f7f">{{ item.organization.id.substr(0, 8) }}</span>
+            </template>
+            <span>{{ $t('users.unique-organization-id')}}: {{ item.organization.id }}</span>
+          </v-tooltip>
         </template>
         <template v-slot:append="{ item }">
           <v-tooltip bottom>
@@ -365,7 +371,7 @@ export default class OrganizationList extends Vue {
 
   async login(item: OrganizationTreeItem) {
     const orgId = item.organization?.id!;
-    if (this.$sessionStorage.currentOrganization.id != orgId) {
+    if (this.$sessionStorage.currentOrganization?.id != orgId) {
       this.$sessionStorage.switchToOrganization(orgId);
       // Refresh page for all components to take the new organization into account
       this.$router.go(0);
