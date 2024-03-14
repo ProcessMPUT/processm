@@ -180,7 +180,9 @@ export default class DataStores extends Vue {
         dataStoreName: dataStore.name
       })}`,
       {
-        title: `${this.$t("common.warning")}`
+        title: `${this.$t("common.warning")}`,
+        buttonTrueText: this.$t("common.yes").toString(),
+        buttonFalseText: this.$t("common.no").toString()
       }
     );
 

@@ -391,6 +391,8 @@
     },
     "in": "in",
     "search": "Search",
-    "security": "Security"
+    "security": "Security",
+    "yes": "Yes",
+    "no": "No"
   }
 }

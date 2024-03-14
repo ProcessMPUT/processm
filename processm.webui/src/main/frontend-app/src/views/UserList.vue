@@ -42,7 +42,7 @@
                   :value.sync="newUser"
                   name="new-user"
                 ></combo-box-with-search>
-                <v-select v-model="newRole" :items="roles" :label="$t('users.role')" name="new-role"></v-select>
+                <v-select v-model="newRole" :items="roles" item-text="name" item-value="value" :label="$t('users.role')" name="new-role"></v-select>
               </v-form>
             </v-card-text>
             <v-card-actions>
@@ -73,6 +73,8 @@
         background-color="transparent"
         v-model="members[index].organizationRole"
         :items="roles"
+        item-text="name"
+        item-value="value"
         hide-details="auto"
         :disabled="members[index].email === $sessionStorage.userInfo.username"
         @input="updateRole(item)"
@@ -120,7 +122,10 @@ export default class UserList extends Vue {
   newRole = OrganizationRole.Reader;
   isNewValid = false;
 
-  roles = [OrganizationRole.Owner, OrganizationRole.Writer, OrganizationRole.Reader];
+  readonly roles = [OrganizationRole.Owner, OrganizationRole.Writer, OrganizationRole.Reader].map((r) => ({
+    name: this.$t(`users.roles.${r}`),
+    value: r
+  }));
   organization = this.$sessionStorage.currentOrganization;
 
   async mounted() {

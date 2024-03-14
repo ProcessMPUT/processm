@@ -190,8 +190,8 @@ abstract class SeleniumBase(
         recorder?.take()
     }
 
-    @Deprecated("This function is inherently brittle, as it (more often than not) relies on a translatable piece of text. Eventually, it should be replaced with something more robust.")
     fun selectVuetifyDropDownItem(vararg text: String, partial: Boolean = false) {
+        require(text.all { '\'' !in it }) { "Apostrophes are currently not supported" }
         val transform =
             if (partial)
                 fun(element: String): String { return "contains(text(), '$element')" }
