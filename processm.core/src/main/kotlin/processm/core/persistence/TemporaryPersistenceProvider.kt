@@ -1,10 +1,13 @@
 package processm.core.persistence
 
+import processm.core.Brand
+
 /**
  * Database-based cache. The cached objects are deleted on close() call. This class is not thread safe.
  * @see close
  */
-class TemporaryPersistenceProvider : AbstractPersistenceProvider("temporary_storage") {
+class TemporaryPersistenceProvider(dbName: String = Brand.mainDBInternalName) :
+    AbstractPersistenceProvider(dbName, "temporary_storage") {
     init {
         connection.autoCommit = false
         connection.createStatement().execute(

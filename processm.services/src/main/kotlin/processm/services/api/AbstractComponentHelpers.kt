@@ -12,6 +12,7 @@ import processm.core.models.petrinet.Transition
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
+import processm.dbmodels.models.dataAsObject
 import processm.dbmodels.models.load
 import processm.helpers.mapToArray
 import processm.helpers.toLocalDateTime
@@ -87,10 +88,10 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
     try {
         when (componentType) {
             ComponentTypeDto.CausalNet -> {
-                val cnet = data?.let {
+                val cnet = dataAsObject?.firstOrNull()?.let {
                     DBSerializer.fetch(
                         DBCache.get(dataStoreId.toString()).database,
-                        it.toInt()
+                        it.modelId.toInt()
                     )
                 } ?: return null.apply {
                     logger.debug("Missing C-net id for component $id.")
@@ -117,10 +118,11 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                     )
                 }
 
+                // TODO: insert here alignment KPIs
                 CausalNetComponentData(
                     type = ComponentType.causalNet,
                     nodes = nodes,
-                    edges = edges
+                    edges = edges,
                 )
             }
 
@@ -142,7 +144,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
             ComponentTypeDto.PetriNet -> {
                 val petriNet = processm.core.models.petrinet.DBSerializer.fetch(
                     DBCache.get(dataStoreId.toString()).database,
-                    UUID.fromString(requireNotNull(data) { "Missing PetriNet id" })
+                    UUID.fromString(requireNotNull(dataAsObject?.firstOrNull()?.modelId) { "Missing PetriNet id" })
                 )
                 val componentDataTransitions = petriNet.transitions.mapToArray {
                     PetriNetComponentDataAllOfTransitions(
@@ -154,6 +156,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                     )
                 }
 
+                // TODO: add alignment KPI
                 PetriNetComponentData(
                     type = ComponentType.petriNet,
                     initialMarking = petriNet.initialMarking.mapKeys { it.key.id.toString() },
@@ -166,9 +169,10 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
             ComponentTypeDto.DirectlyFollowsGraph -> {
                 val dfg = DirectlyFollowsGraph.load(
                     DBCache.get(dataStoreId.toString()).database,
-                    UUID.fromString(requireNotNull(data) { "Missing DFG id" })
+                    UUID.fromString(requireNotNull(dataAsObject?.firstOrNull()?.modelId) { "Missing DFG id" })
                 )
 
+                // TODO: add alignment KPI
                 DirectlyFollowsGraphComponentData(
                     type = ComponentType.directlyFollowsGraph,
                     nodes = dfg.activities.mapToArray {

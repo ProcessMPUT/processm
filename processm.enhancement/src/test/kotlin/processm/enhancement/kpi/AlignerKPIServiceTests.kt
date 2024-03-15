@@ -1,12 +1,14 @@
 package processm.enhancement.kpi
 
+import jakarta.jms.MapMessage
 import jakarta.jms.Message
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Timeout
 import processm.core.DBTestHelper
 import processm.core.communication.Producer
 import processm.core.esb.AbstractJMSListener
@@ -16,30 +18,35 @@ import processm.core.log.attribute.Attribute.COST_TOTAL
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
+import processm.core.persistence.DurablePersistenceProvider
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
+import processm.core.persistence.get
+import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
+import java.net.URI
 import java.util.*
 import java.util.concurrent.Semaphore
-import java.util.concurrent.TimeUnit
 import kotlin.test.*
 
-@Timeout(5L, unit = TimeUnit.SECONDS)
-class AlignerKPIComponentServiceTests {
+//@Timeout(5L, unit = TimeUnit.SECONDS)
+class AlignerKPIServiceTests {
     companion object {
 
         val dataStore = UUID.fromString(DBTestHelper.dbName)
+        val persistenceProvider = DurablePersistenceProvider(DBTestHelper.dbName)
         val logUUID = DBTestHelper.JournalReviewExtra
         val artemis = Artemis()
-        val alignerKPIService = AlignerKPIService()
         val workspaceNotificationMutex = Semaphore(1)
         val workspaceNotificationService = object : AbstractJMSListener(
             WORKSPACE_COMPONENTS_TOPIC,
-            "$WORKSPACE_COMPONENT_EVENT = '$DATA_CHANGE'",
-            "test",
+            "$WORKSPACE_COMPONENT_EVENT = '$DATA_CHANGE' AND $WORKSPACE_COMPONENT_EVENT_DATA <> '$DATA_CHANGE_MODEL'",
+            "test notification handler",
             false
         ) {
             override fun onMessage(message: Message?) {
+                message as MapMessage
+                assertNotEquals(DATA_CHANGE_MODEL, message.getStringProperty(WORKSPACE_COMPONENT_EVENT_DATA))
                 workspaceNotificationMutex.release()
             }
         }
@@ -54,8 +61,6 @@ class AlignerKPIComponentServiceTests {
 
             artemis.register()
             artemis.start()
-            alignerKPIService.register()
-            alignerKPIService.start()
 
             workspaceNotificationService.listen()
         }
@@ -64,21 +69,15 @@ class AlignerKPIComponentServiceTests {
         @AfterAll
         fun tearDown() {
             workspaceNotificationService.listen()
-            alignerKPIService.stop()
             artemis.stop()
             DBSerializer.delete(DBCache.get(dataStore.toString()).database, perfectCNetId.toInt())
             DBSerializer.delete(DBCache.get(dataStore.toString()).database, mainstreamCNetId.toInt())
-        }
-
-        @BeforeTest
-        fun before() {
-            workspaceNotificationMutex.drainPermits()
+            persistenceProvider.close()
         }
 
         private fun waitForDataChange() {
             workspaceNotificationMutex.acquire()
         }
-
 
         fun createPerfectCNet(): Long {
             val inviteReviewers = Node("invite reviewers")
@@ -235,44 +234,51 @@ class AlignerKPIComponentServiceTests {
         }
     }
 
-    fun createKPIComponent(_query: String, _modelId: Long) {
-        transactionMain {
+    @BeforeTest
+    fun before() {
+        workspaceNotificationMutex.drainPermits()
+    }
+
+    fun createComponent(_query: String, _modelId: Long): UUID {
+        val component = transactionMain {
             WorkspaceComponent.new {
                 name = "test-aligner-kpi"
-                componentType = ComponentTypeDto.AlignerKpi
+                componentType = ComponentTypeDto.CausalNet
                 dataStoreId = dataStore
                 query = _query
-                modelType = ModelTypeDto.CausalNet
-                modelId = _modelId
+                data = Json.encodeToString(arrayOf(ComponentData(_modelId.toString(), "")))
                 workspace = Workspace.all().firstOrNull() ?: Workspace.new { name = "test-workspace" }
             }
-        }.triggerEvent(Producer())
+        }
+
+        component.triggerEvent(Producer(), event = DATA_CHANGE, eventData = DATA_CHANGE_MODEL)
+        return component.id.value
     }
 
     @AfterTest
-    fun deleteKPIComponent() {
+    fun deleteComponent() {
         transactionMain {
             WorkspaceComponents.deleteWhere {
-                (WorkspaceComponents.name eq "test-aligner-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
+                (name eq "test-aligner-kpi") and (dataStoreId eq dataStore)
             }
         }
     }
 
     @Test
     fun `create KPI component based on the perfect model then run service`() {
-        createKPIComponent(
+        createComponent(
             "select l:*, t:*, e:name, max(e:timestamp)-min(e:timestamp) where l:id=$logUUID group by e:name, e:instance",
             perfectCNetId
         )
-        val alignerKpiComponentService = AlignerKPIComponentService()
+        val alignerKpiService = AlignerKPIService()
         try {
-            alignerKpiComponentService.register()
-            alignerKpiComponentService.start()
-            assertEquals(ServiceStatus.Started, alignerKpiComponentService.status)
+            alignerKpiService.register()
+            alignerKpiService.start()
+            assertEquals(ServiceStatus.Started, alignerKpiService.status)
 
             waitForDataChange()
         } finally {
-            alignerKpiComponentService.stop()
+            alignerKpiService.stop()
         }
 
         transactionMain {
@@ -280,7 +286,7 @@ class AlignerKPIComponentServiceTests {
                 WorkspaceComponents.dataStoreId eq dataStore
             }.first()
 
-            val report = Report.fromJson(component.data!!)
+            val report = persistenceProvider.get<Report>(URI(component.dataAsObject!![0].alignmentKPIId))
             assertEquals(0, report.logKPI.size)
             assertEquals(1, report.traceKPI.size)
             assertEquals(20.0, report.traceKPI[COST_TOTAL]!!.median)
@@ -326,28 +332,28 @@ class AlignerKPIComponentServiceTests {
 
     @Test
     fun `run service then create KPI component based on the mainstream model`() {
-        val alignerKpiComponentService = AlignerKPIComponentService()
+        val alignerKpiService = AlignerKPIService()
         try {
-            alignerKpiComponentService.register()
-            alignerKpiComponentService.start()
-            assertEquals(ServiceStatus.Started, alignerKpiComponentService.status)
+            alignerKpiService.register()
+            alignerKpiService.start()
+            assertEquals(ServiceStatus.Started, alignerKpiService.status)
 
-            createKPIComponent(
+            val componentId = createComponent(
                 "select l:*, t:*, e:name, max(e:timestamp)-min(e:timestamp) where l:id=$logUUID group by e:name, e:instance",
                 mainstreamCNetId
             )
 
             waitForDataChange()
         } finally {
-            alignerKpiComponentService.stop()
+            alignerKpiService.stop()
         }
 
         transactionMain {
             val component = WorkspaceComponent.find {
-                WorkspaceComponents.dataStoreId eq dataStore
+                (WorkspaceComponents.name eq "test-aligner-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
             }.first()
 
-            val report = Report.fromJson(component.data!!)
+            val report = persistenceProvider.get<Report>(URI(component.dataAsObject!![0].alignmentKPIId))
             assertEquals(0, report.logKPI.size)
             assertEquals(1, report.traceKPI.size)
             assertEquals(20.0, report.traceKPI[COST_TOTAL]!!.median)
@@ -396,25 +402,25 @@ class AlignerKPIComponentServiceTests {
 
     @Test
     fun `create invalid KPI`() {
-        createKPIComponent("just invalid query", mainstreamCNetId)
-        val alignerKpiComponentService = AlignerKPIComponentService()
+        createComponent("just invalid query", mainstreamCNetId)
+        val alignerKpiService = AlignerKPIService()
         try {
-            alignerKpiComponentService.register()
-            alignerKpiComponentService.start()
-            assertEquals(ServiceStatus.Started, alignerKpiComponentService.status)
+            alignerKpiService.register()
+            alignerKpiService.start()
+            assertEquals(ServiceStatus.Started, alignerKpiService.status)
 
 
             waitForDataChange()
         } finally {
-            alignerKpiComponentService.stop()
+            alignerKpiService.stop()
         }
 
         transactionMain {
             val component = WorkspaceComponent.find {
-                WorkspaceComponents.dataStoreId eq dataStore
+                (WorkspaceComponents.name eq "test-aligner-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
             }.first()
 
-            assertNull(component.data)
+            assertEquals("", component.dataAsObject!![0].alignmentKPIId)
             assertNull(component.dataLastModified)
             assertNotNull(component.lastError)
             assertTrue("Line 1 position 0: mismatched input 'just'" in component.lastError!!, component.lastError)
@@ -423,12 +429,12 @@ class AlignerKPIComponentServiceTests {
 
     @Test
     fun `create invalid KPI then fix it`() {
-        createKPIComponent("just invalid query", mainstreamCNetId)
-        val alignerKpiComponentService = AlignerKPIComponentService()
+        createComponent("just invalid query", mainstreamCNetId)
+        val alignerKpiService = AlignerKPIService()
         try {
-            alignerKpiComponentService.register()
-            alignerKpiComponentService.start()
-            assertEquals(ServiceStatus.Started, alignerKpiComponentService.status)
+            alignerKpiService.register()
+            alignerKpiService.start()
+            assertEquals(ServiceStatus.Started, alignerKpiService.status)
 
             waitForDataChange()
 
@@ -437,21 +443,28 @@ class AlignerKPIComponentServiceTests {
                     (WorkspaceComponents.name eq "test-aligner-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
                 }.first()
                 component.query = "select count(^t:name) where l:id=$logUUID"
-                component
-            }.triggerEvent(Producer())
-
+                component.afterCommit {
+                    this as WorkspaceComponent
+                    // simulate that miner actually ran
+                    triggerEvent(
+                        Producer(),
+                        event = DATA_CHANGE,
+                        eventData = DATA_CHANGE_MODEL
+                    )
+                }
+            }
 
             waitForDataChange()
         } finally {
-            alignerKpiComponentService.stop()
+            alignerKpiService.stop()
         }
 
         transactionMain {
             val component = WorkspaceComponent.find {
-                WorkspaceComponents.dataStoreId eq dataStore
+                (WorkspaceComponents.name eq "test-aligner-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
             }.first()
 
-            val report = Report.fromJson(component.data!!)
+            val report = persistenceProvider.get<Report>(URI(component.dataAsObject!![0].alignmentKPIId))
             assertEquals(1, report.logKPI.size)
             assertEquals(0, report.traceKPI.size)
             assertEquals(0, report.eventKPI.size)

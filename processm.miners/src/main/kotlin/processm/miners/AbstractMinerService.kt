@@ -2,6 +2,8 @@ package processm.miners
 
 import jakarta.jms.MapMessage
 import jakarta.jms.Message
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
@@ -44,8 +46,6 @@ abstract class CalcJob<T : ProcessModel> : ServiceJob {
                 return@transactionMain
             }
 
-            // TODO: store the entire history of models in the component.data field
-
             try {
                 val stream = DBHierarchicalXESInputStream(
                     component.dataStoreId.toString(),
@@ -54,14 +54,19 @@ abstract class CalcJob<T : ProcessModel> : ServiceJob {
                 )
 
                 val model = mine(component, stream)
-                component.data = store(DBCache.get(component.dataStoreId.toString()).database, model)
+                val modelId = store(DBCache.get(component.dataStoreId.toString()).database, model)
+                val previousData = component.dataAsObject ?: emptyArray<ComponentData>()
+                val data = arrayOf(ComponentData(modelId, "")) + previousData
+                component.data = Json.encodeToString(data)
                 component.dataLastModified = Instant.now()
                 component.lastError = null
+                component.triggerEvent(Producer(), DATA_CHANGE, DATA_CHANGE_MODEL)
             } catch (e: Exception) {
                 component.lastError = e.message
                 logger.warn("Cannot calculate model for component with id $id.", e)
+                component.triggerEvent(Producer(), DATA_CHANGE, DATA_CHANGE_LAST_ERROR)
             }
-            component.triggerEvent(Producer(), DATA_CHANGE)
+
         }
     }
 }

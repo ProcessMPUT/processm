@@ -13,8 +13,8 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.*
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.serializer
-import processm.enhancement.kpi.Report
 import processm.helpers.UUIDSerializer
+import processm.helpers.serialization.SerializersModuleProvider
 import java.time.LocalDateTime
 import java.util.*
 
@@ -24,7 +24,10 @@ val JsonSerializer = Json {
     explicitNulls = false
     prettyPrint = false
     serializersModule = SerializersModule {
-        include(Report.Json.serializersModule)
+        for (provider in ServiceLoader.load(SerializersModuleProvider::class.java)) {
+            include(provider.getSerializersModule())
+        }
+
         contextual(Any::class, AnySerializer as KSerializer<Any>)
         contextual(LocalDateTime::class, LocalDateTimeSerializer)
         contextual(UUID::class, UUIDSerializer)
