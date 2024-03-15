@@ -262,6 +262,7 @@ export default class WorkspaceArea extends Vue {
   initializeEmptyComponent(componentId: string, componentType: ComponentType) {
     let customProperties: CustomProperty[];
     switch (componentType) {
+      case ComponentType.Bpmn:
       case ComponentType.CausalNet:
         // FIXME: preconfigured WorkspaceComponentModel should be downloaded from server
         // This code repeats processm.services.api.AbstractComponentHelpersKt.getCustomProperties()

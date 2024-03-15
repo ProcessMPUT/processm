@@ -17,11 +17,21 @@ import processm.core.querylanguage.Query
 import processm.dbmodels.models.*
 import processm.helpers.toUUID
 import processm.logging.loggedScope
+import processm.miners.causalnet.onlineminer.OnlineMiner
+import processm.miners.processtree.inductiveminer.OnlineInductiveMiner
 import java.time.Instant
 import java.util.*
 
+const val ALGORITHM_HEURISTIC_MINER = "urn:processm:miners/OnlineHeuristicMiner"
+const val ALGORITHM_INDUCTIVE_MINER = "urn:processm:miners/OnlineInductiveMiner"
 
 abstract class CalcJob<T : ProcessModel> : ServiceJob {
+
+    protected fun minerFromURN(urn: String?): Miner = when (urn) {
+        ALGORITHM_INDUCTIVE_MINER -> OnlineInductiveMiner()
+        ALGORITHM_HEURISTIC_MINER, null -> OnlineMiner()
+        else -> throw IllegalArgumentException("Unexpected type of miner: $urn.")
+    }
 
     abstract fun mine(component: WorkspaceComponent, stream: DBHierarchicalXESInputStream): T
     abstract fun store(database: Database, model: T): String

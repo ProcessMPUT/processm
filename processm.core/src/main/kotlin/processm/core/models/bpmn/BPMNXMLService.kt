@@ -7,6 +7,7 @@ import org.xml.sax.Attributes
 import org.xml.sax.helpers.AttributesImpl
 import processm.core.models.bpmn.jaxb.ObjectFactory
 import processm.core.models.bpmn.jaxb.TDefinitions
+import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.*
@@ -71,9 +72,9 @@ object BPMNXMLService {
 
         fun endElement(element: EndElement) {
             handler.endElement(
-                    element.name.namespaceURI,
-                    element.name.localPart,
-                    qname(element.name)
+                element.name.namespaceURI,
+                element.name.localPart,
+                qname(element.name)
             )
             (element.namespaces as Iterator<Namespace>).forEach { handler.endPrefixMapping(it.prefix) }
         }
@@ -82,16 +83,16 @@ object BPMNXMLService {
             (element.namespaces as Iterator<Namespace>).forEach {
                 if (it.namespaceURI != null)
                     handler.startPrefixMapping(
-                            it.prefix,
-                            it.namespaceURI
+                        it.prefix,
+                        it.namespaceURI
                     )
             }
             try {
                 handler.startElement(
-                        element.name.namespaceURI,
-                        element.name.localPart,
-                        qname(element.name),
-                        attributes(element)
+                    element.name.namespaceURI,
+                    element.name.localPart,
+                    qname(element.name),
+                    attributes(element)
                 )
             } catch (e: NumberFormatException) {
                 _warnings.add(e)
@@ -145,3 +146,9 @@ object BPMNXMLService {
         JAXBContext.newInstance(TDefinitions::class.java).createMarshaller().marshal(wrap, writer)
     }
 }
+
+fun BPMNModel.toXML(): String =
+    ByteArrayOutputStream().use { stream ->
+        BPMNXMLService.save(this.model, stream)
+        return@use stream.toByteArray().decodeToString()
+    }

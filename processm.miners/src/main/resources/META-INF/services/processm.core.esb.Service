@@ -1,4 +1,5 @@
 processm.miners.kpi.LogKPIService
 processm.miners.causalnet.CausalNetMinerService
+processm.miners.bpmn.BPMNMinerService
 processm.miners.petrinet.PetriNetMinerService
 processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraphMinerService

@@ -16,8 +16,8 @@ import processm.dbmodels.models.load
 import processm.helpers.mapToArray
 import processm.helpers.toLocalDateTime
 import processm.logging.loggedScope
-import processm.miners.causalnet.ALGORITHM_HEURISTIC_MINER
-import processm.miners.causalnet.ALGORITHM_INDUCTIVE_MINER
+import processm.miners.ALGORITHM_HEURISTIC_MINER
+import processm.miners.ALGORITHM_INDUCTIVE_MINER
 import processm.services.JsonSerializer
 import processm.services.api.models.*
 import java.util.*
@@ -134,8 +134,10 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
             ComponentTypeDto.BPMN -> {
                 BPMNComponentData(
                     type = ComponentType.bpmn,
-                    xml = javaClass.classLoader.getResourceAsStream("bpmn-mock/pizza-collaboration.bpmn")
-                        .bufferedReader().readText() // FIXME: replace the mock with actual implementation
+                    xml = processm.core.models.bpmn.DBSerializer.fetch(
+                        DBCache.get(dataStoreId.toString()).database,
+                        UUID.fromString(requireNotNull(data) { "Missing BPMN model id" })
+                    )
                 )
             }
 

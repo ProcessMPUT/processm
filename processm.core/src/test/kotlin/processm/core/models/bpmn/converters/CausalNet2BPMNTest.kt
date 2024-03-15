@@ -1,15 +1,13 @@
 package processm.core.models.bpmn.converters
 
+import processm.core.models.bpmn.toXML
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.MutableCausalNet
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import processm.helpers.mapToSet
-import kotlin.test.Ignore
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
+import kotlin.test.*
 
 class CausalNet2BPMNTest {
 
@@ -107,6 +105,35 @@ class CausalNet2BPMNTest {
             a or b join b
             b joins c
         })
+    }
+
+    @Test
+    fun unsound() {
+        val bpmn = with(MutableCausalNet()) {
+            addDependency(start, end)
+            toBPMN()
+        }
+        // boring asserts, but the main concern here is that `toBPMN` does not throw
+        assertEquals(3, bpmn.activities.count())
+        assertTrue { bpmn.activities.any { it.name == "start" } }
+        assertTrue { bpmn.activities.any { it.name == "end" } }
+    }
+
+    @Test
+    fun `removeme`() {
+        val cnet = causalnet {
+            start splits a
+            a splits b or c or b + c
+            b splits c or d or c + d
+            c splits c or d or c + d
+            d splits end
+            start joins a
+            a joins b
+            a or b or c or a + b join c
+            b or c or b + c join d
+            d joins end
+        }
+        println(cnet.toBPMN(true).toXML())
     }
 
 }
