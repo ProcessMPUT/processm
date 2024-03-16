@@ -3,6 +3,7 @@ package processm.core
 import jakarta.jms.MapMessage
 import jakarta.jms.Message
 import processm.core.esb.AbstractJMSListener
+import processm.logging.loggedScope
 import java.util.*
 import java.util.concurrent.Semaphore
 
@@ -25,7 +26,7 @@ class TopicObserver(
         "$topic observer ${UUID.randomUUID()}",
         false
     ) {
-        override fun onMessage(message: Message?) {
+        override fun onMessage(message: Message?) = loggedScope {
             message as MapMessage
             mutex.release()
         }
@@ -34,7 +35,7 @@ class TopicObserver(
     /**
      * Connects to JMS service and starts observing the topic.
      */
-    fun start() {
+    fun start() = loggedScope {
         reset()
         notificationService.listen()
     }
@@ -42,18 +43,18 @@ class TopicObserver(
     /**
      * Sets the state to blocked and waiting for messages.
      */
-    fun reset() {
+    fun reset() = loggedScope {
         mutex.drainPermits()
     }
 
     /**
      * Blocks current thread until a message arrives in [topic] that matches the [filter].
      */
-    fun waitForMessage() {
+    fun waitForMessage() = loggedScope {
         mutex.acquire()
     }
 
-    override fun close() {
+    override fun close() = loggedScope {
         notificationService.close()
     }
 }

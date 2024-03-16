@@ -16,6 +16,7 @@ import processm.core.models.commons.ProcessModel
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.core.querylanguage.Query
+import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
 import processm.helpers.toUUID
 import processm.logging.loggedScope
@@ -24,6 +25,10 @@ import java.util.*
 
 
 abstract class CalcJob<T : ProcessModel> : ServiceJob {
+
+    companion object {
+        private val producer = Producer()
+    }
 
     abstract fun mine(component: WorkspaceComponent, stream: DBHierarchicalXESInputStream): T
     abstract fun store(database: Database, model: T): String
@@ -60,11 +65,15 @@ abstract class CalcJob<T : ProcessModel> : ServiceJob {
                 component.data = Json.encodeToString(data)
                 component.dataLastModified = Instant.now()
                 component.lastError = null
-                component.triggerEvent(Producer(), DATA_CHANGE, DATA_CHANGE_MODEL)
+                component.afterCommit {
+                    component.triggerEvent(producer, DATA_CHANGE, DATA_CHANGE_MODEL)
+                }
             } catch (e: Exception) {
                 component.lastError = e.message
                 logger.warn("Cannot calculate model for component with id $id.", e)
-                component.triggerEvent(Producer(), DATA_CHANGE, DATA_CHANGE_LAST_ERROR)
+                component.afterCommit {
+                    component.triggerEvent(producer, DATA_CHANGE, DATA_CHANGE_LAST_ERROR)
+                }
             }
 
         }
@@ -92,12 +101,13 @@ abstract class DeleteJob : ServiceJob {
 
                 delete(
                     DBCache.get(component.dataStoreId.toString()).database,
-                    component.data ?: throw NoSuchElementException("Model does not exist for component $id.")
+                    component.dataAsObject?.firstOrNull()?.modelId
+                        ?: throw NoSuchElementException("Model does not exist for component $id.")
                 )
 
             } catch (e: Exception) {
                 component.lastError = e.message
-                logger.warn("Error deleting model for component with id $id.")
+                logger.warn("Error deleting model for component with id $id.", e)
             }
 
             if (component.deleted) {
