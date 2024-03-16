@@ -78,7 +78,7 @@ class AlignerKPIService : AbstractJobService(
             val ctx = requireNotNull(context)
             val componentId = requireNotNull((ctx.mergedJobDataMap[COMPONENT_ID] as String).toUUID())
 
-            logger.info("Calculating alignment-based KPI for component $componentId...")
+            logger.debug("Calculating alignment-based KPI for component $componentId...")
             transactionMain {
                 val component = WorkspaceComponent.findById(componentId)
                 if (component === null) {

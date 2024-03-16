@@ -1,7 +1,5 @@
 package processm.enhancement.kpi
 
-import jakarta.jms.MapMessage
-import jakarta.jms.Message
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -9,9 +7,10 @@ import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Timeout
 import processm.core.DBTestHelper
+import processm.core.TopicObserver
 import processm.core.communication.Producer
-import processm.core.esb.AbstractJMSListener
 import processm.core.esb.Artemis
 import processm.core.esb.ServiceStatus
 import processm.core.log.attribute.Attribute.COST_TOTAL
@@ -26,10 +25,10 @@ import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
 import java.net.URI
 import java.util.*
-import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
 import kotlin.test.*
 
-//@Timeout(5L, unit = TimeUnit.SECONDS)
+@Timeout(5L, unit = TimeUnit.SECONDS)
 class AlignerKPIServiceTests {
     companion object {
 
@@ -37,19 +36,10 @@ class AlignerKPIServiceTests {
         val persistenceProvider = DurablePersistenceProvider(DBTestHelper.dbName)
         val logUUID = DBTestHelper.JournalReviewExtra
         val artemis = Artemis()
-        val workspaceNotificationMutex = Semaphore(1)
-        val workspaceNotificationService = object : AbstractJMSListener(
-            WORKSPACE_COMPONENTS_TOPIC,
-            "$WORKSPACE_COMPONENT_EVENT = '$DATA_CHANGE' AND $WORKSPACE_COMPONENT_EVENT_DATA <> '$DATA_CHANGE_MODEL'",
-            "test notification handler",
-            false
-        ) {
-            override fun onMessage(message: Message?) {
-                message as MapMessage
-                assertNotEquals(DATA_CHANGE_MODEL, message.getStringProperty(WORKSPACE_COMPONENT_EVENT_DATA))
-                workspaceNotificationMutex.release()
-            }
-        }
+        val wctObserver = TopicObserver(
+            topic = WORKSPACE_COMPONENTS_TOPIC,
+            filter = "$WORKSPACE_COMPONENT_EVENT = '$DATA_CHANGE' AND $WORKSPACE_COMPONENT_EVENT_DATA <> '$DATA_CHANGE_MODEL'"
+        )
         var perfectCNetId: Long = -1L
         var mainstreamCNetId: Long = -1L
 
@@ -61,22 +51,17 @@ class AlignerKPIServiceTests {
 
             artemis.register()
             artemis.start()
-
-            workspaceNotificationService.listen()
+            wctObserver.start()
         }
 
         @JvmStatic
         @AfterAll
         fun tearDown() {
-            workspaceNotificationService.listen()
+            wctObserver.close()
             artemis.stop()
             DBSerializer.delete(DBCache.get(dataStore.toString()).database, perfectCNetId.toInt())
             DBSerializer.delete(DBCache.get(dataStore.toString()).database, mainstreamCNetId.toInt())
             persistenceProvider.close()
-        }
-
-        private fun waitForDataChange() {
-            workspaceNotificationMutex.acquire()
         }
 
         fun createPerfectCNet(): Long {
@@ -236,7 +221,7 @@ class AlignerKPIServiceTests {
 
     @BeforeTest
     fun before() {
-        workspaceNotificationMutex.drainPermits()
+        wctObserver.reset()
     }
 
     fun createComponent(_query: String, _modelId: Long): UUID {
@@ -276,7 +261,7 @@ class AlignerKPIServiceTests {
             alignerKpiService.start()
             assertEquals(ServiceStatus.Started, alignerKpiService.status)
 
-            waitForDataChange()
+            wctObserver.waitForMessage()
         } finally {
             alignerKpiService.stop()
         }
@@ -343,7 +328,7 @@ class AlignerKPIServiceTests {
                 mainstreamCNetId
             )
 
-            waitForDataChange()
+            wctObserver.waitForMessage()
         } finally {
             alignerKpiService.stop()
         }
@@ -409,8 +394,7 @@ class AlignerKPIServiceTests {
             alignerKpiService.start()
             assertEquals(ServiceStatus.Started, alignerKpiService.status)
 
-
-            waitForDataChange()
+            wctObserver.waitForMessage()
         } finally {
             alignerKpiService.stop()
         }
@@ -436,7 +420,7 @@ class AlignerKPIServiceTests {
             alignerKpiService.start()
             assertEquals(ServiceStatus.Started, alignerKpiService.status)
 
-            waitForDataChange()
+            wctObserver.waitForMessage()
 
             transactionMain {
                 val component = WorkspaceComponent.find {
@@ -454,7 +438,7 @@ class AlignerKPIServiceTests {
                 }
             }
 
-            waitForDataChange()
+            wctObserver.waitForMessage()
         } finally {
             alignerKpiService.stop()
         }

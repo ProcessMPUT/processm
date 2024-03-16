@@ -3,9 +3,11 @@ package processm.miners.causalnet
 import io.mockk.*
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import processm.core.DBTestHelper
+import processm.core.TopicObserver
 import processm.core.communication.Producer
 import processm.core.esb.Artemis
 import processm.core.log.hierarchical.LogInputStream
@@ -21,15 +23,22 @@ import processm.helpers.toUUID
 import processm.miners.causalnet.onlineminer.OnlineMiner
 import processm.miners.processtree.inductiveminer.OnlineInductiveMiner
 import java.lang.Thread.sleep
+import java.util.concurrent.TimeUnit
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
+@Timeout(5L, unit = TimeUnit.SECONDS)
 class CausalNetMinerServiceTest {
     companion object {
         private val producer = Producer()
         private var artemis = Artemis()
         private var service: CausalNetMinerService? = null
+        private val wctObserver = TopicObserver(
+            WORKSPACE_COMPONENTS_TOPIC,
+            "$WORKSPACE_COMPONENT_EVENT = '$DATA_CHANGE'"
+        )
 
         @BeforeAll
         @JvmStatic
@@ -40,6 +49,7 @@ class CausalNetMinerServiceTest {
 
             artemis.register()
             artemis.start()
+            wctObserver.start()
 
             // CausalNetMinerService must be created after mocks are set
             service = CausalNetMinerService()
@@ -51,10 +61,16 @@ class CausalNetMinerServiceTest {
         @JvmStatic
         fun stopServices() {
             service!!.stop()
-            artemis!!.stop()
+            wctObserver.close()
+            artemis.stop()
 
             unmockkAll()
         }
+    }
+
+    @BeforeTest
+    fun before() {
+        wctObserver.reset()
     }
 
     private fun createComponent(algo: String): WorkspaceComponent = transactionMain {
@@ -100,19 +116,13 @@ class CausalNetMinerServiceTest {
         val component = createComponent(algorithm)
         try {
 
-            var cnet: CausalNet? = null
-            for (attempt in 1..20) {
-                cnet = transactionMain {
-                    component.refresh()
-                    component.data?.let {
-                        DBSerializer.fetch(DBCache.get(DBTestHelper.dbName).database, it.toInt())
-                    }
-                }
+            wctObserver.waitForMessage()
 
-                if (cnet !== null)
-                    break
-                else
-                    sleep(100)
+            val cnet = transactionMain {
+                component.refresh()
+                component.dataAsObject?.let {
+                    DBSerializer.fetch(DBCache.get(DBTestHelper.dbName).database, it[0].modelId.toInt())
+                }
             }
 
             assertNotNull(cnet, "Expecting a C-net to be created.")
@@ -131,17 +141,11 @@ class CausalNetMinerServiceTest {
     fun `delete c-net on component removal`() {
         val component = createComponent(ALGORITHM_HEURISTIC_MINER)
 
-        var cnetId: Int? = null
-        for (attempt in 1..20) {
-            cnetId = transactionMain {
-                component.refresh()
-                component.data?.let { it.toInt() }
-            }
+        wctObserver.waitForMessage()
 
-            if (cnetId !== null)
-                break
-            else
-                sleep(100)
+        val cnetId = transactionMain {
+            component.refresh()
+            component.dataAsObject?.let { it[0].modelId.toInt() }
         }
 
         assertNotNull(cnetId, "Expecting a C-net to be created.")
