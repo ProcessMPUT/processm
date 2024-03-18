@@ -1,8 +1,10 @@
 package processm.core.models.bpmn.converters
 
 import jakarta.xml.bind.JAXBElement
+import kotlinx.serialization.json.*
 import processm.core.models.bpmn.BPMNModel
 import processm.core.models.bpmn.jaxb.*
+import processm.logging.logger
 import javax.xml.namespace.QName
 import kotlin.math.ceil
 
@@ -42,6 +44,8 @@ abstract class ToBPMN {
         const val MAX_CHARACTERS_PER_LINE = 8
         const val MIN_HEIGHT = LINE_HEIGHT
         const val MAX_WIDTH = CHARACTER_WIDTH * MAX_CHARACTERS_PER_LINE
+
+        val logger = logger()
     }
 
     protected val factory = ObjectFactory()
@@ -206,38 +210,49 @@ abstract class ToBPMN {
 
     protected fun createDiagram(collaborationId: QName, participantId: QName): BPMNDiagram =
         factory.createBPMNDiagram().apply {
-            bpmnPlane = factory.createBPMNPlane().apply {
-                this.bpmnElement = collaborationId
-                val layout = Layouter.fromFlowElements(flowElements).computeLayout()
-
-                val dimensions = layout.computeDimensions()
-                layout.computeBounds(dimensions)
-                this.diagramElement.add(factory.createBPMNShape(BPMNShape().apply {
-                    bpmnElement = participantId
-                    isIsHorizontal = true
-                    this.bounds = factory.createBounds().apply {
-                        x = 0.0
-                        y = 0.0
-                        width = this@ToBPMN.bounds.values.maxOf { it.x + it.width } + 2 * MARGIN
-                        height = this@ToBPMN.bounds.values.maxOf { it.y + it.height } + 2 * MARGIN
-                    }
-                }))
-                bounds.mapTo(this.diagramElement) { (node, bounds) ->
-                    factory.createBPMNShape(BPMNShape().apply {
-                        bpmnElement = QName(node.id)
-                        this.bounds = bounds
-                    })
+            try {
+                bpmnPlane = factory.createBPMNPlane().apply {
+                    this.bpmnElement = collaborationId
+                    fillDot(participantId)
                 }
-
-                layout.arcs.mapTo(this.diagramElement) { (id, points) ->
-                    factory.createBPMNEdge(BPMNEdge().apply {
-                        bpmnElement = QName(id)
-                        toWaypoints(points, waypoint)
-                    })
+            } catch (e: Exception) {
+                logger.warn("Cannot create the layout using Graphviz", e)
+                bpmnPlane = factory.createBPMNPlane().apply {
+                    this.bpmnElement = collaborationId
+                    fillNaive(participantId)
                 }
             }
         }
 
+    private fun BPMNPlane.fillNaive(participantId: QName) {
+        val layout = Layouter.fromFlowElements(flowElements).computeLayout()
+
+        val dimensions = layout.computeDimensions()
+        layout.computeBounds(dimensions)
+        this.diagramElement.add(factory.createBPMNShape(BPMNShape().apply {
+            bpmnElement = participantId
+            isIsHorizontal = true
+            this.bounds = factory.createBounds().apply {
+                x = 0.0
+                y = 0.0
+                width = this@ToBPMN.bounds.values.maxOf { it.x + it.width } + 2 * MARGIN
+                height = this@ToBPMN.bounds.values.maxOf { it.y + it.height } + 2 * MARGIN
+            }
+        }))
+        bounds.mapTo(this.diagramElement) { (node, bounds) ->
+            factory.createBPMNShape(BPMNShape().apply {
+                bpmnElement = QName(node.id)
+                this.bounds = bounds
+            })
+        }
+
+        layout.arcs.mapTo(this.diagramElement) { (id, points) ->
+            factory.createBPMNEdge(BPMNEdge().apply {
+                bpmnElement = QName(id)
+                toWaypoints(points, waypoint)
+            })
+        }
+    }
 
     protected fun finish(): BPMNModel {
         val process = TProcess().apply {
@@ -258,6 +273,105 @@ abstract class ToBPMN {
             bpmnDiagram.add(createDiagram(QName(collaborationId), QName("participant1")))
         }
         return BPMNModel(model)
+    }
+
+    private fun boundsFromObject(element: JsonObject): Bounds {
+        val points = checkNotNull(element.jsonObject["_draw_"]?.jsonArray?.first {
+            it.jsonObject["op"]?.jsonPrimitive?.content.equals("p", true)
+        }?.jsonObject?.get("points")?.jsonArray)
+        assert(points.size == 4)
+        val minX = points.minOf { it.jsonArray[0].jsonPrimitive.double }
+        val minY = points.minOf { it.jsonArray[1].jsonPrimitive.double }
+        val maxX = points.maxOf { it.jsonArray[0].jsonPrimitive.double }
+        val maxY = points.maxOf { it.jsonArray[1].jsonPrimitive.double }
+        return factory.createBounds().apply {
+            x = minX
+            y = minY
+            width = maxX - minX
+            height = maxY - minY
+        }
+    }
+
+    private fun BPMNPlane.fillDot(participantId: QName) {
+        val layout = runDot()
+        this.diagramElement.add(factory.createBPMNShape(BPMNShape().apply {
+            bpmnElement = participantId
+            isIsHorizontal = true
+            this.bounds = boundsFromObject(layout)
+            with(this.bounds) {
+                x -= MARGIN
+                y -= MARGIN
+                width += 2 * MARGIN
+                height += 2 * MARGIN
+            }
+        }))
+        checkNotNull(layout.jsonObject["objects"]?.jsonArray).mapTo(this.diagramElement) { graphNode ->
+            factory.createBPMNShape(BPMNShape().apply {
+                bpmnElement = QName(checkNotNull(graphNode.jsonObject["name"]?.jsonPrimitive?.content))
+                this.bounds = boundsFromObject(graphNode.jsonObject)
+            })
+        }
+        checkNotNull(layout.jsonObject["edges"]?.jsonArray).mapTo(this.diagramElement) { graphEdge ->
+            factory.createBPMNEdge(BPMNEdge().apply {
+                bpmnElement = QName(checkNotNull(graphEdge.jsonObject["name"]?.jsonPrimitive?.content))
+                graphEdge.jsonObject["_draw_"]?.jsonArray
+                    ?.firstOrNull { it.jsonObject["op"]?.jsonPrimitive?.content.equals("b", true) }
+                    ?.jsonObject?.get("points")?.jsonArray
+                    ?.mapTo(waypoint) {
+                        Point().apply {
+                            this.x = it.jsonArray[0].jsonPrimitive.double
+                            this.y = it.jsonArray[1].jsonPrimitive.double
+                        }
+                    }
+            })
+        }
+    }
+
+    private fun runDot(): JsonObject {
+        val nodes = flowElements.fold(ArrayList<TFlowNode>()) { target, element ->
+            (element.value as? TFlowNode)?.let { target.add(it) }
+            target
+        }
+        val arcs = flowElements.fold(ArrayList<TSequenceFlow>()) { target, element ->
+            (element.value as? TSequenceFlow)?.let { target.add(it) }
+            target
+        }
+        val dotCode = buildString {
+            append("graph test {\nrankdir=LR\nsplines=polyline\n")
+            for (node in nodes) {
+                append(node.id)
+                append(" [shape=")
+                if (node is TGateway)
+                    append("diamond, regular=true")
+                else
+                    append("box")
+                if (!node.name.isNullOrBlank()) {
+                    append(", label=\"")
+                    append(node.name)
+                    append("\"")
+                }
+                append("];\n")
+            }
+            for (element in arcs) {
+                val src = element.sourceRef as TFlowNode
+                val dst = element.targetRef as TFlowNode
+                append(src.id)
+                append(" -- ")
+                append(dst.id)
+                append(" [name=\"")
+                append(element.id)
+                append("\"];\n")
+            }
+            append("}")
+        }
+        val element = with(ProcessBuilder("dot", "-Tjson").start()) {
+            outputStream.write(dotCode.encodeToByteArray())
+            outputStream.close()
+            val json = inputStream.readAllBytes().decodeToString()
+            waitFor()
+            Json.parseToJsonElement(json)
+        }
+        return element as JsonObject
     }
 
 }
