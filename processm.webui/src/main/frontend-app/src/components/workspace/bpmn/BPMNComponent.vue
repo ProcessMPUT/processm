@@ -19,6 +19,8 @@ import Viewer from "bpmn-js";
 import Modeler from "bpmn-js/lib/Modeler";
 import i18npl from "bpmn-js-i18n/translations/pl";
 import { ComponentMode } from "@/components/workspace/WorkspaceComponent.vue";
+import NavigatedViewer from "bpmn-js/lib/NavigatedViewer";
+import ModelingModule from "bpmn-js/lib/features/modeling";
 
 const translations = new Map();
 translations.set("pl", i18npl);
@@ -63,7 +65,6 @@ export default class BPMNComponent extends Vue {
     const container = this.$refs.container;
 
     const xml = this.data.data?.xml;
-    console.log(xml);
     if (xml == undefined) return;
     const options = {
       diagramXML: xml,
@@ -72,15 +73,24 @@ export default class BPMNComponent extends Vue {
         (() => {
           customTranslateModule.locale = this.$i18n.locale;
           return customTranslateModule;
-        })()
+        })(),
+        ModelingModule  // without it exclusive gateways are displayed as general gateways, i.e., an empty diamond
       ],
       moddleExtensions: []
     };
 
     const _options = Object.assign({ container: container as object }, options);
     let ctor;
-    if (this.componentMode != ComponentMode.Edit) ctor = Viewer;
-    else ctor = Modeler;
+    switch (this.componentMode) {
+      case ComponentMode.Interactive:
+        ctor = NavigatedViewer;
+        break;
+      case ComponentMode.Edit:
+        ctor = Modeler;
+        break;
+      default:
+        ctor = Viewer;
+    }
     this.bpmn = new ctor(_options);
     this.bpmn.importXML(_options.diagramXML);
 
@@ -103,6 +113,7 @@ export default class BPMNComponent extends Vue {
     if (this.updateData) {
       const data: any = await this.bpmn?.saveXML({ formatted: true });
       this.data.data = { xml: data.xml };
+      //TODO complete
     }
   }
 

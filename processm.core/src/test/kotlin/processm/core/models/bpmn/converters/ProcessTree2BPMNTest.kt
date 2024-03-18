@@ -29,6 +29,23 @@ class ProcessTree2BPMNTest {
     }
 
     @Test
+    fun `sequence with silents`() {
+        with(ProcessTree.parse("→(τ,A,τ,C,τ,τ)").toBPMN()) {
+            assertEquals(1, processes.size)
+            with(processes[0].allActivities) {
+                assertEquals(4, size)
+                val start = single { it.isStart }
+                val a = single { it.name == "A" }
+                val c = single { it.name == "C" }
+                val end = single { it.isEnd }
+                assertEquals(setOf(a), start.split.possibleOutcomes.single().activities)
+                assertEquals(setOf(c), a.split.possibleOutcomes.single().activities)
+                assertEquals(setOf(end), c.split.possibleOutcomes.single().activities)
+            }
+        }
+    }
+
+    @Test
     fun exclusive() {
         with(ProcessTree.parse("×(A,B,C)").toBPMN()) {
             assertEquals(1, processes.size)

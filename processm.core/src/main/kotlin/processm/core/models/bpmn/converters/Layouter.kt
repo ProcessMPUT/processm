@@ -33,8 +33,17 @@ internal class Layouter<TNode, TArc>(val nodes: Set<TNode>, val arcs: Map<TArc, 
     }
 
     enum class Anchor { N, NE, E, SE, S, SW, W, NW }
-    data class Point(var x: Double, var y: Double, var anchor: Anchor? = null)
-    data class Layout<TNode, TArc>(val nodes: Map<TNode, Point>, val arcs: Map<TArc, List<Point>>)
+    data class AbsolutePoint(var x: Int, var y: Int)
+    data class AnchoredPoint<T>(val center: T, var anchor: Anchor? = null)
+    data class Arc<TNode>(
+        val begin: AnchoredPoint<TNode>,
+        val end: AnchoredPoint<TNode>
+    )
+
+    data class Layout<TNode, TArc>(
+        val nodes: Map<TNode, AbsolutePoint>,
+        val arcs: Map<TArc, Arc<TNode>>
+    )
 
     val incoming = HashMap<TNode, ArrayList<TNode>>()
     val outgoing = HashMap<TNode, ArrayList<TNode>>()
@@ -70,22 +79,29 @@ internal class Layouter<TNode, TArc>(val nodes: Set<TNode>, val arcs: Map<TArc, 
      */
     fun computeLayout(): Layout<TNode, TArc> {
         val layers = computeLayers()
-        val positions = HashMap<TNode, Point>()
+        val positions = HashMap<TNode, AbsolutePoint>()
         for ((x, layer) in layers.withIndex()) {
             for ((y, item) in layer.withIndex()) {
-                positions[item] = Point(x.toDouble(), y.toDouble())
+                positions[item] = AbsolutePoint(x, y)
             }
         }
 
         val arrows = arcs.mapValues { (_, nodes) ->
-            var left = checkNotNull(positions[nodes.first])
-            var right = checkNotNull(positions[nodes.second])
-            if (left.x > right.x)
-                left = right.also { right = left }
-            val lp = Point(left.x, left.y, Anchor.E)
-            val rp = Point(right.x, right.y, Anchor.W)
+            val leftNode = nodes.first
+            val rightNode = nodes.second
+            val left = checkNotNull(positions[leftNode])
+            val right = checkNotNull(positions[rightNode])
+            val lp: AnchoredPoint<TNode>
+            val rp: AnchoredPoint<TNode>
+            if (left.x > right.x) {
+                lp = AnchoredPoint(leftNode, Anchor.W)
+                rp = AnchoredPoint(rightNode, Anchor.E)
+            } else {
+                lp = AnchoredPoint(leftNode, Anchor.E)
+                rp = AnchoredPoint(rightNode, Anchor.W)
+            }
             if (left.x == right.x) {
-                if (lp.y < rp.y) {
+                if (left.y < right.y) {
                     lp.anchor = Anchor.S
                     rp.anchor = Anchor.N
                 } else {
@@ -93,7 +109,7 @@ internal class Layouter<TNode, TArc>(val nodes: Set<TNode>, val arcs: Map<TArc, 
                     rp.anchor = Anchor.S
                 }
             }
-            return@mapValues listOf(lp, rp)
+            return@mapValues Arc(lp, rp)
         }
         return Layout(positions, arrows)
     }

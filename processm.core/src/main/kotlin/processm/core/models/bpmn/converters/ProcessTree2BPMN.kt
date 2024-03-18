@@ -80,12 +80,30 @@ class ProcessTree2BPMN(private val tree: ProcessTree) : ToBPMN() {
         error("A sequence with no children")
     }
 
+    private fun pruneSilents() {
+        for (activity in tree.activities) {
+            if (!activity.isSilent) continue
+            val task = activities[activity] ?: continue
+            val incoming = flowElements.filter { (it.value as? TSequenceFlow)?.targetRef == task }
+            val outgoing = flowElements.filter { (it.value as? TSequenceFlow)?.sourceRef == task }
+            if (incoming.size == 1 && outgoing.size == 1) {
+                val i = incoming.single()
+                val o = outgoing.single()
+                (i.value as TSequenceFlow).targetRef = (o.value as TSequenceFlow).targetRef
+                flowElements.remove(o)
+                flowElements.removeIf { (it.value as? TTask) == task }
+            }
+            println("$task $incoming $outgoing")
+        }
+    }
+
     fun toBPMN(): BPMNModel {
         val (s, e) = convert(checkNotNull(tree.root))
         val startEvent = add(TStartEvent())
         val endEvent = add(TEndEvent())
         link(startEvent, s)
         link(e, endEvent)
+        pruneSilents()
         return finish()
     }
 }
