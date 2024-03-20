@@ -10,6 +10,7 @@ import processm.core.communication.Producer
 import processm.core.esb.AbstractJobService
 import processm.core.esb.ServiceJob
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
+import processm.core.models.commons.ProcessModel
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.core.querylanguage.Query
@@ -24,7 +25,7 @@ import java.util.*
 const val ALGORITHM_HEURISTIC_MINER = "urn:processm:miners/OnlineHeuristicMiner"
 const val ALGORITHM_INDUCTIVE_MINER = "urn:processm:miners/OnlineInductiveMiner"
 
-abstract class CalcJob<T> : ServiceJob {
+abstract class CalcJob<T : ProcessModel> : ServiceJob {
 
     protected fun minerFromURN(urn: String?): Miner = when (urn) {
         ALGORITHM_INDUCTIVE_MINER -> OnlineInductiveMiner()

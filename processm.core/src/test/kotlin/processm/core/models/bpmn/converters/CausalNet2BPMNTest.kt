@@ -1,6 +1,5 @@
 package processm.core.models.bpmn.converters
 
-import processm.core.models.bpmn.toXML
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.MutableCausalNet
 import processm.core.models.causalnet.Node
@@ -118,22 +117,4 @@ class CausalNet2BPMNTest {
         assertTrue { bpmn.activities.any { it.name == "start" } }
         assertTrue { bpmn.activities.any { it.name == "end" } }
     }
-
-    @Test
-    fun `removeme`() {
-        val cnet = causalnet {
-            start splits a
-            a splits b or c or b + c
-            b splits c or d or c + d
-            c splits c or d or c + d
-            d splits end
-            start joins a
-            a joins b
-            a or b or c or a + b join c
-            b or c or b + c join d
-            d joins end
-        }
-        println(cnet.toBPMN(true).toXML())
-    }
-
 }
