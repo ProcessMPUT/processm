@@ -128,7 +128,7 @@ import EmptyComponent from "./EmptyComponent.vue";
 import WorkspaceComponent, { ComponentMode } from "./WorkspaceComponent.vue";
 import WorkspaceService from "@/services/WorkspaceService";
 import { LayoutElement, WorkspaceComponent as WorkspaceComponentModel } from "@/models/WorkspaceComponent";
-import { ComponentType, CustomProperty } from "@/openapi";
+import { ComponentType } from "@/openapi";
 import { WorkspaceObserver } from "@/utils/WorkspaceObserver";
 
 @Component({
@@ -259,46 +259,11 @@ export default class WorkspaceArea extends Vue {
     this.updateComponentLayout(id, { height, width });
   }
 
-  initializeEmptyComponent(componentId: string, componentType: ComponentType) {
-    let customProperties: CustomProperty[];
-    switch (componentType) {
-      case ComponentType.Bpmn:
-      case ComponentType.CausalNet:
-        // FIXME: preconfigured WorkspaceComponentModel should be downloaded from server
-        // This code repeats processm.services.api.AbstractComponentHelpersKt.getCustomProperties()
-        customProperties = [
-          {
-            id: 0,
-            name: "algorithm",
-            type: "enum",
-            enum: [
-              {
-                id: "urn:processm:miners/OnlineHeuristicMiner",
-                name: "Online Heuristic Miner"
-              },
-              {
-                id: "urn:processm:miners/OnlineInductiveMiner",
-                name: "Online Inductive "
-              }
-            ],
-            value: "urn:processm:miners/OnlineHeuristicMiner"
-          }
-        ];
-        break;
-      default:
-        customProperties = [];
-        break;
-    }
-    this.componentsDetails.set(
-      componentId,
-      new WorkspaceComponentModel({
-        id: componentId,
-        query: "",
-        dataStore: "",
-        type: componentType,
-        customProperties: customProperties
-      })
-    );
+  async initializeEmptyComponent(componentId: string, componentType: ComponentType) {
+    const emptyComponent = await this.workspaceService.getEmptyComponent(componentType);
+    emptyComponent.id = componentId;
+    emptyComponent.dataStore = "";
+    this.componentsDetails.set(componentId, new WorkspaceComponentModel(emptyComponent));
     this.editComponent(componentId);
   }
 

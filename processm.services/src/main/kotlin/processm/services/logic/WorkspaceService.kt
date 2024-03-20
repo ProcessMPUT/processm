@@ -12,7 +12,10 @@ import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
 import processm.dbmodels.urn
 import processm.logging.loggedScope
+import processm.services.api.getCustomProperties
+import processm.services.api.models.AbstractComponent
 import processm.services.api.models.CustomProperty
+import processm.services.api.toComponentType
 import processm.services.api.updateData
 import java.time.Instant
 import java.util.*
@@ -267,4 +270,13 @@ class WorkspaceService(
             }
         }
     }
+
+    fun getEmptyComponent(type: ComponentTypeDto): AbstractComponent =
+        AbstractComponent(
+            UUID.randomUUID(),
+            "",
+            UUID.randomUUID(),
+            type.toComponentType(),
+            customProperties = getCustomProperties(type)
+        )
 }

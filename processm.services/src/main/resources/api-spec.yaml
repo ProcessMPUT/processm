@@ -789,6 +789,32 @@ paths:
           $ref: '#/components/responses/Forbidden'
       security:
         - bearerAuth: [ ]
+  /workspaces/empty-component/{type}:
+    parameters:
+      - name: type
+        in: path
+        description: Component type
+        required: true
+        schema:
+          $ref: '#/components/schemas/ComponentType'
+    get:
+      tags:
+        - workspaces
+      summary: Get the template for a new component of the specified type
+      operationId: getEmptyComponent
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/AbstractComponent'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: [ ]
   /workspaces/{workspaceId}:
     parameters:
       - name: workspaceId
