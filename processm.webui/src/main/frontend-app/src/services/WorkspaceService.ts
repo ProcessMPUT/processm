@@ -65,7 +65,6 @@ export default class WorkspaceService extends BaseService {
 
   public async updateComponent(workspaceId: string, componentId: string, component: WorkspaceComponent) {
     const payload = Object.assign({}, component) as { data?: any };
-    delete payload.data;
     const response = await this.workspacesApi.addOrUpdateWorkspaceComponent(workspaceId, componentId, payload as AbstractComponent);
 
     return response.status == 204;

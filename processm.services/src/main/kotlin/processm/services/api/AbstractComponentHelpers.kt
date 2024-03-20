@@ -246,6 +246,16 @@ fun WorkspaceComponent.updateData(data: String) = loggedScope { logger ->
             )
         }
 
+        ComponentTypeDto.BPMN -> {
+            JsonSerializer.decodeFromString<BPMNComponentData>(data).xml?.let { xml ->
+                processm.core.models.bpmn.DBSerializer.update(
+                    DBCache.get(dataStoreId.toString()).database,
+                    UUID.fromString(this.data),
+                    xml
+                )
+            }
+        }
+
         else -> logger.error("Updating data for $componentType is currently not supported")
     }
 }

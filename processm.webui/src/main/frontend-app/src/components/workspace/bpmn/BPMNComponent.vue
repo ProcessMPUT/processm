@@ -112,8 +112,7 @@ export default class BPMNComponent extends Vue {
   async saveXML() {
     if (this.updateData) {
       const data: any = await this.bpmn?.saveXML({ formatted: true });
-      this.data.data = { xml: data.xml };
-      //TODO complete
+      this.data.data!.xml = data.xml;
     }
   }
 
