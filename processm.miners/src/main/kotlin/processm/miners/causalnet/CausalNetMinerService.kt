@@ -11,10 +11,6 @@ import processm.dbmodels.models.WorkspaceComponent
 import processm.miners.AbstractMinerService
 import processm.miners.CalcJob
 import processm.miners.DeleteJob
-import processm.miners.causalnet.onlineminer.OnlineMiner
-import processm.miners.processtree.inductiveminer.OnlineInductiveMiner
-
-
 
 /**
  * The service that discovers Causal net from the event log.

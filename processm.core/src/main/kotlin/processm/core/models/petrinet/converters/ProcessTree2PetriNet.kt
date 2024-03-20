@@ -7,7 +7,7 @@ import processm.core.models.petrinet.Transition
 import processm.core.models.processtree.*
 import java.util.*
 
-class ProcessTree2PetriNet(val tree: ProcessTree) {
+private class ProcessTree2PetriNet(val tree: ProcessTree) {
 
     private val activities = IdentityHashMap<ProcessTreeActivity, UUID>()
     private val uuidToActivity = IdentityHashMap<UUID, ProcessTreeActivity>()
@@ -246,4 +246,7 @@ class ProcessTree2PetriNet(val tree: ProcessTree) {
     }
 }
 
+/**
+ * Create a Petri Net trace-equivalent to the process tree.
+ */
 fun ProcessTree.toPetriNet(): PetriNet = ProcessTree2PetriNet(this).toPetriNet()

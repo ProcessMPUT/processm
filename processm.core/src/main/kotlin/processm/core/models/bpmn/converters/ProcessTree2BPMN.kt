@@ -6,8 +6,7 @@ import processm.core.models.processtree.*
 import java.util.*
 import processm.core.models.processtree.Node as PTNode
 
-class ProcessTree2BPMN(private val tree: ProcessTree) : ToBPMN() {
-
+private class ProcessTree2BPMN(private val tree: ProcessTree) : ToBPMN() {
 
     private val activities = IdentityHashMap<ProcessTreeActivity, TTask>()
 
@@ -97,6 +96,9 @@ class ProcessTree2BPMN(private val tree: ProcessTree) : ToBPMN() {
         }
     }
 
+    /**
+     * Computes and returns a BPMN model corresponding to the [ProcessTree] passed to the constructor
+     */
     fun toBPMN(): BPMNModel {
         val (s, e) = convert(checkNotNull(tree.root))
         val startEvent = add(TStartEvent())
@@ -108,4 +110,8 @@ class ProcessTree2BPMN(private val tree: ProcessTree) : ToBPMN() {
     }
 }
 
+/**
+ * Returns a BPMN model corresponding to the process tree.
+ * The conversion is sound, but not necessarily optimal.
+ */
 fun ProcessTree.toBPMN(): BPMNModel = ProcessTree2BPMN(this).toBPMN()

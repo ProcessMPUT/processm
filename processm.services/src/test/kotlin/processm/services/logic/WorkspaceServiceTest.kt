@@ -195,7 +195,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
                 WorkspaceComponents.id eq componentId and
                         (WorkspaceComponents.name eq newComponentName) and
                         (WorkspaceComponents.query eq newDataQuery) and
-                        (WorkspaceComponents.componentType eq newComponentType.typeName) and
+                        (WorkspaceComponents.componentType eq ComponentTypeDto.CausalNet.typeName) and
                         (WorkspaceComponents.customizationData eq newComponentCustomizationData)
             }.any()
         }

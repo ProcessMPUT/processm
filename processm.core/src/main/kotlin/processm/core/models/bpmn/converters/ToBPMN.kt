@@ -8,6 +8,10 @@ import processm.logging.logger
 import javax.xml.namespace.QName
 import kotlin.math.ceil
 
+/**
+ * A base class for converters from a process model to BPMN. Aims to automatically generate a suitable layout once the abstract process is generated,
+ * and offers some convenience functions for managing BPMN objects.
+ */
 abstract class ToBPMN {
 
 
@@ -37,18 +41,39 @@ abstract class ToBPMN {
          */
         const val HEIGHT = 30.0
 
-        // I have absolute no idea what unit are these in
-        // TODO some doc
+        /**
+         * The height of a line of text in the diagram. Units: unknown, but 16 seems to work well with bpmn-js.
+         */
         const val LINE_HEIGHT = 16
+
+        /**
+         * The width of a single character in the diagram. Units: unknown, but 8 seems to work well with bpmn-js.
+         */
         const val CHARACTER_WIDTH = 8
-        const val MAX_CHARACTERS_PER_LINE = 8
+
+        /**
+         * Maximal number of characters per line in the diagram
+         */
+        const val MAX_CHARACTERS_PER_LINE = 20
+
+        /**
+         * Minimal height of a component in the BPMN diagram
+         */
         const val MIN_HEIGHT = LINE_HEIGHT
+
+        /**
+         * Maximal width of a component in the BPMN diagram
+         */
         const val MAX_WIDTH = CHARACTER_WIDTH * MAX_CHARACTERS_PER_LINE
 
         val logger = logger()
     }
 
     protected val factory = ObjectFactory()
+
+    /**
+     * All [TFlowElement]s in the process
+     */
     protected val flowElements = ArrayList<JAXBElement<out TFlowElement>>()
 
 
@@ -57,42 +82,63 @@ abstract class ToBPMN {
             n.id = "id_${flowElements.size}"
     }
 
+    /**
+     * Add a new [TStartEvent], filling its [TStartEvent.id] if necessary
+     */
     protected fun add(n: TStartEvent): TStartEvent {
         fillId(n)
         flowElements.add(factory.createStartEvent(n))
         return n
     }
 
+    /**
+     * Add a new [TEndEvent], filling its [TEndEvent.id] if necessary
+     */
     protected fun add(n: TEndEvent): TEndEvent {
         fillId(n)
         flowElements.add(factory.createEndEvent(n))
         return n
     }
 
+    /**
+     * Add a new [TTask], filling its [TTask.id] if necessary
+     */
     protected fun add(n: TTask): TTask {
         fillId(n)
         flowElements.add(factory.createTask(n))
         return n
     }
 
+    /**
+     * Add a new [TExclusiveGateway], filling its [TExclusiveGateway.id] if necessary
+     */
     protected fun add(n: TExclusiveGateway): TExclusiveGateway {
         fillId(n)
         flowElements.add(factory.createExclusiveGateway(n))
         return n
     }
 
+    /**
+     * Add a new [TParallelGateway], filling its [TParallelGateway.id] if necessary
+     */
     protected fun add(n: TParallelGateway): TParallelGateway {
         fillId(n)
         flowElements.add(factory.createParallelGateway(n))
         return n
     }
 
+    /**
+     * Add a new [TSequenceFlow], filling its [TSequenceFlow.id] if necessary
+     */
     protected fun add(n: TSequenceFlow): TSequenceFlow {
         fillId(n)
         flowElements.add(factory.createSequenceFlow(n))
         return n
     }
 
+    /**
+     * Add a new link (arc) from [src] to [dst]
+     */
     protected fun link(src: TFlowNode, dst: TFlowNode) {
         require(src !== dst)
         val link = TSequenceFlow()
@@ -208,7 +254,7 @@ abstract class ToBPMN {
     }
 
 
-    protected fun createDiagram(collaborationId: QName, participantId: QName): BPMNDiagram =
+    private fun createDiagram(collaborationId: QName, participantId: QName): BPMNDiagram =
         factory.createBPMNDiagram().apply {
             try {
                 bpmnPlane = factory.createBPMNPlane().apply {
@@ -254,6 +300,12 @@ abstract class ToBPMN {
         }
     }
 
+    /**
+     * Gathers all elements in [flowElements] into a single [TProcess], creates a [TCollaboration] with it,
+     * and creates a [BPMNDiagram] representing the process.
+     *
+     * It tries to use `dot` from GraphViz to draw the diagram, with a custom, crude algorithm to compute the layout as a fallback.
+     */
     protected fun finish(): BPMNModel {
         val process = TProcess().apply {
             flowElement.addAll(flowElements)

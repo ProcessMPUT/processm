@@ -12,10 +12,7 @@ data class Coordinates(val id: SerializableUUID, val x: Double, val y: Double)
 @Serializable
 data class Layout(val layout: List<Coordinates>)
 
-/**
- * Compute a layout for the given [PetriNet] using `dot` from GraphViz
- */
-class Layouter(val model: PetriNet) {
+private class Layouter(val model: PetriNet) {
 
     private val id2num = DualHashBidiMap<UUID, Int>()
 
@@ -80,4 +77,7 @@ class Layouter(val model: PetriNet) {
     }
 }
 
+/**
+ * Compute a layout for the [PetriNet] using `dot` from GraphViz
+ */
 fun PetriNet.computeLayout() = Layouter(this).compute()
