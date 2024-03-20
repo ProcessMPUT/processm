@@ -1,11 +1,8 @@
 package processm.core.models.bpmn
 
 import org.jetbrains.exposed.dao.id.UUIDTable
-import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insertAndGetId
-import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.*
 
@@ -25,6 +22,12 @@ object DBSerializer {
 
     fun insert(database: Database, bpmnXML: String): UUID = transaction(database) {
         BPMNTable.insertAndGetId { it[xml] = bpmnXML }.value
+    }
+
+    fun update(database: Database, modelId: UUID, bpmnXML: String): Unit = transaction(database) {
+        BPMNTable.update(where = { BPMNTable.id eq modelId }) {
+            it[BPMNTable.xml] = bpmnXML
+        }
     }
 
     fun delete(database: Database, modelId: UUID) = transaction(database) {

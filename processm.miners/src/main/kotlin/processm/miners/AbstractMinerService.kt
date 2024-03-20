@@ -10,7 +10,6 @@ import processm.core.communication.Producer
 import processm.core.esb.AbstractJobService
 import processm.core.esb.ServiceJob
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
-import processm.core.models.commons.ProcessModel
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.core.querylanguage.Query
@@ -25,7 +24,7 @@ import java.util.*
 const val ALGORITHM_HEURISTIC_MINER = "urn:processm:miners/OnlineHeuristicMiner"
 const val ALGORITHM_INDUCTIVE_MINER = "urn:processm:miners/OnlineInductiveMiner"
 
-abstract class CalcJob<T : ProcessModel> : ServiceJob {
+abstract class CalcJob<T> : ServiceJob {
 
     protected fun minerFromURN(urn: String?): Miner = when (urn) {
         ALGORITHM_INDUCTIVE_MINER -> OnlineInductiveMiner()
@@ -34,6 +33,14 @@ abstract class CalcJob<T : ProcessModel> : ServiceJob {
     }
 
     abstract fun mine(component: WorkspaceComponent, stream: DBHierarchicalXESInputStream): T
+
+    /**
+     * Given the newly-mined [model] and the previous content of [WorkspaceComponents.customizationData] (in
+     * [customizationData]) return the new value for the field.
+     *
+     * The default implementation returns [customizationData] without any changes
+     */
+    open fun updateCustomizationData(model: T, customizationData: String?): String? = customizationData
     abstract fun store(database: Database, model: T): String
 
     override fun execute(context: JobExecutionContext): Unit = loggedScope { logger ->
@@ -66,6 +73,7 @@ abstract class CalcJob<T : ProcessModel> : ServiceJob {
                 val model = mine(component, stream)
                 component.data = store(DBCache.get(component.dataStoreId.toString()).database, model)
                 component.dataLastModified = Instant.now()
+                component.customizationData = updateCustomizationData(model, component.customizationData)
                 component.lastError = null
             } catch (e: Exception) {
                 component.lastError = e.message

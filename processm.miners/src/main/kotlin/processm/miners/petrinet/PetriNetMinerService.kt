@@ -1,16 +1,21 @@
 package processm.miners.petrinet
 
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.Database
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
+import processm.core.models.causalnet.CausalNet
 import processm.core.models.petrinet.DBSerializer
 import processm.core.models.petrinet.PetriNet
+import processm.core.models.petrinet.computeLayout
 import processm.core.models.petrinet.converters.toPetriNet
+import processm.core.models.processtree.ProcessTree
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
+import processm.logging.logger
 import processm.miners.AbstractMinerService
 import processm.miners.CalcJob
 import processm.miners.DeleteJob
-import processm.miners.causalnet.onlineminer.OnlineMiner
 import java.util.*
 
 class PetriNetMinerService : AbstractMinerService(
@@ -28,15 +33,27 @@ class PetriNetMinerService : AbstractMinerService(
 
     class CalcPetriNetJob : CalcJob<PetriNet>() {
         override fun mine(component: WorkspaceComponent, stream: DBHierarchicalXESInputStream): PetriNet {
-            val miner = OnlineMiner()
-            for (log in stream) {
-                miner.processLog(log)
+            val miner = minerFromURN(component.algorithm)
+
+            val model = miner.processLog(stream)
+            return when (model) {
+                is ProcessTree -> model.toPetriNet()
+                is CausalNet -> model.toPetriNet()
+                else -> throw IllegalStateException("Unexpected type of process model: ${model.javaClass.name}")
             }
-            return miner.result.toPetriNet()
         }
 
         override fun store(database: Database, model: PetriNet): String =
             DBSerializer.insert(database, model).toString()
+
+        override fun updateCustomizationData(model: PetriNet, customizationData: String?): String? {
+            return try {
+                Json.encodeToString(model.computeLayout())
+            } catch (e: Throwable) {
+                logger().warn("Failed to compute layout", e)
+                null
+            }
+        }
     }
 
     class DeletePetriNetJob : DeleteJob() {

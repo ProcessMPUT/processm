@@ -347,7 +347,7 @@ abstract class ToBPMN {
                     append("box")
                 if (!node.name.isNullOrBlank()) {
                     append(", label=\"")
-                    append(node.name)
+                    append(node.name.replace('"', '_'))
                     append("\"")
                 }
                 append("];\n")
