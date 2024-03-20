@@ -36,25 +36,6 @@
           </v-list-item>
           <v-list-item>
             <v-list-item-content>
-              <v-select
-                v-model="component.type"
-                :hint="$t('workspace.component.edit.type-hint')"
-                :items="availableComponents"
-                :label="$t('workspace.component.edit.type')"
-              >
-                <template slot="item" slot-scope="componentType">
-                  <v-icon>${{ componentType.item }}Component</v-icon>
-                  {{ $t(`workspace.component.${kebabize(componentType.item)}`) }}
-                </template>
-                <template slot="selection" slot-scope="componentType">
-                  <v-icon>${{ componentType.item }}Component</v-icon>
-                  {{ $t(`workspace.component.${kebabize(componentType.item)}`) }}
-                </template>
-              </v-select>
-            </v-list-item-content>
-          </v-list-item>
-          <v-list-item>
-            <v-list-item-content>
               <v-text-field
                 v-model="component.query"
                 :hint="$t('workspace.component.edit.query-hint')"
