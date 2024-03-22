@@ -124,7 +124,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                 }
 
                 val alignmentKPIReport = if (recentData.alignmentKPIId.isNotBlank())
-                    DurablePersistenceProvider(dataStoreId.toString()).get<Report>(URI(recentData.alignmentKPIId))
+                    DurablePersistenceProvider(dataStoreId.toString()).use { it.get<Report>(URI(recentData.alignmentKPIId)) }
                 else null
                 CausalNetComponentData(
                     type = ComponentType.causalNet,
@@ -171,7 +171,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                 }
 
                 val alignmentKPIReport = if (recentData.alignmentKPIId.isNotBlank())
-                    DurablePersistenceProvider(dataStoreId.toString()).get<Report>(URI(recentData.alignmentKPIId))
+                    DurablePersistenceProvider(dataStoreId.toString()).use { it.get<Report>(URI(recentData.alignmentKPIId)) }
                 else null
                 PetriNetComponentData(
                     type = ComponentType.petriNet,
