@@ -21,7 +21,7 @@ private class ProcessTree2CausalNet(private val tree: ProcessTree) {
             val name = if (activity.name.isEmpty()) activity.symbol else activity.name
             val id = unique.compute(name) { _, old -> old?.let { it + 1 } ?: 0 }
             val node = Node(
-                activity = name,
+                name = name,
                 instanceId = if (id == 0) "" else id.toString(),
                 isSilent = activity.isSilent
             )

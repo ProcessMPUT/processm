@@ -33,9 +33,9 @@
               <template v-slot:item="{ item }">
                 <v-tooltip v-if="!!item.type && item.type != DeviationType.None" bottom max-width="600px">
                   <template v-slot:activator="{ on, attrs }">
-                    <li :class="deviationToClass(item.type)" v-bind="attrs" v-on="on">{{ getLabel(item) }}</li>
+                    <li :class="deviationToClass(item)" v-bind="attrs" v-on="on">{{ getLabel(item) }}</li>
                   </template>
-                  <span>{{ deviationToTitle(item.type) }}</span>
+                  <span>{{ deviationToTitle(item) }}</span>
                 </v-tooltip>
                 <li v-if="item.type === undefined || item.type == DeviationType.None">{{ getLabel(item) }}</li>
               </template>
@@ -73,6 +73,10 @@
 .model-deviation {
   text-decoration: underline #ff00ff wavy 0.1em;
 }
+
+.model-deviation.silent {
+  text-decoration: underline #ff9aff wavy 0.05em;
+}
 </style>
 <style>
 .log-view .v-breadcrumbs li:nth-child(even) {
@@ -84,7 +88,7 @@
 import { Component, Prop, Vue } from "vue-property-decorator";
 import { LogItem, XesComponentScope } from "@/utils/XesProcessor";
 import { ItemGroup } from "vuetify";
-import { DeviationType } from "@/openapi";
+import { DeviationType, Step } from "@/openapi";
 
 @Component
 export default class LogTable extends Vue {
@@ -136,9 +140,10 @@ export default class LogTable extends Vue {
     return items;
   }
 
-  deviationToClass(deviation?: DeviationType): string {
-    switch (deviation) {
+  deviationToClass(step?: Step | LogItem): string {
+    switch (step?.type) {
       case DeviationType.ModelDeviation:
+        //if ((step.modelMove as { isSilent: boolean }).isSilent) return "model-deviation silent";
         return "model-deviation";
       case DeviationType.LogDeviation:
         return "log-deviation";
@@ -151,9 +156,10 @@ export default class LogTable extends Vue {
     return item[this.classifier] !== undefined ? item[this.classifier] : this.$t("workspace.component.flat-log.no-data");
   }
 
-  deviationToTitle(deviation?: DeviationType): string {
-    switch (deviation) {
+  deviationToTitle(step?: Step | LogItem): string {
+    switch (step?.type) {
       case DeviationType.ModelDeviation:
+        //if ((step.modelMove as { isSilent: boolean })?.isSilent) return this.$t("workspace.component.flat-log.model-deviation-silent").toString();
         return this.$t("workspace.component.flat-log.model-deviation").toString();
       case DeviationType.LogDeviation:
         return this.$t("workspace.component.flat-log.log-deviation").toString();

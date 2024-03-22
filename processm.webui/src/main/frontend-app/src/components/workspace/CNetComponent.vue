@@ -1,7 +1,7 @@
 <template xmlns:v-slot="http://www.w3.org/1999/html">
   <div class="graph">
     <v-toolbar class="toolbar" dense elevation="0" floating>
-      <alignments-dialog :alignments="data.data.alignments"></alignments-dialog>
+      <alignments-dialog :alignments="data.data.alignmentKPIReport?.alignments"></alignments-dialog>
     </v-toolbar>
     <table>
       <tr>

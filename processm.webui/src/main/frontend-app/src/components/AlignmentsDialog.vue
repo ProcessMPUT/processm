@@ -22,7 +22,7 @@
         </v-toolbar-title>
         <v-spacer />
       </v-toolbar>
-      <log-table :show-search="true" headers="headers" items="items"></log-table>
+      <log-table :headers="headers" :items="items" :show-search="true"></log-table>
     </v-card>
   </v-dialog>
 </template>
@@ -59,21 +59,26 @@ export default class AlignmentsDialog extends Vue {
     headers.set(this.classifier, { text: this.classifier, value: this.classifier });
     const items = new Array<LogItem>();
     let idSeq = 0;
-    items.push(new LogItem(XesComponentScope.Log, idSeq++));
+    const log = new LogItem(XesComponentScope.Log, idSeq++);
+    items.push(log);
 
     this.alignments.forEach((a, i) => {
       const trace = new LogItem(XesComponentScope.Trace, idSeq++);
       trace["concept:name"] = i + 1;
+      trace["_parent"] = log;
+      trace["_path"] = [log._id, trace._id];
       items.push(trace);
 
       for (const step of a.steps) {
         const event = new LogItem(XesComponentScope.Event, idSeq++);
         event.type = step.type;
+        event["_parent"] = trace;
+        event["_path"] = [...(trace["_path"] as Array<number>), event._id];
         switch (step.type) {
           case DeviationType.None:
           case DeviationType.LogDeviation:
             Object.assign(event, step.logMove);
-            for (const attribute in Object.getOwnPropertyNames(step.logMove)) {
+            for (const attribute of Object.getOwnPropertyNames(step.logMove)) {
               if (!headers.has(attribute)) headers.set(attribute, { text: attribute, value: attribute });
             }
             break;
@@ -81,6 +86,7 @@ export default class AlignmentsDialog extends Vue {
             event[this.classifier] = (step.modelMove as { name: string }).name;
             break;
         }
+        items.push(event);
       }
     });
 

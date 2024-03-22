@@ -1,7 +1,7 @@
 // TODO add PetriNet = "petriNet" to ComponentType
 import {
   AbstractComponent,
-  Alignment,
+  AlignmentKPIReport,
   BPMNComponent,
   CausalNetComponent,
   ComponentType,
@@ -36,7 +36,7 @@ export abstract class ComponentData {
 export class CNetComponentData extends ComponentData {
   nodes!: Array<CNetNodeConfig>;
   edges!: Array<EdgeConfig>;
-  alignments?: Array<Alignment>;
+  alignmentKPIReport?: AlignmentKPIReport;
 
   get isDisplayable() {
     return this.nodes != null && this.edges != null && this.nodes.length > 0;
@@ -63,6 +63,7 @@ export class PetriNetComponentData extends ComponentData {
   transitions?: Array<any>;
   initialMarking?: { [key: string]: number };
   finalMarking?: { [key: string]: number };
+  alignmentKPIReport?: AlignmentKPIReport;
 
   get isDisplayable() {
     return this.initialMarking !== undefined && this.finalMarking !== undefined && this?.places?.length != 0 && this.transitions?.length != 0;
