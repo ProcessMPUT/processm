@@ -1,11 +1,8 @@
 package processm.helpers.map2d
 
-import kotlinx.serialization.Serializable
-
 /**
  * The default implementation of [Map2D], backed by two hashmaps of hashmaps: one from rows, to columns, to values, and the other from columns, to rows, to values.
  */
-@Serializable
 class DoublingMap2D<Row, Column, Value>() : Map2D<Row, Column, Value> {
 
     private class View<K, V>(private val get: () -> MutableMap<K, V>?, private val update: (K, V) -> Unit) :

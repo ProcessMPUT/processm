@@ -1,13 +1,12 @@
 package processm.enhancement.kpi
 
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.PolymorphicSerializer
-import kotlinx.serialization.builtins.PairSerializer
+import kotlinx.serialization.*
 import kotlinx.serialization.builtins.nullable
-import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.mapSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.*
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
@@ -16,7 +15,6 @@ import processm.core.models.commons.Activity
 import processm.core.models.commons.CausalArc
 import processm.core.models.processtree.ProcessTreeActivity
 import processm.helpers.map2d.DoublingMap2D
-import processm.helpers.map2d.Map2D
 import processm.helpers.serialization.SerializersModuleProvider
 import processm.helpers.stats.Distribution
 
@@ -24,50 +22,171 @@ import processm.helpers.stats.Distribution
  * Provides [SerializersModule] for [Report] class.
  */
 class ReportSerializersModuleProvider : SerializersModuleProvider {
+    @OptIn(InternalSerializationApi::class)
     override fun getSerializersModule(): SerializersModule = SerializersModule {
         polymorphic(Activity::class) {
             subclass(processm.core.models.causalnet.Node::class)
             subclass(processm.core.models.petrinet.Transition::class)
             subclass(ProcessTreeActivity::class)
             subclass(DecoupledNodeExecution::class)
+            subclass(DummyActivity::class)
         }
         polymorphic(CausalArc::class) {
             subclass(processm.core.models.causalnet.Dependency::class)
             subclass(VirtualPetriNetCausalArc::class)
             subclass(VirtualProcessTreeCausalArc::class)
-        }
-        polymorphic(Map2D::class) {
-            subclass(
-                DoublingMap2D::class,
-                DoublingMap2D.serializer(
-                    String.serializer(),
-                    object : KSerializer<Any?> {
-
-                        private val baseSerializer = PairSerializer(
-                            PolymorphicSerializer(Activity::class).nullable,
-                            PolymorphicSerializer(CausalArc::class).nullable
-                        )
-                        override val descriptor: SerialDescriptor
-                            get() = baseSerializer.descriptor
-
-                        override fun deserialize(decoder: Decoder): Any? {
-                            val (s, t) = baseSerializer.deserialize(decoder)
-                            return s ?: t
-                        }
-
-                        override fun serialize(encoder: Encoder, value: Any?) {
-                            if (value is Activity?)
-                                baseSerializer.serialize(encoder, value to null)
-                            else {
-                                check(value is CausalArc)
-                                baseSerializer.serialize(encoder, null to value)
-                            }
-                        }
-
-                    },
-                    Distribution.serializer()
-                ) as KSerializer<DoublingMap2D<*, *, *>>
-            )
+            subclass(DummyArc::class)
         }
     }
+}
+
+class DoublingMap2DStringActivityDistributionSerializer : KSerializer<DoublingMap2D<String, Activity?, Distribution>> {
+    @OptIn(InternalSerializationApi::class)
+    override val descriptor: SerialDescriptor
+        get() = mapSerialDescriptor(
+            ContextualSerializer(String::class).descriptor,
+            mapSerialDescriptor(
+                Activity::class.serializer().nullable.descriptor,
+                Distribution::class.serializer().descriptor
+            )
+        )
+
+    @OptIn(InternalSerializationApi::class)
+    override fun deserialize(decoder: Decoder): DoublingMap2D<String, Activity?, Distribution> {
+        decoder as JsonDecoder
+        val map2d = DoublingMap2D<String, Activity?, Distribution>()
+        val root = decoder.decodeJsonElement()
+        for ((row, entry) in root.jsonObject.entries) {
+            for ((col, value) in entry.jsonObject.entries) {
+                val activity = if (col == "\u0000") null else DummyActivity(col)
+                map2d[row, activity] = decoder.json.decodeFromJsonElement(Distribution::class.serializer(), value)
+            }
+        }
+        return map2d
+    }
+
+    override fun serialize(encoder: Encoder, value: DoublingMap2D<String, Activity?, Distribution>) {
+        encoder as JsonEncoder
+        val obj = buildJsonObject {
+            for (row in value.rows) {
+                val rowObject = buildJsonObject {
+                    for ((col, value) in value.getRow(row)) {
+                        put(col?.toString() ?: "\u0000", encoder.json.encodeToJsonElement(value))
+                    }
+                }
+                put(row, rowObject)
+            }
+        }
+        encoder.encodeJsonElement(obj)
+    }
+}
+
+class DoublingMap2DStringCausalArcDistributionSerializer : KSerializer<DoublingMap2D<String, CausalArc, Distribution>> {
+    @OptIn(InternalSerializationApi::class)
+    override val descriptor: SerialDescriptor
+        get() = mapSerialDescriptor(
+            ContextualSerializer(String::class).descriptor,
+            mapSerialDescriptor(
+                CausalArc::class.serializer().nullable.descriptor,
+                Distribution::class.serializer().descriptor
+            )
+        )
+
+    @OptIn(InternalSerializationApi::class)
+    override fun deserialize(decoder: Decoder): DoublingMap2D<String, CausalArc, Distribution> {
+        decoder as JsonDecoder
+        val map2d = DoublingMap2D<String, CausalArc, Distribution>()
+        val root = decoder.decodeJsonElement()
+        for ((row, entry) in root.jsonObject.entries) {
+            for ((col, value) in entry.jsonObject.entries) {
+                val (source, target) = col.splitOnArrow()
+                map2d[row, DummyArc(DummyActivity(source), DummyActivity(target))] =
+                    decoder.json.decodeFromJsonElement(Distribution::class.serializer(), value)
+            }
+        }
+        return map2d
+    }
+
+    override fun serialize(encoder: Encoder, value: DoublingMap2D<String, CausalArc, Distribution>) {
+        encoder as JsonEncoder
+        val obj = buildJsonObject {
+            for (row in value.rows) {
+                val rowObject = buildJsonObject {
+                    for ((col, value) in value.getRow(row)) {
+                        val arc = "${col.source.name.escapeArrow()}->${col.target.name.escapeArrow()}"
+                        put(arc, encoder.json.encodeToJsonElement(value))
+                    }
+                }
+                put(row, rowObject)
+            }
+        }
+        encoder.encodeJsonElement(obj)
+    }
+
+    private fun String.escapeArrow(): String = replace("\\", "\\\\").replace("->", "\\->")
+
+    private fun String.splitOnArrow(): Pair<String, String> {
+        val left = StringBuilder()
+        val right = StringBuilder()
+        var current = left
+        var i = 0
+        var escapeMode = false
+        while (i < length) {
+            val ch = get(i)
+            when (ch) {
+                '\\' -> {
+                    if (escapeMode) {
+                        current.append(ch)
+                        escapeMode = false
+                    } else {
+                        escapeMode = true
+                    }
+                }
+
+                '-' -> {
+                    if (startsWith("->", i)) {
+                        if (escapeMode) {
+                            current.append("->")
+                            escapeMode = false
+                            i += 1
+                        } else {
+                            assert(current === left)
+                            current = right
+                            i += 1
+                        }
+                    } else {
+                        current.append(ch)
+                        escapeMode = false
+                    }
+                }
+
+                else -> {
+                    current.append(ch)
+                    escapeMode = false
+                }
+            }
+            ++i
+        }
+
+        return left.toString() to right.toString()
+    }
+}
+
+@Serializable
+private data class DummyActivity(override val name: String) : Activity {
+    override fun equals(other: Any?): Boolean = other is Activity && this.name == other.name
+
+    override fun hashCode(): Int = this.name.hashCode()
+
+    override fun toString(): String = name
+}
+
+@Serializable
+private data class DummyArc(override val source: Activity, override val target: Activity) : CausalArc {
+    override fun equals(other: Any?): Boolean =
+        other is CausalArc && this.source == other.source && this.target == other.target
+
+    override fun hashCode(): Int = this.source.hashCode() xor this.target.hashCode()
+
+    override fun toString(): String = "$source->$target"
 }

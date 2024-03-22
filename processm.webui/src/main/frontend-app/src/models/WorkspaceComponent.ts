@@ -1,8 +1,6 @@
 // TODO add PetriNet = "petriNet" to ComponentType
 import {
   AbstractComponent,
-  AlignerKpiComponent,
-  AlignerKpiReport,
   Alignment,
   BPMNComponent,
   CausalNetComponent,
@@ -47,14 +45,6 @@ export class CNetComponentData extends ComponentData {
 
 export class KpiComponentData extends ComponentData {
   value?: number;
-
-  get isDisplayable() {
-    return this.value != null;
-  }
-}
-
-export class AlignerKpiComponentData extends ComponentData {
-  value?: AlignerKpiReport;
 
   get isDisplayable() {
     return this.value != null;
@@ -120,10 +110,6 @@ export class WorkspaceComponent {
       }
       case ComponentType.Kpi: {
         this.data = new KpiComponentData((init as KpiComponent).data ?? {});
-        break;
-      }
-      case ComponentType.AlignerKpi: {
-        this.data = new AlignerKpiComponentData((init as AlignerKpiComponent).data ?? {});
         break;
       }
       case ComponentType.PetriNet: {

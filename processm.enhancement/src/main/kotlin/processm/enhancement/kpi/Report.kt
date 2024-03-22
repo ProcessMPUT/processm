@@ -32,16 +32,19 @@ data class Report(
      * the second key corresponds to the activity in the [model], null for the unaligned events;
      * value corresponds to the distribution of KPI values among events.
      */
+    @Serializable(with = DoublingMap2DStringActivityDistributionSerializer::class)
     val eventKPI: Map2D<String, Activity?, Distribution>,
     /**
      * The event-scope KPIs computed as for [eventKPI], but assigned to [CausalArc]s of the model that are
      * originating in this particular event.
      */
+    @Serializable(with = DoublingMap2DStringCausalArcDistributionSerializer::class)
     val outboundArcKPI: Map2D<String, CausalArc, Distribution>,
     /**
      * The event-scope KPIs computed as for [eventKPI], but assigned to [CausalArc]s of the model that are
      * terminating in this particular event.
      */
+    @Serializable(with = DoublingMap2DStringCausalArcDistributionSerializer::class)
     val inboundArcKPI: Map2D<String, CausalArc, Distribution>,
 
     /**

@@ -1729,7 +1729,7 @@ components:
       enum: [ workspace, dataStore ]
     ComponentType:
       type: string
-      enum: [ kpi, alignerKpi, treeLogView, flatLogView, causalNet, petriNet, bpmn, directlyFollowsGraph ]
+      enum: [ kpi, treeLogView, flatLogView, causalNet, petriNet, bpmn, directlyFollowsGraph ]
     AccountRegistrationInfo:
       type: object
       required: [ userEmail, userPassword, newOrganization ]
@@ -1999,7 +1999,6 @@ components:
       oneOf:
         - $ref: '#/components/schemas/Component'
         - $ref: '#/components/schemas/KpiComponent'
-        - $ref: '#/components/schemas/AlignerKpiComponent'
         - $ref: '#/components/schemas/CausalNetComponent'
         - $ref: '#/components/schemas/PetriNetComponent'
         - $ref: '#/components/schemas/BPMNComponent'
@@ -2007,7 +2006,6 @@ components:
         propertyName: type
         mapping:
           kpi: '#/components/schemas/KpiComponent'
-          alignerKpi: '#/components/schemas/AlignerKpiComponent'
           causalNet: '#/components/schemas/CausalNetComponent'
           petriNet: '#/components/schemas/PetriNetComponent'
           directlyFollowsGraph: '#/components/schemas/DirectlyFollowsGraphComponent'
@@ -2052,7 +2050,6 @@ components:
     AbstractComponentData:
       oneOf:
         - $ref: '#/components/schemas/KpiComponentData'
-        - $ref: '#/components/schemas/AlignerKpiComponentData'
         - $ref: '#/components/schemas/CausalNetComponentData'
         - $ref: '#/components/schemas/PetriNetComponentData'
         - $ref: '#/components/schemas/BPMNComponentData'
@@ -2061,7 +2058,6 @@ components:
         propertyName: type
         mapping:
           kpi: '#/components/schemas/KpiComponentData'
-          alignerKpi: '#/components/schemas/AlignerKpiComponentData'
           causalNet: '#/components/schemas/CausalNetComponentData'
           petriNet: '#/components/schemas/PetriNetComponentData'
           bpmn: '#/components/schemas/BPMNComponentData'
@@ -2080,14 +2076,7 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/KpiComponentData'
-    AlignerKpiComponentData:
-      allOf:
-        - $ref: '#/components/schemas/ComponentData'
-        - type: object
-          properties:
-            report:
-              $ref: '#/components/schemas/AlignerKpiReport'
-    AlignerKpiReport:
+    AlignmentKPIReport:
       required: [ logKPI, traceKPI, eventKPI, alignments ]
       properties:
         logKPI:
@@ -2131,13 +2120,6 @@ components:
         stddev:
           type: number
           format: double
-    AlignerKpiComponent:
-      allOf:
-        - $ref: '#/components/schemas/Component'
-        - type: object
-          properties:
-            data:
-              $ref: '#/components/schemas/AlignerKpiComponentData'
     CausalNetComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -2177,10 +2159,8 @@ components:
                   support:
                     type: number
                     format: double
-            alignments:
-              type: array
-              items:
-                $ref: '#/components/schemas/Alignment'
+            alignmentKPIReport:
+              $ref: '#/components/schemas/AlignmentKPIReport'
     CustomizationData:
       type: object
       properties:
@@ -2249,6 +2229,8 @@ components:
                     type: array
                     items:
                       type: string
+            alignmentKPIReport:
+              $ref: '#/components/schemas/AlignmentKPIReport'
     PetriNetComponent:
       allOf:
         - $ref: '#/components/schemas/Component'
@@ -2293,10 +2275,6 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/DFGEdge'
-            alignments:
-              type: array
-              items:
-                $ref: '#/components/schemas/Alignment'
     DFGNode:
       type: object
       required: [ id, label ]

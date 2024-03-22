@@ -15,9 +15,11 @@ import processm.core.models.petrinet.Place
 import processm.core.models.petrinet.Transition
 import processm.core.models.processtree.ProcessTreeActivity
 import processm.helpers.map2d.DoublingMap2D
+import processm.helpers.map2d.Map2D
 import processm.helpers.stats.Distribution
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ReportTests {
     @Test
@@ -66,7 +68,7 @@ class ReportTests {
                 )
                 set(
                     "e",
-                    VirtualProcessTreeCausalArc(ProcessTreeActivity("z"), ProcessTreeActivity("x")),
+                    VirtualProcessTreeCausalArc(ProcessTreeActivity("v"), ProcessTreeActivity("x")),
                     Distribution(doubleArrayOf(42.0, 69.0))
                 )
             },
@@ -96,7 +98,31 @@ class ReportTests {
         val json = report.toJson()
         val deserializedReport = Report.fromJson(json)
 
-        assertEquals(report, deserializedReport)
+        assertEquals(report.logKPI, deserializedReport.logKPI)
+        assertEquals(report.traceKPI, deserializedReport.traceKPI)
+        assertTrue(report.eventKPI.equals(deserializedReport.eventKPI) { k1, k2 -> k1?.name == k2?.name })
+        assertTrue(report.inboundArcKPI.equals(deserializedReport.inboundArcKPI) { k1, k2 -> k1.source.name == k2.source.name && k1.target.name == k2.target.name })
+        assertTrue(report.outboundArcKPI.equals(deserializedReport.outboundArcKPI) { k1, k2 -> k1.source.name == k2.source.name && k1.target.name == k2.target.name })
+        assertEquals(report.alignments, deserializedReport.alignments)
+    }
+
+    private fun <Col> Map2D<String, Col, Distribution>.equals(
+        other: Map2D<String, Col, Distribution>,
+        eqCol: (key1: Col, key2: Col) -> Boolean
+    ): Boolean {
+        if (this.rows.size != other.rows.size)
+            return false
+
+        if (this.columns.size != other.columns.size)
+            return false
+
+        for (col in columns) {
+            val matchingOtherCol = other.columns.first { eqCol(col, it) }
+            if (getColumn(col).entries != other.getColumn(matchingOtherCol).entries)
+                return false
+        }
+
+        return true
     }
 
     @Test
