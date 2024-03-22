@@ -110,6 +110,7 @@ export default class LogTable extends Vue {
 
   groupItems(items: LogItem[], groupBy: string[], groupDesc: boolean[]): ItemGroup<LogItem>[] {
     const table: any = this.$refs.table;
+    const instance = table.$vnode.componentInstance;
     const groups = items.reduce((result, item) => {
       switch (item.scope) {
         case XesComponentScope.Log:
@@ -121,7 +122,6 @@ export default class LogTable extends Vue {
         case XesComponentScope.Event: {
           const group = `${(item._parent as LogItem)._path}b`;
           (result[group] = result[group] || []).push(item);
-          const instance = table.$vnode.componentInstance;
           instance.$set(instance.openCache, group, false);
         }
       }
