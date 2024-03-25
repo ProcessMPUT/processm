@@ -4,6 +4,7 @@ import {
   AlignmentKPIReport,
   BPMNComponent,
   CausalNetComponent,
+  CausalNetComponentDataAllOfNodes,
   ComponentType,
   CustomProperty,
   DirectlyFollowsGraphComponent,
@@ -34,7 +35,7 @@ export abstract class ComponentData {
 }
 
 export class CNetComponentData extends ComponentData {
-  nodes!: Array<CNetNodeConfig>;
+  nodes!: Array<CNetNodeConfig | CausalNetComponentDataAllOfNodes>;
   edges!: Array<EdgeConfig>;
   alignmentKPIReport?: AlignmentKPIReport;
 

@@ -62,24 +62,36 @@
   padding-bottom: 1.2em;
 }
 
+.log-view ul.v-breadcrumbs {
+  padding-left: 6px;
+}
+
 .scroll-container {
   overflow: auto;
 }
 
 .log-deviation {
   text-decoration: underline #ff0000 wavy 0.1em;
+  position: relative;
+  z-index: 1;
 }
 
 .model-deviation {
   text-decoration: underline #ff00ff wavy 0.1em;
+  position: relative;
+  z-index: 1;
 }
 
 .model-deviation.silent {
-  text-decoration: underline #ff9aff wavy 0.05em;
+  text-decoration: underline #505050 wavy 0.05em;
 }
 </style>
 <style>
-.log-view .v-breadcrumbs li:nth-child(even) {
+.log-view .v-breadcrumbs li {
+  padding: 0;
+}
+
+.log-view .v-breadcrumbs li.v-breadcrumbs__divider {
   padding: 0 6px;
 }
 </style>
@@ -88,7 +100,8 @@
 import { Component, Prop, Vue } from "vue-property-decorator";
 import { LogItem, XesComponentScope } from "@/utils/XesProcessor";
 import { ItemGroup } from "vuetify";
-import { DeviationType, Step } from "@/openapi";
+import { DeviationType } from "@/openapi";
+import { LocaleMessages } from "vue-i18n";
 
 @Component
 export default class LogTable extends Vue {
@@ -109,8 +122,6 @@ export default class LogTable extends Vue {
   showSearch!: boolean;
 
   groupItems(items: LogItem[], groupBy: string[], groupDesc: boolean[]): ItemGroup<LogItem>[] {
-    const table: any = this.$refs.table;
-    const instance = table.$vnode.componentInstance;
     const groups = items.reduce((result, item) => {
       switch (item.scope) {
         case XesComponentScope.Log:
@@ -122,14 +133,24 @@ export default class LogTable extends Vue {
         case XesComponentScope.Event: {
           const group = `${(item._parent as LogItem)._path}b`;
           (result[group] = result[group] || []).push(item);
-          instance.$set(instance.openCache, group, false);
         }
       }
       return result;
     }, {} as Record<string, LogItem[]>);
 
-    const out = Object.keys(groups).map((key) => ({ name: key, items: groups[key] } as ItemGroup<LogItem>));
+    const collapse = () => {
+      const table: any = this.$refs.table;
+      const instance = table.$vnode.componentInstance;
+      for (const group in groups) {
+        instance.$set(instance.openCache, group, false);
+      }
+    };
 
+    // if LogTable is initially hidden, the first call to groupItems() is within render() when $refs.table is not set yet
+    if (this.$refs.table !== undefined) collapse();
+    else setTimeout(collapse, 0);
+
+    const out = Object.keys(groups).map((key) => ({ name: key, items: groups[key] } as ItemGroup<LogItem>));
     return out;
   }
 
@@ -140,10 +161,10 @@ export default class LogTable extends Vue {
     return items;
   }
 
-  deviationToClass(step?: Step | LogItem): string {
-    switch (step?.type) {
+  deviationToClass(item?: LogItem): string {
+    switch (item?.type) {
       case DeviationType.ModelDeviation:
-        //if ((step.modelMove as { isSilent: boolean }).isSilent) return "model-deviation silent";
+        if (item["_isSilent"]) return "model-deviation silent";
         return "model-deviation";
       case DeviationType.LogDeviation:
         return "log-deviation";
@@ -156,13 +177,13 @@ export default class LogTable extends Vue {
     return item[this.classifier] !== undefined ? item[this.classifier] : this.$t("workspace.component.flat-log.no-data");
   }
 
-  deviationToTitle(step?: Step | LogItem): string {
-    switch (step?.type) {
+  deviationToTitle(item?: LogItem): string | LocaleMessages {
+    switch (item?.type) {
       case DeviationType.ModelDeviation:
-        //if ((step.modelMove as { isSilent: boolean })?.isSilent) return this.$t("workspace.component.flat-log.model-deviation-silent").toString();
-        return this.$t("workspace.component.flat-log.model-deviation").toString();
+        if (item["_isSilent"]) return this.$t("workspace.component.flat-log.model-deviation-silent");
+        return this.$t("workspace.component.flat-log.model-deviation");
       case DeviationType.LogDeviation:
-        return this.$t("workspace.component.flat-log.log-deviation").toString();
+        return this.$t("workspace.component.flat-log.log-deviation");
       default:
         return "";
     }

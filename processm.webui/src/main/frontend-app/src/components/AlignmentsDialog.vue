@@ -83,7 +83,9 @@ export default class AlignmentsDialog extends Vue {
             }
             break;
           case DeviationType.ModelDeviation:
-            event[this.classifier] = (step.modelMove as { name: string }).name;
+            const mm = step.modelMove as { name: string; isSilent: boolean };
+            event[this.classifier] = mm.name;
+            event["_isSilent"] = mm.isSilent;
             break;
         }
         items.push(event);

@@ -107,9 +107,10 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                     add(cnet.end)
                 }.mapToArray {
                     CausalNetComponentDataAllOfNodes(
-                        it.name,
-                        cnet.splits[it].orEmpty().mapToArray { split -> split.targets.mapToArray { t -> t.name } },
-                        cnet.joins[it].orEmpty().mapToArray { join -> join.sources.mapToArray { s -> s.name } }
+                        id = "${it.name}${it.instanceId}",
+                        name = it.name,
+                        splits = cnet.splits[it].orEmpty().mapToArray { spl -> spl.targets.mapToArray { t -> t.name } },
+                        joins = cnet.joins[it].orEmpty().mapToArray { join -> join.sources.mapToArray { s -> s.name } }
                     )
                 }
                 val edges = cnet.dependencies.mapToArray {
@@ -117,9 +118,9 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                         (cnet.getAllMetadata(it)[BasicMetadata.DEPENDENCY_MEASURE] as SingleDoubleMetadata?)?.value
                             ?: 0.0
                     CausalNetComponentDataAllOfEdges(
-                        it.source.name,
-                        it.target.name,
-                        dependencyMeasure
+                        sourceNodeId = "${it.source.name}${it.source.instanceId}",
+                        targetNodeId = "${it.target.name}${it.target.instanceId}",
+                        support = dependencyMeasure
                     )
                 }
 

@@ -2130,9 +2130,11 @@ components:
               type: array
               items:
                 type: object
-                required: [ id, splits, joins ]
+                required: [ id, name, splits, joins ]
                 properties:
                   id:
+                    type: string
+                  name:
                     type: string
                   splits:
                     type: array

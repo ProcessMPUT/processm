@@ -61,6 +61,7 @@
       "flat-log": {
         "log-deviation": "An event in the log not corresponding to the process model",
         "model-deviation": "An activity in the model not corresponding to the event in the log",
+        "model-deviation-silent": "A silent activity in the model. Silent activities, by design, do not correspond to the events in the log.",
         "no-data": "(no data)"
       }
     }

@@ -1,7 +1,7 @@
 <template xmlns:v-slot="http://www.w3.org/1999/html">
   <div class="graph">
     <v-toolbar class="toolbar" dense elevation="0" floating>
-      <alignments-dialog :alignments="data.data.alignmentKPIReport?.alignments"></alignments-dialog>
+      <alignments-dialog :alignments="data.data.alignmentKPIReport?.alignments" :name="data.name"></alignments-dialog>
     </v-toolbar>
     <table>
       <tr>
@@ -52,7 +52,7 @@ import Vue from "vue";
 import { Component, Prop, Watch } from "vue-property-decorator";
 import Graph, { CNetGraphData } from "@/components/Graph.vue";
 import { EdgeConfig } from "@antv/g6-core/lib/types";
-import { CNetComponentData } from "@/models/WorkspaceComponent";
+import { CNetComponentData, WorkspaceComponent as WorkspaceComponentModel } from "@/models/WorkspaceComponent";
 import { ComponentMode } from "@/components/workspace/WorkspaceComponent.vue";
 import LogTable from "@/components/LogTable.vue";
 import AlignmentsDialog from "@/components/AlignmentsDialog.vue";
@@ -67,7 +67,7 @@ import AlignmentsDialog from "@/components/AlignmentsDialog.vue";
 })
 export default class CNetComponent extends Vue {
   @Prop({ default: {} })
-  readonly data!: { data: CNetComponentData };
+  readonly data!: WorkspaceComponentModel & { data: CNetComponentData };
   graphData: CNetGraphData = {
     nodes: [],
     edges: []
@@ -91,7 +91,7 @@ export default class CNetComponent extends Vue {
       nodes: this.data.data.nodes.map((node) => {
         return {
           id: node.id,
-          label: node.id,
+          label: node.name as string,
           joins: node.joins,
           splits: node.splits
         };

@@ -62,6 +62,7 @@
     "flat-log": {
       "log-deviation": "Zdarzenie w dzienniku niepasujące do modelu procesu",
       "model-deviation": "Aktywność w modelu niepasująca do zdarzenia w dzienniku",
+      "model-deviation-silent": "Cicha aktywność w modelu. Ciche aktywności z założenia nie odpowiadają zdarzeniom w dzienniku.",
       "no-data": "(brak danych)"
     }
   },
