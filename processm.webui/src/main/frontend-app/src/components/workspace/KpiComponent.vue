@@ -1,6 +1,6 @@
 <template>
   <div class="kpi-container">
-    {{ value }}
+    {{ data.data.value }}
   </div>
 </template>
 
@@ -19,16 +19,11 @@
 <script lang="ts">
 import Vue from "vue";
 import { Component, Prop } from "vue-property-decorator";
+import { KpiComponentData } from "@/models/WorkspaceComponent";
 
 @Component
 export default class KpiComponent extends Vue {
   @Prop({ default: {} })
-  readonly data!: { data: { value: string } };
-
-  value?: string;
-
-  created() {
-    this.value = this.data.data?.value;
-  }
+  readonly data!: { data: KpiComponentData };
 }
 </script>
