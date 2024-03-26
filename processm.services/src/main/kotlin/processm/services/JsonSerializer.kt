@@ -70,7 +70,8 @@ private object LocalDateTimeSerializer : KSerializer<LocalDateTime> {
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("LocalDateTime", PrimitiveKind.STRING)
 
     override fun deserialize(decoder: Decoder): LocalDateTime {
-        return LocalDateTime.parse(decoder.decodeString())
+        // FIXME: LocalDateTime does not store timezone; better use Instant that is in UTC by definition
+        return LocalDateTime.parse(decoder.decodeString().trimEnd('Z'))
     }
 
     override fun serialize(encoder: Encoder, value: LocalDateTime) {
