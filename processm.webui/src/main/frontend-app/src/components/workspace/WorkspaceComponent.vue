@@ -159,7 +159,7 @@ export default class WorkspaceComponent extends Vue {
   @Prop({ default: false })
   readonly updateData = false;
 
-  private readonly lastModified = this.componentDetails?.dataLastModified ?? this.componentDetails?.userLastModified;
+  readonly lastModified = this.componentDetails?.dataLastModified ?? this.componentDetails?.userLastModified;
 
   private get loading(): boolean {
     switch (this.componentDetails?.type) {
