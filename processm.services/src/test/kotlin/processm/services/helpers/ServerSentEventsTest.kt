@@ -1,5 +1,6 @@
 package processm.services.helpers
 
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import java.io.ByteArrayOutputStream
 import kotlin.test.Test
@@ -33,7 +34,7 @@ internal fun unescapeNewLine(input: String): String =
 class ServerSentEventsTest {
 
     @Test
-    fun `writeEvent with annotated class`() {
+    fun `writeEvent with annotated class`() = runBlocking {
         val baseStream = ByteArrayOutputStream()
         EventStream(baseStream).writeEvent(SomeEvent("a value"))
         val text = baseStream.toByteArray().decodeToString()
