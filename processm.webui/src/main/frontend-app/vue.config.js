@@ -8,7 +8,14 @@ module.exports = {
   devServer: {
     port: 8081,
     // Use either the proxy to the actual backend or apiMocker below
-    proxy: "http://localhost:2080/",
+    proxy: {
+      "/api": {
+        target: "http://localhost:2080/",
+        ws: true,
+        changeOrigin: true,
+      },
+    },
+    compress: false,
     // before(app) {
     //   apiMocker(app, path.resolve("./api-mocker/api.js"));
     // },
