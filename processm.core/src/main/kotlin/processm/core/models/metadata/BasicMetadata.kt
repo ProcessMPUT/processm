@@ -25,12 +25,16 @@ object BasicMetadata {
      */
     val SYNCHRONIZATION_TIME: URN = URN("urn:processm:statistics/synchronization_time")
 
+    /**
+     * The wall-clock time of the activity/process being suspended.
+     */
     val SUSPENSION_TIME: URN = URN("urn:processm:statistics/suspension_time")
 
     /**
-     * The set of [LEAD_TIME], [SERVICE_TIME], [WAITING_TIME], [SYNCHRONIZATION_TIME].
+     * The set of [LEAD_TIME], [SERVICE_TIME], [WAITING_TIME], [SYNCHRONIZATION_TIME], [SUSPENSION_TIME].
      */
-    val BASIC_TIME_STATISTICS: Set<URN> = setOf(LEAD_TIME, SERVICE_TIME, WAITING_TIME, SYNCHRONIZATION_TIME)
+    val BASIC_TIME_STATISTICS: Set<URN> =
+        setOf(LEAD_TIME, SERVICE_TIME, WAITING_TIME, SYNCHRONIZATION_TIME, SUSPENSION_TIME)
 
     /**
      * The value of a dependency measure associated with dependencies in Causal Nets obtained from mining services.

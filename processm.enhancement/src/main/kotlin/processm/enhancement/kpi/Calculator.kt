@@ -7,12 +7,20 @@ import processm.conformance.models.alignments.cache.DefaultAlignmentCache
 import processm.conformance.models.alignments.events.DefaultEventsSummarizer
 import processm.conformance.models.alignments.events.EventsSummarizer
 import processm.conformance.models.alignments.petrinet.DecompositionAligner
+import processm.core.log.AggregateConceptInstanceToSingleEvent
+import processm.core.log.InferConceptInstanceFromStandardLifecycle
+import processm.core.log.InferTimes
+import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
+import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.Log
+import processm.core.log.hierarchical.toFlatSequence
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.DecoupledNodeExecution
 import processm.core.models.commons.Activity
 import processm.core.models.commons.CausalArc
 import processm.core.models.commons.ProcessModel
+import processm.core.models.metadata.BasicMetadata.BASIC_TIME_STATISTICS
+import processm.core.models.metadata.URN
 import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.Place
 import processm.core.models.petrinet.Transition
@@ -20,6 +28,9 @@ import processm.core.models.processtree.*
 import processm.helpers.MRUMap
 import processm.helpers.map2d.DoublingMap2D
 import processm.helpers.stats.Distribution
+import processm.helpers.totalDays
+import java.time.Duration
+import java.time.Instant
 import kotlin.sequences.Sequence
 
 /**
@@ -238,9 +249,8 @@ class Calculator(
     /**
      * Calculates KPI report from all numeric attributes spotted in the [logs].
      */
+    @OptIn(InMemoryXESProcessing::class)
     fun calculate(logs: Sequence<Log>): Report {
-
-
         val logKPIraw = HashMap<String, ArrayList<Double>>()
         val traceKPIraw = HashMap<String, ArrayList<Double>>()
         val eventKPIraw = DoublingMap2D<String, Activity?, ArrayList<Double>>()
@@ -254,23 +264,30 @@ class Calculator(
             else -> throw UnsupportedOperationException("Process models of type ${model::class} are not supported")
         }
 
-        for (log in logs) {
-            for ((key, value) in log.attributes.entries) {
-                if (value !is Number)
-                    continue
+        for (_log in logs) {
+            var baseXESStream = _log.toFlatSequence()
+            if (_log.lifecycleModel === null || _log.lifecycleModel.equals("standard", true))
+                baseXESStream = InferConceptInstanceFromStandardLifecycle(baseXESStream)
+            baseXESStream = AggregateConceptInstanceToSingleEvent(InferTimes(baseXESStream))
+            // FIXME: rewrite to not materialize the entire stream in the memory
+            val log = HoneyBadgerHierarchicalXESInputStream(baseXESStream).first()
+
+            for (entry in log.attributes.entries) {
+                val (key, _) = entry
+                val value = entry.toDouble() ?: continue
 
                 logKPIraw.compute(key) { _, old ->
-                    (old ?: ArrayList()).apply { add(value.toDouble()) }
+                    (old ?: ArrayList()).apply { add(value) }
                 }
             }
 
             for (trace in log.traces) {
-                for ((key, attribute) in trace.attributes) {
-                    if (attribute !is Number)
-                        continue
+                for (entry in trace.attributes) {
+                    val (key, _) = entry
+                    val value = entry.toDouble() ?: continue
 
                     traceKPIraw.compute(key) { _, old ->
-                        (old ?: ArrayList()).apply { add(attribute.toDouble()) }
+                        (old ?: ArrayList()).apply { add(value) }
                     }
                 }
             }
@@ -286,8 +303,10 @@ class Calculator(
                         DeviationType.ModelDeviation -> continue // no-way to get values for the model-only moves
                     }
 
-                    val rawValues = step.logMove!!.attributes.mapNotNull { (key, attribute) ->
-                        if (attribute is Number) NumericAttribute(key, attribute.toDouble()) else null
+                    val rawValues = step.logMove!!.attributes.mapNotNull { entry ->
+                        val (key, _) = entry
+                        val value = entry.toDouble()
+                        value?.let { NumericAttribute(key, it) }
                     }
 
                     for ((key, attributeValue) in rawValues) {
@@ -321,5 +340,20 @@ class Calculator(
      */
     fun calculate(log: Log): Report = calculate(sequenceOf(log))
 
+    /**
+     * @return null if the value cannot be converted to Double
+     */
+    private fun Map.Entry<String, Any?>.toDouble(): Double? {
+        val v = value // avoid successive calls to value and redundant casts below
+        return when (v) {
+            is Double -> v
+            is Number -> v.toDouble()
+            is Instant -> v.toEpochMilli().toDouble()
+            else ->
+                if (URN.tryParse(key) in BASIC_TIME_STATISTICS)
+                    Duration.parse(v as CharSequence).totalDays
+                else null
+        }
+    }
 }
 

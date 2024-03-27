@@ -11,6 +11,10 @@ import processm.core.log.hierarchical.Log
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.models.commons.ProcessModel
+import processm.core.models.metadata.BasicMetadata.LEAD_TIME
+import processm.core.models.metadata.BasicMetadata.SERVICE_TIME
+import processm.core.models.metadata.BasicMetadata.SUSPENSION_TIME
+import processm.core.models.metadata.BasicMetadata.WAITING_TIME
 import processm.core.models.petrinet.petrinet
 import processm.core.models.processtree.ProcessTrees
 import processm.core.querylanguage.Query
@@ -485,5 +489,176 @@ class CalculatorTests {
         val report = Calculator(ProcessTrees.loopWithSequenceAndExclusiveInRedo).calculate(log)
         assertTrue { report.inboundArcKPI.getRow("time").entries.none { it.key.source.name == "b" && it.key.target.name == "a" } }
         assertTrue { report.outboundArcKPI.getRow("time").entries.none { it.key.source.name == "b" && it.key.target.name == "a" } }
+    }
+
+    @Test
+    fun `inferred lead service waiting suspension times - perfect Cnet`() {
+        `inferred lead service waiting suspension times`(perfectCNet)
+    }
+
+    @Test
+    fun `inferred lead service waiting suspension times - perfect PetriNet`() {
+        `inferred lead service waiting suspension times`(perfectCNet)
+    }
+
+    @Test
+    fun `inferred lead service waiting suspension times - perfect ProcessTree`() {
+        `inferred lead service waiting suspension times`(ProcessTrees.journalReviewPerfectProcessTree)
+    }
+
+    private fun `inferred lead service waiting suspension times`(model: ProcessModel) {
+        val log = q("where l:id=$logUUID")
+        val calculator = Calculator(model)
+        val report = calculator.calculate(log)
+
+        val eventLeadTime = report.eventKPI.getRow(LEAD_TIME.urn)
+        val eventServiceTime = report.eventKPI.getRow(SERVICE_TIME.urn)
+        val eventWaitingTime = report.eventKPI.getRow(WAITING_TIME.urn)
+        val eventSuspensionTime = report.eventKPI.getRow(SUSPENSION_TIME.urn)
+        assertEquals(14, eventLeadTime.size)
+        assertEquals(14, eventServiceTime.size)
+        assertEquals(14, eventWaitingTime.size)
+        assertEquals(14, eventSuspensionTime.size)
+        println("Lead times for activities:")
+        for ((activity, kpi) in eventLeadTime) {
+            println("$activity: $kpi")
+        }
+
+        println("Service times for activities:")
+        for ((activity, kpi) in eventServiceTime) {
+            println("$activity: $kpi")
+        }
+
+        println("Waiting times for activities:")
+        for ((activity, kpi) in eventWaitingTime) {
+            println("$activity: $kpi")
+        }
+
+        println("Suspension times for activities:")
+        for ((activity, kpi) in eventSuspensionTime) {
+            println("$activity: $kpi")
+        }
+
+        println("Lead time for inbound arc KPI:")
+        for ((arc, kpi) in report.inboundArcKPI.getRow(LEAD_TIME.urn)) {
+            println("$arc: $kpi")
+        }
+
+        println("Service time for inbound arc KPI:")
+        for ((arc, kpi) in report.inboundArcKPI.getRow(SERVICE_TIME.urn)) {
+            println("$arc: $kpi")
+        }
+
+        println("Waiting time for inbound arc KPI:")
+        for ((arc, kpi) in report.inboundArcKPI.getRow(WAITING_TIME.urn)) {
+            println("$arc: $kpi")
+        }
+
+        println("Suspension time for inbound arc KPI:")
+        for ((arc, kpi) in report.inboundArcKPI.getRow(SUSPENSION_TIME.urn)) {
+            println("$arc: $kpi")
+        }
+
+
+        with(model.activities) {
+            // instant activities
+            assertEquals(0.0, eventLeadTime[first { it.name == "get review 1" }]!!.max)
+            assertEquals(0.0, eventLeadTime[first { it.name == "get review 2" }]!!.max)
+            assertEquals(0.0, eventLeadTime[first { it.name == "get review 3" }]!!.max)
+            assertEquals(0.0, eventLeadTime[first { it.name == "get review X" }]!!.max)
+            assertEquals(0.0, eventLeadTime[first { it.name == "time-out 1" }]!!.max)
+            assertEquals(0.0, eventLeadTime[first { it.name == "time-out 2" }]!!.max)
+            assertEquals(0.0, eventLeadTime[first { it.name == "time-out 3" }]!!.max)
+            assertEquals(0.0, eventLeadTime[first { it.name == "time-out X" }]!!.max)
+
+            assertEquals(0.0, eventServiceTime[first { it.name == "get review 1" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "get review 2" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "get review 3" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "get review X" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "time-out 1" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "time-out 2" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "time-out 3" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "time-out X" }]!!.max)
+
+            assertEquals(0.0, eventWaitingTime[first { it.name == "get review 1" }]!!.max)
+            assertEquals(0.0, eventWaitingTime[first { it.name == "get review 2" }]!!.max)
+            assertEquals(0.0, eventWaitingTime[first { it.name == "get review 3" }]!!.max)
+            assertEquals(0.0, eventWaitingTime[first { it.name == "get review X" }]!!.max)
+            assertEquals(0.0, eventWaitingTime[first { it.name == "time-out 1" }]!!.max)
+            assertEquals(0.0, eventWaitingTime[first { it.name == "time-out 2" }]!!.max)
+            assertEquals(0.0, eventWaitingTime[first { it.name == "time-out 3" }]!!.max)
+            assertEquals(0.0, eventWaitingTime[first { it.name == "time-out X" }]!!.max)
+
+            // longer activities [times in days]
+            // lead times for activities are wall-clock durations between the first and the last event of an activity instance
+            // for JournalReview, where only start and complete events are available, lead times equal service times
+            assertEquals(0.0, eventLeadTime[first { it.name == "invite reviewers" }]!!.min)
+            assertEquals(3.0, eventLeadTime[first { it.name == "invite reviewers" }]!!.median)
+            assertEquals(12.0, eventLeadTime[first { it.name == "invite reviewers" }]!!.max)
+            assertEquals(101, eventLeadTime[first { it.name == "invite reviewers" }]!!.raw.size)
+            assertEquals(0.0, eventLeadTime[first { it.name == "decide" }]!!.min)
+            assertEquals(3.0, eventLeadTime[first { it.name == "decide" }]!!.median)
+            assertEquals(12.0, eventLeadTime[first { it.name == "decide" }]!!.max)
+            assertEquals(100, eventLeadTime[first { it.name == "decide" }]!!.raw.size)
+            assertEquals(0.0, eventLeadTime[first { it.name == "invite additional reviewer" }]!!.min)
+            assertEquals(2.0, eventLeadTime[first { it.name == "invite additional reviewer" }]!!.median)
+            assertEquals(11.0, eventLeadTime[first { it.name == "invite additional reviewer" }]!!.max)
+            assertEquals(399, eventLeadTime[first { it.name == "invite additional reviewer" }]!!.raw.size)
+            assertEquals(0.0, eventLeadTime[first { it.name == "accept" }]!!.min)
+            assertEquals(1.0, eventLeadTime[first { it.name == "accept" }]!!.median)
+            assertEquals(12.0, eventLeadTime[first { it.name == "accept" }]!!.max)
+            assertEquals(45, eventLeadTime[first { it.name == "accept" }]!!.raw.size)
+            assertEquals(0.0, eventLeadTime[first { it.name == "reject" }]!!.min)
+            assertEquals(4.0, eventLeadTime[first { it.name == "reject" }]!!.median)
+            assertEquals(9.0, eventLeadTime[first { it.name == "reject" }]!!.max)
+            assertEquals(55, eventLeadTime[first { it.name == "reject" }]!!.raw.size)
+
+            assertEquals(0.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.min)
+            assertEquals(3.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.median)
+            assertEquals(12.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.max)
+            assertEquals(101, eventServiceTime[first { it.name == "invite reviewers" }]!!.raw.size)
+            assertEquals(0.0, eventServiceTime[first { it.name == "decide" }]!!.min)
+            assertEquals(3.0, eventServiceTime[first { it.name == "decide" }]!!.median)
+            assertEquals(12.0, eventServiceTime[first { it.name == "decide" }]!!.max)
+            assertEquals(100, eventServiceTime[first { it.name == "decide" }]!!.raw.size)
+            assertEquals(0.0, eventServiceTime[first { it.name == "invite additional reviewer" }]!!.min)
+            assertEquals(2.0, eventServiceTime[first { it.name == "invite additional reviewer" }]!!.median)
+            assertEquals(11.0, eventServiceTime[first { it.name == "invite additional reviewer" }]!!.max)
+            assertEquals(399, eventServiceTime[first { it.name == "invite additional reviewer" }]!!.raw.size)
+            assertEquals(0.0, eventServiceTime[first { it.name == "accept" }]!!.min)
+            assertEquals(1.0, eventServiceTime[first { it.name == "accept" }]!!.median)
+            assertEquals(12.0, eventServiceTime[first { it.name == "accept" }]!!.max)
+            assertEquals(45, eventServiceTime[first { it.name == "accept" }]!!.raw.size)
+            assertEquals(0.0, eventServiceTime[first { it.name == "reject" }]!!.min)
+            assertEquals(4.0, eventServiceTime[first { it.name == "reject" }]!!.median)
+            assertEquals(9.0, eventServiceTime[first { it.name == "reject" }]!!.max)
+            assertEquals(55, eventServiceTime[first { it.name == "reject" }]!!.raw.size)
+        }
+
+        with(report.inboundArcKPI.getRow(SERVICE_TIME.urn)) {
+            with(entries.single { it.key.source.name == "invite additional reviewer" && it.key.target.name == "time-out X" }.value) {
+                assertEquals(0.0, max)
+                assertEquals(198, count)
+            }
+            with(entries.single { it.key.source.name == "invite additional reviewer" && it.key.target.name == "get review X" }.value) {
+                assertEquals(0.0, max)
+                assertEquals(201, count)
+            }
+        }
+
+        with(report.outboundArcKPI.getRow(SERVICE_TIME.urn)) {
+            with(entries.single { it.key.source.name == "invite additional reviewer" && it.key.target.name == "time-out X" }.value) {
+                assertEquals(0.0, min)
+                assertDoubleEquals(2.167, average)
+                assertEquals(5.0, max)
+                assertEquals(198, count)
+            }
+            with(entries.single { it.key.source.name == "invite additional reviewer" && it.key.target.name == "get review X" }.value) {
+                assertEquals(0.0, min)
+                assertDoubleEquals(2.383, average)
+                assertEquals(11.0, max)
+                assertEquals(201, count)
+            }
+        }
     }
 }

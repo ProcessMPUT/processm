@@ -30,7 +30,9 @@ class InferTimes(val base: XESInputStream) : XESInputStream {
         suspend fun SequenceScope<XESComponent>.flushBuffer() {
             if (traceBuffer !== null) with(traceBuffer!!) {
                 // set trace statistics
-                val lead = Duration.between(eventBuffer.first().timeTimestamp, eventBuffer.last().timeTimestamp)
+                val earliestTimestamp = eventBuffer.firstOrNull { it.timeTimestamp !== null }?.timeTimestamp
+                val latestTimestamp = eventBuffer.lastOrNull { it.timeTimestamp !== null }?.timeTimestamp
+                val lead = earliestTimestamp?.let { Duration.between(it, latestTimestamp) } ?: Duration.ZERO
                 // at this moment [nameInstanceToEvent] consists of the total service times spotted in the trace
                 val service = Duration.ofMillis(nameInstanceToEvent.rows.sumOf { row ->
                     nameInstanceToEvent.getRow(row).values.sumOf { v -> v.service.toMillis() }
@@ -58,38 +60,42 @@ class InferTimes(val base: XESInputStream) : XESInputStream {
         for (component in base) {
             when (component) {
                 is Event -> with(component) {
-                    require(!conceptName.isNullOrBlank()) { "The $CONCEPT_NAME attribute must be set and not blank for all events." }
-                    requireNotNull(timeTimestamp) { "The $TIME_TIMESTAMP attribute must be set for all events." }
-
-                    val times = nameInstanceToEvent.compute(conceptName!!, conceptInstance) { _, _, old ->
-                        if (old === null) {
-                            Times(timeTimestamp!!, calculator.getState(component))
-                        } else {
-                            val durationSinceLastEvent = Duration.between(old.lastTimestamp, timeTimestamp!!)
-                            old.lead = old.lead.plus(durationSinceLastEvent)
-                            when (old.state) {
-                                State.Servicing -> old.service = old.service.plus(durationSinceLastEvent)
-                                State.Waiting -> old.waiting = old.waiting.plus(durationSinceLastEvent)
-                                State.Suspended -> old.suspension = old.suspension.plus(durationSinceLastEvent)
-                                else -> Unit
-                            }
-                            old.state = calculator.getState(component)
-
-                            old
-                        }
-                    }!!
-
-                    attributesInternal[LEAD_TIME.urn] = times.lead.toString()
-                    attributesInternal[SERVICE_TIME.urn] = times.service.toString()
-                    attributesInternal[WAITING_TIME.urn] = times.waiting.toString()
-                    attributesInternal[SUSPENSION_TIME.urn] = times.suspension.toString()
-
                     eventBuffer.add(component)
+
+                    if (!conceptName.isNullOrBlank()) {
+                        var times = nameInstanceToEvent[conceptName!!, conceptInstance]
+
+                        if (timeTimestamp !== null) {
+                            if (times === null) {
+                                times = Times(timeTimestamp!!, calculator.getState(component))
+                                nameInstanceToEvent[conceptName!!, conceptInstance] = times
+                            } else {
+                                val durationSinceLastEvent = Duration.between(times.lastTimestamp, timeTimestamp!!)
+                                times.lead = times.lead.plus(durationSinceLastEvent)
+                                when (times.state) {
+                                    State.Servicing -> times.service = times.service.plus(durationSinceLastEvent)
+                                    State.Waiting -> times.waiting = times.waiting.plus(durationSinceLastEvent)
+                                    State.Suspended -> times.suspension = times.suspension.plus(durationSinceLastEvent)
+                                    else -> Unit
+                                }
+                                times.state = calculator.getState(component)
+                            }
+                        }
+
+                        if (times !== null) {
+                            attributesInternal[LEAD_TIME.urn] = times.lead.toString()
+                            attributesInternal[SERVICE_TIME.urn] = times.service.toString()
+                            attributesInternal[WAITING_TIME.urn] = times.waiting.toString()
+                            attributesInternal[SUSPENSION_TIME.urn] = times.suspension.toString()
+                        }
+                    }
                 }
+
                 is Trace -> {
                     flushBuffer()
                     traceBuffer = component
                 }
+
                 is Log -> {
                     flushBuffer()
                     calculator =
@@ -139,12 +145,17 @@ private object StandardLifecycleCalculator : Calculator {
  * See IEEE 1849-2016 Figure 4.
  */
 private object BPAFCalculator : Calculator {
-    override fun getState(event: Event): State = with(event.lifecycleState?.lowercase()) {
-        if (this === null) State.Stopped
-        else if (this == "open") State.Servicing
-        else if (startsWith("open.running") && this != "open.running.suspended") State.Servicing
-        else if (startsWith("open.notrunning") && !startsWith("open.notrunning.suspended")) State.Waiting
-        else if (this == "open.running.suspended" || startsWith("open.notrunning.suspended")) State.Suspended
+    override fun getState(event: Event): State = with(event.lifecycleState) {
+        if (this === null)
+            State.Stopped
+        else if (equals("open", true))
+            State.Servicing
+        else if (startsWith("open.running", true) && !equals("open.running.suspended", true))
+            State.Servicing
+        else if (startsWith("open.notrunning", true) && !startsWith("open.notrunning.suspended", true))
+            State.Waiting
+        else if (equals("open.running.suspended", true) || startsWith("open.notrunning.suspended", true))
+            State.Suspended
         else State.Stopped
     }
 }
