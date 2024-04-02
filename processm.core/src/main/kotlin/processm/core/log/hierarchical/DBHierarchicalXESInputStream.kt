@@ -154,6 +154,12 @@ class DBHierarchicalXESInputStream(
 
     override fun iterator(): Iterator<Log> = getLogs().iterator()
 
+    /**
+     * Returns the most recent (highest) version number over all events in the stream
+     * or null if no even has a version number
+     */
+    fun readVersion(): Long? = translator.readVersion()
+
     private fun <T : QueryResult, R : XESComponent> get(
         getExecutor: () -> TranslatedQuery.Executor<T>,
         getBatch: (batchIndex: Int, initializer: () -> List<R>, skipAction: () -> Unit) -> List<R>,

@@ -42,6 +42,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
 
         val validUse = q("select [e:c:Event Name] where l:id=$journal")
         assertEquals(1, validUse.count())
+        assertEquals(2298L, validUse.readVersion())
 
         val log = validUse.first()
         assertEquals(101, log.traces.count())
@@ -58,6 +59,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     fun duplicateAttributes() {
         val stream = q("select e:name, [e:c:Event Name] where l:id=$journal")
         assertEquals(1, stream.count())
+        assertEquals(2298L, stream.readVersion())
 
         val log = stream.first()
         assertEquals(101, log.traces.count())
@@ -77,6 +79,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     fun selectEmpty() {
         val stream = q("where 0=1")
         assertEquals(0, stream.count())
+        assertNull(stream.readVersion())
     }
 
     @Test
@@ -84,6 +87,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
         val stream =
             q("select [e:classifier:concept:name+lifecycle:transition] where l:id=$journal group by [^e:classifier:concept:name+lifecycle:transition]")
         assertEquals(1, stream.count())
+        assertEquals(2298L, stream.readVersion())
 
         val log = stream.first()
         // as of 2020-06-04 JournalReview-extra.xes consists of variants (w.r.t. concept:name+lifecycle:transition):
@@ -145,6 +149,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     fun groupEventByStandardAttributeTest() {
         val stream = q("select t:name, e:name, sum(e:total) where l:id=$journal group by e:name")
         assertEquals(1, stream.count())
+        assertEquals(2298L, stream.readVersion())
 
         val log = stream.first()
         assertEquals(101, log.traces.count())
@@ -173,6 +178,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     fun groupLogByEventStandardAttributeAndImplicitGroupEventByTest() {
         val stream = q("select sum(e:total) where l:name='JournalReview' group by ^^e:name")
         assertTrue(stream.count() == 1)
+        assertEquals(2298L, stream.readVersion())
 
         val log = stream.first()
         assertTrue(log.count >= 1)
@@ -193,6 +199,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     fun groupLogByEventStandardAndGroupEventByStandardAttributeAttributeTest() {
         val stream = q("select e:name, sum(e:total) where l:name='JournalReview' group by ^^e:name, e:name")
         assertTrue(stream.count() == 1)
+        assertEquals(2298L, stream.readVersion())
 
         val log = stream.first()
         assertTrue(log.count >= 1)
@@ -214,6 +221,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     fun groupByImplicitScopeTest() {
         val stream = q("where l:id=$journal group by c:Resource")
         assertEquals(1, stream.count())
+        assertEquals(2298L, stream.readVersion())
 
         val log = stream.first()
         assertEquals(101, log.traces.count())
@@ -253,6 +261,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     fun groupByOuterScopeTest() {
         val stream = q("select t:min(l:name) where l:name='JournalReview' limit l:3")
         assertTrue(stream.count() in 1..3)
+        assertEquals(2298L, stream.readVersion())
 
         for (log in stream) {
             assertEquals(1, log.traces.count())
@@ -269,6 +278,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
             "select l:*, t:*, avg(e:total), min(e:timestamp), max(e:timestamp) where l:name matches '(?i)^journalreview$' limit l:1"
         )
         assertEquals(1, stream.count())
+        assertEquals(2298L, stream.readVersion())
 
         val log = stream.first()
         assertEquals(101, log.traces.count())
@@ -309,6 +319,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     fun groupByImplicitFromOrderByTest() {
         val stream = q("where l:id=$journal order by avg(e:total), min(e:timestamp), max(e:timestamp)")
         assertEquals(1, stream.count())
+        assertEquals(2298L, stream.readVersion())
 
         val log = stream.first()
         assertEquals(101, log.traces.count())
@@ -346,6 +357,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     fun groupByImplicitWithHoistingTest() {
         val stream = q("select avg(^^e:total), min(^^e:timestamp), max(^^e:timestamp) where l:id=$journal")
         assertEquals(1, stream.count())
+        assertEquals(2298L, stream.readVersion())
 
         val log = stream.first()
         assertNull(log.conceptName)
@@ -384,6 +396,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     @Test
     fun orderBySimpleTest() {
         val stream = q("where l:name='JournalReview' order by e:timestamp limit l:3")
+        assertEquals(2298L, stream.readVersion())
         assertTrue(stream.count() > 0)
         assertTrue(stream.count() <= 3)
         for (log in stream) {
@@ -405,6 +418,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     @Test
     fun orderByWithModifierAndScopesTest() {
         val stream = q("where l:name='JournalReview' order by t:total desc, e:timestamp limit l:3")
+        assertEquals(2298L, stream.readVersion())
         for (log in stream) {
             assertTrue(log.traces.count() == 101)
 
@@ -426,6 +440,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     @Test
     fun orderByWithModifierAndScopes2Test() {
         val stream = q("where l:name='JournalReview' order by e:timestamp, t:total desc limit l:3")
+        assertEquals(2298L, stream.readVersion())
         for (log in stream) {
             assertTrue(log.traces.count() == 101)
 
@@ -457,6 +472,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     @Test
     fun orderByExpressionTest() {
         val stream = q("select min(timestamp) where l:id=$journal group by ^e:name order by min(^e:timestamp)")
+        assertEquals(2298L, stream.readVersion())
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -475,6 +491,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     @Test
     fun groupByWithHoistingAndOrderByWithinGroupTest() {
         val stream = q("where l:id=$journal group by ^e:name order by name")
+        assertEquals(2298L, stream.readVersion())
         val log = stream.first()
 
         // as of 2020-06-11 JournalReview-extra.xes consists of 78 variants w.r.t. concept:name order by concept:name:
@@ -557,6 +574,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
                     "limit l:1\n"
         )
         assertEquals(1, stream.count())
+        assertEquals(2298L, stream.readVersion())
 
         val log = stream.first()
         assertEquals("JournalReview", log.conceptName)
@@ -617,6 +635,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
                     "order by count(t:name) desc\n" +
                     "limit l:1\n"
         )
+        assertEquals(2298L, stream1.readVersion())
         val stream2 = q(
             "select l:name, count(t:name), count(^e:name), e:name\n" +
                     "where l:id=$journal\n" +
@@ -624,6 +643,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
                     "order by count(t:name) desc\n" +
                     "limit l:1\n"
         )
+        assertEquals(2298L, stream2.readVersion())
         assertEquals(stream1.count(), stream2.count())
 
         val log1 = stream1.first()
@@ -651,6 +671,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
                     "order by count(t:name) desc\n" +
                     "limit l:1\n"
         )
+        assertEquals(2298L, stream.readVersion())
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -679,6 +700,8 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
                     "group by ^e:name\n" +
                     "order by count(t:name) desc"
         )
+        // bpi has no version information, hence only info for journal is taken
+        assertEquals(2298L, stream.readVersion())
 
         assertEquals(2, stream.count())
         val logs = stream.toList()
@@ -704,6 +727,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
                     "group by t:name, e:name\n"
         )
 
+        assertEquals(2298L, stream.readVersion())
         assertEquals(1, stream.count())
         val log = stream.first()
 
@@ -807,6 +831,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     fun offsetSingleTest() {
         val stream = q("where l:id=$journal offset l:1")
         assertEquals(0, stream.count())
+        assertNull(stream.readVersion())
 
         val journalAll = q("where l:name like 'Journal%'")
         val journalWithOffset = q("where l:name like 'Journal%' offset l:1")
@@ -817,6 +842,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     fun offsetAllTest() {
         val stream = q("where l:id=$journal offset e:3, t:2, l:1")
         assertEquals(0, stream.count())
+        assertNull(stream.readVersion())
 
         val journalAll = q("where l:name='JournalReview' limit l:3").map { it.identityId to it }.toMap()
         val journalWithOffset = q("where l:name='JournalReview' limit l:3 offset e:3, t:2")
@@ -882,7 +908,12 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
 
     @Test
     fun `where on a nested attribute`() {
-        val stream = DBHierarchicalXESInputStream(dbName, Query("where (l:id=$hospital or l:id=$journal) and [l:${SEPARATOR}${STRING_MARKER}meta_org:group_events_average${SEPARATOR}Maternity ward]='0.016' limit l:1, t:1, e:1"), true)
+        val stream = DBHierarchicalXESInputStream(
+            dbName,
+            Query("where (l:id=$hospital or l:id=$journal) and [l:${SEPARATOR}${STRING_MARKER}meta_org:group_events_average${SEPARATOR}Maternity ward]='0.016' limit l:1, t:1, e:1"),
+            true
+        )
+        assertNull(stream.readVersion())
         val log = stream.first()
         assertEquals(1.728, log.attributes.children("meta_org:group_events_average")["Pathology"])
     }

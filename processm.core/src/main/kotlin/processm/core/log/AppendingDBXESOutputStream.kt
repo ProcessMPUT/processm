@@ -8,9 +8,15 @@ import java.util.*
  * attribute set for identification. To make appending to the existing traces possible, the traces must also have
  * the identity:id attribute set. The anonymous traces with identity:id unset will not be appended and instead a new
  * trace will be created.
+ *
+ * @param version If not null, every event is tagged with this version number (column `version`, not available from PQL)
  */
-class AppendingDBXESOutputStream(connection: Connection, batchSize: Int = DBXESOutputStream.batchSize) :
-    DBXESOutputStream(connection, true, batchSize) {
+class AppendingDBXESOutputStream(
+    connection: Connection,
+    batchSize: Int = DBXESOutputStream.batchSize,
+    version: Long? = null
+) :
+    DBXESOutputStream(connection, true, batchSize, version) {
     override fun write(component: XESComponent) {
         if (component is Log) {
             val existingLogId = getLogId(component)
