@@ -16,6 +16,7 @@ import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.etl.jdbc.*
 import processm.dbmodels.models.DataStores
+import processm.etl.helpers.nextVersion
 import processm.etl.helpers.reportETLError
 import processm.helpers.toUUID
 import processm.logging.loggedScope
@@ -133,9 +134,10 @@ class ETLService : AbstractJobService(QUARTZ_CONFIG, JDBC_ETL_TOPIC, null) {
                     name = config?.metadata?.name ?: name
                     logger.info("Running the JDBC-based ETL process ${config!!.metadata.name} in datastore $datastore")
 
+                    val sqlConnection = (connection as JdbcConnectionImpl).connection
                     // DO NOT call output.close(), as it would commit transaction and close connection. Instead, we are
                     // just attaching extra data to the exposed-managed database connection.
-                    val output = AppendingDBXESOutputStream((connection as JdbcConnectionImpl).connection)
+                    val output = AppendingDBXESOutputStream(sqlConnection, version = sqlConnection.nextVersion())
                     output.write(
                         config!!.toXESInputStream()
                             .let { stream -> config!!.sampleSize?.let { stream.take(it) } ?: stream })

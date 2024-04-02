@@ -32,10 +32,7 @@ import java.net.URI
 import java.nio.file.Files
 import java.sql.DriverManager
 import java.util.*
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import kotlin.test.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DebeziumChangeTrackerTest {
@@ -382,18 +379,21 @@ class DebeziumChangeTrackerTest {
             ).use { tracker ->
                 tracker.start()
                 connection.autoCommit = false
+                var previousVersion: Long? = null
                 for ((query, expected) in queries zip expectedTraces) {
                     connection.createStatement().use { stmt ->
                         stmt.executeUpdate(query)
                     }
                     connection.commit()
                     val actual = HashMap<UUID, HashMap<UUID, HashSet<String>>>()
+                    var currentVersion: Long? = null
                     for (i in 0..10) {
                         actual.clear()
                         val xes = DBHierarchicalXESInputStream(
                             dataStoreDBName,
                             Query("where l:identity:id = $etlProcessId")
                         )
+                        currentVersion = xes.readVersion()
                         for (log in xes) {
                             val logMap = actual.computeIfAbsent(log.identityId!!) { HashMap() }
                             for (trace in log.traces) {
@@ -405,6 +405,9 @@ class DebeziumChangeTrackerTest {
                             break
                         Thread.sleep(1000)
                     }
+                    assertNotNull(currentVersion)
+                    assertTrue { previousVersion == null || previousVersion!! < currentVersion }
+                    previousVersion = currentVersion
                     assertEquals(1, actual.size)
                     val traces = actual.values.single()
                     assertEquals(expected.size, traces.size)
