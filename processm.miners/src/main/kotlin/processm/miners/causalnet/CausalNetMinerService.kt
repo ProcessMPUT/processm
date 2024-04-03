@@ -41,6 +41,8 @@ class CausalNetMinerService : AbstractMinerService(
             }
         }
 
+        override fun delete(database: Database, modelId: String) = DBSerializer.delete(database, modelId.toInt())
+
         override fun store(database: Database, model: CausalNet): String =
             DBSerializer.insert(database, model).toString()
     }

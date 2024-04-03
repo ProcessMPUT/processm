@@ -43,6 +43,9 @@ class PetriNetMinerService : AbstractMinerService(
             }
         }
 
+        override fun delete(database: Database, modelId: String) =
+            DBSerializer.delete(database, UUID.fromString(modelId))
+
         override fun store(database: Database, model: PetriNet): String =
             DBSerializer.insert(database, model).toString()
 

@@ -47,6 +47,10 @@ class BPMNMinerService : AbstractMinerService(
             }
         }
 
+        override fun delete(database: Database, modelId: String) {
+            DBSerializer.delete(database, UUID.fromString(modelId))
+        }
+
         override fun store(database: Database, model: BPMNModel): String =
             DBSerializer.insert(database, model.toXML()).toString()
     }

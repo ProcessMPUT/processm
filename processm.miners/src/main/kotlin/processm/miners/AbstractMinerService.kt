@@ -2,6 +2,8 @@ package processm.miners
 
 import jakarta.jms.MapMessage
 import jakarta.jms.Message
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
@@ -44,6 +46,11 @@ abstract class CalcJob<T : ProcessModel> : ServiceJob {
     open fun updateCustomizationData(model: T, customizationData: String?): String? = customizationData
     abstract fun store(database: Database, model: T): String
 
+    /**
+     * @param modelId A value returned by [store]
+     */
+    abstract fun delete(database: Database, modelId: String)
+
     override fun execute(context: JobExecutionContext): Unit = loggedScope { logger ->
         val id = requireNotNull(context.jobDetail.key.name?.toUUID())
 
@@ -55,14 +62,15 @@ abstract class CalcJob<T : ProcessModel> : ServiceJob {
                 return@transactionMain
             }
 
-            if (component.data !== null &&
-                !component.userLastModified.isAfter(component.dataLastModified ?: Instant.MIN)
-            ) {
-                logger.debug("Component $id is already populated with data, skipping")
-                return@transactionMain
+            if (component.userLastModified.isAfter(component.dataLastModified ?: Instant.MIN)) {
+                // If the user modified the component, we remove all data from it, as it may no longer be suitable
+                for (element in component.dataAsJsonObject()?.values.orEmpty()) {
+                    val database = DBCache.get(component.dataStoreId.toString()).database
+                    if (element is JsonPrimitive)
+                        delete(database, element.content)
+                }
+                component.data = null
             }
-
-            // TODO: store the entire history of models in the component.data field
 
             try {
                 val stream = DBHierarchicalXESInputStream(
@@ -70,9 +78,25 @@ abstract class CalcJob<T : ProcessModel> : ServiceJob {
                     Query(component.query),
                     false
                 )
+                val version = stream.readVersion()
+                val previousData = component.dataAsJsonObject()
+                if (previousData !== null) {
+                    val mostRecentVersion = previousData.mostRecentVersion()
+                    if (mostRecentVersion == null || (version !== null && mostRecentVersion >= version)) {
+                        logger.debug(
+                            "Component {} is already populated with data (most recent data in the component: {}, log version: {}), skipping",
+                            id, mostRecentVersion, version
+                        )
+                        return@transactionMain
+                    }
+                }
 
                 val model = mine(component, stream)
-                component.data = store(DBCache.get(component.dataStoreId.toString()).database, model)
+                val newData = previousData.orEmpty().toMutableMap().apply {
+                    this[version.toString()] =
+                        JsonPrimitive(store(DBCache.get(component.dataStoreId.toString()).database, model))
+                }
+                component.data = JsonObject(newData).toString()
                 component.dataLastModified = Instant.now()
                 component.customizationData = updateCustomizationData(model, component.customizationData)
                 component.lastError = null
@@ -104,10 +128,11 @@ abstract class DeleteJob : ServiceJob {
 
             try {
 
-                delete(
-                    DBCache.get(component.dataStoreId.toString()).database,
-                    component.data ?: throw NoSuchElementException("Model does not exist for component $id.")
-                )
+                for (element in component.dataAsJsonObject()?.values.orEmpty()) {
+                    val database = DBCache.get(component.dataStoreId.toString()).database
+                    if (element is JsonPrimitive)
+                        delete(database, element.content)
+                }
 
             } catch (e: Exception) {
                 component.lastError = e.message

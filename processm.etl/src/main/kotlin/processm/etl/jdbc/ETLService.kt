@@ -18,6 +18,7 @@ import processm.dbmodels.etl.jdbc.*
 import processm.dbmodels.models.DataStores
 import processm.etl.helpers.nextVersion
 import processm.etl.helpers.reportETLError
+import processm.etl.helpers.notifyAboutNewData
 import processm.helpers.toUUID
 import processm.logging.loggedScope
 
@@ -143,6 +144,7 @@ class ETLService : AbstractJobService(QUARTZ_CONFIG, JDBC_ETL_TOPIC, null) {
                             .let { stream -> config!!.sampleSize?.let { stream.take(it) } ?: stream })
                     output.flush()
                 }
+                notifyAboutNewData(datastore.toUUID()!!)
             } catch (e: Exception) {
                 logger.error(e.message, e)
                 if (config !== null) {

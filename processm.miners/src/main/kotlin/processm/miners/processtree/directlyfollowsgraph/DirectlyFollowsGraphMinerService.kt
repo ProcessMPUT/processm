@@ -36,6 +36,10 @@ class DirectlyFollowsGraphMinerService : AbstractMinerService(
             return dfg;
         }
 
+        override fun delete(database: Database, modelId: String): Unit = transaction(database) {
+            DFG[UUID.fromString(modelId)].delete()
+        }
+
         override fun store(database: Database, model: DirectlyFollowsGraph): String =
             model.store(database).toString()
     }
