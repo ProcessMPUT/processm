@@ -11,6 +11,7 @@ import processm.dbmodels.models.store
 import processm.miners.AbstractMinerService
 import processm.miners.CalcJob
 import processm.miners.DeleteJob
+import processm.miners.MinerJob
 import java.util.*
 
 /**
@@ -29,25 +30,22 @@ class DirectlyFollowsGraphMinerService : AbstractMinerService(
     override val name: String
         get() = "Directly-follows graph"
 
-    class CalcDFGJob : CalcJob<DirectlyFollowsGraph>() {
+    interface DFGJob : MinerJob<DirectlyFollowsGraph> {
         override fun mine(component: WorkspaceComponent, stream: DBHierarchicalXESInputStream): DirectlyFollowsGraph {
             val dfg = DirectlyFollowsGraph()
             dfg.discover(stream)
             return dfg;
         }
 
-        override fun delete(database: Database, modelId: String): Unit = transaction(database) {
-            DFG[UUID.fromString(modelId)].delete()
+        override fun delete(database: Database, id: String): Unit = transaction(database) {
+            DFG[UUID.fromString(id)].delete()
         }
 
         override fun store(database: Database, model: DirectlyFollowsGraph): String =
             model.store(database).toString()
     }
 
-    class DeleteDFGJob : DeleteJob() {
-        override fun delete(database: Database, id: String): Unit = transaction(database) {
-            DFG[UUID.fromString(id)].delete()
-        }
+    class CalcDFGJob : CalcJob<DirectlyFollowsGraph>(), DFGJob
 
-    }
+    class DeleteDFGJob : DeleteJob<DirectlyFollowsGraph>(), DFGJob
 }

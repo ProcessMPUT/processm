@@ -13,6 +13,7 @@ import processm.dbmodels.models.WorkspaceComponent
 import processm.miners.AbstractMinerService
 import processm.miners.CalcJob
 import processm.miners.DeleteJob
+import processm.miners.MinerJob
 import java.util.*
 
 
@@ -32,7 +33,7 @@ class BPMNMinerService : AbstractMinerService(
     override val name: String
         get() = "BPMN"
 
-    class CalcBPMNJob : CalcJob<BPMNModel>() {
+    interface BPMNJob : MinerJob<BPMNModel> {
         override fun mine(component: WorkspaceComponent, stream: DBHierarchicalXESInputStream): BPMNModel {
 
             val miner = minerFromURN(component.algorithm)
@@ -47,17 +48,15 @@ class BPMNMinerService : AbstractMinerService(
             }
         }
 
-        override fun delete(database: Database, modelId: String) {
-            DBSerializer.delete(database, UUID.fromString(modelId))
+        override fun delete(database: Database, id: String) {
+            DBSerializer.delete(database, UUID.fromString(id))
         }
 
         override fun store(database: Database, model: BPMNModel): String =
             DBSerializer.insert(database, model.toXML()).toString()
     }
 
-    class DeleteBPMNJob : DeleteJob() {
-        override fun delete(database: Database, id: String) {
-            DBSerializer.delete(database, UUID.fromString(id))
-        }
-    }
+    class CalcBPMNJob : CalcJob<BPMNModel>(), BPMNJob
+
+    class DeleteBPMNJob : DeleteJob<BPMNModel>(), BPMNJob
 }

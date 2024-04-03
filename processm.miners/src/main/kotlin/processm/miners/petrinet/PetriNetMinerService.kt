@@ -16,6 +16,7 @@ import processm.logging.logger
 import processm.miners.AbstractMinerService
 import processm.miners.CalcJob
 import processm.miners.DeleteJob
+import processm.miners.MinerJob
 import java.util.*
 
 class PetriNetMinerService : AbstractMinerService(
@@ -31,7 +32,7 @@ class PetriNetMinerService : AbstractMinerService(
     override val name: String
         get() = "Petri net"
 
-    class CalcPetriNetJob : CalcJob<PetriNet>() {
+    interface PetriNetJob : MinerJob<PetriNet> {
         override fun mine(component: WorkspaceComponent, stream: DBHierarchicalXESInputStream): PetriNet {
             val miner = minerFromURN(component.algorithm)
 
@@ -43,8 +44,8 @@ class PetriNetMinerService : AbstractMinerService(
             }
         }
 
-        override fun delete(database: Database, modelId: String) =
-            DBSerializer.delete(database, UUID.fromString(modelId))
+        override fun delete(database: Database, id: String) =
+            DBSerializer.delete(database, UUID.fromString(id))
 
         override fun store(database: Database, model: PetriNet): String =
             DBSerializer.insert(database, model).toString()
@@ -59,7 +60,7 @@ class PetriNetMinerService : AbstractMinerService(
         }
     }
 
-    class DeletePetriNetJob : DeleteJob() {
-        override fun delete(database: Database, id: String) = DBSerializer.delete(database, UUID.fromString(id))
-    }
+    class CalcPetriNetJob : CalcJob<PetriNet>(), PetriNetJob
+
+    class DeletePetriNetJob : DeleteJob<PetriNet>(), PetriNetJob
 }

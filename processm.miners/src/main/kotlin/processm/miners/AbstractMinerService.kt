@@ -27,15 +27,14 @@ import java.util.*
 const val ALGORITHM_HEURISTIC_MINER = "urn:processm:miners/OnlineHeuristicMiner"
 const val ALGORITHM_INDUCTIVE_MINER = "urn:processm:miners/OnlineInductiveMiner"
 
-abstract class CalcJob<T : ProcessModel> : ServiceJob {
-
-    protected fun minerFromURN(urn: String?): Miner = when (urn) {
+interface MinerJob<T : ProcessModel> : ServiceJob {
+    fun minerFromURN(urn: String?): Miner = when (urn) {
         ALGORITHM_INDUCTIVE_MINER -> OnlineInductiveMiner()
         ALGORITHM_HEURISTIC_MINER, null -> OnlineMiner()
         else -> throw IllegalArgumentException("Unexpected type of miner: $urn.")
     }
 
-    abstract fun mine(component: WorkspaceComponent, stream: DBHierarchicalXESInputStream): T
+    fun mine(component: WorkspaceComponent, stream: DBHierarchicalXESInputStream): T
 
     /**
      * Given the newly-mined [model] and the previous content of [WorkspaceComponents.customizationData] (in
@@ -43,14 +42,22 @@ abstract class CalcJob<T : ProcessModel> : ServiceJob {
      *
      * The default implementation returns [customizationData] without any changes
      */
-    open fun updateCustomizationData(model: T, customizationData: String?): String? = customizationData
-    abstract fun store(database: Database, model: T): String
+    fun updateCustomizationData(model: T, customizationData: String?): String? = customizationData
+    fun store(database: Database, model: T): String
 
     /**
-     * @param modelId A value returned by [store]
+     * @param id A value returned by [store]
      */
-    abstract fun delete(database: Database, modelId: String)
+    fun delete(database: Database, id: String)
 
+    fun batchDelete(database: Database, component: WorkspaceComponent) {
+        for (element in component.dataAsJsonObject()?.values.orEmpty())
+            if (element is JsonPrimitive)
+                delete(database, element.content)
+    }
+}
+
+abstract class CalcJob<T : ProcessModel> : MinerJob<T> {
     override fun execute(context: JobExecutionContext): Unit = loggedScope { logger ->
         val id = requireNotNull(context.jobDetail.key.name?.toUUID())
 
@@ -61,14 +68,10 @@ abstract class CalcJob<T : ProcessModel> : ServiceJob {
                 logger.error("Component with id $id is not found.")
                 return@transactionMain
             }
+            val database = DBCache.get(component.dataStoreId.toString()).database
 
             if (component.userLastModified.isAfter(component.dataLastModified ?: Instant.MIN)) {
-                // If the user modified the component, we remove all data from it, as it may no longer be suitable
-                for (element in component.dataAsJsonObject()?.values.orEmpty()) {
-                    val database = DBCache.get(component.dataStoreId.toString()).database
-                    if (element is JsonPrimitive)
-                        delete(database, element.content)
-                }
+                batchDelete(database, component)
                 component.data = null
             }
 
@@ -94,7 +97,7 @@ abstract class CalcJob<T : ProcessModel> : ServiceJob {
                 val model = mine(component, stream)
                 val newData = previousData.orEmpty().toMutableMap().apply {
                     this[version.toString()] =
-                        JsonPrimitive(store(DBCache.get(component.dataStoreId.toString()).database, model))
+                        JsonPrimitive(store(database, model))
                 }
                 component.data = JsonObject(newData).toString()
                 component.dataLastModified = Instant.now()
@@ -110,9 +113,7 @@ abstract class CalcJob<T : ProcessModel> : ServiceJob {
 }
 
 
-abstract class DeleteJob : ServiceJob {
-
-    abstract fun delete(database: Database, id: String)
+abstract class DeleteJob<T : ProcessModel> : MinerJob<T> {
 
     override fun execute(context: JobExecutionContext) = loggedScope { logger ->
         val id = requireNotNull(context.jobDetail.key.name?.toUUID())
@@ -127,13 +128,7 @@ abstract class DeleteJob : ServiceJob {
             }
 
             try {
-
-                for (element in component.dataAsJsonObject()?.values.orEmpty()) {
-                    val database = DBCache.get(component.dataStoreId.toString()).database
-                    if (element is JsonPrimitive)
-                        delete(database, element.content)
-                }
-
+                batchDelete(DBCache.get(component.dataStoreId.toString()).database, component)
             } catch (e: Exception) {
                 component.lastError = e.message
                 logger.warn("Error deleting model for component with id $id.")
@@ -158,7 +153,7 @@ abstract class AbstractMinerService(
     schedulerConfig: String,
     private val componentType: ComponentTypeDto,
     private val calcJob: java.lang.Class<out CalcJob<*>>,
-    private val deleteJob: java.lang.Class<out DeleteJob>,
+    private val deleteJob: java.lang.Class<out DeleteJob<*>>,
 ) : AbstractJobService(
     schedulerConfig,
     WORKSPACE_COMPONENTS_TOPIC,
