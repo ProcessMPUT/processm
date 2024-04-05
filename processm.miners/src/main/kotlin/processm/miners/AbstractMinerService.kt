@@ -20,6 +20,7 @@ import processm.dbmodels.models.*
 import processm.helpers.toUUID
 import processm.logging.loggedScope
 import processm.miners.causalnet.onlineminer.OnlineMiner
+import processm.miners.causalnet.onlineminer.replayer.SingleReplayer
 import processm.miners.processtree.inductiveminer.OnlineInductiveMiner
 import java.time.Instant
 import java.util.*
@@ -28,10 +29,14 @@ const val ALGORITHM_HEURISTIC_MINER = "urn:processm:miners/OnlineHeuristicMiner"
 const val ALGORITHM_INDUCTIVE_MINER = "urn:processm:miners/OnlineInductiveMiner"
 
 interface MinerJob<T : ProcessModel> : ServiceJob {
-    fun minerFromURN(urn: String?): Miner = when (urn) {
+    fun minerFromProperties(properties: Map<String, String>): Miner = when (properties["algorithm"]) {
         ALGORITHM_INDUCTIVE_MINER -> OnlineInductiveMiner()
-        ALGORITHM_HEURISTIC_MINER, null -> OnlineMiner()
-        else -> throw IllegalArgumentException("Unexpected type of miner: $urn.")
+        ALGORITHM_HEURISTIC_MINER, null -> OnlineMiner(
+            SingleReplayer(
+                horizon = properties["horizon"]?.toIntOrNull()?.let { if (it > 0) it else null })
+        )
+
+        else -> throw IllegalArgumentException("Unexpected type of miner: ${properties["algorithm"]}.")
     }
 
     fun mine(component: WorkspaceComponent, stream: DBHierarchicalXESInputStream): T

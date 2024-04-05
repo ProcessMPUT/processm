@@ -1,5 +1,9 @@
 package processm.dbmodels.models
 
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
@@ -50,9 +54,9 @@ object WorkspaceComponents : UUIDTable("workspace_components") {
     val query = text("query")
 
     /**
-     * The algorithm used to calculate data. The interpretation of this property is component-specific.
+     * Component-specific properties stored as a json map.
      */
-    val algorithm = text("algorithm").nullable()
+    val properties = text("properties").nullable()
 
     /**
      * The type of the model associated with this component (the configuration parameter).
@@ -119,7 +123,13 @@ class WorkspaceComponent(id: EntityID<UUID>) : UUIDEntity(id) {
     var name by WorkspaceComponents.name
     var workspace by Workspace referencedOn WorkspaceComponents.workspaceId
     var query by WorkspaceComponents.query
-    var algorithm by WorkspaceComponents.algorithm
+    var properties by WorkspaceComponents.properties.transform(
+        { Json.encodeToString(it) },
+        {
+            it?.let { (Json.parseToJsonElement(it) as? JsonObject)?.mapValues { it.value.jsonPrimitive.content } }
+                ?: emptyMap()
+        }
+    )
     var modelType by WorkspaceComponents.modelType.transform(
         { it?.typeName },
         { ModelTypeDto.byTypeNameInDatabase(it) }

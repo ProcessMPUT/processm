@@ -62,3 +62,11 @@ export function isPositiveIntegerRule(
   const int = Number(value);
   return (Number.isInteger(int) && int > 0) || errorMessage;
 }
+
+export function isNonNegativeIntegerRule(
+    value: string,
+    errorMessage: string
+): string | boolean {
+  const int = Number(value);
+  return (Number.isInteger(int) && int >= 0) || errorMessage;
+}

@@ -20,6 +20,11 @@ import processm.services.api.updateData
 import java.time.Instant
 import java.util.*
 
+fun Array<CustomProperty>.toMap() = fold(HashMap<String, String>()) { target, item ->
+    item.value?.let { target[item.name] = item.value }
+    return@fold target
+}
+
 class WorkspaceService(
     private val accountService: AccountService,
     private val aclService: ACLService,
@@ -230,7 +235,7 @@ class WorkspaceService(
             this.customizationData = customizationData
             this.layoutData = layoutData
             this.workspace = Workspace[workspaceId]
-            this.algorithm = customProperties.firstOrNull { it.name == "algorithm" }?.value
+            this.properties = customProperties.toMap()
             this.userLastModified = Instant.now()
 
             afterCommit {
@@ -266,11 +271,10 @@ class WorkspaceService(
             if (customizationData != null) this.customizationData = customizationData
             if (layoutData != null) this.layoutData = layoutData
             if (data != null) this.updateData(data)
-            customProperties.firstOrNull { it.name == "algorithm" }?.value?.let { algorithm ->
-                if (algorithm != this.algorithm) {
-                    this.algorithm = algorithm
-                    trigger = true
-                }
+            val newCustomProperties = customProperties.toMap()
+            if (properties != newCustomProperties) {
+                this.properties = newCustomProperties
+                trigger = true
             }
             this.userLastModified = Instant.now()
 
