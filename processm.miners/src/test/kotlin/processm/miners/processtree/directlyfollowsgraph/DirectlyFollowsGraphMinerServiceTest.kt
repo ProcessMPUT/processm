@@ -79,7 +79,7 @@ class DirectlyFollowsGraphMinerServiceTest {
             }.first()
 
             val dfg =
-                DirectlyFollowsGraph.load(DBCache.get(dataStore.toString()).database, UUID.fromString(component.data!!))
+                DirectlyFollowsGraph.load(DBCache.get(dataStore.toString()).database, UUID.fromString(component.mostRecentData()!!))
             assertEquals(1, dfg.initialActivities.size)
             assertEquals(3, dfg.finalActivities.size)
             val invite = dfg.activities.first { it.name == "invite reviewers" }
@@ -124,7 +124,7 @@ class DirectlyFollowsGraphMinerServiceTest {
             }.first()
 
             val dfg =
-                DirectlyFollowsGraph.load(DBCache.get(dataStore.toString()).database, UUID.fromString(component.data!!))
+                DirectlyFollowsGraph.load(DBCache.get(dataStore.toString()).database, UUID.fromString(component.mostRecentData()!!))
             assertEquals(1, dfg.initialActivities.size)
             assertEquals(3, dfg.finalActivities.size)
             val invite = dfg.activities.first { it.name == "invite reviewers" }
