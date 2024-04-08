@@ -2438,6 +2438,8 @@ components:
         organizationId:
           type: string
           format: uuid
+        organizationName:
+          type: string
     Organization:
       type: object
       required: [ name, isPrivate ]
@@ -2552,6 +2554,8 @@ components:
           format: uuid
         groupName:
           type: string
+        organization:
+          $ref: '#/components/schemas/Organization'
         role:
           $ref: '#/components/schemas/OrganizationRole'
     EntityID:

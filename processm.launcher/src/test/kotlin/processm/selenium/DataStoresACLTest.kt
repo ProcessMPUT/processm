@@ -187,7 +187,7 @@ class DataStoresACLTest : SeleniumBase() {
         iam(email2, "goto-data-stores")
         openACLEditor(dataStores[0])
         wait.until {
-            driver.findElements(By.xpath("//td[text()='$email2']/../td[text()[contains(.,'Owner')] or text()[contains(.,'Właściciel')]]"))
+            driver.findElements(By.xpath("//tr[td[*[text()='$email2']]]//*[contains(text(),'Owner')]"))
                 ?.singleOrNull()?.isDisplayed
         }
         closeACLEditor()

@@ -76,6 +76,14 @@
           @change="item.dirty = true"
           @focus="item.focus = true"
         >
+          <template v-slot:prepend>
+            <v-tooltip bottom>
+              <template v-slot:activator="{ on, attrs }">
+                <span v-bind="attrs" v-on="on" style="font-size: x-small; color: #7f7f7f">{{ item.id.substr(0, 8) }}</span>
+              </template>
+              <span>{{ $t("users.unique-group-id") }}: {{ item.id }}</span>
+            </v-tooltip>
+          </template>
           <template v-slot:append>
             <v-tooltip bottom>
               <template v-slot:activator="{ on, attrs }">
@@ -159,7 +167,12 @@
       </template>
 
       <template v-slot:item.organizationId="{ item }">
-        {{ organizations.find((o) => o.id === item.organizationId)?.name ?? item.organizationId }}
+        <v-tooltip bottom>
+          <template v-slot:activator="{ on, attrs }">
+            <span v-bind="attrs" v-on="on">{{ organizations[item.organizationId]?.name ?? item.organizationId }}</span>
+          </template>
+          <span>{{ $t("users.unique-organization-id") }}: {{ item.organizationId }}</span>
+        </v-tooltip>
       </template>
 
       <template v-slot:item.actions="{ item, index }">
@@ -275,7 +288,7 @@ export default class UserGroupList extends Vue {
   loading = true;
 
   groups: Array<EnhancedGroup> = [];
-  organizations: Array<Organization> = [];
+  organizations: { [id: string]: Organization } = {};
   organization = this.$sessionStorage.currentOrganization;
 
   newDialog = false;
@@ -292,8 +305,14 @@ export default class UserGroupList extends Vue {
   groupIdToRemove: string | undefined = undefined;
 
   async mounted() {
-    this.organizations = await this.organizationService.getOrganizations();
-    this.refreshGroups();
+    this.organizations = {};
+    for (const org of await this.organizationService.getOrganizations()) {
+      if (org.id !== undefined) {
+        this.organizations[org.id] = org;
+      }
+    }
+    console.log(this.organizations);
+    await this.refreshGroups();
   }
 
   async refreshGroups() {
@@ -316,10 +335,10 @@ export default class UserGroupList extends Vue {
     try {
       console.assert(this.newName != "", "newName: " + this.newName);
       await this.groupService.createGroup(this.organization?.id!, this.newName);
-      this.refreshGroups();
       this.newDialog = false;
       this.resetNewDialog();
       this.app.info(this.$t("users.group-added").toString());
+      await this.refreshGroups();
     } catch (e) {
       this.app.error(e);
     }

@@ -40,12 +40,24 @@ class ACLAPITest : BaseApiTest() {
         every { aclService.getEntries(urn) } returns listOf(
             mockk {
                 every { this@mockk.urn } returns urn
-                every { group } returns mockk(relaxed = true) { every { id } returns EntityID(organizationId, Groups) }
+                every { group } returns mockk(relaxed = true) {
+                    every { id } returns EntityID(organizationId, Groups)
+                    every { this@mockk.organizationId } returns mockk(relaxed = true) {
+                        every { id } returns EntityID(organizationId, Organizations)
+                        every { parentOrganization } returns null
+                    }
+                }
                 every { role } returns mockk { every { name } returns RoleType.Owner }
             },
             mockk {
                 every { this@mockk.urn } returns urn
-                every { group } returns mockk(relaxed = true) { every { id } returns EntityID(groupId, Groups) }
+                every { group } returns mockk(relaxed = true) {
+                    every { id } returns EntityID(groupId, Groups)
+                    every { this@mockk.organizationId } returns mockk(relaxed = true) {
+                        every { id } returns EntityID(organizationId, Organizations)
+                        every { parentOrganization } returns null
+                    }
+                }
                 every { role } returns mockk { every { name } returns RoleType.Writer }
             }
         )
@@ -304,7 +316,7 @@ class ACLAPITest : BaseApiTest() {
         val data = listOf(mockk<Group> {
             every { id } returns EntityID(groupId, Groups)
             every { name } returns "Group name"
-            every { this@mockk.organizationId } returns mockk {
+            every { this@mockk.organizationId } returns mockk(relaxed = true) {
                 every { id } returns EntityID(organizationId, Organizations)
             }
             every { isImplicit } returns false

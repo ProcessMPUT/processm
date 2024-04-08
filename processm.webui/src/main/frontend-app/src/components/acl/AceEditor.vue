@@ -9,14 +9,26 @@
           <v-form ref="editor">
             <v-row v-if="groupId == null">
               <v-col>
-                <v-combobox :label="$t('users.group')" v-model="newGroup" :items="availableGroups" item-text="name"
-                            item-value="id" name="ace-editor-group"></v-combobox>
+                <v-combobox :label="$t('users.group')" v-model="newGroup" :items="availableGroups" item-text="name" item-value="id" name="ace-editor-group">
+                  <template v-slot:item="{ parent, item, on, attrs }">
+                    <v-tooltip bottom>
+                      <template v-slot:activator="{ on, attrs }">
+                        <span v-bind="attrs" v-on="on">{{ item.name }}</span>
+                      </template>
+                      <span v-if="item.organizationId == null"> {{ $t("users.implicit") }} </span>
+                      <span v-else>
+                        {{ $t("users.unique-group-id") }}: {{ item.id }}<br />
+                        {{ $t("users.organization") }}: {{ item.organizationName }}<br />
+                        {{ $t("users.unique-organization-id") }}: {{ item.organizationId }}
+                      </span>
+                    </v-tooltip>
+                  </template>
+                </v-combobox>
               </v-col>
             </v-row>
             <v-row>
               <v-col>
-                <v-select v-model="newRole" :items="roles" item-text="name" item-value="value"
-                          :label="$t('users.role')" name="ace-editor-role"></v-select>
+                <v-select v-model="newRole" :items="roles" item-text="name" item-value="value" :label="$t('users.role')" name="ace-editor-role"></v-select>
               </v-col>
             </v-row>
           </v-form>
@@ -30,13 +42,7 @@
           {{ $t("common.cancel") }}
         </v-btn>
 
-        <v-btn
-            color="primary"
-            text
-            @click.stop="save"
-            :disabled="newGroup === null && groupId === null"
-            name="btn-ace-editor-submit"
-        >
+        <v-btn color="primary" text @click.stop="save" :disabled="newGroup === null && groupId === null" name="btn-ace-editor-submit">
           {{ $t("common.submit") }}
         </v-btn>
       </v-card-actions>

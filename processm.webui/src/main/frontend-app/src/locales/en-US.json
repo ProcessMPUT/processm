@@ -215,6 +215,8 @@
     "user": "User",
     "you": "You",
     "unknown-email": "The specified e-mail address does not correspond to a known user",
+    "unique-organization-id": "Organization ID",
+    "unique-group-id": "Group ID",
     "roles": {
       "owner": "Owner",
       "reader": "Reader",
