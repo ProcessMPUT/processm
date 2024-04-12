@@ -176,8 +176,18 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                 else null
                 PetriNetComponentData(
                     type = ComponentType.petriNet,
-                    initialMarking = petriNet.initialMarking.mapKeys { it.key.id.toString() },
-                    finalMarking = petriNet.finalMarking.mapKeys { it.key.id.toString() },
+                    initialMarking = HashMap<String, Int>().apply {
+                        for ((p, t) in petriNet.initialMarking) put(
+                            p.toString(),
+                            t.size
+                        )
+                    },
+                    finalMarking = HashMap<String, Int>().apply {
+                        for ((p, t) in petriNet.finalMarking) put(
+                            p.toString(),
+                            t.size
+                        )
+                    },
                     places = petriNet.places.mapToArray { PetriNetComponentDataAllOfPlaces(it.id.toString()) },
                     transitions = componentDataTransitions,
                     alignmentKPIReport = alignmentKPIReport
