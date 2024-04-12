@@ -76,18 +76,20 @@ class ReportTests {
                 Alignment(
                     steps = listOf(
                         Step(
-                            Transition("a"),
-                            null,
-                            event("a"),
-                            null,
-                            DeviationType.None
+                            modelMove = Transition("a"),
+                            modelState = null,
+                            modelCause = emptyList(),
+                            logMove = event("a"),
+                            logState = null,
+                            type = DeviationType.None
                         ),
                         Step(
-                            null,
-                            null,
-                            event("b"),
-                            null,
-                            DeviationType.LogDeviation
+                            modelMove = null,
+                            modelState = null,
+                            modelCause = emptyList(),
+                            logMove = event("b"),
+                            logState = null,
+                            type = DeviationType.LogDeviation
                         )
                     ),
                     cost = 1
