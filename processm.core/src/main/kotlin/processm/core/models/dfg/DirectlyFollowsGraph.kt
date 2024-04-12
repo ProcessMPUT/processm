@@ -1,9 +1,9 @@
 package processm.core.models.dfg
 
-import jakarta.transaction.NotSupportedException
 import processm.core.log.hierarchical.LogInputStream
 import processm.core.models.commons.*
 import processm.core.models.processtree.ProcessTreeActivity
+import processm.helpers.asList
 import processm.helpers.map2d.DoublingMap2D
 import java.util.concurrent.ConcurrentHashMap
 
@@ -30,8 +30,8 @@ class DirectlyFollowsGraph : ProcessModel {
      */
     val graph = DoublingMap2D<Activity, Activity, Arc>()
 
-    override val activities: Sequence<Activity>
-        get() = (graph.rows + graph.columns + initialActivities.keys + finalActivities.keys).asSequence()
+    override val activities: List<Activity>
+        get() = (graph.rows + graph.columns + initialActivities.keys + finalActivities.keys).asList()
 
     /**
      * Map with start activities (first activity in trace) + arc statistics
@@ -46,8 +46,8 @@ class DirectlyFollowsGraph : ProcessModel {
      */
     val initialActivities = HashMap<Activity, Arc>()
 
-    override val startActivities: Sequence<Activity>
-        get() = initialActivities.keys.asSequence()
+    override val startActivities: List<Activity>
+        get() = initialActivities.keys.asList()
 
     /**
      * Map with end activities (last activity in trace) + arc statistics
@@ -62,8 +62,8 @@ class DirectlyFollowsGraph : ProcessModel {
      */
     val finalActivities = HashMap<Activity, Arc>()
 
-    override val endActivities: Sequence<Activity>
-        get() = finalActivities.keys.asSequence()
+    override val endActivities: List<Activity>
+        get() = finalActivities.keys.asList()
 
     override val controlStructures: Sequence<ControlStructure>
         get() = emptySequence()
@@ -72,7 +72,7 @@ class DirectlyFollowsGraph : ProcessModel {
         get() = emptySequence()
 
     override fun createInstance(): ProcessModelInstance {
-        throw NotSupportedException("Directly-follows graphs does not have executable semantics.")
+        throw UnsupportedOperationException("Directly-follows graphs does not have executable semantics.")
     }
 
     /**

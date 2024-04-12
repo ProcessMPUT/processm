@@ -23,7 +23,8 @@ class PetriNetInstance(
         get() = model.backwardAvailable(currentState)
 
     override val availableActivityExecutions: Sequence<TransitionExecution>
-        get() = model.available(currentState).map { TransitionExecution(it, currentState) }
+        get() = model.available(currentState)
+            .map { TransitionExecution(it, model.getCause(it, currentState), currentState) }
 
     override val isFinalState: Boolean
         get() = currentState == model.finalMarking
@@ -34,11 +35,11 @@ class PetriNetInstance(
 
     override fun getExecutionFor(activity: Activity): ActivityExecution {
         check(model.isAvailable(activity as Transition, currentState))
-        return TransitionExecution(activity, currentState)
+        return TransitionExecution(activity, model.getCause(activity, currentState), currentState)
     }
 
     fun getBackwardExecutionFor(activity: Transition): ActivityExecution {
         check(activity in model.backwardAvailable(currentState))
-        return BackwardTransitionExecution(activity, currentState)
+        return BackwardTransitionExecution(activity, model.getConsequence(activity, currentState), currentState)
     }
 }

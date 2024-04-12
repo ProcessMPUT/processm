@@ -2,6 +2,7 @@ package processm.core.models.causalnet
 
 import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.MetadataHandler
+import processm.helpers.asList
 import java.util.*
 
 /**
@@ -89,18 +90,18 @@ abstract class CausalNet(
     /**
      * Same as [instances]
      */
-    override val activities: Sequence<Node>
-        get() = instances.asSequence()
+    override val activities: List<Node>
+        get() = instances.asList()
 
     /**
      * A single-element sequence consisting of [start]
      */
-    override val startActivities: Sequence<Node> = sequenceOf(start)
+    override val startActivities: List<Node> = listOf(start)
 
     /**
      * A single-element sequence consisting of [end]
      */
-    override val endActivities: Sequence<Node> = sequenceOf(end)
+    override val endActivities: List<Node> = listOf(end)
 
     /**
      * All decision points of the model. Each node (except [start] and [end]) generates two, one to chose a [Join] and the other to choose a [Split].

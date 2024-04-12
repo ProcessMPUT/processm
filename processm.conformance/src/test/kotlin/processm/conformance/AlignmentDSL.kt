@@ -55,15 +55,29 @@ class AlignmentDSL {
         }
     }
 
+    class StepAux(val event: Event?, val activity: Activity?)
 
-    infix fun Event?.executing(a: Activity?): Unit {
+    /**
+     * @param activityAndCause The first item is activity, the second item is collection of activites that directly caused the first item.
+     */
+    infix fun Event?.executing(activityAndCause: Pair<Activity?, Collection<Activity>>): Unit {
         steps.add(
             Step(
-                a, null, this, null,
-                if (a !== null) if (this !== null) DeviationType.None else DeviationType.ModelDeviation else DeviationType.LogDeviation
+                modelMove = activityAndCause.first,
+                modelState = null,
+                modelCause = activityAndCause.second,
+                logMove = this,
+                logState = null,
+                type = if (activityAndCause.first !== null) if (this !== null) DeviationType.None else DeviationType.ModelDeviation else DeviationType.LogDeviation
             )
         )
     }
+
+    infix fun Event?.executing(a: Activity?) = this executing (a to emptyList<Activity>())
+
+    @JvmName("executingString")
+    infix fun Event?.executing(activityAndCause: Pair<String?, Collection<String>>) =
+        this executing (activityAndCause.first?.let { Node(it) } to activityAndCause.second.map { Node(it) })
 
     infix fun Event?.executing(a: String?) = this executing if (a !== null) Node(a) else null
 
@@ -71,13 +85,20 @@ class AlignmentDSL {
 
     infix fun String.executing(a: String) = EventAux(a) executing Node(a)
 
+    infix fun String.executing(activityAndCause: Pair<String?, Collection<String>>) =
+        EventAux(this) executing activityAndCause
+
     infix fun EventAux.executing(a: String) = this.toEvent() executing Node(a)
 
     infix fun EventAux.executing(a: Activity?) = this.toEvent() executing a
 
+    infix fun EventAux.executing(activityAndCause: Pair<String?, Collection<String>>) =
+        this.toEvent() executing activityAndCause
+
     infix fun String.with(v: Pair<String, Any>) = EventAux(this) with v
 
     fun String.asEvent() = EventAux(this)
+
 
     fun result(): Alignment = Alignment(steps, cost)
 

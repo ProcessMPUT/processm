@@ -29,22 +29,22 @@ class BPMNModel internal constructor(internal val model: TDefinitions) : Process
     /**
      * Lists all TActivities, TEvents and TGateways of the underlying models, incl. these in subprocesses
      */
-    override val activities: Sequence<BPMNFlowNode>
-        get() = processes.asSequence().flatMap { it.allActivities.asSequence() }
+    override val activities: List<BPMNFlowNode>
+        get() = processes.flatMap { it.allActivities }
 
     /**
      * Lists all start activities of the underlying process, i.e., TActivities without any incoming sequence flows and TStartEvents.
      * Does not include activities of subprocesses.
      */
-    override val startActivities: Sequence<BPMNFlowNode>
-        get() = processes.asSequence().flatMap { it.startActivities }
+    override val startActivities: List<BPMNFlowNode>
+        get() = processes.flatMap { it.startActivities }
 
     /**
      * Lists all end activities of the underlying process, i.e., TActivities without any outgoing sequence flows and TEndEvents.
      * Does not include activities of subprocesses.
      */
-    override val endActivities: Sequence<BPMNFlowNode>
-        get() = processes.asSequence().flatMap { it.endActivities }
+    override val endActivities: List<BPMNFlowNode>
+        get() = processes.flatMap { it.endActivities }
 
     /**
      * Lists all decisions points of the model, i.e., all the gateways. Some of them may be not real decision points.

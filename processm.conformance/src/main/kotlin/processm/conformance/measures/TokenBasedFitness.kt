@@ -3,7 +3,9 @@ package processm.conformance.measures
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.petrinet.PetriNet
+import processm.core.models.petrinet.Token
 import processm.core.models.petrinet.Transition
+import java.util.*
 
 /**
  * The four counters used by [TokenBasedFitness]
@@ -38,7 +40,7 @@ class TokenBasedFitness(val model: PetriNet) : Measure<Log, Double> {
         var c = 0
         var m = 0
         val instance = model.createInstance()
-        p += model.initialMarking.values.sum()
+        p += model.initialMarking.values.sumOf { it.size }
         for (event in trace.events) {
             val activity = activities[event.conceptName]?.singleOrNull()
             if (activity !== null) {
@@ -46,19 +48,21 @@ class TokenBasedFitness(val model: PetriNet) : Measure<Log, Double> {
                 for (place in activity.inPlaces) {
                     instance.currentState.compute(place) { _, old ->
                         c += 1
-                        if (old == null || old == 0) {
+                        if (old === null || old.isEmpty()) {
                             m += 1
                             return@compute null
                         } else {
-                            assert(old >= 1)
-                            return@compute old - 1
+                            assert(old.isNotEmpty())
+                            old.removeFirst()
+                            return@compute old
                         }
                     }
                 }
+                val sharedToken = Token(activity) // tokens are immutable and do not have identity, so can be shared
                 for (place in activity.outPlaces) {
                     instance.currentState.compute(place) { _, old ->
                         p += 1
-                        return@compute (old ?: 0) + 1
+                        return@compute (old ?: ArrayDeque()).apply { addLast(sharedToken) }
                     }
                 }
             } else {
@@ -67,16 +71,16 @@ class TokenBasedFitness(val model: PetriNet) : Measure<Log, Double> {
         }
         for ((place, n) in model.finalMarking) {
             instance.currentState.compute(place) { _, old ->
-                val avail = old ?: 0
-                c += n
-                if (avail < n) {
-                    m += n - avail
+                val avail = old.orEmpty()
+                c += n.size
+                if (avail.size < n.size) {
+                    m += n.size - avail.size
                     return@compute null
                 } else
-                    return@compute avail - n
+                    return@compute old!!.apply { repeat(n.size) { removeFirst() } }
             }
         }
-        val r = instance.currentState.values.sum()
+        val r = instance.currentState.values.sumOf { it.size }
         return TokenCounters(p, c, m, r)
     }
 

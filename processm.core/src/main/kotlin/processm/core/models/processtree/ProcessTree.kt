@@ -3,6 +3,7 @@ package processm.core.models.processtree
 import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.DefaultMutableMetadataHandler
 import processm.core.models.metadata.MetadataHandler
+import processm.helpers.asList
 import processm.helpers.mapToArray
 
 /**
@@ -148,14 +149,14 @@ class ProcessTree(root: Node? = null, private val metadataHandler: MetadataHandl
                 emptySequence()
         }
 
-    override val activities: kotlin.sequences.Sequence<ProcessTreeActivity>
-        get() = allNodes.filterIsInstance<ProcessTreeActivity>()
+    override val activities: List<ProcessTreeActivity>
+        get() = allNodes.filterIsInstance<ProcessTreeActivity>().asList()
 
-    override val startActivities: kotlin.sequences.Sequence<ProcessTreeActivity>
-        get() = root?.startActivities.orEmpty()
+    override val startActivities: List<ProcessTreeActivity>
+        get() = root?.startActivities.orEmpty().asList()
 
-    override val endActivities: kotlin.sequences.Sequence<ProcessTreeActivity>
-        get() = root?.endActivities.orEmpty()
+    override val endActivities: List<ProcessTreeActivity>
+        get() = root?.endActivities.orEmpty().asList()
 
     override val decisionPoints: kotlin.sequences.Sequence<InternalNode>
         get() = allNodes.filterIsInstance<InternalNode>()

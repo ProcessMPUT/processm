@@ -3,12 +3,12 @@ package processm.conformance.models.antialignments
 import processm.core.models.commons.*
 
 internal class ReplayModel(var trace: List<Activity>) : ProcessModel {
-    override val activities: Sequence<Activity>
-        get() = trace.distinct().asSequence()
-    override val startActivities: Sequence<Activity>
-        get() = sequenceOf(trace.first())
-    override val endActivities: Sequence<Activity>
-        get() = sequenceOf(trace.last())
+    override val activities: List<Activity>
+        get() = trace.distinct()
+    override val startActivities: List<Activity>
+        get() = listOf(trace.first())
+    override val endActivities: List<Activity>
+        get() = listOf(trace.last())
     override val decisionPoints: Sequence<DecisionPoint>
         get() = emptySequence()
     override val controlStructures: Sequence<ControlStructure>
@@ -41,6 +41,9 @@ internal class ReplayModelInstance(override val model: ReplayModel) : ProcessMod
 
     override val activity: Activity
         get() = model.trace[state.index]
+
+    override val cause: Collection<Activity>
+        get() = if (state.index > 0) listOf(model.trace[state.index - 1]) else emptyList()
 
     override fun execute() {
         state.index = state.index + 1

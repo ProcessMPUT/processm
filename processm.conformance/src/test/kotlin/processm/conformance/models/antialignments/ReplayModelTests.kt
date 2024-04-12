@@ -36,12 +36,12 @@ class ReplayModelTests {
 
     @Test
     fun `start activity is a`() {
-        assertContentEquals(sequenceOf(a), model.startActivities)
+        assertContentEquals(listOf(a), model.startActivities)
     }
 
     @Test
     fun `end activity is c`() {
-        assertContentEquals(sequenceOf(c), model.endActivities)
+        assertContentEquals(listOf(c), model.endActivities)
     }
 
     @Test

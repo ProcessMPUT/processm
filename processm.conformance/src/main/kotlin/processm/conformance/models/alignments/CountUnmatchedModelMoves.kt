@@ -96,8 +96,8 @@ class CountUnmatchedPetriNetMoves(val model: PetriNet) : CountUnmatchedModelMove
             val consuments = consumentsCache.computeIfAbsent(place to startIndex) {
                 following.sumOf { set -> set.minOf { nEvents[it] ?: 0 } }
             }
-            if (counter > consuments)
-                nonConsumable.add(following to counter - consuments)
+            if (counter.size > consuments)
+                nonConsumable.add(following to counter.size - consuments)
         }
         if (nonConsumable.isEmpty())
             return 0

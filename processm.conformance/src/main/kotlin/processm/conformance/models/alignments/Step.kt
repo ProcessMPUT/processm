@@ -23,6 +23,11 @@ data class Step(
     @Transient
     val modelState: ProcessModelState? = null,
     /**
+     * The collection of activities that caused the execution of the current [modelMove].
+     */
+    @Transient
+    val modelCause: Collection<Activity> = emptyList(),
+    /**
      * The event in the log corresponding to this step. Null for no move.
      */
     val logMove: Event?,

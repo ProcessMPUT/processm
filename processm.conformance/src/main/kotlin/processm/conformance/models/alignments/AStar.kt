@@ -94,6 +94,7 @@ class AStar(
                 nEvents,
             ),
             activity = null, // before first activity
+            cause = emptyList(),
             event = -1, // before first event
             previousSearchState = null,
             processState = initialProcessState
@@ -104,7 +105,6 @@ class AStar(
         var lastCost = 0
         while (queue.isNotEmpty()) {
             val searchState = queue.poll()!!
-
 
             val newCost = searchState.currentCost + searchState.predictedCost
             assert(lastCost <= newCost)
@@ -137,7 +137,7 @@ class AStar(
                     // Note that we prevent below the insertion of new states of larger cost than the upperbound.
                     // Note also that the queue clean-up procedure can be done in O(log(n)) by replacing heap-based queue
                     // with the queue with total order. However, this may increase the time of other operations on the
-                    // queue, and so we do go this direction.
+                    // queue, and so we do not go this direction.
                     // val sizeBefore = queue.size
                     // queue.removeIf { s -> s.currentCost + s.predictedCost > upperBoundCost }
                     // val fried = sizeBefore - queue.size
@@ -299,6 +299,7 @@ class AStar(
                     Step(
                         modelMove = activity,
                         modelState = processState,
+                        modelCause = cause.orEmpty(),
                         logMove = if (event != SKIP_EVENT) events[event] else null,
                         logState = events.subList(0, getPreviousEventIndex() + 1).asSequence(),
                         type = when {
@@ -368,19 +369,36 @@ class AStar(
          */
         val activity: Activity?,
         /**
+         * The collection of activities that were the direct cause for [activity].
+         */
+        var cause: Collection<Activity>? = null,
+        /**
          * The last executed event.
          */
         val event: Int,
         val previousSearchState: SearchState?,
         var processState: ProcessModelState? = null
     ) : Comparable<SearchState> {
+        private fun calcProcessStateAndCause(instance: ProcessModelInstance) {
+            checkNotNull(activity)
+            instance.setState(previousSearchState!!.getProcessState(instance).copy())
+            val execution = instance.getExecutionFor(activity)
+            cause = execution.cause
+            execution.execute()
+            processState = instance.currentState
+        }
+
         fun getProcessState(instance: ProcessModelInstance): ProcessModelState {
             if (processState === null && activity !== null) {
-                instance.setState(previousSearchState!!.getProcessState(instance).copy())
-                instance.getExecutionFor(activity).execute()
-                processState = instance.currentState
+                calcProcessStateAndCause(instance)
             }
             return processState ?: previousSearchState!!.getProcessState(instance)
+        }
+
+        fun getCause(instance: ProcessModelInstance): Collection<Activity> {
+            if (cause === null && activity !== null)
+                calcProcessStateAndCause(instance)
+            return cause!!
         }
 
         fun getPreviousEventIndex(): Int {
