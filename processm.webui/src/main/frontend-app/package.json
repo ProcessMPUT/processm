@@ -21,7 +21,7 @@
     "@antv/g6": "^4.8.24",
     "axios": "^1.6.7",
     "axios-auth-refresh": "^3.3.6",
-    "bpmn-js": "^8.8.3",
+    "bpmn-js": "^17.1.0",
     "bpmn-js-i18n": "github:bpmn-io/bpmn-js-i18n",
     "buffer": "^6.0.3",
     "clarinet": "^0.12.4",

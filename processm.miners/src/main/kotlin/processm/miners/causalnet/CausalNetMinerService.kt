@@ -11,11 +11,6 @@ import processm.dbmodels.models.WorkspaceComponent
 import processm.miners.AbstractMinerService
 import processm.miners.CalcJob
 import processm.miners.DeleteJob
-import processm.miners.causalnet.onlineminer.OnlineMiner
-import processm.miners.processtree.inductiveminer.OnlineInductiveMiner
-
-const val ALGORITHM_HEURISTIC_MINER = "urn:processm:miners/OnlineHeuristicMiner"
-const val ALGORITHM_INDUCTIVE_MINER = "urn:processm:miners/OnlineInductiveMiner"
 
 /**
  * The service that discovers Causal net from the event log.
@@ -36,11 +31,7 @@ class CausalNetMinerService : AbstractMinerService(
     class CalcCNetJob : CalcJob<CausalNet>() {
         override fun mine(component: WorkspaceComponent, stream: DBHierarchicalXESInputStream): CausalNet {
 
-            val miner = when (component.algorithm) {
-                ALGORITHM_INDUCTIVE_MINER -> OnlineInductiveMiner()
-                ALGORITHM_HEURISTIC_MINER, null -> OnlineMiner()
-                else -> throw IllegalArgumentException("Unexpected type of miner: ${component.algorithm}.")
-            }
+            val miner = minerFromURN(component.algorithm)
 
             val model = miner.processLog(stream)
             return when (model) {

@@ -17,13 +17,31 @@ import processm.core.querylanguage.Query
 import processm.dbmodels.models.*
 import processm.helpers.toUUID
 import processm.logging.loggedScope
+import processm.miners.causalnet.onlineminer.OnlineMiner
+import processm.miners.processtree.inductiveminer.OnlineInductiveMiner
 import java.time.Instant
 import java.util.*
 
+const val ALGORITHM_HEURISTIC_MINER = "urn:processm:miners/OnlineHeuristicMiner"
+const val ALGORITHM_INDUCTIVE_MINER = "urn:processm:miners/OnlineInductiveMiner"
 
 abstract class CalcJob<T : ProcessModel> : ServiceJob {
 
+    protected fun minerFromURN(urn: String?): Miner = when (urn) {
+        ALGORITHM_INDUCTIVE_MINER -> OnlineInductiveMiner()
+        ALGORITHM_HEURISTIC_MINER, null -> OnlineMiner()
+        else -> throw IllegalArgumentException("Unexpected type of miner: $urn.")
+    }
+
     abstract fun mine(component: WorkspaceComponent, stream: DBHierarchicalXESInputStream): T
+
+    /**
+     * Given the newly-mined [model] and the previous content of [WorkspaceComponents.customizationData] (in
+     * [customizationData]) return the new value for the field.
+     *
+     * The default implementation returns [customizationData] without any changes
+     */
+    open fun updateCustomizationData(model: T, customizationData: String?): String? = customizationData
     abstract fun store(database: Database, model: T): String
 
     override fun execute(context: JobExecutionContext): Unit = loggedScope { logger ->
@@ -56,6 +74,7 @@ abstract class CalcJob<T : ProcessModel> : ServiceJob {
                 val model = mine(component, stream)
                 component.data = store(DBCache.get(component.dataStoreId.toString()).database, model)
                 component.dataLastModified = Instant.now()
+                component.customizationData = updateCustomizationData(model, component.customizationData)
                 component.lastError = null
             } catch (e: Exception) {
                 component.lastError = e.message

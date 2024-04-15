@@ -6,10 +6,7 @@ import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import processm.helpers.mapToSet
-import kotlin.test.Ignore
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
+import kotlin.test.*
 
 class CausalNet2BPMNTest {
 
@@ -109,4 +106,15 @@ class CausalNet2BPMNTest {
         })
     }
 
+    @Test
+    fun unsound() {
+        val bpmn = with(MutableCausalNet()) {
+            addDependency(start, end)
+            toBPMN()
+        }
+        // boring asserts, but the main concern here is that `toBPMN` does not throw
+        assertEquals(3, bpmn.activities.count())
+        assertTrue { bpmn.activities.any { it.name == "start" } }
+        assertTrue { bpmn.activities.any { it.name == "end" } }
+    }
 }

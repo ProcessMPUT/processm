@@ -305,6 +305,9 @@ object Paths {
     @Location("/workspaces")
     class Workspaces
 
+    @Location("/workspaces/empty-component/{type}")
+    class EmptyComponent(val type:String)
+
     /**
      * Get the whole ACL for the given URN
      */

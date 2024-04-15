@@ -16,8 +16,8 @@ import processm.dbmodels.models.load
 import processm.helpers.mapToArray
 import processm.helpers.toLocalDateTime
 import processm.logging.loggedScope
-import processm.miners.causalnet.ALGORITHM_HEURISTIC_MINER
-import processm.miners.causalnet.ALGORITHM_INDUCTIVE_MINER
+import processm.miners.ALGORITHM_HEURISTIC_MINER
+import processm.miners.ALGORITHM_INDUCTIVE_MINER
 import processm.services.JsonSerializer
 import processm.services.api.models.*
 import java.util.*
@@ -44,7 +44,7 @@ fun WorkspaceComponent.toAbstractComponent(): AbstractComponent =
 /**
  * Converts the component type from database representation into service API [ComponentType].
  */
-private fun ComponentTypeDto.toComponentType(): ComponentType = when (this) {
+fun ComponentTypeDto.toComponentType(): ComponentType = when (this) {
     ComponentTypeDto.CausalNet -> ComponentType.causalNet
     ComponentTypeDto.Kpi -> ComponentType.kpi
     ComponentTypeDto.BPMN -> ComponentType.bpmn
@@ -134,8 +134,10 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
             ComponentTypeDto.BPMN -> {
                 BPMNComponentData(
                     type = ComponentType.bpmn,
-                    xml = javaClass.classLoader.getResourceAsStream("bpmn-mock/pizza-collaboration.bpmn")
-                        .bufferedReader().readText() // FIXME: replace the mock with actual implementation
+                    xml = processm.core.models.bpmn.DBSerializer.fetchXML(
+                        DBCache.get(dataStoreId.toString()).database,
+                        UUID.fromString(requireNotNull(data) { "Missing BPMN model id" })
+                    )
                 )
             }
 
@@ -244,6 +246,16 @@ fun WorkspaceComponent.updateData(data: String) = loggedScope { logger ->
             )
         }
 
+        ComponentTypeDto.BPMN -> {
+            JsonSerializer.decodeFromString<BPMNComponentData>(data).xml?.let { xml ->
+                processm.core.models.bpmn.DBSerializer.update(
+                    DBCache.get(dataStoreId.toString()).database,
+                    UUID.fromString(this.data),
+                    xml
+                )
+            }
+        }
+
         else -> logger.error("Updating data for $componentType is currently not supported")
     }
 }
@@ -251,27 +263,33 @@ fun WorkspaceComponent.updateData(data: String) = loggedScope { logger ->
 /**
  * Gets the list of custom properties for this component.
  */
-fun WorkspaceComponent.getCustomProperties(): Array<CustomProperty> = when (componentType) {
-    ComponentTypeDto.CausalNet ->
-        arrayOf(
-            CustomProperty(
-                id = 0,
-                name = "algorithm",
-                type = "enum",
-                enum = arrayOf(
-                    EnumItem(
-                        id = ALGORITHM_HEURISTIC_MINER,
-                        name = "Online Heuristic Miner"
-                    ),
-                    EnumItem(
-                        id = ALGORITHM_INDUCTIVE_MINER,
-                        name = "Online Inductive Miner"
-                    )
-                ),
-                value = algorithm ?: ALGORITHM_HEURISTIC_MINER
-            )
-        )
+fun WorkspaceComponent.getCustomProperties() = getCustomProperties(componentType, algorithm)
 
-    else -> emptyArray()
-}
+/**
+ * Gets the list of custom properties for the component of the [componentType] type
+ */
+fun getCustomProperties(componentType: ComponentTypeDto, algorithm: String? = null): Array<CustomProperty> =
+    when (componentType) {
+        ComponentTypeDto.CausalNet, ComponentTypeDto.BPMN, ComponentTypeDto.PetriNet ->
+            arrayOf(
+                CustomProperty(
+                    id = 0,
+                    name = "algorithm",
+                    type = "enum",
+                    enum = arrayOf(
+                        EnumItem(
+                            id = ALGORITHM_HEURISTIC_MINER,
+                            name = "Online Heuristic Miner"
+                        ),
+                        EnumItem(
+                            id = ALGORITHM_INDUCTIVE_MINER,
+                            name = "Online Inductive Miner"
+                        )
+                    ),
+                    value = algorithm ?: ALGORITHM_HEURISTIC_MINER
+                )
+            )
+
+        else -> emptyArray()
+    }
 
