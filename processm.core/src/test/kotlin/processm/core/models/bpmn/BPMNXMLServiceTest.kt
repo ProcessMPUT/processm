@@ -1,5 +1,6 @@
 package processm.core.models.bpmn
 
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.TestFactory
@@ -67,6 +68,7 @@ class BPMNXMLServiceTest {
     private val nonStrictFiles = files.filter { nonStrict.any { p -> it.path.endsWith(p) } }
     private val idempotentFiles = strictFiles.filter { !nonIdempotent.any { p -> it.path.endsWith(p) } }
     private val nonIdempotentFiles = strictFiles.filter { nonIdempotent.any { p -> it.path.endsWith(p) } }
+    private val referenceFiles = files.filter { "/Reference/" in it.path }
 
     @Ignore("Intended for manual execution due to high resource consumption")
     @Tag("BPMN")
@@ -160,5 +162,28 @@ class BPMNXMLServiceTest {
             "_404cd32e-8789-46c5-ad72-cdedb860665d",
             (((b.rootElement[1].value as TProcess).flowElement[0].value as TUserTask).resourceRole[0].value as TPerformer).resourceRef.localPart
         )
+    }
+
+    @Tag("BPMN")
+    @TestFactory
+    fun `reference files conform to the XSD`(): Iterable<DynamicTest> {
+        return referenceFiles
+            .map {
+                DynamicTest.dynamicTest(it.path.replace(base, ""))
+                { assertTrue { BPMNXMLService.validate(it.inputStream()) } }
+            }.toList()
+    }
+
+    @Tag("BPMN")
+    @TestFactory
+    fun `files from Modelio 3_5 don't conform to the XSD`(): Iterable<DynamicTest> {
+        // I don't know how come all files produced by this tool don't validate with the XSD even though they should, as they reference the same namespace
+        // xmllint confirms that they don't
+        return files
+            .filter { "/Modelio 3.5/" in it.path }
+            .map {
+                DynamicTest.dynamicTest(it.path.replace(base, ""))
+                { assertFalse { BPMNXMLService.validate(it.inputStream()) } }
+            }.toList()
     }
 }

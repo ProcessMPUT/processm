@@ -92,7 +92,6 @@ private class ProcessTree2BPMN(private val tree: ProcessTree) : ToBPMN() {
                 flowElements.remove(o)
                 flowElements.removeIf { (it.value as? TTask) == task }
             }
-            println("$task $incoming $outgoing")
         }
     }
 

@@ -135,7 +135,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
             ComponentTypeDto.BPMN -> {
                 BPMNComponentData(
                     type = ComponentType.bpmn,
-                    xml = processm.core.models.bpmn.DBSerializer.fetch(
+                    xml = processm.core.models.bpmn.DBSerializer.fetchXML(
                         DBCache.get(dataStoreId.toString()).database,
                         UUID.fromString(requireNotNull(mostRecentData()) { "Missing BPMN model id" })
                     )
