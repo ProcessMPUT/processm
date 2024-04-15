@@ -293,7 +293,7 @@
                 </executions>
                 <configuration>
                     <markGenerated>true</markGenerated>
-                    <schemaDirectory>src/bpmn</schemaDirectory>
+                    <schemaDirectory>src/main/resources/bpmn</schemaDirectory>
                     <schemaIncludes>
                         <include>*.xsd</include>
                     </schemaIncludes>
