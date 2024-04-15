@@ -16,7 +16,7 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 
 /**
- * @param version If not null, every event is tagged with this version number (column `version`, not available from PQL)
+ * @param version Every event is tagged with this version number (column `version`, not available from PQL)
  */
 open class DBXESOutputStream protected constructor(
     protected val connection: Connection,

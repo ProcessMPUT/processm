@@ -9,7 +9,8 @@ import java.util.*
  * the identity:id attribute set. The anonymous traces with identity:id unset will not be appended and instead a new
  * trace will be created.
  *
- * @param version If not null, every event is tagged with this version number (column `version`, not available from PQL)
+ * @param version Every event is tagged with this version number (column `version`, not available from PQL). If the
+ * models are to be recomputed, the value must be higher than any already existing in the logs that will be written.
  */
 class AppendingDBXESOutputStream(
     connection: Connection,
