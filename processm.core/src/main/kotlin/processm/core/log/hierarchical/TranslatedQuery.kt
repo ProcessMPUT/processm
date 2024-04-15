@@ -1408,8 +1408,10 @@ internal class TranslatedQuery(
 
     /**
      * Reads the most recent version number for the query. Exposed publicly as [DBHierarchicalXESInputStream.readVersion]
+     *
+     * @return 0 if there are no events, a positive value otherwise
      */
-    internal fun readVersion(): Long? {
+    internal fun readVersion(): Long {
         val allEventIds = ArrayList<Long>()
         cache.topEntry.logs.values.forEach { logEntry ->
             logEntry.traces?.values?.forEach { traceEntry ->
@@ -1423,15 +1425,15 @@ internal class TranslatedQuery(
                 }
             }
         }
-        if (allEventIds.isEmpty()) return null
+        if (allEventIds.isEmpty()) return 0L
         return connection.use { conn ->
             conn.prepareStatement("select max(version) from events where id=any(?::bigint[])").use { stmt ->
                 stmt.setArray(1, conn.createArrayOf(JDBCType.BIGINT.name, allEventIds.toTypedArray()))
                 stmt.executeQuery().use { rs ->
                     if (rs.next())
-                        rs.getLongOrNull(1)
+                        rs.getLong(1)
                     else
-                        null
+                        0L
                 }
             }
         }

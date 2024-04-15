@@ -14,7 +14,7 @@ import java.util.*
 class AppendingDBXESOutputStream(
     connection: Connection,
     batchSize: Int = DBXESOutputStream.batchSize,
-    version: Long? = null
+    version: Long = connection.nextVersion()
 ) :
     DBXESOutputStream(connection, true, batchSize, version) {
     override fun write(component: XESComponent) {

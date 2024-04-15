@@ -19,7 +19,6 @@ import processm.dbmodels.models.AutomaticEtlProcess
 import processm.dbmodels.models.Class
 import processm.dbmodels.models.Classes
 import processm.dbmodels.models.Relationship
-import processm.etl.helpers.nextVersion
 import processm.etl.tracker.DatabaseChangeApplier
 import processm.helpers.mapToArray
 import processm.helpers.mapToSet

@@ -1,8 +1,8 @@
 package processm.core.log.hierarchical
 
 import processm.core.DBTestHelper.dbName
-import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR
 import processm.core.log.attribute.AttributeMap.Companion.STRING_MARKER
 import processm.core.querylanguage.Query
 import java.time.Instant
@@ -79,7 +79,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     fun selectEmpty() {
         val stream = q("where 0=1")
         assertEquals(0, stream.count())
-        assertNull(stream.readVersion())
+        assertEquals(0L, stream.readVersion())
     }
 
     @Test
@@ -831,7 +831,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     fun offsetSingleTest() {
         val stream = q("where l:id=$journal offset l:1")
         assertEquals(0, stream.count())
-        assertNull(stream.readVersion())
+        assertEquals(0L, stream.readVersion())
 
         val journalAll = q("where l:name like 'Journal%'")
         val journalWithOffset = q("where l:name like 'Journal%' offset l:1")
@@ -842,7 +842,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     fun offsetAllTest() {
         val stream = q("where l:id=$journal offset e:3, t:2, l:1")
         assertEquals(0, stream.count())
-        assertNull(stream.readVersion())
+        assertEquals(0L, stream.readVersion())
 
         val journalAll = q("where l:name='JournalReview' limit l:3").map { it.identityId to it }.toMap()
         val journalWithOffset = q("where l:name='JournalReview' limit l:3 offset e:3, t:2")
@@ -913,7 +913,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
             Query("where (l:id=$hospital or l:id=$journal) and [l:${SEPARATOR}${STRING_MARKER}meta_org:group_events_average${SEPARATOR}Maternity ward]='0.016' limit l:1, t:1, e:1"),
             true
         )
-        assertNull(stream.readVersion())
+        assertTrue { stream.readVersion() >= 1L }
         val log = stream.first()
         assertEquals(1.728, log.attributes.children("meta_org:group_events_average")["Pathology"])
     }

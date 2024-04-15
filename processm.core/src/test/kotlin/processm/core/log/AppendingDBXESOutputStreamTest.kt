@@ -140,7 +140,7 @@ class AppendingDBXESOutputStreamTest {
         expect(sequenceOf(log, trace1) + events1 + sequenceOf(trace2) + events2 + sequenceOf(trace3) + events3)
     }
 
-    private fun save(part: Sequence<XESComponent>, version: Long? = null) {
+    private fun save(part: Sequence<XESComponent>, version: Long = 1L) {
         AppendingDBXESOutputStream(DBCache.get(dbName).getConnection(), version = version).use { stream ->
             stream.write(part)
         }
