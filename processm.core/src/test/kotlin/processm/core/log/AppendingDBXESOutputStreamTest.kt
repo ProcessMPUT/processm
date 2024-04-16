@@ -146,7 +146,7 @@ class AppendingDBXESOutputStreamTest {
         }
     }
 
-    private fun expect(expected: Sequence<XESComponent>, version: Long? = null) {
+    private fun expect(expected: Sequence<XESComponent>, version: Long = 1L) {
         val stream = DBHierarchicalXESInputStream(dbName, Query("where l:id=$logUUID"))
         assertEquals(1, stream.count())
         assertContentEquals(expected, stream.first().toFlatSequence())
