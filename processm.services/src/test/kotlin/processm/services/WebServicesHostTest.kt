@@ -38,7 +38,7 @@ class WebServicesHostTest {
             host.start()
             var response = client.get(baseURIs).bodyAsText()
             try {
-                assertTrue(response.startsWith("<!DOCTYPE html>"))
+                assertTrue(response.startsWith("<!DOCTYPE html>", ignoreCase = true))
             } finally {
                 host.stop()
             }
