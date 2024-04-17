@@ -85,6 +85,7 @@ class LogKPIService : AbstractJobService(
                 }
 
                 try {
+                    // since no computation beyond the query itself is involved, we don't use versioning here, as it'd only increase the complexity instead of decreasing it
                     val stream =
                         DBHierarchicalXESInputStream(component.dataStoreId.toString(), Query(component.query), false)
                     val first = stream.take(2).toList()

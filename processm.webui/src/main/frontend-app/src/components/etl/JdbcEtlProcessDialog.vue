@@ -402,7 +402,7 @@ export default class JdbcEtlProcessDialog extends Vue {
       enabled: this.enabled,
       batch: this.batch,
       traceId: { source: this.traceIdSource, target: this.traceIdTarget },
-      eventId: { source: this.eventIdSource, target: this.traceIdTarget },
+      eventId: { source: this.eventIdSource, target: this.eventIdTarget },
       attributes: this.attributes
     } as JdbcEtlProcessConfiguration;
     if (!this.batch) {

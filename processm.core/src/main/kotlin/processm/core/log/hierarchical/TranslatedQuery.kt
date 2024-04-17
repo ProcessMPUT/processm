@@ -12,6 +12,7 @@ import processm.logging.exit
 import processm.logging.logger
 import processm.logging.trace
 import java.sql.Connection
+import java.sql.JDBCType
 import java.sql.Timestamp
 import java.time.Instant
 import kotlin.LazyThreadSafetyMode.NONE
@@ -1064,7 +1065,7 @@ internal class TranslatedQuery(
         }
 
         abstract inner class TraceEntry(val parent: LogEntry) : Entry() {
-            override val ids: Iterable<Any>
+            override val ids: Collection<Any>
                 get() = events!!
 
             /**
@@ -1402,6 +1403,39 @@ internal class TranslatedQuery(
             }
 
             return@toSQL orderByCount
+        }
+    }
+
+    /**
+     * Reads the most recent version number for the query. Exposed publicly as [DBHierarchicalXESInputStream.readVersion]
+     *
+     * @return 0 if there are no events, a positive value otherwise
+     */
+    internal fun readVersion(): Long {
+        val allEventIds = ArrayList<Long>()
+        cache.topEntry.logs.values.forEach { logEntry ->
+            logEntry.traces?.values?.forEach { traceEntry ->
+                traceEntry.ids.forEach { eventIds ->
+                    if (eventIds is LongArray)
+                        allEventIds.addAll(eventIds.asList())
+                    else {
+                        assert(eventIds is Long)
+                        allEventIds.add(eventIds as Long)
+                    }
+                }
+            }
+        }
+        if (allEventIds.isEmpty()) return 0L
+        return connection.use { conn ->
+            conn.prepareStatement("select max(version) from events where id=any(?::bigint[])").use { stmt ->
+                stmt.setArray(1, conn.createArrayOf(JDBCType.BIGINT.name, allEventIds.toTypedArray()))
+                stmt.executeQuery().use { rs ->
+                    if (rs.next())
+                        rs.getLong(1)
+                    else
+                        0L
+                }
+            }
         }
     }
 }

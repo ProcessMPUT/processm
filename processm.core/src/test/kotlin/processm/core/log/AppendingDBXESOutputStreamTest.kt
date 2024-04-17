@@ -98,6 +98,19 @@ class AppendingDBXESOutputStreamTest {
     }
 
     @Test
+    fun `Create a partial log and append two parts with versioning`() {
+        save(part1, 1L)
+        expect(part1, 1L)
+        save(part2, 2L)
+        expect(sequenceOf(log, trace1) + events1 + sequenceOf(trace2) + events2.take(4), 2L)
+        save(part3, 3L)
+        expect(
+            sequenceOf(log, trace1) + events1 + sequenceOf(trace2) + events2 + sequenceOf(trace3) + events3.take(1),
+            3L
+        )
+    }
+
+    @Test
     fun `Create a partial log and append parts with anomaly`() {
         save(part1)
         save(part2)
@@ -127,15 +140,16 @@ class AppendingDBXESOutputStreamTest {
         expect(sequenceOf(log, trace1) + events1 + sequenceOf(trace2) + events2 + sequenceOf(trace3) + events3)
     }
 
-    private fun save(part: Sequence<XESComponent>) {
-        AppendingDBXESOutputStream(DBCache.get(dbName).getConnection()).use { stream ->
+    private fun save(part: Sequence<XESComponent>, version: Long = 1L) {
+        AppendingDBXESOutputStream(DBCache.get(dbName).getConnection(), version = version).use { stream ->
             stream.write(part)
         }
     }
 
-    private fun expect(expected: Sequence<XESComponent>) {
+    private fun expect(expected: Sequence<XESComponent>, version: Long = 1L) {
         val stream = DBHierarchicalXESInputStream(dbName, Query("where l:id=$logUUID"))
         assertEquals(1, stream.count())
         assertContentEquals(expected, stream.first().toFlatSequence())
+        assertEquals(version, stream.readVersion())
     }
 }

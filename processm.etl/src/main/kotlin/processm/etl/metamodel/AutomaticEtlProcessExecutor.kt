@@ -346,7 +346,7 @@ class AutomaticEtlProcessExecutor(
     private fun List<XESComponent>.writeToDB(connection: Connection) {
         assert(any { it is Event })
         //No use on AppendingDBXESOutputStream to avoid closing the connection
-        val output = AppendingDBXESOutputStream(connection, size + 1)
+        val output = AppendingDBXESOutputStream(connection, size + 1, version = connection.nextVersion())
         output.write(Log(mutableAttributeMapOf(Attribute.IDENTITY_ID to logId)))
         output.write(asSequence())
         output.flush()

@@ -13,6 +13,7 @@ import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
 import processm.dbmodels.models.load
+import processm.dbmodels.models.mostRecentData
 import processm.helpers.mapToArray
 import processm.helpers.toLocalDateTime
 import processm.logging.loggedScope
@@ -87,7 +88,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
     try {
         when (componentType) {
             ComponentTypeDto.CausalNet -> {
-                val cnet = data?.let {
+                val cnet = mostRecentData()?.let {
                     DBSerializer.fetch(
                         DBCache.get(dataStoreId.toString()).database,
                         it.toInt()
@@ -136,7 +137,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                     type = ComponentType.bpmn,
                     xml = processm.core.models.bpmn.DBSerializer.fetchXML(
                         DBCache.get(dataStoreId.toString()).database,
-                        UUID.fromString(requireNotNull(data) { "Missing BPMN model id" })
+                        UUID.fromString(requireNotNull(mostRecentData()) { "Missing BPMN model id" })
                     )
                 )
             }
@@ -144,7 +145,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
             ComponentTypeDto.PetriNet -> {
                 val petriNet = processm.core.models.petrinet.DBSerializer.fetch(
                     DBCache.get(dataStoreId.toString()).database,
-                    UUID.fromString(requireNotNull(data) { "Missing PetriNet id" })
+                    UUID.fromString(requireNotNull(mostRecentData()) { "Missing PetriNet id" })
                 )
                 val componentDataTransitions = petriNet.transitions.mapToArray {
                     PetriNetComponentDataAllOfTransitions(
@@ -168,7 +169,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
             ComponentTypeDto.DirectlyFollowsGraph -> {
                 val dfg = DirectlyFollowsGraph.load(
                     DBCache.get(dataStoreId.toString()).database,
-                    UUID.fromString(requireNotNull(data) { "Missing DFG id" })
+                    UUID.fromString(requireNotNull(mostRecentData()) { "Missing DFG id" })
                 )
 
                 DirectlyFollowsGraphComponentData(

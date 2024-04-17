@@ -11,6 +11,7 @@ import processm.dbmodels.models.WorkspaceComponent
 import processm.miners.AbstractMinerService
 import processm.miners.CalcJob
 import processm.miners.DeleteJob
+import processm.miners.MinerJob
 
 /**
  * The service that discovers Causal net from the event log.
@@ -28,7 +29,7 @@ class CausalNetMinerService : AbstractMinerService(
     override val name: String
         get() = "Causal net"
 
-    class CalcCNetJob : CalcJob<CausalNet>() {
+    interface CNetJob : MinerJob<CausalNet> {
         override fun mine(component: WorkspaceComponent, stream: DBHierarchicalXESInputStream): CausalNet {
 
             val miner = minerFromURN(component.algorithm)
@@ -41,11 +42,13 @@ class CausalNetMinerService : AbstractMinerService(
             }
         }
 
+        override fun delete(database: Database, id: String) = DBSerializer.delete(database, id.toInt())
+
         override fun store(database: Database, model: CausalNet): String =
             DBSerializer.insert(database, model).toString()
     }
 
-    class DeleteCNetJob : DeleteJob() {
-        override fun delete(database: Database, id: String) = DBSerializer.delete(database, id.toInt())
-    }
+    class CalcCNetJob : CalcJob<CausalNet>(), CNetJob
+
+    class DeleteCNetJob : DeleteJob<CausalNet>(), CNetJob
 }

@@ -444,6 +444,7 @@ OFFSET ?::bigint
     @Test
     fun `deactivate and activate continuous ETL process`() {
         val service = ETLService()
+        val version1: Long?
         try {
             service.register()
             service.start()
@@ -452,18 +453,21 @@ OFFSET ?::bigint
             Thread.sleep(3500L)
 
             logger.info("Disabling ETL process repeat")
-            transaction(DBCache.get(dataStoreId).database) {
+            val config = transaction(DBCache.get(dataStoreId).database) {
                 val config = ETLConfiguration.find {
                     ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name eq "repeat" }
                         .first().id
                 }.first()
                 config.enabled = false
                 config
-            }.notifyUsers()
+            }
+            config.notifyUsers()
 
             // simulate break
             logger.info("Break")
             Thread.sleep(3000L)
+
+            version1 = q(config.logIdentityId).readVersion()
 
             logger.info("Enabling ETL process repeat")
             transaction(DBCache.get(dataStoreId).database) {
@@ -490,6 +494,12 @@ OFFSET ?::bigint
                     .first().id
             }.first()
             val stream = q(config.logIdentityId)
+
+            val version2 = stream.readVersion()
+
+            assertNotNull(version1)
+            assertNotNull(version2)
+            assertTrue { version1 < version2 }
 
             assertEquals(1, stream.count())
             val log = stream.first()

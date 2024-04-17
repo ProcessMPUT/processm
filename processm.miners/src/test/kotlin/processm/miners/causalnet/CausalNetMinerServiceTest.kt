@@ -106,7 +106,7 @@ class CausalNetMinerServiceTest {
             for (attempt in 1..20) {
                 cnet = transactionMain {
                     component.refresh()
-                    component.data?.let {
+                    component.mostRecentData()?.let {
                         DBSerializer.fetch(DBCache.get(DBTestHelper.dbName).database, it.toInt())
                     }
                 }
@@ -137,7 +137,7 @@ class CausalNetMinerServiceTest {
         for (attempt in 1..20) {
             cnetId = transactionMain {
                 component.refresh()
-                component.data?.let { it.toInt() }
+                component.mostRecentData()?.toInt()
             }
 
             if (cnetId !== null)

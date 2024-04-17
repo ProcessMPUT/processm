@@ -28,7 +28,7 @@ class NestableAutoCloseable<T : AutoCloseable>(private val initializer: () -> T)
      * @param callee The callee to run with the [AutoCloseable] object.
      * @throws IllegalStateException If the number of nested calls reaches the maximum of [Byte.MAX_VALUE].
      */
-    fun use(callee: (T) -> Unit) {
+    fun <R> use(callee: (T) -> R): R {
         // Note that the .toByte() calls are evaluated at compile-time. See bytecode for details.
         assert(counter >= 0.toByte())
         check(counter < Byte.MAX_VALUE) { "Reached the maximum of ${Byte.MAX_VALUE} of the nested calls." }
@@ -40,7 +40,7 @@ class NestableAutoCloseable<T : AutoCloseable>(private val initializer: () -> T)
                 ref = initializer()
             }
             logger.trace { "Counter value $counter on enter to $callee" }
-            callee(ref!!)
+            return callee(ref!!)
         } finally {
             logger.trace { "Counter value $counter on exit from $callee" }
             if (--counter == 0.toByte() && ref !== null) {
