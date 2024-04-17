@@ -18,7 +18,7 @@ import processm.core.log.attribute.Attribute.ORG_ROLE
 import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
 import processm.core.log.getStandardToCustomNameMap
 import processm.core.querylanguage.Query
-import processm.helpers.parseISO8601
+import processm.helpers.time.parseISO8601
 import processm.logging.logger
 import java.util.*
 import kotlin.test.assertTrue

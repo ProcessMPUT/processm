@@ -1,10 +1,9 @@
 package processm.helpers
 
 import org.jetbrains.exposed.sql.SizedIterable
-import java.time.*
-import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoField
 import java.util.*
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 /**
  * Reads the system property ignoring the key case.
@@ -37,11 +36,19 @@ infix fun <T, R> Sequence<T>.zipOrThrow(seq2: Sequence<R>): Sequence<Pair<T, R>>
 }
 
 /**
- * Returns index of the first element matching the given [predicate] beginning from [startIndex], or -1 if the list does
- * not contain such element.
+ * Returns index of the first element matching the given [predicate] beginning from [startIndex] (inclusive), or -1 if
+ * the list does not contain such element.
+ * @param startIndex The index of the first item to verify the [predicate] for.
+ * @throws IndexOutOfBoundsException If [startIndex] is out of bounds of [this] list.
  */
+@OptIn(ExperimentalContracts::class)
 inline fun <T> List<T>.indexOfFirst(startIndex: Int, predicate: (item: T) -> Boolean): Int {
-    val iterator = this.listIterator(startIndex.coerceAtLeast(0))
+    contract {
+        callsInPlace(predicate)
+    }
+
+    if (startIndex !in 0..size) throw IndexOutOfBoundsException(startIndex)
+    val iterator = this.listIterator(startIndex)
     while (iterator.hasNext()) {
         if (predicate(iterator.next()))
             return iterator.previousIndex()
@@ -51,32 +58,103 @@ inline fun <T> List<T>.indexOfFirst(startIndex: Int, predicate: (item: T) -> Boo
 }
 
 /**
- * Parses a timestamp with timezone in the ISO-8601 format into [Instant].
- * @throws java.time.format.DateTimeParseException if unable to parse the requested string
+ * Returns index of the last element matching the given [predicate] starting from [endIndex] (exclusive), or -1 if the
+ * list does not contain such element.
+ * @param endIndex The index after the last item to verify the [predicate] for.
+ * @throws IndexOutOfBoundsException If [endIndex] is out of bounds of [this] list.
  */
-inline fun String.parseISO8601(): Instant = DateTimeFormatter.ISO_DATE_TIME.parse(this, Instant::from)
-
-/**
- * Parses a timestamp with timezone in the ISO-8601 format into [Instant].
- * This function trades some safety-checks for performance. E.g.,
- * * The exception messages may be less detailed than these thrown by [parseISO8601] but the normal results of both
- * methods should equal.
- * @throws java.time.format.DateTimeParseException if unable to parse the requested string
- * @throws java.time.DateTimeException if the date/time cannot be represented using [Instant]
- */
-inline fun String.fastParseISO8601(): Instant =
-    DateTimeFormatter.ISO_DATE_TIME.parse(this) { temporal ->
-        val instantSecs = temporal.getLong(ChronoField.INSTANT_SECONDS)
-        val nanoOfSecond = temporal.get(ChronoField.NANO_OF_SECOND).toLong()
-        Instant.ofEpochSecond(instantSecs, nanoOfSecond)
+@OptIn(ExperimentalContracts::class)
+inline fun <T> List<T>.indexOfLast(endIndex: Int, predicate: (item: T) -> Boolean): Int {
+    contract {
+        callsInPlace(predicate)
     }
 
-inline fun Instant.toDateTime(): OffsetDateTime = this.atOffset(ZoneOffset.UTC)
+    if (endIndex !in 0..size) throw IndexOutOfBoundsException(endIndex)
+    val iterator = this.listIterator(endIndex)
+    while (iterator.hasPrevious()) {
+        if (predicate(iterator.previous()))
+            return iterator.nextIndex()
+    }
+
+    return -1
+}
 
 /**
- * Converts an [Instant] to [LocalDateTime] in a uniform way.
+ * Returns the first element matching the given [predicate] starting from the [startIndex] position (inclusive).
+ * @param startIndex The index of the first item to verify the [predicate] for.
+ * @throws IndexOutOfBoundsException if [startIndex] is out of bounds of [this] list.
+ * @throws NoSuchElementException if no such element is found.
  */
-fun Instant.toLocalDateTime(): LocalDateTime = LocalDateTime.ofInstant(this, ZoneId.of("Z"))
+@OptIn(ExperimentalContracts::class)
+inline fun <T> List<T>.first(startIndex: Int, predicate: (item: T) -> Boolean): T {
+    contract {
+        callsInPlace(predicate)
+    }
+
+    return firstOrNull(startIndex, predicate)
+        ?: throw NoSuchElementException("Collection contains no element matching the predicate.")
+}
+
+/**
+ * Returns the first element matching the given [predicate] starting from the [startIndex] position (inclusive) or null
+ * if no such element exists.
+ * @param startIndex The index of the first item to verify the [predicate] for.
+ * @throws IndexOutOfBoundsException if [startIndex] is out of bounds of [this] list.
+ */
+@OptIn(ExperimentalContracts::class)
+inline fun <T> List<T>.firstOrNull(startIndex: Int, predicate: (item: T) -> Boolean): T? {
+    contract {
+        callsInPlace(predicate)
+    }
+
+    if (startIndex !in indices) throw IndexOutOfBoundsException(startIndex)
+    val iterator = this.listIterator(startIndex)
+    while (iterator.hasNext()) {
+        val item = iterator.next()
+        if (predicate(item))
+            return item
+    }
+    return null
+}
+
+/**
+ * Returns the last element matching the given [predicate] starting from the [endIndex] position (exclusive).
+ * @param endIndex The index after the last item to verify the [predicate] for.
+ * @throws IndexOutOfBoundsException if [endIndex] is out of bounds of [this] list.
+ * @throws NoSuchElementException if no such element is found.
+ */
+@OptIn(ExperimentalContracts::class)
+inline fun <T> List<T>.last(endIndex: Int, predicate: (item: T) -> Boolean): T {
+    contract {
+        callsInPlace(predicate)
+    }
+
+    return lastOrNull(endIndex, predicate)
+        ?: throw NoSuchElementException("Collection contains no element matching the predicate.")
+}
+
+/**
+ * Returns the last element matching the given [predicate] starting from the [endIndex] position (exclusive) or null
+ * if no such element exists.
+ * @param endIndex The index after the last item to verify the [predicate] for.
+ * @throws IndexOutOfBoundsException if [endIndex] is out of bounds of [this] list.
+ */
+@OptIn(ExperimentalContracts::class)
+inline fun <T> List<T>.lastOrNull(endIndex: Int, predicate: (item: T) -> Boolean): T? {
+    contract {
+        callsInPlace(predicate)
+    }
+
+    // as endIndex refers to the position one after the last item, endIndex == size is valid option
+    if (endIndex !in 0..size) throw IndexOutOfBoundsException(endIndex)
+    val iterator = this.listIterator(endIndex)
+    while (iterator.hasPrevious()) {
+        val item = iterator.previous()
+        if (predicate(item))
+            return item
+    }
+    return null
+}
 
 /**
  * Returns a set containing the results of applying the given [transform] function

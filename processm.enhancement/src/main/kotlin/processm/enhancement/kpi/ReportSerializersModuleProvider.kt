@@ -35,7 +35,7 @@ class ReportSerializersModuleProvider : SerializersModuleProvider {
             subclass(processm.core.models.causalnet.Dependency::class)
             subclass(VirtualPetriNetCausalArc::class)
             subclass(VirtualProcessTreeCausalArc::class)
-            subclass(DummyArc::class)
+            subclass(Arc::class)
         }
     }
 }
@@ -100,7 +100,7 @@ class DoublingMap2DStringCausalArcDistributionSerializer : KSerializer<DoublingM
         for ((row, entry) in root.jsonObject.entries) {
             for ((col, value) in entry.jsonObject.entries) {
                 val (source, target) = col.splitOnArrow()
-                map2d[row, DummyArc(DummyActivity(source), DummyActivity(target))] =
+                map2d[row, Arc(DummyActivity(source), DummyActivity(target))] =
                     decoder.json.decodeFromJsonElement(Distribution::class.serializer(), value)
             }
         }
@@ -179,14 +179,4 @@ private data class DummyActivity(override val name: String) : Activity {
     override fun hashCode(): Int = this.name.hashCode()
 
     override fun toString(): String = name
-}
-
-@Serializable
-private data class DummyArc(override val source: Activity, override val target: Activity) : CausalArc {
-    override fun equals(other: Any?): Boolean =
-        other is CausalArc && this.source == other.source && this.target == other.target
-
-    override fun hashCode(): Int = this.source.hashCode() xor this.target.hashCode()
-
-    override fun toString(): String = "$source->$target"
 }

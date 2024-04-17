@@ -34,7 +34,7 @@ class ReportTests {
                 set("e", null, Distribution(doubleArrayOf(0.11, 0.99)))
                 set("f", ProcessTreeActivity("pt"), Distribution(doubleArrayOf(-.1, -101.0)))
             },
-            inboundArcKPI = DoublingMap2D<String, CausalArc, Distribution>().apply {
+            arcKPI = DoublingMap2D<String, CausalArc, Distribution>().apply {
                 set(
                     "e",
                     Dependency(Node("a"), Node("b")),
@@ -44,32 +44,6 @@ class ReportTests {
                     "e",
                     Dependency(Node("c"), Node("d")),
                     Distribution(doubleArrayOf(12.0, 17.0)),
-                )
-            },
-            outboundArcKPI = DoublingMap2D<String, CausalArc, Distribution>().apply {
-                set(
-                    "e",
-                    Dependency(Node("a"), Node("b")),
-                    Distribution(doubleArrayOf(25.0, 26.0))
-                )
-                set(
-                    "e",
-                    Dependency(Node("c"), Node("d")),
-                    Distribution(doubleArrayOf(22.0, 27.0))
-                )
-                set(
-                    "e",
-                    VirtualPetriNetCausalArc(
-                        Transition("z", outPlaces = listOf(place)),
-                        Transition("x", inPlaces = listOf(place)),
-                        place
-                    ),
-                    Distribution(doubleArrayOf(32.0, 37.0))
-                )
-                set(
-                    "e",
-                    VirtualProcessTreeCausalArc(ProcessTreeActivity("v"), ProcessTreeActivity("x")),
-                    Distribution(doubleArrayOf(42.0, 69.0))
                 )
             },
             alignments = listOf(
@@ -103,8 +77,7 @@ class ReportTests {
         assertEquals(report.logKPI, deserializedReport.logKPI)
         assertEquals(report.traceKPI, deserializedReport.traceKPI)
         assertTrue(report.eventKPI.equals(deserializedReport.eventKPI) { k1, k2 -> k1?.name == k2?.name })
-        assertTrue(report.inboundArcKPI.equals(deserializedReport.inboundArcKPI) { k1, k2 -> k1.source.name == k2.source.name && k1.target.name == k2.target.name })
-        assertTrue(report.outboundArcKPI.equals(deserializedReport.outboundArcKPI) { k1, k2 -> k1.source.name == k2.source.name && k1.target.name == k2.target.name })
+        assertTrue(report.arcKPI.equals(deserializedReport.arcKPI) { k1, k2 -> k1.source.name == k2.source.name && k1.target.name == k2.target.name })
         assertEquals(report.alignments, deserializedReport.alignments)
     }
 

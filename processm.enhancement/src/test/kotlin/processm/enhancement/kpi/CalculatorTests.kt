@@ -11,6 +11,7 @@ import processm.core.log.hierarchical.Log
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.models.commons.ProcessModel
+import processm.core.models.metadata.BasicMetadata.COUNT
 import processm.core.models.metadata.BasicMetadata.LEAD_TIME
 import processm.core.models.metadata.BasicMetadata.SERVICE_TIME
 import processm.core.models.metadata.BasicMetadata.SUSPENSION_TIME
@@ -18,8 +19,10 @@ import processm.core.models.metadata.BasicMetadata.WAITING_TIME
 import processm.core.models.petrinet.petrinet
 import processm.core.models.processtree.ProcessTrees
 import processm.core.querylanguage.Query
+import processm.helpers.totalDays
+import java.time.Duration
+import java.time.Instant
 import java.util.*
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -275,32 +278,18 @@ class CalculatorTests {
             assertEquals(55, eventServiceTime[first { it.name == "reject" }]!!.raw.size)
         }
 
-        with(report.inboundArcKPI.getRow("max(event:time:timestamp) - min(event:time:timestamp)")) {
+        with(report.arcKPI.getRow(COUNT.urn)) {
             with(entries.single { it.key.source.name == "decide" && it.key.target.name == "accept" }.value) {
-                assertEquals(0.0, min)
-                assertEquals(1.0, median)
-                assertEquals(12.0, max)
-                assertEquals(45, count)
+                assertEquals(45.0, min)
+                assertEquals(45.0, median)
+                assertEquals(45.0, max)
+                assertEquals(1, count)
             }
             with(entries.single { it.key.source.name == "decide" && it.key.target.name == "reject" }.value) {
-                assertEquals(0.0, min)
-                assertEquals(4.0, median)
-                assertEquals(9.0, max)
-                assertEquals(55, count)
-            }
-        }
-        with(report.outboundArcKPI.getRow("max(event:time:timestamp) - min(event:time:timestamp)")) {
-            with(entries.single { it.key.source.name == "decide" && it.key.target.name == "accept" }.value) {
-                assertEquals(0.0, min)
-                assertDoubleEquals(3.0, average)
-                assertEquals(12.0, max)
-                assertEquals(45, count)
-            }
-            with(entries.single { it.key.source.name == "decide" && it.key.target.name == "reject" }.value) {
-                assertEquals(0.0, min)
-                assertDoubleEquals(2.672, average)
-                assertEquals(5.0, max)
-                assertEquals(55, count)
+                assertEquals(55.0, min)
+                assertEquals(55.0, median)
+                assertEquals(55.0, max)
+                assertEquals(1, count)
             }
         }
     }
@@ -372,29 +361,18 @@ class CalculatorTests {
             assertEquals(55, eventServiceTime[first { it.name == "reject" }]!!.raw.size)
         }
 
-        with(report.inboundArcKPI.getRow("max(event:time:timestamp) - min(event:time:timestamp)")) {
+        with(report.arcKPI.getRow(COUNT.urn)) {
             with(entries.single { it.key.source.name == "invite additional reviewer" && it.key.target.name == "time-out X" }.value) {
-                assertEquals(0.0, max)
-                assertEquals(198, count)
+                assertEquals(198.0, min)
+                assertEquals(198.0, average)
+                assertEquals(198.0, max)
+                assertEquals(1, count)
             }
             with(entries.single { it.key.source.name == "invite additional reviewer" && it.key.target.name == "get review X" }.value) {
-                assertEquals(0.0, max)
-                assertEquals(201, count)
-            }
-        }
-
-        with(report.outboundArcKPI.getRow("max(event:time:timestamp) - min(event:time:timestamp)")) {
-            with(entries.single { it.key.source.name == "invite additional reviewer" && it.key.target.name == "time-out X" }.value) {
-                assertEquals(0.0, min)
-                assertDoubleEquals(2.167, average)
-                assertEquals(5.0, max)
-                assertEquals(198, count)
-            }
-            with(entries.single { it.key.source.name == "invite additional reviewer" && it.key.target.name == "get review X" }.value) {
-                assertEquals(0.0, min)
-                assertDoubleEquals(2.383, average)
-                assertEquals(11.0, max)
-                assertEquals(201, count)
+                assertEquals(201.0, min)
+                assertEquals(201.0, average)
+                assertEquals(201.0, max)
+                assertEquals(1, count)
             }
         }
     }
@@ -411,25 +389,14 @@ class CalculatorTests {
                     trace(event("b", "time" to 3L), event("a", "time" to 2L), event("c", "time" to 20L)).times(10)
         )
         val report = Calculator(ProcessTrees.twoParallelTasksAndSingleFollower).calculate(log)
-        with(report.inboundArcKPI.getRow("time").entries) {
+        with(report.arcKPI.getRow(COUNT.urn).entries) {
             with(single { it.key.source.name == "a" && it.key.target.name == "c" }.value) {
-                assertEquals(20, count)
+                assertEquals(20.0, average)
             }
             with(single { it.key.source.name == "b" && it.key.target.name == "c" }.value) {
-                assertEquals(20, count)
+                assertEquals(20.0, average)
             }
         }
-        with(report.outboundArcKPI.getRow("time").entries) {
-            with(single { it.key.source.name == "a" && it.key.target.name == "c" }.value) {
-                assertEquals(20, count)
-                assertDoubleEquals(1.5, average)
-            }
-            with(single { it.key.source.name == "b" && it.key.target.name == "c" }.value) {
-                assertEquals(20, count)
-                assertDoubleEquals(2.5, average)
-            }
-        }
-
     }
 
     @Test
@@ -438,39 +405,23 @@ class CalculatorTests {
             traces =
             sequenceOf(
                 trace(
-                    event("a", "time" to 1L),
-                    event("c", "time" to 10L),
-                    event("b", "time" to 2L),
-                    event("a", "time" to 1L)
+                    event("a", "time:timestamp" to Instant.ofEpochSecond(1L)),
+                    event("c", "time:timestamp" to Instant.ofEpochSecond(10L)),
+                    event("b", "time:timestamp" to Instant.ofEpochSecond(20L)),
+                    event("a", "time:timestamp" to Instant.ofEpochSecond(100L))
                 )
             )
         )
         val report = Calculator(ProcessTrees.loopWithRepeatedActivityInRedo).calculate(log)
-        with(report.inboundArcKPI.getRow("time").entries.single { it.key.source.name == "c" && it.key.target.name == "a" }.value) {
-            assertEquals(1, count)
-        }
-        with(report.outboundArcKPI.getRow("time").entries.single { it.key.source.name == "c" && it.key.target.name == "a" }.value) {
-            assertEquals(1, count)
-        }
-    }
+        fun getWaitingTime(a: String, b: String): Double =
+            report.arcKPI.getRow(WAITING_TIME.urn).entries.single { it.key.source.name == a && it.key.target.name == b }.value.median
 
-    @Test
-    @Ignore("This test is known to fail. See the discussion in the documentation of [Calculator.ProcessTreeArcKPIHandler]")
-    fun `cunning loop`() {
-        val log = Log(
-            traces =
-            sequenceOf(
-                trace(
-                    event("a", "time" to 1),
-                    event("b", "time" to 10),
-                    event("c", "time" to 2),
-                    event("a", "time" to 1)
-                )
-            )
-        )
-        val report = Calculator(ProcessTrees.loopWithPossibilityOfRepeatedActivity).calculate(log)
-        assertTrue { report.inboundArcKPI.getRow("time").entries.none { it.key.source.name == "b" && it.key.target.name == "a" } }
-        assertTrue { report.outboundArcKPI.getRow("time").entries.none { it.key.source.name == "b" && it.key.target.name == "a" } }
+        with(report.arcKPI) {
+            assertEquals(Duration.ofSeconds(9L).totalDays, getWaitingTime("a", "c"))
+            assertEquals(Duration.ofSeconds(19L).totalDays, getWaitingTime("a", "b"))
+            assertEquals(Duration.ofSeconds(90L).totalDays, getWaitingTime("c", "a"))
+            assertEquals(Duration.ofSeconds(80L).totalDays, getWaitingTime("b", "a"))
+        }
     }
 
     @Test
@@ -487,8 +438,7 @@ class CalculatorTests {
             )
         )
         val report = Calculator(ProcessTrees.loopWithSequenceAndExclusiveInRedo).calculate(log)
-        assertTrue { report.inboundArcKPI.getRow("time").entries.none { it.key.source.name == "b" && it.key.target.name == "a" } }
-        assertTrue { report.outboundArcKPI.getRow("time").entries.none { it.key.source.name == "b" && it.key.target.name == "a" } }
+        assertTrue { report.arcKPI.getRow("time").entries.none { it.key.source.name == "b" && it.key.target.name == "a" } }
     }
 
     @Test
@@ -539,23 +489,23 @@ class CalculatorTests {
             println("$activity: $kpi")
         }
 
-        println("Lead time for inbound arc KPI:")
-        for ((arc, kpi) in report.inboundArcKPI.getRow(LEAD_TIME.urn)) {
+        println("Lead time for arc KPI:")
+        for ((arc, kpi) in report.arcKPI.getRow(LEAD_TIME.urn)) {
             println("$arc: $kpi")
         }
 
-        println("Service time for inbound arc KPI:")
-        for ((arc, kpi) in report.inboundArcKPI.getRow(SERVICE_TIME.urn)) {
+        println("Service time for arc KPI:")
+        for ((arc, kpi) in report.arcKPI.getRow(SERVICE_TIME.urn)) {
             println("$arc: $kpi")
         }
 
-        println("Waiting time for inbound arc KPI:")
-        for ((arc, kpi) in report.inboundArcKPI.getRow(WAITING_TIME.urn)) {
+        println("Waiting time for arc KPI:")
+        for ((arc, kpi) in report.arcKPI.getRow(WAITING_TIME.urn)) {
             println("$arc: $kpi")
         }
 
-        println("Suspension time for inbound arc KPI:")
-        for ((arc, kpi) in report.inboundArcKPI.getRow(SUSPENSION_TIME.urn)) {
+        println("Suspension time for arc KPI:")
+        for ((arc, kpi) in report.arcKPI.getRow(SUSPENSION_TIME.urn)) {
             println("$arc: $kpi")
         }
 
@@ -635,28 +585,26 @@ class CalculatorTests {
             assertEquals(55, eventServiceTime[first { it.name == "reject" }]!!.raw.size)
         }
 
-        with(report.inboundArcKPI.getRow(SERVICE_TIME.urn)) {
+        with(report.arcKPI.getRow(COUNT.urn)) {
             with(entries.single { it.key.source.name == "invite additional reviewer" && it.key.target.name == "time-out X" }.value) {
-                assertEquals(0.0, max)
-                assertEquals(198, count)
+                assertEquals(198.0, average)
             }
             with(entries.single { it.key.source.name == "invite additional reviewer" && it.key.target.name == "get review X" }.value) {
-                assertEquals(0.0, max)
-                assertEquals(201, count)
+                assertEquals(201.0, average)
             }
         }
 
-        with(report.outboundArcKPI.getRow(SERVICE_TIME.urn)) {
+        with(report.arcKPI.getRow(WAITING_TIME.urn)) {
             with(entries.single { it.key.source.name == "invite additional reviewer" && it.key.target.name == "time-out X" }.value) {
                 assertEquals(0.0, min)
-                assertDoubleEquals(2.167, average)
-                assertEquals(5.0, max)
+                assertDoubleEquals(5.025252, average)
+                assertEquals(16.0, max)
                 assertEquals(198, count)
             }
             with(entries.single { it.key.source.name == "invite additional reviewer" && it.key.target.name == "get review X" }.value) {
                 assertEquals(0.0, min)
-                assertDoubleEquals(2.383, average)
-                assertEquals(11.0, max)
+                assertDoubleEquals(2.60199, average)
+                assertEquals(10.0, max)
                 assertEquals(201, count)
             }
         }

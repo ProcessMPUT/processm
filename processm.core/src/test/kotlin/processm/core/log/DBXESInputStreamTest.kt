@@ -12,7 +12,7 @@ import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.log.hierarchical.toFlatSequence
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
-import processm.helpers.parseISO8601
+import processm.helpers.time.parseISO8601
 import java.io.File
 import java.util.*
 import kotlin.test.*

@@ -37,6 +37,12 @@ object BasicMetadata {
         setOf(LEAD_TIME, SERVICE_TIME, WAITING_TIME, SYNCHRONIZATION_TIME, SUSPENSION_TIME)
 
     /**
+     * The count of events. The precise semantics of this attribute depends on the context. It may be, e.g., the total
+     * number of times an activity runs, or the total number of tokens passed through the arc.
+     */
+    val COUNT: URN = URN("urn:processm:statistics/count")
+
+    /**
      * The value of a dependency measure associated with dependencies in Causal Nets obtained from mining services.
      * The details of the measure are implementation-specific.
      */

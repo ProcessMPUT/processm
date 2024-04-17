@@ -3,8 +3,8 @@ package processm.core.log.hierarchical
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
 import processm.helpers.implies
-import processm.helpers.parseISO8601
-import processm.helpers.toDateTime
+import processm.helpers.time.parseISO8601
+import processm.helpers.time.toDateTime
 import java.time.Duration
 import java.time.Instant
 import kotlin.math.abs

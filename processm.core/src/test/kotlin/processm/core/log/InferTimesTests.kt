@@ -16,7 +16,7 @@ import processm.core.models.metadata.BasicMetadata.SERVICE_TIME
 import processm.core.models.metadata.BasicMetadata.SUSPENSION_TIME
 import processm.core.models.metadata.BasicMetadata.WAITING_TIME
 import processm.core.querylanguage.Query
-import processm.helpers.fastParseISO8601
+import processm.helpers.time.fastParseISO8601
 import java.time.Duration
 import kotlin.test.Test
 import kotlin.test.assertEquals
