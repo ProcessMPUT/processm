@@ -36,20 +36,17 @@ object DBLogCleaner {
     }
 
     private fun removeTracesOfLogs(connection: Connection, logIds: Collection<Int>) {
-        val removed = ArrayList<Long>()
         connection.prepareStatement(
-            "DELETE FROM traces WHERE log_id=ANY(?) RETURNING id"
+            """WITH deleted_traces AS (DELETE FROM traces WHERE log_id=ANY(?) RETURNING id),
+                deleted_events AS (DELETE FROM events WHERE trace_id=ANY(SELECT id FROM deleted_traces) RETURNING id),
+                ignore AS (DELETE FROM events_attributes WHERE event_id = ANY (SELECT id FROM deleted_events))
+                DELETE FROM traces_attributes WHERE trace_id = ANY (SELECT id FROM deleted_traces)
+            """
         ).use {
             it.setArray(1, connection.createArrayOf("int", logIds.toTypedArray()))
 
-            it.executeQuery().use { response ->
-                while (response.next())
-                    removed.add(response.getLong("id"))
-            }
+            it.execute()
         }
-
-        removeTraceAttributes(connection, removed)
-        removeEventsOfTraces(connection, removed)
     }
 
     /**
@@ -60,31 +57,19 @@ object DBLogCleaner {
      */
     internal fun removeTraces(connection: Connection, traceIds: Collection<Long>) {
         connection.prepareStatement(
-            "DELETE FROM traces WHERE id=ANY(?); DELETE FROM traces_attributes WHERE trace_id=ANY(?)"
+            """DELETE FROM traces WHERE id=ANY(?);
+                DELETE FROM traces_attributes WHERE trace_id=ANY(?);
+                WITH deleted_events AS (DELETE FROM events WHERE trace_id=ANY(?) RETURNING id)
+                DELETE FROM events_attributes WHERE event_id = ANY(SELECT id FROM deleted_events)
+            """.trimMargin()
         ).use {
             val array = connection.createArrayOf("bigint", traceIds.toTypedArray())
             it.setArray(1, array)
             it.setArray(2, array)
+            it.setArray(3, array)
 
             it.execute()
         }
-
-        removeEventsOfTraces(connection, traceIds)
-    }
-
-    private fun removeEventsOfTraces(connection: Connection, traceIds: Collection<Long>) {
-        val removed = ArrayList<Long>()
-        connection.prepareStatement(
-            "DELETE FROM events WHERE trace_id=ANY(?) RETURNING id"
-        ).use {
-            it.setArray(1, connection.createArrayOf("bigint", traceIds.toTypedArray()))
-            it.executeQuery().use { response ->
-                while (response.next())
-                    removed.add(response.getLong("id"))
-            }
-        }
-
-        removeEventAttributes(connection, removed)
     }
 
     /**
@@ -94,7 +79,6 @@ object DBLogCleaner {
      * @param eventIds The collection of event ids. For null all events of the given traces are removed.
      */
     internal fun removeEvents(connection: Connection, eventIds: Collection<Long>) {
-        val removed = ArrayList<Long>()
         connection.prepareStatement(
             "DELETE FROM events WHERE id=ANY(?); DELETE FROM events_attributes WHERE event_id=ANY(?)"
         ).use {
@@ -102,22 +86,6 @@ object DBLogCleaner {
             it.setArray(1, array)
             it.setArray(2, array)
 
-            it.execute()
-        }
-    }
-
-    @Deprecated("Combine with the upper-level query into CTE (#113)")
-    private fun removeEventAttributes(connection: Connection, eventsIds: Collection<Long>) {
-        connection.prepareStatement("""DELETE FROM events_attributes WHERE event_id = ANY (?)""").use {
-            it.setArray(1, connection.createArrayOf("bigint", eventsIds.toTypedArray()))
-            it.execute()
-        }
-    }
-
-    @Deprecated("Combine with the upper-level query into CTE (#113)")
-    private fun removeTraceAttributes(connection: Connection, tracesIds: Collection<Long>) {
-        connection.prepareStatement("""DELETE FROM traces_attributes WHERE trace_id = ANY (?)""").use {
-            it.setArray(1, connection.createArrayOf("bigint", tracesIds.toTypedArray()))
             it.execute()
         }
     }
