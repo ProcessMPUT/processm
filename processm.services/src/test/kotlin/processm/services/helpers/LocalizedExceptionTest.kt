@@ -1,26 +1,25 @@
-package processm.services.api
+package processm.services.helpers
 
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import java.util.*
-import kotlin.test.Test
 import kotlin.test.assertTrue
 
-class ApiExceptionTest {
+class LocalizedExceptionTest {
 
     val PL = Locale("pl")
 
     // TODO I think these tests are not perfect, as there's an internal fallback to the system's locale
 
     @ParameterizedTest
-    @EnumSource(ApiExceptionReason::class)
-    fun `ApiExceptions are translated to Polish`(reason: ApiExceptionReason) {
+    @EnumSource(ExceptionReason::class)
+    fun `ExceptionReasons are translated to Polish`(reason: ExceptionReason) {
         assertTrue { PL.getErrorMessage(reason.toString()).isNotBlank() }
     }
 
     @ParameterizedTest
-    @EnumSource(ApiExceptionReason::class)
-    fun `ApiExceptions are translated to English`(reason: ApiExceptionReason) {
+    @EnumSource(ExceptionReason::class)
+    fun `ExceptionReasons are translated to English`(reason: ExceptionReason) {
         assertTrue { Locale.US.getErrorMessage(reason.toString()).isNotBlank() }
     }
 }

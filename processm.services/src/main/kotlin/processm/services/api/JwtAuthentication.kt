@@ -6,6 +6,7 @@ import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.http.*
 import io.ktor.server.config.*
 import processm.services.api.models.OrganizationRole
+import processm.services.helpers.ExceptionReason
 import java.security.SecureRandom
 import java.time.Duration
 import java.time.Instant
@@ -30,7 +31,7 @@ object JwtAuthentication {
         var expiredToken = createProlongingTokenVerifier(issuer, secret, acceptableExpiration).verify(encodedToken)
 
         if (Duration.between(expiredToken.expiresAt.toInstant(), Instant.now()) > acceptableExpiration) {
-            throw ApiException(ApiExceptionReason.TOKEN_EXPIRED, responseCode = HttpStatusCode.Unauthorized)
+            throw ApiException(ExceptionReason.TOKEN_EXPIRED, responseCode = HttpStatusCode.Unauthorized)
         }
         val apiUser = ApiUser(expiredToken.claims)
         val newExpirationDate = Instant

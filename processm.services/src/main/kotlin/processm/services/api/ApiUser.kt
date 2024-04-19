@@ -4,15 +4,16 @@ import com.auth0.jwt.interfaces.Claim
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import processm.services.api.models.OrganizationRole
+import processm.services.helpers.ExceptionReason
 import java.util.*
 
 data class ApiUser(private val claims: Map<String, Claim>) : Principal {
     val userId: UUID =
         UUID.fromString(
-            claims["userId"]?.asString() ?: throw ApiException(ApiExceptionReason.NO_FIELD_IN_TOKEN, arrayOf("userId"))
+            claims["userId"]?.asString() ?: throw ApiException(ExceptionReason.NO_FIELD_IN_TOKEN, arrayOf("userId"))
         )
     val username: String =
-        claims["username"]?.asString() ?: throw ApiException(ApiExceptionReason.NO_FIELD_IN_TOKEN, arrayOf("username"))
+        claims["username"]?.asString() ?: throw ApiException(ExceptionReason.NO_FIELD_IN_TOKEN, arrayOf("username"))
     val organizations: Map<UUID, OrganizationRole> =
         claims["organizations"]?.asString()?.split(JwtAuthentication.MULTIVALUE_CLAIM_SEPARATOR)?.mapNotNull {
             if (it.isEmpty())
@@ -20,7 +21,7 @@ data class ApiUser(private val claims: Map<String, Claim>) : Principal {
             val (organizationId, organizationRole) = it.split(':')
             return@mapNotNull UUID.fromString(organizationId) to OrganizationRole.valueOf(organizationRole)
         }?.toMap()
-            ?: throw ApiException(ApiExceptionReason.NO_FIELD_IN_TOKEN, arrayOf("organizations"))
+            ?: throw ApiException(ExceptionReason.NO_FIELD_IN_TOKEN, arrayOf("organizations"))
 }
 
 /**
@@ -33,10 +34,10 @@ internal fun ApiUser.ensureUserBelongsToOrganization(
     organizationRole: OrganizationRole = OrganizationRole.reader
 ) {
     if (!organizations.containsKey(organizationId)) {
-        throw ApiException(ApiExceptionReason.NOT_MEMBER_OF_ORGANIZATION, responseCode = HttpStatusCode.Forbidden)
+        throw ApiException(ExceptionReason.NOT_MEMBER_OF_ORGANIZATION, responseCode = HttpStatusCode.Forbidden)
     } else if ((organizations[organizationId]?.ordinal ?: -1) > organizationRole.ordinal) {
         throw ApiException(
-            ApiExceptionReason.INSUFFICIENT_PERMISSION_IN_ORGANIZATION,
+            ExceptionReason.INSUFFICIENT_PERMISSION_IN_ORGANIZATION,
             responseCode = HttpStatusCode.Forbidden
         )
     }

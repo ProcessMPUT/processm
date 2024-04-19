@@ -11,6 +11,7 @@ import processm.helpers.mapToSet
 import processm.services.api.models.ErrorMessage
 import processm.services.api.models.OrganizationMember
 import processm.services.api.models.OrganizationRole
+import processm.services.helpers.ExceptionReason
 import processm.services.logic.*
 import java.util.*
 import java.util.stream.Stream
@@ -106,7 +107,7 @@ class OrganizationsApiTest : BaseApiTest() {
 
             withAuthentication(role = null) {
                 every { organizationService.getMembers(removedOrganizationId) } throws ApiException(
-                    ApiExceptionReason.NOT_FOUND,
+                    ExceptionReason.NOT_FOUND,
                     responseCode = HttpStatusCode.NotFound
                 )
 
