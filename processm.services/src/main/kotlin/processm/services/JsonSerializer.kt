@@ -13,8 +13,13 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.*
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.serializer
+import processm.dbmodels.models.ComponentTypeDto
+import processm.enhancement.kpi.Report
 import processm.helpers.UUIDSerializer
 import processm.helpers.serialization.SerializersModuleProvider
+import processm.services.api.models.BPMNComponentData
+import processm.services.api.models.CausalNetComponentData
+import processm.services.api.models.PetriNetComponentData
 import java.time.LocalDateTime
 import java.util.*
 
@@ -43,7 +48,22 @@ private object AnySerializer : KSerializer<Any?> {
             return null
 
         decoder as JsonDecoder
-        return deserializeJsonElement(decoder.decodeJsonElement())
+        val jsonElement = decoder.decodeJsonElement()
+        val componentType = ((jsonElement as? JsonObject)?.get("type") as? JsonPrimitive)?.content?.let {
+            ComponentTypeDto.byTypeNameInDatabase(it)
+        }
+        return when (componentType) {
+            ComponentTypeDto.BPMN ->
+                decoder.json.decodeFromJsonElement<BPMNComponentData>(jsonElement)
+
+            ComponentTypeDto.PetriNet ->
+                decoder.json.decodeFromJsonElement<PetriNetComponentData>(jsonElement)
+
+            ComponentTypeDto.CausalNet ->
+                decoder.json.decodeFromJsonElement<CausalNetComponentData>(jsonElement)
+
+            else -> deserializeJsonElement(jsonElement)
+        }
     }
 
     private fun deserializeJsonElement(element: JsonElement): Any = when (element) {
@@ -56,7 +76,7 @@ private object AnySerializer : KSerializer<Any?> {
     override fun serialize(encoder: Encoder, value: Any?) {
         if (value === null)
             encoder.encodeNull()
-        else if (value::class == Any::class)
+        else if (value::class == Any::class || (value is Map<*, *> && value.isEmpty()))
             encoder.beginStructure(emptyObjectDescriptor).endStructure(emptyObjectDescriptor)
         else {
             val serializer = encoder.serializersModule.serializer(value.javaClass)

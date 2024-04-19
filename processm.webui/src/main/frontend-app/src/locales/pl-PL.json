@@ -1,6 +1,6 @@
 {
   "language-name": "Polski",
-  "code": "pl_PL",
+  "code": "pl-PL",
   "flag": "pl",
   "navigation": {
     "menu": "Menu",
@@ -87,7 +87,8 @@
     },
     "jdbc-etl-process": {
       "title": "Dodaj ręczny proces ETL",
-      "description": "Ręcznie zdefiniuj zapytanie, które zwraca istotne zdarzenia w formie wierszy wyniku"
+      "description": "Ręcznie zdefiniuj zapytanie, które zwraca istotne zdarzenia w formie wierszy wyniku",
+      "trigger": "Wykonaj proces jednorazowo w najwcześniejszym możliwym momencie."
     },
     "upload-xes-file": {
       "title": "Załaduj dziennik zdarzeń XES",
@@ -183,6 +184,14 @@
     "change-password": "Zmień hasło",
     "password-changed": "Hasło zostało zmienione."
   },
+  "organizations": {
+    "attach": "Dołącz organizację jako pod-organizację",
+    "detach": "Odłącz organizację od jej organizacji nadrzędnej",
+    "moved": "Pomyślnie przeniesiono organizację.",
+    "switch-to-private": "Organizacja publiczna. Przełącz na prywatną.",
+    "switch-to-public": "Organizacja prywatna. Przełącz na publiczną.",
+    "login": "Zaloguj do organizacji"
+  },
   "users": {
     "exclude-member": "Usuń członka z organizacji",
     "groups": "Grupy",
@@ -194,15 +203,21 @@
     "implicit": "Domniemana",
     "member-included": "Dodano członka do organizacji",
     "member-excluded": "Usunięto członka z organizacji",
+    "no-organization-error": "Nie jesteś członkiem żadnej organizacji",
+    "organization": "Organizacja",
     "organizations": "Organizacje",
+    "organization-remove-objects": "Grupy tej organizacji są jedynymi właścicielami następujących obiektów. Czy chcesz je usunąć w celu usunięcia organizacji?",
     "page-title": "Użytkownicy",
     "remove-objects": "Ta grupa jest jedynym właścicielem następujących obiektów. Czy chcesz je usunąć w celu usunięcia grupy?",
     "role": "Rola",
+    "select-organization": "Wybierz organizację",
     "shared": "Współdzielona",
     "users": "Użytkownicy",
     "user": "Użytkownik",
     "you": "Ty",
     "unknown-email": "Podany adres e-mail nie odpowiada znanemu użytkownikowi",
+    "unique-organization-id": "Identyfikator organizacji",
+    "unique-group-id": "Identyfikator grupy",
     "roles": {
       "owner": "Właściciel",
       "reader": "Czytelnik",
@@ -212,6 +227,13 @@
   },
   "xes-data-table": {
     "logs-removal-confirmation": "Czy potwierdzasz nieodwracalne usunięcie {count} logów?"
+  },
+  "new-dialog": {
+    "dialog-title": "@:common.add-new",
+    "new-name-placeholder": "@:rename-dialog.new-name-placeholder",
+    "validation": {
+      "name-empty": "@:rename-dialog.validation.name-empty"
+    }
   },
   "rename-dialog": {
     "dialog-title": "Zmień nazwę",
@@ -357,6 +379,10 @@
       "success": "Pomyślnie zapisano",
       "failure": "Zapisywanie nie powiodło się"
     },
+    "creating": {
+      "success": "Pomyślnie utworzono",
+      "failure": "Tworzenie nie powiodło się"
+    },
     "activate": "Aktywuj",
     "deactivate": "Dezaktywuj",
     "operation-successful": "Operacja wykonana pomyślnie",
@@ -367,6 +393,8 @@
     },
     "in": "w",
     "search": "Szukaj",
-    "security": "Bezpieczeństwo"
+    "security": "Bezpieczeństwo",
+    "yes": "Tak",
+    "no": "Nie"
   }
 }

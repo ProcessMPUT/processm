@@ -15,10 +15,14 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.*
 
+/**
+ * @param version Every event is tagged with this version number (column `version`, not available from PQL)
+ */
 open class DBXESOutputStream protected constructor(
     protected val connection: Connection,
     val isAppending: Boolean,
-    val batchSize: Int = DBXESOutputStream.batchSize
+    val batchSize: Int = DBXESOutputStream.batchSize,
+    val version: Long = 1L
 ) :
     XESOutputStream {
     companion object {
@@ -199,7 +203,7 @@ open class DBXESOutputStream protected constructor(
         }
 
         val eventCopy =
-            LazyCopy("""$tempEventsTable(trace_id,"concept:name","concept:instance","cost:total","cost:currency","identity:id","lifecycle:transition","lifecycle:state","org:resource","org:role","org:group","time:timestamp")""")
+            LazyCopy("""$tempEventsTable(trace_id,"concept:name","concept:instance","cost:total","cost:currency","identity:id","lifecycle:transition","lifecycle:state","org:resource","org:role","org:group","time:timestamp","version")""")
         val traceAttrCopy = copyForAttributes("TRACES_ATTRIBUTES", "trace")
         val eventAttrCopy = copyForAttributes("EVENTS_ATTRIBUTES", "event")
 
@@ -312,6 +316,7 @@ open class DBXESOutputStream protected constructor(
             add(event.orgRole)
             add(event.orgGroup)
             add(event.timeTimestamp)
+            add(version)
 
             flushRow(traceIndex)
         }

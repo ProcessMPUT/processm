@@ -102,6 +102,14 @@ fun Route.WorkspacesApi() {
             call.respond(HttpStatusCode.OK, component)
         }
 
+        get<Paths.EmptyComponent> { path ->
+            val principal = call.authentication.principal<ApiUser>()!!
+
+            val component = workspaceService.getEmptyComponent(ComponentTypeDto.byTypeNameInDatabase(path.type))
+
+            call.respond(HttpStatusCode.OK, component)
+        }
+
         put<Paths.WorkspaceComponent> { component ->
             val principal = call.authentication.principal<ApiUser>()!!
             val workspaceComponent = runCatching { call.receiveNullable<AbstractComponent>() }.let {

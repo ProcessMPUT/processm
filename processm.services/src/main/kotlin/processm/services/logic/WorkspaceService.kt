@@ -12,7 +12,10 @@ import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
 import processm.dbmodels.urn
 import processm.logging.loggedScope
+import processm.services.api.getCustomProperties
+import processm.services.api.models.AbstractComponent
 import processm.services.api.models.CustomProperty
+import processm.services.api.toComponentType
 import processm.services.api.updateData
 import java.time.Instant
 import java.util.*
@@ -154,7 +157,6 @@ class WorkspaceService(
                 name,
                 query,
                 dataStore,
-                componentType,
                 customizationData,
                 layoutData,
                 data,
@@ -243,28 +245,49 @@ class WorkspaceService(
         name: String?,
         query: String?,
         dataStore: UUID?,
-        componentType: ComponentTypeDto?,
         customizationData: String? = null,
         layoutData: String? = null,
         data: String? = null,
         customProperties: Array<CustomProperty> = emptyArray()
     ) {
         WorkspaceComponent[workspaceComponentId].apply {
+            var trigger = false
             if (workspaceId != null) this.workspace = Workspace[workspaceId]
             if (name != null) this.name = name
-            if (query != null) this.query = query
-            if (dataStore != null) this.dataStoreId = dataStore
-            if (componentType != null) this.componentType =
-                ComponentTypeDto.byTypeNameInDatabase(componentType.typeName)
+            if (query != null && this.query != query) {
+                this.query = query
+                trigger = true
+            }
+            if (dataStore != null && this.dataStoreId != dataStore) {
+                this.dataStoreId = dataStore
+                trigger = true
+            }
+            // updating componentType is not supported, as it is impossible to convert data from one component type to another
             if (customizationData != null) this.customizationData = customizationData
             if (layoutData != null) this.layoutData = layoutData
             if (data != null) this.updateData(data)
-            this.algorithm = customProperties.firstOrNull { it.name == "algorithm" }?.value
+            customProperties.firstOrNull { it.name == "algorithm" }?.value?.let { algorithm ->
+                if (algorithm != this.algorithm) {
+                    this.algorithm = algorithm
+                    trigger = true
+                }
+            }
             this.userLastModified = Instant.now()
 
-            afterCommit {
-                triggerEvent(producer)
+            if (trigger) {
+                afterCommit {
+                    triggerEvent(producer)
+                }
             }
         }
     }
+
+    fun getEmptyComponent(type: ComponentTypeDto): AbstractComponent =
+        AbstractComponent(
+            UUID.randomUUID(),
+            "",
+            UUID.randomUUID(),
+            type.toComponentType(),
+            customProperties = getCustomProperties(type)
+        )
 }

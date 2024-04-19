@@ -2,7 +2,7 @@ import Vue from "vue";
 import Workspace from "@/models/Workspace";
 import BaseService from "./BaseService";
 import { LayoutElement, WorkspaceComponent } from "@/models/WorkspaceComponent";
-import { AbstractComponent, Workspace as ApiWorkspace } from "@/openapi";
+import { AbstractComponent, ComponentType, Workspace as ApiWorkspace } from "@/openapi";
 import { WorkspaceObserver } from "@/utils/WorkspaceObserver";
 
 export default class WorkspaceService extends BaseService {
@@ -65,7 +65,6 @@ export default class WorkspaceService extends BaseService {
 
   public async updateComponent(workspaceId: string, componentId: string, component: WorkspaceComponent) {
     const payload = Object.assign({}, component) as { data?: any };
-    delete payload.data;
     const response = await this.workspacesApi.addOrUpdateWorkspaceComponent(workspaceId, componentId, payload as AbstractComponent);
 
     return response.status == 204;
@@ -110,5 +109,10 @@ export default class WorkspaceService extends BaseService {
       return true;
     };
     return observer;
+  }
+
+  public async getEmptyComponent(componentType: ComponentType) {
+    const response = await this.workspacesApi.getEmptyComponent(componentType);
+    return response.data;
   }
 }

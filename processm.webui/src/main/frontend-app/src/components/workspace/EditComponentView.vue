@@ -36,25 +36,6 @@
           </v-list-item>
           <v-list-item>
             <v-list-item-content>
-              <v-select
-                v-model="component.type"
-                :hint="$t('workspace.component.edit.type-hint')"
-                :items="availableComponents"
-                :label="$t('workspace.component.edit.type')"
-              >
-                <template slot="item" slot-scope="componentType">
-                  <v-icon>${{ componentType.item }}Component</v-icon>
-                  {{ $t(`workspace.component.${kebabize(componentType.item)}`) }}
-                </template>
-                <template slot="selection" slot-scope="componentType">
-                  <v-icon>${{ componentType.item }}Component</v-icon>
-                  {{ $t(`workspace.component.${kebabize(componentType.item)}`) }}
-                </template>
-              </v-select>
-            </v-list-item-content>
-          </v-list-item>
-          <v-list-item>
-            <v-list-item-content>
               <v-text-field
                 v-model="component.query"
                 :hint="$t('workspace.component.edit.query-hint')"
@@ -188,7 +169,7 @@ export default class EditComponentView extends Vue {
       await waitForRepaint(() => 0);
 
       await this.workspaceService.updateComponent(this.workspaceId, this.componentDetails.id, this.component);
-      this.component.userLastModified = new Date().toISOString();
+      this.component.userLastModified = new Date().toISOString().slice(0, -1);
 
       this.$emit("component-updated", this.component);
       this.app.success(`${this.$t("common.saving.success")}`);

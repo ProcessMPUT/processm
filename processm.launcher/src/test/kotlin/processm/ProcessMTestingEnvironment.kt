@@ -25,6 +25,7 @@ import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.LogInputStream
 import processm.core.persistence.Migrator
+import processm.core.persistence.connection.DatabaseChecker
 import processm.etl.PostgreSQLEnvironment
 import processm.etl.metamodel.MetaModelDebeziumWatchingService.Companion.DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY
 import processm.services.JsonSerializer
@@ -138,7 +139,7 @@ class ProcessMTestingEnvironment {
             loadConfiguration(true)
             properties.forEach { (k, v) -> System.setProperty(k, v) }
             jdbcUrl?.let { jdbcUrl ->
-                System.setProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL", jdbcUrl)
+                System.setProperty(DatabaseChecker.databaseConnectionURLProperty, jdbcUrl)
                 Migrator.reloadConfiguration()
             }
             httpPort = Random.Default.nextInt(1025, 65535)
@@ -250,7 +251,7 @@ class ProcessMTestingEnvironment {
 
     val organizations: List<Organization>
         get() = get<Paths.UserOrganizations, List<Organization>> {
-            return@get body<List<Organization>>().toList()
+            return@get body<List<UserRoleInOrganization>>().map { it.organization }
         }
 
     fun registerUser(userEmail: String, organizationName: String) =

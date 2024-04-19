@@ -13,6 +13,7 @@ import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.toFlatSequence
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
+import processm.etl.helpers.notifyAboutNewData
 import processm.helpers.getPropertyIgnoreCase
 import processm.logging.loggedScope
 import java.io.BufferedInputStream
@@ -74,6 +75,8 @@ class LogsService(private val producer: Producer) {
                         }
                 )
             }
+            // It is possible that the user first configures an object, and later uploads data relevant to the object
+            notifyAboutNewData(dataStoreId)
         }
     }
 

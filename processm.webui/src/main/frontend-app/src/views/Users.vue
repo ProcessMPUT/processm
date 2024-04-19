@@ -11,6 +11,11 @@
           {{ $t("users.groups") }}
           <v-icon>group_work</v-icon>
         </v-tab>
+
+        <v-tab href="#organizations" id="tab-organizations">
+          {{ $t("users.organizations") }}
+          <v-icon>groups3</v-icon>
+        </v-tab>
       </v-tabs>
     </v-row>
     <v-row class="ma-0">
@@ -21,6 +26,9 @@
           </v-tab-item>
           <v-tab-item value="groups">
             <user-group-list />
+          </v-tab-item>
+          <v-tab-item value="organizations">
+            <organization-list />
           </v-tab-item>
         </v-tabs-items>
       </v-col>
@@ -41,9 +49,10 @@ import Vue from "vue";
 import { Component } from "vue-property-decorator";
 import UserList from "./UserList.vue";
 import UserGroupList from "./UserGroupList.vue";
+import OrganizationList from "./OrganizationList.vue";
 
 @Component({
-  components: { UserList, UserGroupList }
+  components: { OrganizationList, UserList, UserGroupList }
 })
 export default class Users extends Vue {
   tab = 0;

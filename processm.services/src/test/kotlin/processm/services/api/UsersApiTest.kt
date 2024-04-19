@@ -458,13 +458,21 @@ class UsersApiTest : BaseApiTest() {
         val accountService = declareMock<AccountService>()
 
         every { accountService.changeLocale(userId = any(), locale = "pl_PL") } just runs
+        every { accountService.getUser(any()) } returns mockk {
+            every { id } returns EntityID(UUID.randomUUID(), Users)
+            every { email } returns "email@example.com"
+            every { locale } returns "pl-PL"
+        }
 
         withAuthentication {
             with(handleRequest(HttpMethod.Patch, "/api/users/me/locale") {
                 addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                 withSerializedBody(LocaleChange("pl_PL"))
             }) {
-                assertEquals(HttpStatusCode.NoContent, response.status())
+                assertEquals(HttpStatusCode.OK, response.status())
+                with(response.deserializeContent<UserAccountInfo>()) {
+                    assertEquals("pl-PL", locale)
+                }
             }
         }
 
@@ -526,16 +534,20 @@ class UsersApiTest : BaseApiTest() {
                             every { organization.id } returns EntityID(UUID.randomUUID(), Organizations)
                             every { organization.name } returns "Org1"
                             every { organization.isPrivate } returns false
+                            every { organization.parentOrganization } returns null
                             every { role } returns RoleType.Writer.role
                         })
 
                 with(handleRequest(HttpMethod.Get, "/api/users/me/organizations")) {
                     assertEquals(HttpStatusCode.OK, response.status())
                     val deserializedContent =
-                        response.deserializeContent<List<ApiOrganization>>()
+                        response.deserializeContent<List<ApiUserRoleInOrganization>>()
                     assertEquals(1, deserializedContent.count())
                     assertTrue {
-                        deserializedContent.any { it.name == "Org1" }
+                        deserializedContent.any { it.organization.name == "Org1" }
+                    }
+                    assertTrue {
+                        deserializedContent.any { it.role == OrganizationRole.writer }
                     }
                 }
 

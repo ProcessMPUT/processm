@@ -87,6 +87,12 @@ object Paths {
     @Location("/organizations/{organizationId}")
     class Organization(val organizationId: UUID)
 
+    @Location("/organizations/{organizationId}/suborganizations/{subOrganizationId}")
+    class SubOrganization(val organizationId: UUID, val subOrganizationId: UUID)
+
+    @Location("/organizations/{organizationId}/suborganizations")
+    class SubOrganizations(val organizationId: UUID)
+
     /**
      * Groups associated with the specified organization.
      *
@@ -102,6 +108,14 @@ object Paths {
      */
     @Location("/organizations/{organizationId}/members")
     class OrganizationMembers(val organizationId: UUID)
+
+    /**
+     * Get identifiers of the objects such that the groups of the organization are the sole owners of
+     *
+     * @param organizationId Organization ID
+     */
+    @Location("/organizations/{organizationId}/sole-ownership")
+    class OrganizationSoleOwnership(val organizationId: UUID)
 
     /**
      * List of organizations
@@ -290,6 +304,9 @@ object Paths {
      */
     @Location("/workspaces")
     class Workspaces
+
+    @Location("/workspaces/empty-component/{type}")
+    class EmptyComponent(val type:String)
 
     /**
      * Get the whole ACL for the given URN

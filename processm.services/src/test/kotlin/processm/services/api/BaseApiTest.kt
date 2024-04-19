@@ -25,6 +25,7 @@ import org.koin.test.mock.declareMock
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.Organizations
 import processm.dbmodels.models.RoleType
+import processm.dbmodels.models.UserRoleInOrganization
 import processm.dbmodels.models.Users
 import processm.services.JsonSerializer
 import processm.services.api.models.AuthenticationResult
@@ -125,19 +126,38 @@ abstract class BaseApiTest : KoinTest {
         role: Pair<OrganizationRole, UUID>? = OrganizationRole.owner to UUID.randomUUID(),
         acl: Iterable<Triple<RoleType, Table, UUID>> = emptyList(),
         callback: JwtAuthenticationTrackingEngine.() -> Unit
+    ): Unit = withAuthentication(
+        userId,
+        login,
+        password,
+        acl,
+        roles = if (role !== null) arrayOf(role) else emptyArray(),
+        callback
+    )
+
+    protected inline fun TestApplicationEngine.withAuthentication(
+        userId: UUID = UUID.randomUUID(),
+        login: String = "user@example.com",
+        password: String = "pass",
+        acl: Iterable<Triple<RoleType, Table, UUID>> = emptyList(),
+        vararg roles: Pair<OrganizationRole, UUID> = arrayOf(OrganizationRole.owner to UUID.randomUUID()),
+        callback: JwtAuthenticationTrackingEngine.() -> Unit
     ) {
         val accountService = declareMock<AccountService>()
         every { accountService.verifyUsersCredentials(login, password) } returns mockk {
             every { id } returns EntityID(userId, Users)
             every { email } returns login
         }
-        if (role !== null)
-            every { accountService.getRolesAssignedToUser(userId) } returns
-                    listOf(mockk {
-                        every { user.id } returns EntityID(userId, Users)
-                        every { organization.id } returns EntityID(role.second, Organizations)
-                        every { this@mockk.role } returns transactionMain { role.first.toDB() }
-                    })
+        if (roles.isNotEmpty()) {
+            val rolesList: List<UserRoleInOrganization> = roles.map { role ->
+                mockk {
+                    every { user.id } returns EntityID(userId, Users)
+                    every { organization.id } returns EntityID(role.second, Organizations)
+                    every { this@mockk.role } returns transactionMain { role.first.toDB() }
+                }
+            }
+            every { accountService.getRolesAssignedToUser(userId) } returns rolesList
+        }
         val aclService = declareMock<ACLService>()
         val tableSlot = slot<Table>()
         val uuidSlot = slot<UUID>()

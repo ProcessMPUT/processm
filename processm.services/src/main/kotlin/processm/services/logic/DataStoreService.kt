@@ -14,14 +14,14 @@ import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.afterCommit
-import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
-import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMaps
-import processm.dbmodels.etl.jdbc.ETLConfiguration
-import processm.dbmodels.etl.jdbc.ETLConfigurations
+import processm.dbmodels.etl.jdbc.*
 import processm.dbmodels.models.*
+import processm.dbmodels.models.ACTIVATE
 import processm.dbmodels.models.AutomaticEtlProcess
+import processm.dbmodels.models.DEACTIVATE
 import processm.dbmodels.models.DataConnector
 import processm.dbmodels.models.DataStore
+import processm.dbmodels.models.TYPE
 import processm.dbmodels.urn
 import processm.etl.discovery.SchemaCrawlerExplorer
 import processm.etl.helpers.getDataSource
@@ -535,6 +535,20 @@ class DataStoreService(
 
                 else -> throw IllegalArgumentException("Unknown ETL process type: ${etlProcess.processType}.")
             }
+        }
+    }
+
+    fun triggerEtlProcess(dataStoreId: UUID, etlProcessId: UUID) {
+        assertDataStoreExists(dataStoreId)
+        transaction(DBCache.get("$dataStoreId").database) {
+            ETLConfiguration
+                .find { ETLConfigurations.metadata eq etlProcessId }
+                .firstOrNull()
+                .validateNotNull(
+                    Reason.ResourceNotFound,
+                    "The specified process ID does not correspond to a JDBC ETCL process"
+                )
+                .notifyUsers(TRIGGER)
         }
     }
 

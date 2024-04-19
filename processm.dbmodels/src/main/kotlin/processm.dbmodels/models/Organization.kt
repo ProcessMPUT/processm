@@ -4,8 +4,15 @@ import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.and
 import java.util.*
+
+object OrganizationsDescendants : Table("organizations_descendants") {
+    val subOrganizationId = reference("sub_organization_id", Organizations)
+    val superOrganizationId = reference("super_organization_id", Organizations).nullable()
+    override val primaryKey = PrimaryKey(subOrganizationId)
+}
 
 object Organizations : UUIDTable("organizations") {
     val name = text("name")

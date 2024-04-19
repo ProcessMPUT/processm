@@ -108,7 +108,9 @@ export default class XesDataTable extends Vue {
         count: this.selectedEntries.length
       })}`,
       {
-        title: `${this.$t("common.warning")}`
+        title: `${this.$t("common.warning")}`,
+        buttonTrueText: this.$t("common.yes").toString(),
+        buttonFalseText: this.$t("common.no").toString()
       }
     );
 

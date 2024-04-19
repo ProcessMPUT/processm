@@ -49,7 +49,7 @@ class StaticContentTest {
         val httpGetDoc = client.get(baseURI).bodyAsText()
         val httpsGetDoc = client.get(baseURIs).bodyAsText()
 
-        assertTrue(httpGetDoc.startsWith("<!DOCTYPE html>"))
+        assertTrue(httpGetDoc.startsWith("<!DOCTYPE html>", ignoreCase = true))
         assertEquals(httpGetDoc, httpsGetDoc)
     }
 }

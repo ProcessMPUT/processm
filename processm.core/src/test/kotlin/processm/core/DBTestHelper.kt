@@ -22,7 +22,8 @@ object DBTestHelper {
      * The UUID of the JournalReview-extra.xes log.
      */
     val JournalReviewExtra by lazy {
-        this::class.java.getResourceAsStream("/xes-logs/JournalReview-extra.xes").use { loadLog(it) }
+        this::class.java.getResourceAsStream("/xes-logs/JournalReview-extra.xes")
+            .use { loadLog(it).also { computeVersionsFromTimestamps(it) } }
     }
 
     /**
@@ -58,6 +59,28 @@ object DBTestHelper {
             })
         }
         return uuid
+    }
+
+    fun computeVersionsFromTimestamps(logIdentityId: UUID) {
+        DBCache.get(dbName).getConnection().use { connection ->
+            connection.prepareStatement(
+                """
+                update events
+                set version = tmp.version
+                from
+                (
+                    select events.id, rank() over (order by events."time:timestamp") as version
+                    from logs join traces on logs.id = traces.log_id join events on traces.id = events.trace_id
+                    where logs."identity:id"=?::uuid
+                    order by events."time:timestamp"
+                ) tmp
+                where
+                    events.id = tmp.id;"""
+            ).use { ps ->
+                ps.setString(1, logIdentityId.toString())
+                ps.executeUpdate()
+            }
+        }
     }
 
     /**

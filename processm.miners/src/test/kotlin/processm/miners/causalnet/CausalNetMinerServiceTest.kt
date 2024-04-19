@@ -20,6 +20,8 @@ import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
 import processm.helpers.toUUID
+import processm.miners.ALGORITHM_HEURISTIC_MINER
+import processm.miners.ALGORITHM_INDUCTIVE_MINER
 import processm.miners.causalnet.onlineminer.OnlineMiner
 import processm.miners.processtree.inductiveminer.OnlineInductiveMiner
 import java.lang.Thread.sleep
@@ -120,7 +122,7 @@ class CausalNetMinerServiceTest {
 
             val cnet = transactionMain {
                 component.refresh()
-                component.dataAsObject?.let {
+                component.mostRecentData()?.let {
                     DBSerializer.fetch(DBCache.get(DBTestHelper.dbName).database, it[0].modelId.toInt())
                 }
             }
@@ -145,7 +147,7 @@ class CausalNetMinerServiceTest {
 
         val cnetId = transactionMain {
             component.refresh()
-            component.dataAsObject?.let { it[0].modelId.toInt() }
+            component.mostRecentData()?.let { it[0].modelId.toInt() }
         }
 
         assertNotNull(cnetId, "Expecting a C-net to be created.")

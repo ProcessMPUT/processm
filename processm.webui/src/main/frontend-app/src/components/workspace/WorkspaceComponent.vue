@@ -50,7 +50,7 @@
       <p v-else class="no-data">{{ $t("workspace.component.no-data") }}</p>
       <div class="last-updated">
         {{ $t("common.last-updated") }}:
-        {{ lastModified }}
+        {{ new Date(lastModified+'Z').toLocaleString() }}
       </div>
     </div>
   </div>

@@ -1,59 +1,27 @@
 package processm.core.models.bpmn.converters
 
-import jakarta.xml.bind.JAXBElement
 import processm.core.models.bpmn.BPMNModel
 import processm.core.models.bpmn.jaxb.*
 import processm.core.models.causalnet.*
 import processm.core.models.causalnet.Node
-import javax.xml.namespace.QName
 
 /**
  * Performs conversion from causal net to BPMN Process
  * @see [CausalNet].[toBPMN]
  */
-internal class CausalNet2BPMN(private val cnet: CausalNet, private val nameGateways: Boolean, private val targetNamespace: String) {
+internal class CausalNet2BPMN(
+    private val cnet: CausalNet,
+    private val nameGateways: Boolean,
+    private val targetNamespace: String
+) : ToBPMN() {
 
-    private fun <T : TFlowNode> wrap(a: Node, result: T): T {
-        result.name = a.name
-        return result
-    }
 
     private val nodes = HashMap<Node, TFlowNode>()
-    private val factory = ObjectFactory()
-    private var ctr = 0
-    private val flowElements = ArrayList<JAXBElement<out TFlowElement>>()
     private lateinit var deps: Map<Dependency, Pair<TFlowNode, TFlowNode>>
     private val splitsExclusive = HashMap<Node, TFlowNode>()
     private val joinsExclusive = HashMap<Node, TFlowNode>()
     private val splitsParallel = HashMap<Split, TFlowNode>()
     private val joinsParallel = HashMap<Join, TFlowNode>()
-
-    private fun add(n: TFlowElement) {
-        if (n.id == null) {
-            n.id = "id_$ctr"
-            ctr += 1
-        }
-        val e = when (n) {
-            is TStartEvent -> factory.createStartEvent(n)
-            is TEndEvent -> factory.createEndEvent(n)
-            is TTask -> factory.createTask(n)
-            is TExclusiveGateway -> factory.createExclusiveGateway(n)
-            is TParallelGateway -> factory.createParallelGateway(n)
-            is TSequenceFlow -> factory.createSequenceFlow(n)
-            else -> throw UnsupportedOperationException("Unsupported flow element ${n::class}")
-        }
-        flowElements.add(e)
-    }
-
-    private fun link(src: TFlowNode, dst: TFlowNode) {
-        require(src !== dst)
-        val link = TSequenceFlow()
-        link.sourceRef = src
-        link.targetRef = dst
-        add(link)
-        src.outgoing.add(QName(link.id))
-        dst.incoming.add(QName(link.id))
-    }
 
     private fun linkSplits() {
         for ((src, splits) in cnet.splits) {
@@ -151,8 +119,8 @@ internal class CausalNet2BPMN(private val cnet: CausalNet, private val nameGatew
 
     private fun createDependencyGateways() {
         deps = cnet.dependencies.associateWith { dep ->
-            val relevantSplits = cnet.splits.getValue(dep.source).filter { dep in it }
-            val relevantJoins = cnet.joins.getValue(dep.target).filter { dep in it }
+            val relevantSplits = cnet.splits[dep.source]?.filter { dep in it }.orEmpty()
+            val relevantJoins = cnet.joins[dep.target]?.filter { dep in it }.orEmpty()
             if (relevantSplits.size == 1 && relevantJoins.size == 1) {
                 val left = splitsParallel.getValue(relevantSplits.single())
                 val right = joinsParallel.getValue(relevantJoins.single())
@@ -165,30 +133,24 @@ internal class CausalNet2BPMN(private val cnet: CausalNet, private val nameGatew
         }
     }
 
+
     /**
      * Performs the actual conversion
      */
     fun toBPMN(): BPMNModel {
         nodes.clear()
         val tasks = cnet.activities
-                .filter { it != cnet.start && it != cnet.end }
-                .associateWithTo(nodes) { wrap(it, TTask()) }
-        nodes[cnet.start] = wrap(cnet.start, TStartEvent())
-        nodes[cnet.end] = wrap(cnet.end, TEndEvent())
+            .filter { it != cnet.start && it != cnet.end }
+            .associateWithTo(nodes) { add(TTask().apply { name = it.name }) }
+        nodes[cnet.start] = add(TStartEvent().apply { name = cnet.start.name })
+        nodes[cnet.end] = add(TEndEvent().apply { name = cnet.end.name })
         nodes.putAll(tasks)
-        for (node in nodes.values)
-            add(node)
         createSplitGateways()
         createJoinGateways()
         createDependencyGateways()
         linkSplits()
         linkJoins()
-        val process = TProcess()
-        process.flowElement.addAll(flowElements)
-        val model = TDefinitions()
-        model.targetNamespace = targetNamespace
-        model.rootElement.add(factory.createProcess(process))
-        return BPMNModel(model)
+        return finish()
     }
 }
 
@@ -198,4 +160,5 @@ internal class CausalNet2BPMN(private val cnet: CausalNet, private val nameGatew
  * @param nameGateways True if gateways in the resulting BPMN are to be named
  * @param targetNamespace BPMN spec: This attribute identifies the namespace associated with the Definition and follows the convention established by XML Schema.
  */
-fun CausalNet.toBPMN(nameGateways: Boolean = false, targetNamespace: String = "") = CausalNet2BPMN(this, nameGateways, targetNamespace).toBPMN()
+fun CausalNet.toBPMN(nameGateways: Boolean = false, targetNamespace: String = "") =
+    CausalNet2BPMN(this, nameGateways, targetNamespace).toBPMN()

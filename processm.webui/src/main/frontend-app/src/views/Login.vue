@@ -51,6 +51,36 @@
         </v-snackbar>
       </v-flex>
     </v-layout>
+    <v-dialog v-model="selectOrganizationDialog" max-width="500px">
+      <template>
+        <v-card title="Dialog">
+          <v-toolbar color="primary" dark flat>
+            <v-toolbar-title>{{ this.$t("users.organizations") }}</v-toolbar-title>
+          </v-toolbar>
+          <v-card-text>
+            {{ this.$t("users.select-organization") }}:
+            <v-select v-model="selectedOrganizationId" item-value="id" :items="organizations" item-text="name" name="combo-organization">
+              <template v-slot:item="{ parent, item, on, attrs }">
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <span v-bind="attrs" v-on="on">{{ item.name }}</span>
+                  </template>
+                  <span>{{ $t("users.unique-organization-id") }}: {{ item.id }}</span>
+                </v-tooltip>
+              </template>
+            </v-select>
+          </v-card-text>
+
+          <v-card-actions>
+            <v-spacer></v-spacer>
+
+            <v-btn color="primary" @click="organizationSelected" name="btn-select-organization">
+              {{ this.$t("common.submit") }}
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </template>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -59,10 +89,12 @@ import Vue from "vue";
 import { Component, Inject } from "vue-property-decorator";
 import AccountService from "@/services/AccountService";
 import ConfigService from "@/services/ConfigService";
-import { Config, Organization } from "@/openapi";
+import { Config, Organization, UserRoleInOrganization } from "@/openapi";
+import App from "@/App.vue";
 
 @Component
 export default class Login extends Vue {
+  @Inject() app!: App;
   @Inject() accountService!: AccountService;
   @Inject() configService!: ConfigService;
   readonly errorTimeout = 3000;
@@ -74,8 +106,14 @@ export default class Login extends Vue {
     loginMessage: "",
     demoMode: false
   };
+  selectOrganizationDialog: boolean = false;
+  organizations: Organization[] = [];
+  selectedOrganizationId: string | null = null;
 
   async mounted() {
+    // Manually call to resetLocale to overwrite the locale of the user that just logged out
+    // Since there's no user at this point, the login page will display in the first available language in the order of preference of the web browser
+    this.app.resetLocale();
     const c = await this.configService.getConfig();
     Object.assign(this.config, c);
   }
@@ -89,11 +127,11 @@ export default class Login extends Vue {
 
     try {
       await this.accountService.signIn(this.username, this.password);
-      const { language } = await this.accountService.getAccountDetails();
-      this.setLanguage(language);
+
+      await this.accountService.updateUserInfo();
+      this.app.resetLocale();
       const organizations = await this.accountService.getUserOrganizations();
       this.setCurrentOrganization(organizations);
-      this.$router.push({ name: "home" });
     } catch (error) {
       console.error(error);
       this.errorMessage = true;
@@ -106,20 +144,31 @@ export default class Login extends Vue {
     }
   }
 
-  setCurrentOrganization(userOrganizations: Organization[]) {
+  private goHome() {
+    this.$router.push({ name: "home" });
+  }
+
+  setCurrentOrganization(userOrganizations: UserRoleInOrganization[]) {
     if (userOrganizations.length > 1) {
-      //TODO: the current user is associated with more than one organization,
-      //display a modal which allows the user to choose the organization context
-      this.$sessionStorage.currentOrganizationIndex = 0; // FIXME: temporary: always choose the first organization
-      console.error(
-        `Not implemented: the current user is associated with ${userOrganizations.length} organizations; the first one was automatically selected.`
-      );
+      this.organizations = userOrganizations.map((it) => it.organization);
+      this.selectedOrganizationId = userOrganizations[0].organization.id ?? null;
+      this.selectOrganizationDialog = true;
     } else if (userOrganizations.length == 1) {
       this.$sessionStorage.currentOrganizationIndex = 0;
+      this.goHome();
     } else {
-      //TODO: user is not assigned to any organization
-      //display the error on the global snackbar
-      console.error("Not implemented: the user is not associated with any organization.");
+      this.app.error(this.$t("users.no-organization-error").toString());
+      this.goHome();
+    }
+  }
+
+  organizationSelected() {
+    if (this.selectedOrganizationId !== null) {
+      this.selectOrganizationDialog = false;
+
+      this.$sessionStorage.currentOrganizationIndex = this.organizations.findIndex((org) => org.id == this.selectedOrganizationId);
+      this.selectedOrganizationId = null;
+      this.goHome();
     }
   }
 }

@@ -95,7 +95,7 @@ class DirectlyFollowsGraphMinerServiceTest {
 
             val dfg = DirectlyFollowsGraph.load(
                 DBCache.get(dataStore.toString()).database,
-                UUID.fromString(component.dataAsObject!![0].modelId)
+                UUID.fromString(component.mostRecentData().modelId)
             )
             assertEquals(1, dfg.initialActivities.size)
             assertEquals(3, dfg.finalActivities.size)
@@ -142,7 +142,7 @@ class DirectlyFollowsGraphMinerServiceTest {
 
             val dfg = DirectlyFollowsGraph.load(
                 DBCache.get(dataStore.toString()).database,
-                UUID.fromString(component.dataAsObject!![0].modelId)
+                UUID.fromString(component.mostRecentData().modelId)
             )
             assertEquals(1, dfg.initialActivities.size)
             assertEquals(3, dfg.finalActivities.size)

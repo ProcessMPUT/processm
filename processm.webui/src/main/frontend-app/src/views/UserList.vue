@@ -42,7 +42,7 @@
                   :value.sync="newUser"
                   name="new-user"
                 ></combo-box-with-search>
-                <v-select v-model="newRole" :items="roles" :label="$t('users.role')" name="new-role"></v-select>
+                <v-select v-model="newRole" :items="roles" item-text="name" item-value="value" :label="$t('users.role')" name="new-role"></v-select>
               </v-form>
             </v-card-text>
             <v-card-actions>
@@ -50,7 +50,7 @@
               <v-btn color="primary darken-1" text @click="newDialog = false">
                 {{ $t("common.cancel") }}
               </v-btn>
-              <v-btn :disabled="!isNewValid" color="primary darken-1" form="newForm" type="submit" name="btn-commit-add-member">
+              <v-btn :disabled="!isNewValid" color="primary darken-1" form="newOrgMemberForm" type="submit" name="btn-commit-add-member">
                 {{ $t("common.save") }}
               </v-btn>
             </v-card-actions>
@@ -73,6 +73,8 @@
         background-color="transparent"
         v-model="members[index].organizationRole"
         :items="roles"
+        item-text="name"
+        item-value="value"
         hide-details="auto"
         :disabled="members[index].email === $sessionStorage.userInfo.username"
         @input="updateRole(item)"
@@ -120,7 +122,10 @@ export default class UserList extends Vue {
   newRole = OrganizationRole.Reader;
   isNewValid = false;
 
-  roles = [OrganizationRole.Owner, OrganizationRole.Writer, OrganizationRole.Reader];
+  readonly roles = [OrganizationRole.Owner, OrganizationRole.Writer, OrganizationRole.Reader].map((r) => ({
+    name: this.$t(`users.roles.${r}`),
+    value: r
+  }));
   organization = this.$sessionStorage.currentOrganization;
 
   async mounted() {
@@ -129,7 +134,7 @@ export default class UserList extends Vue {
 
   async loadMembers() {
     this.loading = true;
-    this.members = await this.organizationService.getOrganizationMembers(this.organization.id!);
+    this.members = await this.organizationService.getOrganizationMembers(this.organization?.id!);
     this.loading = false;
   }
 
@@ -153,7 +158,7 @@ export default class UserList extends Vue {
       try {
         console.assert(this.newUser != "", "newUser: " + this.newUser);
         console.debug("adding member ", this.newUser);
-        await this.organizationService.addMember(this.organization.id!, this.newUser, this.newRole);
+        await this.organizationService.addMember(this.organization?.id!, this.newUser, this.newRole);
         await this.loadMembers();
         this.newDialog = false;
         this.app.info(this.$t("users.member-included").toString());
@@ -167,7 +172,7 @@ export default class UserList extends Vue {
     try {
       console.assert(member.id !== undefined);
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await this.organizationService.removeMember(this.organization.id!, member.id!);
+      await this.organizationService.removeMember(this.organization?.id!, member.id!);
       this.members = this.members.filter((item) => item != member);
       this.app.info(this.$t("users.member-excluded").toString());
     } catch (e) {
@@ -179,7 +184,7 @@ export default class UserList extends Vue {
     try {
       console.assert(member.id !== undefined);
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await this.organizationService.updateRole(this.organization.id!, member.id!, member.organizationRole);
+      await this.organizationService.updateRole(this.organization?.id!, member.id!, member.organizationRole);
     } catch (e) {
       this.app.error(e);
     }

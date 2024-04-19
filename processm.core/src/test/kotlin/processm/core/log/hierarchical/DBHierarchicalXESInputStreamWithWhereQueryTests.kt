@@ -15,6 +15,8 @@ class DBHierarchicalXESInputStreamWithWhereQueryTests : DBHierarchicalXESInputSt
         val stream = q("where dayofweek(e:timestamp) in (1, 7) and l:id=$journal")
         val validDays = EnumSet.of(DayOfWeek.SUNDAY, DayOfWeek.SATURDAY)
         assertEquals(1, stream.count())
+        // the result of: select max(version) from events where extract(dow from "time:timestamp") in (0, 6)
+        assertEquals(2298L, stream.readVersion())
 
         val log = stream.first()
         assertEquals("JournalReview", log.conceptName)
@@ -65,6 +67,8 @@ class DBHierarchicalXESInputStreamWithWhereQueryTests : DBHierarchicalXESInputSt
         val stream = q("where dayofweek(^e:timestamp) in (1, 7) and l:id=$journal")
         val validDays = EnumSet.of(DayOfWeek.SUNDAY, DayOfWeek.SATURDAY)
         assertEquals(1, stream.count())
+        // the result of: select max(version) from events where trace_id in (select trace_id from events where extract(dow from "time:timestamp") in (0, 6))
+        assertEquals(2298L, stream.readVersion())
 
         val log = stream.first()
         assertEquals("JournalReview", log.conceptName)
@@ -116,6 +120,7 @@ class DBHierarchicalXESInputStreamWithWhereQueryTests : DBHierarchicalXESInputSt
         val stream = q("where dayofweek(^^e:timestamp) in (1, 7) and l:id=$journal")
         val validDays = EnumSet.of(DayOfWeek.SUNDAY, DayOfWeek.SATURDAY)
         assertEquals(1, stream.count())
+        assertEquals(2298L, stream.readVersion())
 
         val log = stream.first()
         assertEquals("JournalReview", log.conceptName)
@@ -169,6 +174,8 @@ class DBHierarchicalXESInputStreamWithWhereQueryTests : DBHierarchicalXESInputSt
     @Test
     fun whereLogicExprWithHoistingTest() {
         val stream = q("where not(t:currency = ^e:currency) and l:id=$journal")
+        //select max(events.version) from events join traces on events.trace_id = traces.id where events."cost:currency" != traces."cost:currency"
+        assertEquals(2298L, stream.readVersion())
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -217,6 +224,8 @@ class DBHierarchicalXESInputStreamWithWhereQueryTests : DBHierarchicalXESInputSt
     fun whereLogicExprTest() {
         val stream = q("where t:currency != e:currency and l:id=$journal")
         assertEquals(1, stream.count())
+        //select max(events.version) from events join traces on events.trace_id = traces.id where events."cost:currency" != traces."cost:currency"
+        assertEquals(2298L, stream.readVersion())
 
         val log = stream.first()
         assertEquals("JournalReview", log.conceptName)
@@ -264,6 +273,8 @@ class DBHierarchicalXESInputStreamWithWhereQueryTests : DBHierarchicalXESInputSt
     fun whereLogicExpr2Test() {
         val stream = q("where not(t:currency = ^e:currency) and t:total is null and l:id=$journal")
         assertEquals(1, stream.count())
+        //select max(events.version) from events join traces on events.trace_id = traces.id where events."cost:currency" != traces."cost:currency" and traces."cost:total" is null
+        assertEquals(2298L, stream.readVersion())
 
         val log = stream.first()
         assertEquals("JournalReview", log.conceptName)
@@ -353,6 +364,9 @@ class DBHierarchicalXESInputStreamWithWhereQueryTests : DBHierarchicalXESInputSt
             q("where t:name like '%5' and ^e:resource matches '^[SP]am$' and l:id=$journal")
         val nameRegex = Regex("^[SP]am$")
         assertEquals(1, stream.count())
+        //select max(events.version) from events where events.trace_id in
+        // (select trace_id from events join traces on events.trace_id = traces.id where traces."concept:name" like '%5' and events."org:resource" ~ '^[SP]am${'$'}')
+        assertEquals(2200, stream.readVersion())
 
         val log = stream.first()
         assertEquals("JournalReview", log.conceptName)
