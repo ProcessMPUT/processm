@@ -4,6 +4,13 @@ import io.ktor.http.*
 import processm.logging.logger
 import java.util.*
 
+/**
+ * An exception supporting localization according to the remote user's locale
+ *
+ * @property reason The reason for the exception
+ * @property arguments Arguments for the description of the exception (a format string) retrieved from resources
+ * @property message message passed to parent [Exception]. If not provided, `reason.toString()` is used.
+ */
 open class LocalizedException(
     val reason: ExceptionReason,
     val arguments: Array<out Any?> = emptyArray(),
@@ -24,6 +31,7 @@ open class LocalizedException(
     }
 }
 
+//TODO perhaps follow kotlin naming conventions after all
 enum class ExceptionReason(val statusCode: HttpStatusCode = HttpStatusCode.BadRequest) {
     UNSPECIFIED_REASON,
     NO_FIELD_IN_TOKEN,
@@ -37,7 +45,7 @@ enum class ExceptionReason(val statusCode: HttpStatusCode = HttpStatusCode.BadRe
     ACL_CANNOT_BE_READ(HttpStatusCode.Forbidden),
     INVALID_USERNAME_OR_PASSWORD(HttpStatusCode.Unauthorized),
 
-    @Deprecated("A temporary patch until PQL errors are translated")
+    @Deprecated("A temporary patch until PQL errors are translated (TODO)")
     PQL_ERROR,
 
     UNEXPECTED_REQUEST_PARAMETER,
@@ -68,7 +76,7 @@ enum class ExceptionReason(val statusCode: HttpStatusCode = HttpStatusCode.BadRe
     MISSING_DATA_STORE,
     MISSING_COMPONENT_TYPE,
     MISSING_QUERY,
-    SHARED_GROUP_NOT_ASSIGNED(HttpStatusCode.NotFound), //TODO review
+    SHARED_GROUP_NOT_ASSIGNED(HttpStatusCode.NotFound),
     WORKSPACE_NOT_FOUND(HttpStatusCode.NotFound),
     WORKSPACE_COMPONENT_NOT_FOUND(HttpStatusCode.NotFound),
     GROUP_IS_SOLE_OWNER(HttpStatusCode.UnprocessableEntity),

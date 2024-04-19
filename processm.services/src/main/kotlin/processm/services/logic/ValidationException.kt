@@ -8,9 +8,7 @@ import kotlin.contracts.contract
 /**
  * Represents result of failed validation in business logic.
  *
- * @property reason the reason of failed validation.
- * @property arguments TODO
- * @property message message passed to parent [Exception]. If not provided, [TODO] is used.
+ * @see LocalizedException
  */
 class ValidationException(
     reason: ExceptionReason,
