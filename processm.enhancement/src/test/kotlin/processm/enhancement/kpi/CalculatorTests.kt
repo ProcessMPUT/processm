@@ -1,6 +1,7 @@
 package processm.enhancement.kpi
 
 import processm.conformance.measures.precision.causalnet.times
+import processm.conformance.models.alignments.AStar
 import processm.core.DBTestHelper
 import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.log.Helpers.event
@@ -224,7 +225,7 @@ class CalculatorTests {
         val log = q(
             "select t:*, e:name, e:instance, sum(e:total), max(e:timestamp)-min(e:timestamp) where l:id=$logUUID group by e:name, e:instance"
         )
-        val calculator = Calculator(model)
+        val calculator = Calculator(AStar(model))
         val report = calculator.calculate(log)
 
         val traceCostTotal = report.traceKPI[COST_TOTAL]!!
@@ -280,9 +281,10 @@ class CalculatorTests {
 
         with(report.arcKPI.getRow(COUNT.urn)) {
             with(entries.single { it.key.source.name == "decide" && it.key.target.name == "accept" }.value) {
-                assertEquals(45.0, min)
-                assertEquals(45.0, median)
-                assertEquals(45.0, max)
+                // 44 and 45 are valid values, as there are alternative alignments with the same cost
+                assertEquals(44.5, min, 1.0)
+                assertEquals(44.5, median, 1.0)
+                assertEquals(44.5, max, 1.0)
                 assertEquals(1, count)
             }
             with(entries.single { it.key.source.name == "decide" && it.key.target.name == "reject" }.value) {
@@ -310,7 +312,7 @@ class CalculatorTests {
         val log = q(
             "select t:*, e:name, e:instance, sum(e:total), max(e:timestamp)-min(e:timestamp) where l:id=$logUUID group by e:name, e:instance"
         )
-        val calculator = Calculator(model)
+        val calculator = Calculator(AStar(model))
         val report = calculator.calculate(log)
 
         val traceCostTotal = report.traceKPI[COST_TOTAL]!!
@@ -363,7 +365,7 @@ class CalculatorTests {
 
         with(report.arcKPI.getRow(COUNT.urn)) {
             with(entries.single { it.key.source.name == "invite additional reviewer" && it.key.target.name == "time-out X" }.value) {
-                assertEquals(198.0, min)
+                assertEquals(198.0, min) //193
                 assertEquals(198.0, average)
                 assertEquals(198.0, max)
                 assertEquals(1, count)
@@ -385,10 +387,18 @@ class CalculatorTests {
     fun `two parallel tasks in a process tree`() {
         val log = Log(
             traces =
-            trace(event("a", "time" to 1L), event("b", "time" to 2L), event("c", "time" to 10L)).times(10) +
-                    trace(event("b", "time" to 3L), event("a", "time" to 2L), event("c", "time" to 20L)).times(10)
+            trace(
+                event("a", "time" to 1L),
+                event("b", "time" to 2L),
+                event("c", "time" to 10L)
+            ).times(10) +
+                    trace(
+                        event("b", "time" to 3L),
+                        event("a", "time" to 2L),
+                        event("c", "time" to 20L)
+                    ).times(10)
         )
-        val report = Calculator(ProcessTrees.twoParallelTasksAndSingleFollower).calculate(log)
+        val report = Calculator(AStar(ProcessTrees.twoParallelTasksAndSingleFollower)).calculate(log)
         with(report.arcKPI.getRow(COUNT.urn).entries) {
             with(single { it.key.source.name == "a" && it.key.target.name == "c" }.value) {
                 assertEquals(20.0, average)
@@ -458,7 +468,7 @@ class CalculatorTests {
 
     private fun `inferred lead service waiting suspension times`(model: ProcessModel) {
         val log = q("where l:id=$logUUID")
-        val calculator = Calculator(model)
+        val calculator = Calculator(AStar(model))
         val report = calculator.calculate(log)
 
         val eventLeadTime = report.eventKPI.getRow(LEAD_TIME.urn)

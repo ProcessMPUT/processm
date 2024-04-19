@@ -18,7 +18,7 @@ import processm.dbmodels.models.dataAsObject
 import processm.dbmodels.models.load
 import processm.enhancement.kpi.Report
 import processm.helpers.mapToArray
-import processm.helpers.toLocalDateTime
+import processm.helpers.time.toLocalDateTime
 import processm.logging.loggedScope
 import processm.miners.causalnet.ALGORITHM_HEURISTIC_MINER
 import processm.miners.causalnet.ALGORITHM_INDUCTIVE_MINER

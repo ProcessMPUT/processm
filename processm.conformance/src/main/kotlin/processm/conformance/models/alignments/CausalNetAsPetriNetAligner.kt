@@ -128,7 +128,7 @@ class CausalNetAsPetriNetAligner(private val base: Aligner, private val converte
                         causalNetSteps.add(
                             step.copy(
                                 modelMove = this,
-                                modelState = instance.currentState.copy()
+                                modelState = instance.currentState.copy() // FIXME: translate modelCause #207
                             )
                         )
                     }

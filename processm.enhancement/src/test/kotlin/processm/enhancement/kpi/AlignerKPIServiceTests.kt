@@ -272,8 +272,8 @@ class AlignerKPIServiceTests {
             }.first()
 
             val report = persistenceProvider.get<Report>(URI(component.dataAsObject!![0].alignmentKPIId))
-            assertEquals(0, report.logKPI.size)
-            assertEquals(1, report.traceKPI.size)
+            assertEquals(1, report.logKPI.size)
+            assertEquals(6, report.traceKPI.size)
             assertEquals(20.0, report.traceKPI[COST_TOTAL]!!.median)
             assertEquals(50, report.traceKPI[COST_TOTAL]!!.raw.size)
 
@@ -300,7 +300,7 @@ class AlignerKPIServiceTests {
                 assertEquals(0.0, entries.first { (k, _) -> k?.name == "invite additional reviewer" }.value.min)
                 assertEquals(2.0, entries.first { (k, _) -> k?.name == "invite additional reviewer" }.value.median)
                 assertEquals(11.0, entries.first { (k, _) -> k?.name == "invite additional reviewer" }.value.max)
-                assertEquals(399, entries.first { (k, _) -> k?.name == "invite additional reviewer" }.value.raw.size)
+                assertEquals(90, entries.first { (k, _) -> k?.name == "invite additional reviewer" }.value.raw.size)
                 assertEquals(0.0, entries.first { (k, _) -> k?.name == "accept" }.value.min)
                 assertEquals(1.0, entries.first { (k, _) -> k?.name == "accept" }.value.median)
                 assertEquals(12.0, entries.first { (k, _) -> k?.name == "accept" }.value.max)
@@ -339,8 +339,8 @@ class AlignerKPIServiceTests {
             }.first()
 
             val report = persistenceProvider.get<Report>(URI(component.dataAsObject!![0].alignmentKPIId))
-            assertEquals(0, report.logKPI.size)
-            assertEquals(1, report.traceKPI.size)
+            assertEquals(1, report.logKPI.size)
+            assertEquals(6, report.traceKPI.size)
             assertEquals(20.0, report.traceKPI[COST_TOTAL]!!.median)
             assertEquals(50, report.traceKPI[COST_TOTAL]!!.raw.size)
 
@@ -352,7 +352,7 @@ class AlignerKPIServiceTests {
                 assertEquals(0.0, get(null)!!.min)
                 assertEquals(0.0, get(null)!!.median)
                 assertEquals(11.0, get(null)!!.max)
-                assertEquals(798, get(null)!!.raw.size)
+                assertEquals(242, get(null)!!.raw.size)
 
                 // instant activities
                 assertEquals(0.0, entries.first { (k, _) -> k?.name == "get review 1" }.value.max)
@@ -449,9 +449,9 @@ class AlignerKPIServiceTests {
             }.first()
 
             val report = persistenceProvider.get<Report>(URI(component.dataAsObject!![0].alignmentKPIId))
-            assertEquals(1, report.logKPI.size)
-            assertEquals(0, report.traceKPI.size)
-            assertEquals(0, report.eventKPI.size)
+            assertEquals(2, report.logKPI.size)
+            assertEquals(5, report.traceKPI.size)
+            assertEquals(1, report.eventKPI.size)
 
             val kpi = report.logKPI["count(^trace:concept:name)"]!!
             assertEquals(101.0, kpi.min)

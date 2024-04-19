@@ -36,14 +36,12 @@ import java.time.Instant
 
 /**
  * A KPI calculator.
- * @property model The process model.
  * @property aligner The aligner for aligning log and the [model].
  * @property eventsSummarizer The event summarizer that assigns grouping identity to process traces for reuse of
  * alignments of different traces of the same process variant.
  */
 class Calculator(
-    val model: ProcessModel,
-    val aligner: Aligner = getDefaultAligner(model),
+    val aligner: Aligner,
     val eventsSummarizer: EventsSummarizer<*> = DefaultEventsSummarizer
 ) {
     companion object {
@@ -72,6 +70,17 @@ class Calculator(
             return CompositeAligner(model, cache = null, alignerFactories = factories)
         }
     }
+
+    /**
+     * Creates new instance of the KPI calculator.
+     * @param model The process model.
+     * @param eventsSummarizer The event summarizer that assigns grouping identity to process traces for reuse of
+     * alignments of different traces of the same process variant.
+     */
+    constructor(
+        model: ProcessModel,
+        eventsSummarizer: EventsSummarizer<*> = DefaultEventsSummarizer
+    ) : this(getDefaultAligner(model), eventsSummarizer)
 
     /**
      * An auxiliary class to store the value of the attribute [key] as a [Double], to be eventually added to a [Distribution]
