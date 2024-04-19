@@ -17,6 +17,7 @@ import processm.dbmodels.toEntityID
 import processm.helpers.mapToArray
 import processm.services.api.models.OrganizationMember
 import processm.services.api.models.OrganizationRole
+import processm.services.helpers.ExceptionReason
 import processm.services.logic.*
 import processm.services.respondCreated
 
@@ -28,9 +29,6 @@ fun Route.OrganizationsApi() {
         // region Organizations
         get<Paths.Organizations> { _ ->
             val principal = call.authentication.principal<ApiUser>()!!
-            // This method is available to authorized users only
-            // Access control: only non-private organizations are available to every authorized user
-            principal.validateNotNull(Reason.Unauthorized)
 
             val organizations = transactionMain {
                 organizationService.getAll(principal.userId).map(Organization::toApi)
@@ -115,7 +113,7 @@ fun Route.OrganizationsApi() {
 
                 organizationService.get(path.subOrganizationId).parentOrganization?.id?.value?.validate(
                     path.organizationId,
-                    message = "The organization ${path.subOrganizationId} is not a direct sub-organization of the organization ${path.organizationId}"
+                    ExceptionReason.NOT_A_DIRECT_SUBORGANIZATION, path.subOrganizationId, path.organizationId
                 )
 
                 organizationService.detachSubOrganization(path.subOrganizationId)
@@ -164,8 +162,7 @@ fun Route.OrganizationsApi() {
 
             params.userId.validateNot(
                 principal.userId,
-                Reason.UnprocessableResource,
-                "Cannot change role of the current user."
+                ExceptionReason.CANNOT_CHANGE_ROLE
             )
             organizationService.updateMember(params.organizationId, params.userId, member.organizationRole.toRoleType())
 
@@ -176,7 +173,7 @@ fun Route.OrganizationsApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(params.organizationId, OrganizationRole.owner)
 
-            params.userId.validateNot(principal.userId, Reason.UnprocessableResource, "Cannot delete the current user.")
+            params.userId.validateNot(principal.userId, ExceptionReason.CANNOT_DELETE)
             organizationService.removeMember(params.organizationId, params.userId)
 
             call.respond(HttpStatusCode.NoContent)

@@ -11,6 +11,7 @@ import processm.dbmodels.models.*
 import processm.etl.jdbc.toXESInputStream
 import processm.services.api.models.JdbcEtlColumnConfiguration
 import processm.services.api.models.JdbcEtlProcessConfiguration
+import processm.services.helpers.ExceptionReason
 import java.io.ByteArrayOutputStream
 import java.sql.Types
 import java.util.*
@@ -63,7 +64,7 @@ internal class DataStoreServiceTest : ServiceTestBase() {
             dataStoreService.getDataStore(UUID.randomUUID())
         }
 
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.DATA_STORE_NOT_FOUND, exception.reason)
     }
 
     @Test
@@ -202,7 +203,7 @@ internal class DataStoreServiceTest : ServiceTestBase() {
                 methodCall(dataStoreService)
             }
 
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.DATA_STORE_NOT_FOUND, exception.reason)
     }
 
     @Test

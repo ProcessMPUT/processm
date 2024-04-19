@@ -1,11 +1,12 @@
 package processm.services.helpers
 
+import io.ktor.http.*
 import processm.logging.logger
 import java.util.*
 
 open class LocalizedException(
     val reason: ExceptionReason,
-    val arguments: Array<Any?> = emptyArray(),
+    val arguments: Array<out Any?> = emptyArray(),
     message: String? = null
 ) : Exception(message ?: reason.toString()) {
 
@@ -23,14 +24,14 @@ open class LocalizedException(
     }
 }
 
-enum class ExceptionReason {
+enum class ExceptionReason(val statusCode: HttpStatusCode = HttpStatusCode.BadRequest) {
     UNSPECIFIED_REASON,
     NO_FIELD_IN_TOKEN,
     NOT_MEMBER_OF_ORGANIZATION,
     INSUFFICIENT_PERMISSION_IN_ORGANIZATION,
     UNPARSABLE_DATA,
     LAST_ACE_CANNOT_BE_DOWNGRADED,
-    ENTRY_NOT_FOUND,
+    ENTRY_NOT_FOUND(HttpStatusCode.NotFound),
     LAST_ACE_CANNOT_BE_REMOVED,
     ACL_CANNOT_BE_MODIFIED,
     ACL_CANNOT_BE_READ,
@@ -50,12 +51,46 @@ enum class ExceptionReason {
     EMPTY_ETL_CONFIGURATION_NOT_SUPPORTED,
     ETL_PROCESS_TYPE_NOT_SUPPORTED,
     ACTIVATION_STATUS_IS_REQUIRED,
-    NOT_FOUND,
+    NOT_FOUND(HttpStatusCode.NotFound),
     TOKEN_EXPIRED,
     CREDENTIALS_OR_TOKEN_ARE_REQUIRED,
     WORKSPACE_NAME_IS_REQUIRED,
     CONNECTION_TEST_FAILED,
-    INVALID_TOKEN_FORMAT
+    INVALID_TOKEN_FORMAT,
+    PARENT_ORGANIZATION_ALREADY_SET,
+    INVALID_GROUP,
+    INVALID_USER_ID,
+    ORGANIZATION_NOT_FOUND(HttpStatusCode.NotFound),
+    ORGANIZATION_IS_ALREADY_TOP_LEVEL,
+    ACCOUNT_NOT_FOUND(HttpStatusCode.NotFound),
+    GROUP_NOT_FOUND(HttpStatusCode.NotFound),
+    USER_NOT_FOUND_IN_ORGANIZATION(HttpStatusCode.NotFound),
+    MISSING_DATA_STORE,
+    MISSING_COMPONENT_TYPE,
+    MISSING_QUERY,
+    SHARED_GROUP_NOT_ASSIGNED(HttpStatusCode.NotFound), //TODO review
+    WORKSPACE_NOT_FOUND(HttpStatusCode.NotFound),
+    WORKSPACE_COMPONENT_NOT_FOUND(HttpStatusCode.NotFound),
+    GROUP_IS_SOLE_OWNER, //TODO review code
+    NAME_IS_BLANK,
+    INVALID_GROUP_SPECIFICATION,
+    CANNOT_DETACH_FROM_SHARED_GROUP,
+    CANNOT_DETACH_FROM_IMPLICIT_GROUP,
+    USER_OR_GROUP_NOT_FOUND(HttpStatusCode.NotFound),
+    ORGANIZATION_NOT_OWN_CHILD,
+    ALREADY_DESCENDANT,
+    USER_ALREADY_IN_ORGANIZATION(HttpStatusCode.Conflict),
+    NOT_A_DIRECT_SUBORGANIZATION,
+    CANNOT_CHANGE_ROLE(HttpStatusCode.UnprocessableEntity),
+    CANNOT_DELETE(HttpStatusCode.UnprocessableEntity),
+    INVALID_LOCALE,
+    CANNOT_CHANGE_LOCALE,
+    INVALID_EMAIL,
+    PASSWORD_TOO_WEAK,
+    USER_ALREADY_EXISTS(HttpStatusCode.Conflict),
+    INSUFFICIENT_PERMISSION_TO_URN(HttpStatusCode.Forbidden),
+    DATA_STORE_NOT_FOUND(HttpStatusCode.NotFound),
+    ETL_PROCESS_NOT_FOUND(HttpStatusCode.NotFound)
 }
 
 

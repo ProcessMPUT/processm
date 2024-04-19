@@ -12,6 +12,7 @@ import processm.services.api.models.ErrorMessage
 import processm.services.api.models.Group
 import processm.services.api.models.OrganizationRole
 import processm.services.api.models.UserInfo
+import processm.services.helpers.ExceptionReason
 import processm.services.logic.*
 import java.util.*
 import java.util.stream.Stream
@@ -119,14 +120,13 @@ class GroupsApiTest : BaseApiTest() {
                     })
             withAuthentication(role = null) {
                 every { organizationService.getOrganizationGroups(removedOrganizationId) } throws ValidationException(
-                    Reason.ResourceNotFound,
-                    userMessage = "Organization not found"
+                    ExceptionReason.ORGANIZATION_NOT_FOUND, arrayOf(removedOrganizationId)
                 )
                 with(handleRequest(HttpMethod.Get, "/api/organizations/$removedOrganizationId/groups")) {
                     assertEquals(HttpStatusCode.NotFound, response.status())
                     assertTrue(
                         response.deserializeContent<ErrorMessage>().error
-                            .contains("Organization not found")
+                            .contains("The organization $removedOrganizationId does not exist.")
                     )
                 }
             }
@@ -245,7 +245,7 @@ class GroupsApiTest : BaseApiTest() {
         val organizationId = UUID.randomUUID()
         val groupId = UUID.randomUUID()
         val groupService = declareMock<GroupService> {
-            every { remove(groupId) } throws ValidationException(Reason.ResourceNotFound, "Group is not found.")
+            every { remove(groupId) } throws ValidationException(ExceptionReason.GROUP_NOT_FOUND)
         }
 
         withAuthentication(role = OrganizationRole.writer to organizationId) {
@@ -329,8 +329,7 @@ class GroupsApiTest : BaseApiTest() {
 
         withAuthentication {
             every { groupService.getRootGroupId(groupId) } throws ValidationException(
-                Reason.ResourceNotFound,
-                "The specified group does not exist"
+                ExceptionReason.GROUP_NOT_FOUND
             )
             with(handleRequest(HttpMethod.Get, "/api/organizations/${UUID.randomUUID()}/groups/$groupId/subgroups")) {
                 assertEquals(HttpStatusCode.NotFound, response.status())
@@ -448,8 +447,7 @@ class GroupsApiTest : BaseApiTest() {
                 every { parentOrganization } returns null
             }
             every { groupService.getGroup(groupId) } throws ValidationException(
-                Reason.ResourceNotFound,
-                "The specified group does not exist"
+                ExceptionReason.GROUP_NOT_FOUND
             )
             with(handleRequest(HttpMethod.Get, "/api/organizations/${UUID.randomUUID()}/groups/$groupId")) {
                 assertEquals(HttpStatusCode.NotFound, response.status())
@@ -505,7 +503,7 @@ class GroupsApiTest : BaseApiTest() {
         val organizationId = UUID.randomUUID()
         val groupId = UUID.randomUUID()
         val groupService = declareMock<GroupService> {
-            every { getGroup(groupId) } throws ValidationException(Reason.ResourceNotFound, "Group is not found.")
+            every { getGroup(groupId) } throws ValidationException(ExceptionReason.GROUP_NOT_FOUND)
         }
 
         withAuthentication(role = OrganizationRole.reader to organizationId) {
@@ -573,10 +571,7 @@ class GroupsApiTest : BaseApiTest() {
         val groupId = UUID.randomUUID()
         val userId = UUID.randomUUID()
         val groupService = declareMock<GroupService> {
-            every { attachUserToGroup(userId, groupId) } throws ValidationException(
-                Reason.ResourceNotFound,
-                "Group is not found"
-            )
+            every { attachUserToGroup(userId, groupId) } throws ValidationException(ExceptionReason.GROUP_NOT_FOUND)
         }
 
         withAuthentication(role = OrganizationRole.writer to organizationId) {
@@ -638,10 +633,12 @@ class GroupsApiTest : BaseApiTest() {
             val groupId = UUID.randomUUID()
             val userId = UUID.randomUUID()
             val groupService = declareMock<GroupService> {
-                every { detachUserFromGroup(userId, groupId) } throws ValidationException(
-                    Reason.ResourceNotFound,
-                    "Member is not found."
-                )
+                every {
+                    detachUserFromGroup(
+                        userId,
+                        groupId
+                    )
+                } throws ValidationException(ExceptionReason.USER_OR_GROUP_NOT_FOUND)
             }
 
             withAuthentication(role = OrganizationRole.writer to organizationId) {
@@ -664,8 +661,7 @@ class GroupsApiTest : BaseApiTest() {
             val userId = UUID.randomUUID()
             val groupService = declareMock<GroupService> {
                 every { detachUserFromGroup(userId, groupId) } throws ValidationException(
-                    Reason.ResourceNotFound,
-                    "Member is not found."
+                    ExceptionReason.USER_OR_GROUP_NOT_FOUND
                 )
             }
 

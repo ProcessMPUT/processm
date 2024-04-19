@@ -19,8 +19,9 @@ import processm.dbmodels.ilike
 import processm.dbmodels.models.*
 import processm.helpers.getPropertyIgnoreCase
 import processm.logging.loggedScope
-import processm.services.helpers.parseLocale
+import processm.services.helpers.ExceptionReason
 import processm.services.helpers.Patterns
+import processm.services.helpers.parseLocale
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -39,13 +40,7 @@ class AccountService(private val groupService: GroupService, private val produce
         loggedScope { logger ->
             transactionMain {
                 val user = User.find(Users.email ieq username).firstOrNull()
-
-                if (user == null) {
-                    logger.debug("The specified username ${username} is unknown and cannot be verified")
-                    throw ValidationException(
-                        Reason.ResourceNotFound, "The specified user account does not exist"
-                    )
-                }
+                    .validateNotNull(ExceptionReason.ACCOUNT_NOT_FOUND)
 
                 return@transactionMain if (verifyPassword(password, user.password)) user else null
             }
@@ -60,21 +55,11 @@ class AccountService(private val groupService: GroupService, private val produce
         pass: String
     ): User = loggedScope { logger ->
         transactionMain {
-            Patterns.email.matches(email) || throw ValidationException(
-                Reason.ResourceFormatInvalid,
-                "Invalid e-mail format: $email"
-            )
+            Patterns.email.matches(email).validate(ExceptionReason.INVALID_EMAIL, email)
 
-            Patterns.password.matches(pass) || throw ValidationException(
-                Reason.ResourceFormatInvalid,
-                "Password should have 1 lowercase letter, 1 uppercase letter, 1 number, and be at least 8 characters long."
-            )
+            Patterns.password.matches(pass).validate(ExceptionReason.PASSWORD_TOO_WEAK)
 
-            val usersCount = Users.select { Users.email ieq email }.limit(1).count()
-            usersCount == 0L || throw ValidationException(
-                Reason.ResourceAlreadyExists,
-                "The user with the given email already exists."
-            )
+            Users.select { Users.email ieq email }.limit(1).count().validate(0L, ExceptionReason.USER_ALREADY_EXISTS)
 
             // automatically created group for the particular user // name group after username
             val privateGroup = groupService.create(email, organizationId = null)
@@ -134,7 +119,7 @@ class AccountService(private val groupService: GroupService, private val produce
     fun remove(userId: UUID): Unit = transactionMain {
         Users.deleteWhere {
             Users.id eq userId
-        }.validate(1, Reason.ResourceNotFound) { "User is not found." }
+        }.validate(1, ExceptionReason.ACCOUNT_NOT_FOUND)
     }
 
     /**
@@ -172,7 +157,7 @@ class AccountService(private val groupService: GroupService, private val produce
      * Throws [ValidationException] if the specified [userId] doesn't exist.
      */
     fun getUser(userId: UUID): User = transactionMain {
-        User.findById(userId).validateNotNull(Reason.ResourceNotFound) { "The specified user account does not exist" }
+        User.findById(userId).validateNotNull(ExceptionReason.ACCOUNT_NOT_FOUND)
     }
 
     /**

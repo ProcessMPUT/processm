@@ -1,6 +1,5 @@
 package processm.services.logic
 
-import io.mockk.*
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.junit.jupiter.api.TestInstance
@@ -10,6 +9,7 @@ import org.junit.jupiter.params.provider.ValueSource
 import processm.core.communication.email.Email
 import processm.core.communication.email.Emails
 import processm.dbmodels.models.*
+import processm.services.helpers.ExceptionReason
 import java.util.*
 import kotlin.NoSuchElementException
 import kotlin.test.*
@@ -41,7 +41,7 @@ class AccountServiceTest : ServiceTestBase() {
         val exception = assertFailsWith<ValidationException>("Specified user account does not exist") {
             accountService.verifyUsersCredentials("user2", correctPassword)
         }
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.ACCOUNT_NOT_FOUND, exception.reason)
     }
 
     @Test
@@ -71,7 +71,7 @@ class AccountServiceTest : ServiceTestBase() {
             assertFailsWith<ValidationException>("The user with the given email already exists.") {
                 accountService.create("user@example.com", null, "passW0RD")
             }
-        assertEquals(Reason.ResourceAlreadyExists, exception.reason)
+        assertEquals(ExceptionReason.USER_ALREADY_EXISTS, exception.reason)
     }
 
     @Test
@@ -84,7 +84,7 @@ class AccountServiceTest : ServiceTestBase() {
             assertFailsWith<ValidationException>("The user with the given email already exists.") {
                 accountService.create("uSeR@eXaMpLe.com", null, "passW0RD")
             }
-        assertEquals(Reason.ResourceAlreadyExists, exception.reason)
+        assertEquals(ExceptionReason.USER_ALREADY_EXISTS, exception.reason)
     }
 
     @Test
@@ -99,7 +99,7 @@ class AccountServiceTest : ServiceTestBase() {
         val exception = assertFailsWith<ValidationException>("Specified user account does not exist") {
             accountService.getUser(userId = UUID.randomUUID())
         }
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.ACCOUNT_NOT_FOUND, exception.reason)
     }
 
     @Test
@@ -109,7 +109,7 @@ class AccountServiceTest : ServiceTestBase() {
                 userId = UUID.randomUUID(), currentPassword = correctPassword, newPassword = "new_pass"
             )
         }
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.ACCOUNT_NOT_FOUND, exception.reason)
     }
 
     @Test
@@ -143,7 +143,7 @@ class AccountServiceTest : ServiceTestBase() {
         val exception = assertFailsWith<ValidationException> {
             accountService.changeLocale(userId, unsupportedLocale)
         }
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.CANNOT_CHANGE_LOCALE, exception.reason)
     }
 
     @ParameterizedTest
@@ -156,7 +156,7 @@ class AccountServiceTest : ServiceTestBase() {
             val exception = assertFailsWith<ValidationException> {
                 accountService.changeLocale(userId, unsupportedLocale)
             }
-            assertEquals(Reason.ResourceFormatInvalid, exception.reason)
+            assertEquals(ExceptionReason.INVALID_LOCALE, exception.reason)
         }
 
     @Test
@@ -164,7 +164,7 @@ class AccountServiceTest : ServiceTestBase() {
         val exception = assertFailsWith<ValidationException>("Specified user account does not exist") {
             accountService.changeLocale(userId = UUID.randomUUID(), locale = "en_US")
         }
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.ACCOUNT_NOT_FOUND, exception.reason)
     }
 
     @Test
@@ -191,7 +191,7 @@ class AccountServiceTest : ServiceTestBase() {
         val exception = assertFailsWith<ValidationException> {
             accountService.getRolesAssignedToUser(userId = UUID.randomUUID())
         }
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.ACCOUNT_NOT_FOUND, exception.reason)
     }
 
     @Test

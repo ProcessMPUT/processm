@@ -9,6 +9,7 @@ import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.MutableCausalNet
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
+import processm.services.helpers.ExceptionReason
 import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -112,7 +113,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
             assertFailsWith<ValidationException>("The specified workspace does not exist or the user has insufficient permissions to it") {
                 workspaceService.remove(UUID.randomUUID())
             }
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.WORKSPACE_NOT_FOUND, exception.reason)
         assertTrue { Workspaces.select { Workspaces.id eq workspaceId }.any() }
     }
 
@@ -316,6 +317,6 @@ class WorkspaceServiceTest : ServiceTestBase() {
                 workspaceService.removeComponent(UUID.randomUUID())
             }
 
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.WORKSPACE_COMPONENT_NOT_FOUND, exception.reason)
     }
 }

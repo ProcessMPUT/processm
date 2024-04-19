@@ -31,6 +31,7 @@ import processm.services.JsonSerializer
 import processm.services.api.models.AuthenticationResult
 import processm.services.api.models.OrganizationRole
 import processm.services.apiModule
+import processm.services.helpers.ExceptionReason
 import processm.services.logic.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -175,7 +176,7 @@ abstract class BaseApiTest : KoinTest {
                     }
                 }
             }
-            throw ValidationException(Reason.Forbidden, "Forbidden")
+            throw ValidationException(ExceptionReason.INSUFFICIENT_PERMISSION_TO_URN, arrayOf("", ""))
         }
 
         callback(JwtAuthenticationTrackingEngine(this, login, password))

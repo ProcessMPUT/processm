@@ -4,7 +4,6 @@ import com.auth0.jwt.interfaces.Claim
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
-import processm.services.logic.Reason
 import processm.services.logic.ValidationException
 import java.util.*
 import kotlin.contracts.ExperimentalContracts
@@ -36,19 +35,14 @@ fun parseLocale(locale: String): Locale {
         3 -> Locale(localeTags[0], localeTags[1], localeTags[2])
         2 -> Locale(localeTags[0], localeTags[1])
         1 -> Locale(localeTags[0])
-        else -> throw ValidationException(
-            Reason.ResourceFormatInvalid, "The provided locale string is in invalid format"
-        )
+        else -> throw ValidationException(ExceptionReason.INVALID_LOCALE)
     }
 
     try {
         localeObject.isO3Language
         localeObject.isO3Country
     } catch (e: MissingResourceException) {
-        throw ValidationException(
-            Reason.ResourceNotFound,
-            "The current locale could not be changed: ${e.message.orEmpty()}"
-        )
+        throw ValidationException(ExceptionReason.CANNOT_CHANGE_LOCALE, message = e.message)
     }
 
     return localeObject

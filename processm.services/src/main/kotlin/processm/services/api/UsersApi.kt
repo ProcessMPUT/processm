@@ -99,10 +99,7 @@ fun Route.UsersApi() {
             val locale = call.request.acceptLanguageItems().getOrNull(0)
 
             with(accountInfo) {
-                (!newOrganization || !organizationName.isNullOrBlank()) || throw ValidationException(
-                    Reason.ResourceFormatInvalid,
-                    "Organization name must not be empty."
-                )
+                (!newOrganization || !organizationName.isNullOrBlank()) || throw ValidationException(ExceptionReason.NAME_IS_BLANK)
 
                 transactionMain {
                     val user = accountService.create(userEmail, locale?.value, userPassword)

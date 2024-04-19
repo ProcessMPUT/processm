@@ -29,7 +29,7 @@ import processm.dbmodels.models.*
 import processm.services.JsonSerializer
 import processm.services.api.models.*
 import processm.services.api.models.Workspace
-import processm.services.logic.Reason
+import processm.services.helpers.ExceptionReason
 import processm.services.logic.ValidationException
 import processm.services.logic.WorkspaceService
 import java.time.Instant
@@ -133,7 +133,7 @@ class WorkspacesApiTest : BaseApiTest() {
         withAuthentication(acl = acl { RoleType.Owner * Workspaces * workspaceId }) {
             every {
                 workspaceService.remove(workspaceId)
-            } throws ValidationException(Reason.ResourceNotFound, "Workspace is not found")
+            } throws ValidationException(ExceptionReason.WORKSPACE_NOT_FOUND)
             with(handleRequest(HttpMethod.Delete, "/api/workspaces/$workspaceId")) {
                 assertEquals(HttpStatusCode.NotFound, response.status())
             }
@@ -518,10 +518,7 @@ class WorkspacesApiTest : BaseApiTest() {
                     workspaceService.updateLayout(
                         layoutData.mapValues { JsonSerializer.encodeToString(it.value) }
                     )
-                } throws ValidationException(
-                    Reason.ResourceNotFound,
-                    "The specified workspace does not exist or the user has insufficient permissions to it"
-                )
+                } throws ValidationException(ExceptionReason.WORKSPACE_NOT_FOUND)
                 with(
                     handleRequest(
                         HttpMethod.Patch,
@@ -571,10 +568,7 @@ class WorkspacesApiTest : BaseApiTest() {
             withAuthentication(acl = acl { RoleType.Owner * Workspaces * workspaceId }) {
                 every {
                     workspaceService.removeComponent(componentId)
-                } throws ValidationException(
-                    Reason.ResourceNotFound,
-                    "The specified workspace/component does not exist or the user has insufficient permissions to it"
-                )
+                } throws ValidationException(ExceptionReason.WORKSPACE_COMPONENT_NOT_FOUND)
                 with(
                     handleRequest(
                         HttpMethod.Delete,

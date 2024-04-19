@@ -15,7 +15,8 @@ import processm.services.helpers.LocalizedException
 class ApiException(
     reason: ExceptionReason,
     arguments: Array<Any?> = emptyArray(),
-    val responseCode: HttpStatusCode = HttpStatusCode.BadRequest,
+    @Deprecated("This field should be removed, as responseCode follows directly from the reason")
+    val responseCode: HttpStatusCode = reason.statusCode,
     message: String? = null
 ) : LocalizedException(reason, arguments, message)
 
