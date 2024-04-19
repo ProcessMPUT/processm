@@ -478,7 +478,7 @@ fun Route.DataStoresApi() {
                 )
                 call.respond(HttpStatusCode.OK, message)
             } catch (_: NoSuchElementException) {
-                throw ApiException(ExceptionReason.NOT_FOUND, responseCode = HttpStatusCode.NotFound)
+                throw ApiException(ExceptionReason.NOT_FOUND)
             }
         }
 

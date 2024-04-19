@@ -15,7 +15,10 @@ import processm.helpers.mapToArray
 import processm.logging.loggedScope
 import processm.services.api.models.*
 import processm.services.helpers.ExceptionReason
-import processm.services.logic.*
+import processm.services.logic.AccountService
+import processm.services.logic.OrganizationService
+import processm.services.logic.ValidationException
+import processm.services.logic.toApi
 import java.time.Duration
 import java.time.Instant
 
@@ -34,10 +37,7 @@ fun Route.UsersApi() {
                 credentials != null -> {
                     val token = transactionMain {
                         val user = accountService.verifyUsersCredentials(credentials.login, credentials.password)
-                            ?: throw ApiException(
-                                ExceptionReason.INVALID_USERNAME_OR_PASSWORD,
-                                responseCode = HttpStatusCode.Unauthorized
-                            )
+                            ?: throw ApiException(ExceptionReason.INVALID_USERNAME_OR_PASSWORD)
                         val userRolesInOrganizations = accountService.getRolesAssignedToUser(user.id.value)
                             .associate { it.organization.id.value to it.role.toApi() }
                         val token = JwtAuthentication.createToken(
@@ -59,7 +59,7 @@ fun Route.UsersApi() {
                 call.request.authorization() !== null -> {
                     val authorizationHeader =
                         call.request.parseAuthorizationHeader() as? HttpAuthHeader.Single ?: throw ApiException(
-                            ExceptionReason.INVALID_TOKEN_FORMAT, responseCode = HttpStatusCode.Unauthorized
+                            ExceptionReason.INVALID_TOKEN_FORMAT
                         )
                     val prolongedToken = JwtAuthentication.verifyAndProlongToken(
                         authorizationHeader.blob, jwtIssuer, jwtSecret, jwtTokenTtl

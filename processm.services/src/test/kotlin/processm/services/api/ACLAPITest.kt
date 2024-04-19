@@ -210,7 +210,7 @@ class ACLAPITest : BaseApiTest() {
         every { aclService.removeEntry(urn, organizationId) } returns null
         withAuthentication(userId, role = OrganizationRole.owner to organizationId) {
             with(handleRequest(HttpMethod.Delete, "/api/acl/ace/$groupId/${urn.urn}")) {
-                assertEquals(HttpStatusCode.Forbidden, response.status())
+                assertEquals(HttpStatusCode.UnprocessableEntity, response.status())
             }
         }
         verify(exactly = 0) { aclService.removeEntry(urn, organizationId) }
@@ -271,7 +271,7 @@ class ACLAPITest : BaseApiTest() {
             with(handleRequest(HttpMethod.Put, "/api/acl/ace/$organizationId/${urn.urn}") {
                 withSerializedBody(OrganizationRole.reader)
             }) {
-                assertEquals(HttpStatusCode.Forbidden, response.status())
+                assertEquals(HttpStatusCode.UnprocessableEntity, response.status())
             }
         }
         verify(exactly = 0) { aclService.updateEntry(urn, organizationId, RoleType.Reader) }

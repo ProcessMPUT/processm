@@ -13,8 +13,8 @@ import io.ktor.server.response.*
 import io.ktor.util.logging.*
 import processm.logging.loggedScope
 import processm.services.api.models.ErrorMessage
+import processm.services.helpers.LocalizedException
 import processm.services.helpers.locale
-import processm.services.logic.ValidationException
 import java.time.Duration
 import java.util.*
 import io.ktor.util.converters.DataConversion.Configuration as DataConversionConfig
@@ -39,12 +39,9 @@ internal fun ApplicationCompressionConfiguration(): CompressionConfig.() -> Unit
 
 internal fun ApplicationStatusPageConfiguration(): StatusPagesConfig.() -> Unit = {
     loggedScope { logger ->
-        exception<ValidationException> { call, cause ->
+        exception<LocalizedException> { call, cause ->
             logger.trace(cause.message)
             call.respond(cause.reason.statusCode, ErrorMessage(cause.localizedMessage(call.locale)))
-        }
-        exception<ApiException> { call, cause ->
-            call.respond(cause.responseCode, ErrorMessage(cause.localizedMessage(call.locale)))
         }
         exception<TokenExpiredException> { call, cause ->
             call.respond(HttpStatusCode.Unauthorized, ErrorMessage(cause.message.orEmpty()))

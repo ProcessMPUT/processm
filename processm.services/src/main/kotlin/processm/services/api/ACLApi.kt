@@ -39,10 +39,7 @@ fun Route.ACLApi() {
             )
         }
         if (!canRead)
-            throw ApiException(
-                ExceptionReason.ACL_CANNOT_BE_READ, arrayOf(urn),
-                HttpStatusCode.Forbidden
-            )
+            throw ApiException(ExceptionReason.ACL_CANNOT_BE_READ, arrayOf(urn))
     }
 
     fun ApiUser.ensureCanModify(urn: URN) {
@@ -54,10 +51,7 @@ fun Route.ACLApi() {
             )
         }
         if (!canModify)
-            throw ApiException(
-                ExceptionReason.ACL_CANNOT_BE_MODIFIED, arrayOf(urn),
-                HttpStatusCode.Forbidden
-            )
+            throw ApiException(ExceptionReason.ACL_CANNOT_BE_MODIFIED, arrayOf(urn))
     }
 
     authenticate {
@@ -104,14 +98,11 @@ fun Route.ACLApi() {
                 ?: throw ApiException(ExceptionReason.UNPARSABLE_DATA)
             transactionMain {
                 if (role.toRoleType() > leastRoleToModifyACL && isLastAbleToModify(urn, groupId))
-                    throw ApiException(
-                        ExceptionReason.LAST_ACE_CANNOT_BE_DOWNGRADED,
-                        responseCode = HttpStatusCode.Forbidden
-                    )
+                    throw ApiException(ExceptionReason.LAST_ACE_CANNOT_BE_DOWNGRADED)
                 try {
                     aclService.updateEntry(urn, groupId, role.toRoleType())
                 } catch (_: ValidationException) {
-                    throw ApiException(ExceptionReason.ENTRY_NOT_FOUND, responseCode = HttpStatusCode.NotFound)
+                    throw ApiException(ExceptionReason.ENTRY_NOT_FOUND)
                 }
             }
             call.respond(HttpStatusCode.NoContent)
@@ -124,14 +115,11 @@ fun Route.ACLApi() {
             val groupId = it.groupId
             transactionMain {
                 if (isLastAbleToModify(urn, groupId))
-                    throw ApiException(
-                        ExceptionReason.LAST_ACE_CANNOT_BE_REMOVED,
-                        responseCode = HttpStatusCode.Forbidden
-                    )
+                    throw ApiException(ExceptionReason.LAST_ACE_CANNOT_BE_REMOVED)
                 try {
                     aclService.removeEntry(urn, groupId)
                 } catch (_: ValidationException) {
-                    throw ApiException(ExceptionReason.ENTRY_NOT_FOUND, responseCode = HttpStatusCode.NotFound)
+                    throw ApiException(ExceptionReason.ENTRY_NOT_FOUND)
                 }
             }
             call.respond(HttpStatusCode.NoContent)

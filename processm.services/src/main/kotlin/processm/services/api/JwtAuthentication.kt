@@ -31,7 +31,7 @@ object JwtAuthentication {
         var expiredToken = createProlongingTokenVerifier(issuer, secret, acceptableExpiration).verify(encodedToken)
 
         if (Duration.between(expiredToken.expiresAt.toInstant(), Instant.now()) > acceptableExpiration) {
-            throw ApiException(ExceptionReason.TOKEN_EXPIRED, responseCode = HttpStatusCode.Unauthorized)
+            throw ApiException(ExceptionReason.TOKEN_EXPIRED)
         }
         val apiUser = ApiUser(expiredToken.claims)
         val newExpirationDate = Instant

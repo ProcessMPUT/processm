@@ -106,10 +106,7 @@ class OrganizationsApiTest : BaseApiTest() {
                     })
 
             withAuthentication(role = null) {
-                every { organizationService.getMembers(removedOrganizationId) } throws ApiException(
-                    ExceptionReason.NOT_FOUND,
-                    responseCode = HttpStatusCode.NotFound
-                )
+                every { organizationService.getMembers(removedOrganizationId) } throws ApiException(ExceptionReason.NOT_FOUND)
 
                 with(handleRequest(HttpMethod.Get, "/api/organizations/$removedOrganizationId/members")) {
                     assertEquals(HttpStatusCode.NotFound, response.status())

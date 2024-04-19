@@ -1,7 +1,6 @@
 package processm.services.api
 
 import com.auth0.jwt.interfaces.Claim
-import io.ktor.http.*
 import io.ktor.server.auth.*
 import processm.services.api.models.OrganizationRole
 import processm.services.helpers.ExceptionReason
@@ -34,11 +33,8 @@ internal fun ApiUser.ensureUserBelongsToOrganization(
     organizationRole: OrganizationRole = OrganizationRole.reader
 ) {
     if (!organizations.containsKey(organizationId)) {
-        throw ApiException(ExceptionReason.NOT_MEMBER_OF_ORGANIZATION, responseCode = HttpStatusCode.Forbidden)
+        throw ApiException(ExceptionReason.NOT_MEMBER_OF_ORGANIZATION)
     } else if ((organizations[organizationId]?.ordinal ?: -1) > organizationRole.ordinal) {
-        throw ApiException(
-            ExceptionReason.INSUFFICIENT_PERMISSION_IN_ORGANIZATION,
-            responseCode = HttpStatusCode.Forbidden
-        )
+        throw ApiException(ExceptionReason.INSUFFICIENT_PERMISSION_IN_ORGANIZATION)
     }
 }
