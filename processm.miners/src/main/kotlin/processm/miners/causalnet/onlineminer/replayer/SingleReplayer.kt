@@ -28,11 +28,16 @@ private typealias RelaxedState = HashMapWithDefault<Node, Counter<Dependency>>
  *
  * It is preferrable to start with a low [initialQueueSize], as the cost of queue management for large queues is non-negligible.
  * Iterative deepening is relatively cheap due to its multiplicative nature - most of the work is performed in the final repetition.
+ *
+ * @param horizon How many activities forward in the trace to consider as possible effects. `null` means until the end of
+ * the trace (i.e., all of them). Intuitively, both the average split size and the maximum split size should be
+ * non-decreasing functions of horizon, however, no formal proof is offered.
  */
 class SingleReplayer(
     val initialQueueSize: Int = 100,
     val deepeningSteep: Int = 10,
-    val maximalQueueSize: Int = Integer.MAX_VALUE
+    val maximalQueueSize: Int = Integer.MAX_VALUE,
+    val horizon: Int? = null
 ) : Replayer {
 
     companion object {
@@ -42,6 +47,7 @@ class SingleReplayer(
     init {
         require(deepeningSteep > 1)
         require(initialQueueSize < maximalQueueSize)
+        require(horizon == null || horizon >= 1)
     }
 
     private data class Context(
@@ -325,10 +331,11 @@ class SingleReplayer(
             counters[i].putAll(counters[i + 1])
             counters[i].inc(trace[i + 1])
         }
+        val localHorizon = horizon?.coerceAtMost(trace.size) ?: trace.size
         return trace.indices.map { i ->
             val a = trace[i]
             val prod = HashSet<Dependency>()
-            for (j in i + 1 until trace.size) {
+            for (j in i + 1 until (i + 1 + localHorizon).coerceAtMost(trace.size)) {
                 val b = trace[j]
                 val dep = Dependency(a, b)
                 if (prod.contains(dep))

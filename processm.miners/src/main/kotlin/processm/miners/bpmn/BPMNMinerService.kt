@@ -36,7 +36,7 @@ class BPMNMinerService : AbstractMinerService(
     interface BPMNJob : MinerJob<BPMNModel> {
         override fun mine(component: WorkspaceComponent, stream: DBHierarchicalXESInputStream): BPMNModel {
 
-            val miner = minerFromURN(component.algorithm)
+            val miner = minerFromProperties(component.properties)
 
 
             val model = miner.processLog(stream)

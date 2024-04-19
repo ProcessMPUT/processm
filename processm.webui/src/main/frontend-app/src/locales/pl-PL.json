@@ -53,9 +53,11 @@
         "validation": {
           "datastore-empty": "Magazyn danych nie może być pusty",
           "name-empty": "Nazwa nie może być pusta",
-          "query-empty": "Zapytanie nie może być puste"
+          "query-empty": "Zapytanie nie może być puste",
+          "not-a-non-negative-integer": "Wartość musi być nieujemną liczbą całkowitą"
         },
-        "algorithm": "Algorytm odkrywania"
+        "algorithm": "Algorytm odkrywania",
+        "horizon": "Adekwatne wyłącznie dla Online Heuristic Miner. Ile zdarzeń na przód w śladzie należy rozważać jako możliwe efekty aktywności."
       }
     },
     "flat-log-view": "Tabelaryczny widok logu",

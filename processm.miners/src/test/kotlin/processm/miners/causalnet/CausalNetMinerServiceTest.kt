@@ -68,7 +68,7 @@ class CausalNetMinerServiceTest {
             name = "c-net"
             componentType = ComponentTypeDto.CausalNet
             dataStoreId = DBTestHelper.dbName.toUUID()!!
-            algorithm = algo
+            properties = mapOf("algorithm" to algo)
             query = "where l:id=${DBTestHelper.JournalReviewExtra}"
 
             afterCommit {

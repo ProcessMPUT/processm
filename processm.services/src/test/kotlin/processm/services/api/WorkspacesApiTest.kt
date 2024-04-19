@@ -338,7 +338,7 @@ class WorkspacesApiTest : BaseApiTest() {
                     every { dataLastModified } returns null
                     every { userLastModified } returns Instant.now()
                     every { lastError } returns null
-                    every { algorithm } returns null
+                    every { properties } returns emptyMap()
                 }
             )
             every {
