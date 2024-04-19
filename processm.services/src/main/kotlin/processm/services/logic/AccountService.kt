@@ -19,6 +19,7 @@ import processm.dbmodels.ilike
 import processm.dbmodels.models.*
 import processm.helpers.getPropertyIgnoreCase
 import processm.logging.loggedScope
+import processm.services.helpers.parseLocale
 import processm.services.helpers.Patterns
 import java.time.Duration
 import java.time.Instant
@@ -251,28 +252,4 @@ class AccountService(private val groupService: GroupService, private val produce
 
     private fun verifyPassword(password: String, passwordHash: String) =
         passwordVerifier.hash(passwordHash).password(password.toByteArray()).verifyEncoded()
-
-    private fun parseLocale(locale: String): Locale {
-        val localeTags = locale.split("_", "-")
-        val localeObject = when (localeTags.size) {
-            3 -> Locale(localeTags[0], localeTags[1], localeTags[2])
-            2 -> Locale(localeTags[0], localeTags[1])
-            1 -> Locale(localeTags[0])
-            else -> throw ValidationException(
-                Reason.ResourceFormatInvalid, "The provided locale string is in invalid format"
-            )
-        }
-
-        try {
-            localeObject.isO3Language
-            localeObject.isO3Country
-        } catch (e: MissingResourceException) {
-            throw ValidationException(
-                Reason.ResourceNotFound,
-                "The current locale could not be changed: ${e.message.orEmpty()}"
-            )
-        }
-
-        return localeObject
-    }
 }

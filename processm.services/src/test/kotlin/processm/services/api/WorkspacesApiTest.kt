@@ -224,7 +224,7 @@ class WorkspacesApiTest : BaseApiTest() {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
                     assertTrue(
                         response.deserializeContent<ErrorMessage>().error
-                            .contains("The provided workspace data cannot be parsed")
+                            .contains("data cannot be parsed")
                     )
                 }
             }

@@ -53,17 +53,36 @@ class UsersApiTest : BaseApiTest() {
     }
 
     @Test
-    fun `responds to unsuccessful authentication with 401 and error message`() = withConfiguredTestApplication {
+    fun `responds to unsuccessful authentication with 401 and error message in English`() = withConfiguredTestApplication {
         val accountService = declareMock<AccountService>()
 
         every { accountService.verifyUsersCredentials(username = any(), password = any()) } returns null
 
         with(handleRequest(HttpMethod.Post, "/api/users/session") {
             addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            addHeader(HttpHeaders.AcceptLanguage, "ja;q=1.0,en;q=0.9,pl;q=0.8")
             withSerializedBody(UserCredentials("user", "wrong_password"))
         }) {
             assertEquals(HttpStatusCode.Unauthorized, response.status())
             assertTrue(response.deserializeContent<ErrorMessage>().error.contains("Invalid username or password"))
+        }
+
+        verify { accountService.verifyUsersCredentials(username = any(), password = any()) }
+    }
+
+    @Test
+    fun `responds to unsuccessful authentication with 401 and error message in Polish`() = withConfiguredTestApplication {
+        val accountService = declareMock<AccountService>()
+
+        every { accountService.verifyUsersCredentials(username = any(), password = any()) } returns null
+
+        with(handleRequest(HttpMethod.Post, "/api/users/session") {
+            addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            addHeader(HttpHeaders.AcceptLanguage, "ja;q=1.0,en;q=0.8,de,pl;q=0.9")
+            withSerializedBody(UserCredentials("user", "wrong_password"))
+        }) {
+            assertEquals(HttpStatusCode.Unauthorized, response.status())
+            assertTrue(response.deserializeContent<ErrorMessage>().error.contains("Nieprawidłowa nazwa użytkownika lub hasło"))
         }
 
         verify { accountService.verifyUsersCredentials(username = any(), password = any()) }
@@ -357,7 +376,7 @@ class UsersApiTest : BaseApiTest() {
                     withSerializedBody(Object())
                 }) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
-                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("The provided account details cannot be parsed"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("cannot be parsed"))
                 }
             }
 
@@ -442,7 +461,7 @@ class UsersApiTest : BaseApiTest() {
                     withSerializedBody(Object())
                 }) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
-                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("The provided password data cannot be parsed"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("data cannot be parsed"))
                 }
             }
 
@@ -515,7 +534,7 @@ class UsersApiTest : BaseApiTest() {
                     withSerializedBody(Object())
                 }) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
-                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("The provided locale data cannot be parsed"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("data cannot be parsed"))
                 }
             }
 

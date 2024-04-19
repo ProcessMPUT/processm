@@ -7,10 +7,12 @@ import processm.services.api.models.OrganizationRole
 import java.util.*
 
 data class ApiUser(private val claims: Map<String, Claim>) : Principal {
-
     val userId: UUID =
-        UUID.fromString(claims["userId"]?.asString() ?: throw ApiException("Token should contain 'userId' field"))
-    val username: String = claims["username"]?.asString() ?: throw ApiException("Token should contain 'username' field")
+        UUID.fromString(
+            claims["userId"]?.asString() ?: throw ApiException(ApiExceptionReason.NO_FIELD_IN_TOKEN, arrayOf("userId"))
+        )
+    val username: String =
+        claims["username"]?.asString() ?: throw ApiException(ApiExceptionReason.NO_FIELD_IN_TOKEN, arrayOf("username"))
     val organizations: Map<UUID, OrganizationRole> =
         claims["organizations"]?.asString()?.split(JwtAuthentication.MULTIVALUE_CLAIM_SEPARATOR)?.mapNotNull {
             if (it.isEmpty())
@@ -18,7 +20,7 @@ data class ApiUser(private val claims: Map<String, Claim>) : Principal {
             val (organizationId, organizationRole) = it.split(':')
             return@mapNotNull UUID.fromString(organizationId) to OrganizationRole.valueOf(organizationRole)
         }?.toMap()
-            ?: throw ApiException("Token should contain 'organizations' field")
+            ?: throw ApiException(ApiExceptionReason.NO_FIELD_IN_TOKEN, arrayOf("organizations"))
 }
 
 /**
@@ -31,11 +33,11 @@ internal fun ApiUser.ensureUserBelongsToOrganization(
     organizationRole: OrganizationRole = OrganizationRole.reader
 ) {
     if (!organizations.containsKey(organizationId)) {
-        throw ApiException("The user is not a member of the related organization", HttpStatusCode.Forbidden)
+        throw ApiException(ApiExceptionReason.NOT_MEMBER_OF_ORGANIZATION, responseCode = HttpStatusCode.Forbidden)
     } else if ((organizations[organizationId]?.ordinal ?: -1) > organizationRole.ordinal) {
         throw ApiException(
-            "The user has insufficient permissions to access the related organization",
-            HttpStatusCode.Forbidden
+            ApiExceptionReason.INSUFFICIENT_PERMISSION_IN_ORGANIZATION,
+            responseCode = HttpStatusCode.Forbidden
         )
     }
 }

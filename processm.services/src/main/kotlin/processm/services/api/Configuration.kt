@@ -13,6 +13,7 @@ import io.ktor.server.response.*
 import io.ktor.util.logging.*
 import processm.logging.loggedScope
 import processm.services.api.models.ErrorMessage
+import processm.services.helpers.locale
 import processm.services.logic.Reason
 import processm.services.logic.ValidationException
 import java.time.Duration
@@ -52,7 +53,7 @@ internal fun ApplicationStatusPageConfiguration(): StatusPagesConfig.() -> Unit 
             call.respond(responseStatusCode, ErrorMessage(cause.userMessage))
         }
         exception<ApiException> { call, cause ->
-            call.respond(cause.responseCode, ErrorMessage(cause.publicMessage.orEmpty()))
+            call.respond(cause.responseCode, ErrorMessage(cause.localizedMessage(call.locale)))
         }
         exception<TokenExpiredException> { call, cause ->
             call.respond(HttpStatusCode.Unauthorized, ErrorMessage(cause.message.orEmpty()))
