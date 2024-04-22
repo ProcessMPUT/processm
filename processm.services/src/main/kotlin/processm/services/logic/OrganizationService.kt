@@ -52,13 +52,13 @@ class OrganizationService(
     fun addMember(organizationId: UUID, userId: UUID, role: RoleType): User = loggedScope { logger ->
         transactionMain {
             val organization = Organization.findById(organizationId)
-                .validateNotNull(ExceptionReason.ORGANIZATION_NOT_FOUND)
+                .validateNotNull(ExceptionReason.OrganizationNotFound)
 
-            val user = User.findById(userId).validateNotNull(ExceptionReason.ACCOUNT_NOT_FOUND)
+            val user = User.findById(userId).validateNotNull(ExceptionReason.UserNotFound)
 
             UserRoleInOrganization.find {
                 (UsersRolesInOrganizations.userId eq user.id) and (UsersRolesInOrganizations.organizationId eq organization.id)
-            }.firstOrNull().validate(null, ExceptionReason.USER_ALREADY_IN_ORGANIZATION)
+            }.firstOrNull().validate(null, ExceptionReason.UserAlreadyInOrganization)
 
             UserRoleInOrganization.new {
                 this.user = user
@@ -81,7 +81,7 @@ class OrganizationService(
                 val member = UserRoleInOrganization.find {
                     (UsersRolesInOrganizations.organizationId eq organizationId) and (UsersRolesInOrganizations.userId eq userId)
                 }.firstOrNull()
-                    .validateNotNull(ExceptionReason.USER_NOT_FOUND_IN_ORGANIZATION, userId, organizationId)
+                    .validateNotNull(ExceptionReason.UserNotFoundInOrganization, userId, organizationId)
                 member.role = role.role
 
                 logger.debug("Updated user $userId in organization $organizationId.")
@@ -91,13 +91,13 @@ class OrganizationService(
     fun removeMember(organizationId: UUID, userId: UUID): Unit = loggedScope { logger ->
         transactionMain {
             val organization = Organization.findById(organizationId)
-                .validateNotNull(ExceptionReason.ORGANIZATION_NOT_FOUND)
+                .validateNotNull(ExceptionReason.OrganizationNotFound)
 
-            User.findById(userId).validateNotNull(ExceptionReason.ACCOUNT_NOT_FOUND)
+            User.findById(userId).validateNotNull(ExceptionReason.UserNotFound)
 
             UsersRolesInOrganizations.deleteWhere {
                 (UsersRolesInOrganizations.userId eq userId) and (UsersRolesInOrganizations.organizationId eq organizationId)
-            }.validateNot(0, ExceptionReason.USER_NOT_FOUND_IN_ORGANIZATION, userId, organizationId)
+            }.validateNot(0, ExceptionReason.UserNotFoundInOrganization, userId, organizationId)
 
             // detach the user from all groups in this organization
             UsersInGroups.deleteWhere {
@@ -123,7 +123,7 @@ class OrganizationService(
             ).with(Group::organizationId /*eager loading*/).toList()
 
         // if organization exists, we should find at least the shared group
-        groups.isNotEmpty().validate(ExceptionReason.ORGANIZATION_NOT_FOUND)
+        groups.isNotEmpty().validate(ExceptionReason.OrganizationNotFound)
 
         groups
     }
@@ -139,7 +139,7 @@ class OrganizationService(
                 .select { (Groups.id eq sharedGroupId) and (Groups.isShared eq true) }
                 .map { Organization.wrapRow(it) }
                 .firstOrNull()
-                .validateNotNull(ExceptionReason.SHARED_GROUP_NOT_ASSIGNED, sharedGroupId)
+                .validateNotNull(ExceptionReason.SharedGroupNotAssigned, sharedGroupId)
 
             return@transactionMain organization
         }
@@ -149,7 +149,7 @@ class OrganizationService(
      */
     fun create(name: String, isPrivate: Boolean, parent: UUID? = null, ownerUserId: UUID? = null): Organization =
         loggedScope { logger ->
-            name.isNotBlank().validate(ExceptionReason.NAME_IS_BLANK)
+            name.isNotBlank().validate(ExceptionReason.BlankName)
 
             transactionMain {
                 val org = Organization.new {
@@ -207,7 +207,7 @@ class OrganizationService(
      * i.e., if [getSoleOwnershipURNs] returns a non-empty list.
      */
     fun remove(id: UUID): Unit = transactionMain {
-        getSoleOwnershipURNs(id).isEmpty().validate(ExceptionReason.GROUP_IS_SOLE_OWNER)
+        getSoleOwnershipURNs(id).isEmpty().validate(ExceptionReason.SoleOwner)
         val parentId = Organization.findById(id)?.parentOrganization?.id
         Organizations.update(where = { Organizations.parentOrganizationId eq id }) {
             it[parentOrganizationId] = parentId
@@ -251,18 +251,18 @@ class OrganizationService(
     private fun Transaction.getOrganization(organizationId: UUID): Organization =
         Organization
             .findById(organizationId)
-            .validateNotNull(ExceptionReason.ORGANIZATION_NOT_FOUND, organizationId)
+            .validateNotNull(ExceptionReason.OrganizationNotFound, organizationId)
             .load(Organization::parentOrganization)
 
     fun attachSubOrganization(organizationId: UUID, subOrganizationId: UUID) {
         transactionMain {
-            organizationId.validateNot(subOrganizationId, ExceptionReason.ORGANIZATION_NOT_OWN_CHILD)
+            organizationId.validateNot(subOrganizationId, ExceptionReason.OrganizationCannotBeItsOwnChild)
             val organization = Organization.findById(organizationId)
-                .validateNotNull(ExceptionReason.ORGANIZATION_NOT_FOUND, organizationId)
+                .validateNotNull(ExceptionReason.OrganizationNotFound, organizationId)
             val subOrganization = Organization.findById(subOrganizationId)
-                .validateNotNull(ExceptionReason.ORGANIZATION_NOT_FOUND, subOrganizationId)
+                .validateNotNull(ExceptionReason.OrganizationNotFound, subOrganizationId)
             subOrganization.parentOrganization.validateNull(
-                ExceptionReason.PARENT_ORGANIZATION_ALREADY_SET,
+                ExceptionReason.ParentOrganizationAlreadySet,
                 subOrganizationId
             )
             val expr = OrganizationsDescendants.subOrganizationId.count()
@@ -271,7 +271,7 @@ class OrganizationService(
                 .select {
                     (OrganizationsDescendants.subOrganizationId eq organizationId) and (OrganizationsDescendants.superOrganizationId eq subOrganizationId)
                 }.firstNotNullOf { row -> row[expr] }
-                .validate(0, ExceptionReason.ALREADY_DESCENDANT, organizationId, subOrganizationId)
+                .validate(0, ExceptionReason.AlreadyDescendant, organizationId, subOrganizationId)
             subOrganization.parentOrganization = organization
         }
     }
@@ -279,9 +279,9 @@ class OrganizationService(
     fun detachSubOrganization(organizationId: UUID) {
         transactionMain {
             val organization = Organization.findById(organizationId)
-                .validateNotNull(ExceptionReason.ORGANIZATION_NOT_FOUND, organizationId)
+                .validateNotNull(ExceptionReason.OrganizationNotFound, organizationId)
             organization.parentOrganization.validateNotNull(
-                ExceptionReason.ORGANIZATION_IS_ALREADY_TOP_LEVEL,
+                ExceptionReason.OrganizationAlreadyTopLevel,
                 organizationId
             )
             organization.parentOrganization = null

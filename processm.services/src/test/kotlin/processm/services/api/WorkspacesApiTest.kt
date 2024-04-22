@@ -133,7 +133,7 @@ class WorkspacesApiTest : BaseApiTest() {
         withAuthentication(acl = acl { RoleType.Owner * Workspaces * workspaceId }) {
             every {
                 workspaceService.remove(workspaceId)
-            } throws ValidationException(ExceptionReason.WORKSPACE_NOT_FOUND)
+            } throws ValidationException(ExceptionReason.WorkspaceNotFound)
             with(handleRequest(HttpMethod.Delete, "/api/workspaces/$workspaceId")) {
                 assertEquals(HttpStatusCode.NotFound, response.status())
             }
@@ -518,7 +518,7 @@ class WorkspacesApiTest : BaseApiTest() {
                     workspaceService.updateLayout(
                         layoutData.mapValues { JsonSerializer.encodeToString(it.value) }
                     )
-                } throws ValidationException(ExceptionReason.WORKSPACE_NOT_FOUND)
+                } throws ValidationException(ExceptionReason.WorkspaceNotFound)
                 with(
                     handleRequest(
                         HttpMethod.Patch,
@@ -568,7 +568,7 @@ class WorkspacesApiTest : BaseApiTest() {
             withAuthentication(acl = acl { RoleType.Owner * Workspaces * workspaceId }) {
                 every {
                     workspaceService.removeComponent(componentId)
-                } throws ValidationException(ExceptionReason.WORKSPACE_COMPONENT_NOT_FOUND)
+                } throws ValidationException(ExceptionReason.WorkspaceComponentNotFound)
                 with(
                     handleRequest(
                         HttpMethod.Delete,

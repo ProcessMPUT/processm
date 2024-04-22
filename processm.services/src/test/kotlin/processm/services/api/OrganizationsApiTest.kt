@@ -106,7 +106,7 @@ class OrganizationsApiTest : BaseApiTest() {
                     })
 
             withAuthentication(role = null) {
-                every { organizationService.getMembers(removedOrganizationId) } throws ApiException(ExceptionReason.NOT_FOUND)
+                every { organizationService.getMembers(removedOrganizationId) } throws ApiException(ExceptionReason.NotFound)
 
                 with(handleRequest(HttpMethod.Get, "/api/organizations/$removedOrganizationId/members")) {
                     assertEquals(HttpStatusCode.NotFound, response.status())
@@ -155,7 +155,7 @@ class OrganizationsApiTest : BaseApiTest() {
         withAuthentication(userId = userId, login = email, role = OrganizationRole.owner to organizationId) {
             every {
                 organizationService.addMember(organizationId, email, RoleType.Reader)
-            } throws ValidationException(ExceptionReason.USER_ALREADY_IN_ORGANIZATION)
+            } throws ValidationException(ExceptionReason.UserAlreadyInOrganization)
 
             with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/members") {
                 withSerializedBody(
@@ -208,7 +208,7 @@ class OrganizationsApiTest : BaseApiTest() {
 
             every {
                 organizationService.removeMember(organizationId, memberToDelete)
-            } throws ValidationException(ExceptionReason.ACCOUNT_NOT_FOUND)
+            } throws ValidationException(ExceptionReason.UserNotFound)
 
             with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/members/$memberToDelete")) {
                 assertEquals(HttpStatusCode.NotFound, response.status())
@@ -279,7 +279,7 @@ class OrganizationsApiTest : BaseApiTest() {
 
             every {
                 organizationService.updateMember(organizationId, memberToUpdate, RoleType.Writer)
-            } throws ValidationException(ExceptionReason.ACCOUNT_NOT_FOUND)
+            } throws ValidationException(ExceptionReason.UserNotFound)
 
             with(handleRequest(HttpMethod.Patch, "/api/organizations/$organizationId/members/$memberToUpdate") {
                 withSerializedBody(OrganizationMember(organizationRole = OrganizationRole.writer))
@@ -416,7 +416,7 @@ class OrganizationsApiTest : BaseApiTest() {
         val organizationId = UUID.randomUUID()
         val organizationService = declareMock<OrganizationService> {
             every { get(organizationId) } throws ValidationException(
-                ExceptionReason.ORGANIZATION_NOT_FOUND,
+                ExceptionReason.OrganizationNotFound,
                 arrayOf(organizationId)
             )
         }
@@ -437,7 +437,7 @@ class OrganizationsApiTest : BaseApiTest() {
             val organizationId = UUID.randomUUID()
             val organizationService = declareMock<OrganizationService> {
                 every { get(organizationId) } throws ValidationException(
-                    ExceptionReason.ORGANIZATION_NOT_FOUND,
+                    ExceptionReason.OrganizationNotFound,
                     arrayOf(organizationId)
                 )
             }
@@ -479,7 +479,7 @@ class OrganizationsApiTest : BaseApiTest() {
         val organizationId = UUID.randomUUID()
         val organizationService = declareMock<OrganizationService> {
             every { update(organizationId, any()) } throws ValidationException(
-                ExceptionReason.ORGANIZATION_NOT_FOUND,
+                ExceptionReason.OrganizationNotFound,
                 arrayOf(organizationId)
             )
         }
@@ -535,7 +535,7 @@ class OrganizationsApiTest : BaseApiTest() {
         val organizationId = UUID.randomUUID()
         val organizationService = declareMock<OrganizationService> {
             every { remove(organizationId) } throws ValidationException(
-                ExceptionReason.ORGANIZATION_NOT_FOUND,
+                ExceptionReason.OrganizationNotFound,
                 arrayOf(organizationId)
             )
         }

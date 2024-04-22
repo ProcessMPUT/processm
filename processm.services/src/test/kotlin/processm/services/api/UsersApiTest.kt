@@ -275,7 +275,7 @@ class UsersApiTest : BaseApiTest() {
         withConfiguredTestApplication {
             val accountService = declareMock<AccountService>()
 
-            every { accountService.getUser(userId = any()) } throws ValidationException(ExceptionReason.ACCOUNT_NOT_FOUND)
+            every { accountService.getUser(userId = any()) } throws ValidationException(ExceptionReason.UserNotFound)
 
             withAuthentication {
                 with(handleRequest(HttpMethod.Get, "/api/users/me")) {
@@ -341,7 +341,7 @@ class UsersApiTest : BaseApiTest() {
                 accountService.create(
                     "user@example.com", accountLocale = any(), pass = any()
                 )
-            } throws ValidationException(ExceptionReason.USER_ALREADY_EXISTS)
+            } throws ValidationException(ExceptionReason.UserAlreadyExists)
 
             withAuthentication {
                 with(handleRequest(HttpMethod.Post, "/api/users") {
@@ -505,7 +505,7 @@ class UsersApiTest : BaseApiTest() {
                 accountService.changeLocale(
                     userId = any(), locale = "eng_ENG"
                 )
-            } throws ValidationException(ExceptionReason.CANNOT_CHANGE_LOCALE)
+            } throws ValidationException(ExceptionReason.CannotChangeLocale)
 
             withAuthentication {
                 with(handleRequest(HttpMethod.Patch, "/api/users/me/locale") {

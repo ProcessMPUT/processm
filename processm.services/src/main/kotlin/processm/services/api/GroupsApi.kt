@@ -52,7 +52,7 @@ fun Route.GroupsApi() = loggedScope { logger ->
 
             val newGroup =
                 kotlin.runCatching { call.receiveNullable<Group>() }.getOrNull()
-                    .validateNotNull(ExceptionReason.INVALID_GROUP)
+                    .validateNotNull(ExceptionReason.InvalidGroupSpecification)
             if (path.organizationId != newGroup.organizationId) {
                 logger.warn("path.organizationId '${path.organizationId}' does not equal newGroup.organizationId '${newGroup.organizationId}'; ignoring the latter.")
             }
@@ -139,7 +139,7 @@ fun Route.GroupsApi() = loggedScope { logger ->
 
             val newMemberId =
                 kotlin.runCatching { call.receiveNullable<String>() }.getOrNull()
-                    .validateNotNull(ExceptionReason.INVALID_USER_ID)
+                    .validateNotNull(ExceptionReason.InvalidUserID)
                     .toUUID()!!
             groupService.attachUserToGroup(newMemberId, path.groupId)
 

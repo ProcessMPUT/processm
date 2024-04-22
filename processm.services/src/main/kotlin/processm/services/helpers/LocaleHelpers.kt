@@ -35,14 +35,14 @@ fun parseLocale(locale: String): Locale {
         3 -> Locale(localeTags[0], localeTags[1], localeTags[2])
         2 -> Locale(localeTags[0], localeTags[1])
         1 -> Locale(localeTags[0])
-        else -> throw ValidationException(ExceptionReason.INVALID_LOCALE)
+        else -> throw ValidationException(ExceptionReason.InvalidLocale)
     }
 
     try {
         localeObject.isO3Language
         localeObject.isO3Country
     } catch (e: MissingResourceException) {
-        throw ValidationException(ExceptionReason.CANNOT_CHANGE_LOCALE, message = e.message)
+        throw ValidationException(ExceptionReason.CannotChangeLocale, message = e.message)
     }
 
     return localeObject

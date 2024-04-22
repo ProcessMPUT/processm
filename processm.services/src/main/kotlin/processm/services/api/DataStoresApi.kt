@@ -39,9 +39,9 @@ fun Route.DataStoresApi() {
         post<Paths.DataStores> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
             val messageBody = kotlin.runCatching { call.receiveNullable<DataStore>() }.getOrNull()
-                ?: throw ApiException(ExceptionReason.UNPARSABLE_DATA)
+                ?: throw ApiException(ExceptionReason.UnparsableData)
 
-            if (messageBody.name.isEmpty()) throw ApiException(ExceptionReason.NAME_FOR_DATA_STORE_IS_REQUIRED)
+            if (messageBody.name.isEmpty()) throw ApiException(ExceptionReason.DataStoreNameRequired)
             val ds =
                 dataStoreService.createDataStore(
                     userId = principal.userId,
@@ -100,7 +100,7 @@ fun Route.DataStoresApi() {
                 RoleType.Owner
             )
             val dataStore = kotlin.runCatching { call.receiveNullable<DataStore>() }.getOrNull()
-                ?: throw ApiException(ExceptionReason.UNPARSABLE_DATA)
+                ?: throw ApiException(ExceptionReason.UnparsableData)
             dataStoreService.renameDataStore(pathParams.dataStoreId, dataStore.name)
 
             call.respond(HttpStatusCode.NoContent)
@@ -120,11 +120,11 @@ fun Route.DataStoresApi() {
                     part.streamProvider().use { requestStream ->
                         logsService.saveLogFile(pathParams.dataStoreId, part.originalFileName, requestStream)
                     }
-                } else throw ApiException(ExceptionReason.UNEXPECTED_REQUEST_PARAMETER, arrayOf(part?.name))
+                } else throw ApiException(ExceptionReason.UnexpectedRequestParameter, arrayOf(part?.name))
             } catch (e: XMLStreamException) {
-                throw ApiException(ExceptionReason.NOT_A_VALID_FILE, arrayOf("XES"), message = e.message)
+                throw ApiException(ExceptionReason.InvalidFile, arrayOf("XES"), message = e.message)
             } catch (e: ZipException) {
-                throw ApiException(ExceptionReason.NOT_A_VALID_FILE, arrayOf("ZIP"), message = e.message)
+                throw ApiException(ExceptionReason.InvalidFile, arrayOf("ZIP"), message = e.message)
             }
 
             call.respond(HttpStatusCode.Created)
@@ -157,7 +157,7 @@ fun Route.DataStoresApi() {
                     )
                 }
 
-                else -> throw ApiException(ExceptionReason.UNSUPPORTED_CONTENT_TYPE, arrayOf(accept))
+                else -> throw ApiException(ExceptionReason.UnsupportedContentType, arrayOf(accept))
             }
 
             try {
@@ -166,9 +166,9 @@ fun Route.DataStoresApi() {
                     queryProcessor(this)
                 }
             } catch (e: RecognitionException) {
-                throw ApiException(ExceptionReason.PQL_ERROR, arrayOf(e.message))
+                throw ApiException(ExceptionReason.PQLError, arrayOf(e.message))
             } catch (e: IllegalArgumentException) {
-                throw ApiException(ExceptionReason.PQL_ERROR, arrayOf(e.message))
+                throw ApiException(ExceptionReason.PQLError, arrayOf(e.message))
             }
         }
 
@@ -212,11 +212,11 @@ fun Route.DataStoresApi() {
                 RoleType.Writer
             )
             val dataConnector = runCatching { call.receiveNullable<DataConnector>() }.getOrNull()
-                ?: throw ApiException(ExceptionReason.UNPARSABLE_DATA)
+                ?: throw ApiException(ExceptionReason.UnparsableData)
             val connectorProperties =
-                dataConnector.properties ?: throw ApiException(ExceptionReason.CONNECTOR_CONFIGURATION_REQUIRED)
+                dataConnector.properties ?: throw ApiException(ExceptionReason.ConnectorConfigurationRequired)
             val connectorName =
-                dataConnector.name ?: throw ApiException(ExceptionReason.NAME_FOR_DATA_CONNECTOR_IS_REQUIRED)
+                dataConnector.name ?: throw ApiException(ExceptionReason.ConnectorNameRequired)
             val connectionString = connectorProperties[connectionStringPropertyName]
             val dataConnectorId =
                 if (connectionString.isNullOrBlank()) dataStoreService.createDataConnector(
@@ -257,11 +257,11 @@ fun Route.DataStoresApi() {
                 RoleType.Writer
             )
             val dataConnector = kotlin.runCatching { call.receiveNullable<DataConnector>() }.getOrNull()
-                ?: throw ApiException(ExceptionReason.UNPARSABLE_DATA)
+                ?: throw ApiException(ExceptionReason.UnparsableData)
             dataStoreService.renameDataConnector(
                 pathParams.dataStoreId,
                 pathParams.dataConnectorId,
-                dataConnector.name ?: throw ApiException(ExceptionReason.NAME_FOR_DATA_CONNECTOR_IS_REQUIRED)
+                dataConnector.name ?: throw ApiException(ExceptionReason.ConnectorNameRequired)
             )
 
             call.respond(HttpStatusCode.NoContent)
@@ -275,14 +275,14 @@ fun Route.DataStoresApi() {
                 RoleType.Reader
             )
             val connectionProperties = runCatching { call.receiveNullable<DataConnector>() }.getOrNull()?.properties
-                ?: throw ApiException(ExceptionReason.UNPARSABLE_DATA)
+                ?: throw ApiException(ExceptionReason.UnparsableData)
             val connectionString = connectionProperties[connectionStringPropertyName]
 
             try {
                 if (connectionString.isNullOrBlank()) dataStoreService.testDatabaseConnection(connectionProperties)
                 else dataStoreService.testDatabaseConnection(connectionString)
             } catch (e: Exception) {
-                throw ApiException(ExceptionReason.CONNECTION_TEST_FAILED, arrayOf(e.message))
+                throw ApiException(ExceptionReason.ConnectionTestFailed, arrayOf(e.message))
             }
 
             call.respond(HttpStatusCode.NoContent)
@@ -345,9 +345,9 @@ fun Route.DataStoresApi() {
                 RoleType.Writer
             )
             val etlProcessData = runCatching { call.receiveNullable<AbstractEtlProcess>() }.getOrNull()
-                ?: throw ApiException(ExceptionReason.UNPARSABLE_DATA)
-            if (etlProcessData.dataConnectorId == null) throw ApiException(ExceptionReason.DATA_CONNECTOR_REFERENCE_IS_REQUIRED)
-            if (etlProcessData.name.isNullOrBlank()) throw ApiException(ExceptionReason.NAME_FOR_ETL_PROCESS_IS_REQUIRED)
+                ?: throw ApiException(ExceptionReason.UnparsableData)
+            if (etlProcessData.dataConnectorId == null) throw ApiException(ExceptionReason.ConnectorReferenceRequired)
+            if (etlProcessData.name.isNullOrBlank()) throw ApiException(ExceptionReason.ETLProcessNameRequired)
 
             val etlProcessId = when (etlProcessData.type) {
                 EtlProcessType.automatic -> {
@@ -364,7 +364,7 @@ fun Route.DataStoresApi() {
                 EtlProcessType.jdbc -> {
                     val configuration =
                         etlProcessData.configuration
-                            ?: throw ApiException(ExceptionReason.EMPTY_ETL_CONFIGURATION_NOT_SUPPORTED)
+                            ?: throw ApiException(ExceptionReason.EmptyETLConfigurationNotSupported)
                     dataStoreService.saveJdbcEtlProcess(
                         null,
                         pathParams.dataStoreId,
@@ -374,7 +374,7 @@ fun Route.DataStoresApi() {
                     )
                 }
 
-                else -> throw ApiException(ExceptionReason.ETL_PROCESS_TYPE_NOT_SUPPORTED)
+                else -> throw ApiException(ExceptionReason.ETLProcessTypeNotSupported)
             }
 
             call.respond(
@@ -396,8 +396,8 @@ fun Route.DataStoresApi() {
                 RoleType.Writer
             )
             val etlProcessData = runCatching { call.receiveNullable<AbstractEtlProcess>() }.getOrNull()
-                ?: throw ApiException(ExceptionReason.UNPARSABLE_DATA)
-            if (etlProcessData.isActive == null) throw ApiException(ExceptionReason.ACTIVATION_STATUS_IS_REQUIRED)
+                ?: throw ApiException(ExceptionReason.UnparsableData)
+            if (etlProcessData.isActive == null) throw ApiException(ExceptionReason.ActivationStatusRequired)
             dataStoreService.changeEtlProcessActivationState(
                 pathParams.dataStoreId,
                 pathParams.etlProcessId,
@@ -427,9 +427,9 @@ fun Route.DataStoresApi() {
             )
 
             val etlProcessData = runCatching { call.receiveNullable<AbstractEtlProcess>() }.getOrNull()
-                ?: throw ApiException(ExceptionReason.UNPARSABLE_DATA)
-            if (etlProcessData.dataConnectorId == null) throw ApiException(ExceptionReason.DATA_CONNECTOR_REFERENCE_IS_REQUIRED)
-            if (etlProcessData.name.isNullOrBlank()) throw ApiException(ExceptionReason.NAME_FOR_ETL_PROCESS_IS_REQUIRED)
+                ?: throw ApiException(ExceptionReason.UnparsableData)
+            if (etlProcessData.dataConnectorId == null) throw ApiException(ExceptionReason.ConnectorReferenceRequired)
+            if (etlProcessData.name.isNullOrBlank()) throw ApiException(ExceptionReason.ETLProcessNameRequired)
 
             val etlProcessId = when (etlProcessData.type) {
                 EtlProcessType.automatic -> {
@@ -446,7 +446,7 @@ fun Route.DataStoresApi() {
                 EtlProcessType.jdbc -> {
                     val configuration =
                         etlProcessData.configuration
-                            ?: throw ApiException(ExceptionReason.EMPTY_ETL_CONFIGURATION_NOT_SUPPORTED)
+                            ?: throw ApiException(ExceptionReason.EmptyETLConfigurationNotSupported)
                     dataStoreService.saveJdbcEtlProcess(
                         etlProcessData.id,
                         pathParams.dataStoreId,
@@ -456,7 +456,7 @@ fun Route.DataStoresApi() {
                     )
                 }
 
-                else -> throw ApiException(ExceptionReason.ETL_PROCESS_TYPE_NOT_SUPPORTED)
+                else -> throw ApiException(ExceptionReason.ETLProcessTypeNotSupported)
             }
 
             call.respond(HttpStatusCode.NoContent)
@@ -478,7 +478,7 @@ fun Route.DataStoresApi() {
                 )
                 call.respond(HttpStatusCode.OK, message)
             } catch (_: NoSuchElementException) {
-                throw ApiException(ExceptionReason.NOT_FOUND)
+                throw ApiException(ExceptionReason.NotFound)
             }
         }
 
@@ -503,14 +503,14 @@ fun Route.DataStoresApi() {
             )
             val nComponents = (pathParams.nComponents ?: defaultSampleSize).coerceAtMost(maxSampleSize)
             val etlProcessData = runCatching { call.receiveNullable<AbstractEtlProcess>() }.getOrNull()
-                ?: throw ApiException(ExceptionReason.UNPARSABLE_DATA)
+                ?: throw ApiException(ExceptionReason.UnparsableData)
             val id = when (etlProcessData.type) {
                 EtlProcessType.jdbc -> {
                     etlProcessData.configuration
-                        ?: throw ApiException(ExceptionReason.EMPTY_ETL_CONFIGURATION_NOT_SUPPORTED)
+                        ?: throw ApiException(ExceptionReason.EmptyETLConfigurationNotSupported)
                     etlProcessData.dataConnectorId
-                        ?: throw ApiException(ExceptionReason.DATA_CONNECTOR_REFERENCE_IS_REQUIRED)
-                    etlProcessData.name ?: throw ApiException(ExceptionReason.NAME_FOR_ETL_PROCESS_IS_REQUIRED)
+                        ?: throw ApiException(ExceptionReason.ConnectorReferenceRequired)
+                    etlProcessData.name ?: throw ApiException(ExceptionReason.ETLProcessNameRequired)
                     dataStoreService.createSamplingJdbcEtlProcess(
                         pathParams.dataStoreId,
                         etlProcessData.dataConnectorId,
@@ -520,7 +520,7 @@ fun Route.DataStoresApi() {
                     )
                 }
 
-                else -> throw ApiException(ExceptionReason.ETL_PROCESS_TYPE_NOT_SUPPORTED)
+                else -> throw ApiException(ExceptionReason.ETLProcessTypeNotSupported)
             }
 
             call.respond(

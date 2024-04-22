@@ -40,7 +40,7 @@ class AccountService(private val groupService: GroupService, private val produce
         loggedScope { logger ->
             transactionMain {
                 val user = User.find(Users.email ieq username).firstOrNull()
-                    .validateNotNull(ExceptionReason.ACCOUNT_NOT_FOUND)
+                    .validateNotNull(ExceptionReason.UserNotFound)
 
                 return@transactionMain if (verifyPassword(password, user.password)) user else null
             }
@@ -55,11 +55,11 @@ class AccountService(private val groupService: GroupService, private val produce
         pass: String
     ): User = loggedScope { logger ->
         transactionMain {
-            Patterns.email.matches(email).validate(ExceptionReason.INVALID_EMAIL, email)
+            Patterns.email.matches(email).validate(ExceptionReason.InvalidEmail, email)
 
-            Patterns.password.matches(pass).validate(ExceptionReason.PASSWORD_TOO_WEAK)
+            Patterns.password.matches(pass).validate(ExceptionReason.PasswordTooWeak)
 
-            Users.select { Users.email ieq email }.limit(1).count().validate(0L, ExceptionReason.USER_ALREADY_EXISTS)
+            Users.select { Users.email ieq email }.limit(1).count().validate(0L, ExceptionReason.UserAlreadyExists)
 
             // automatically created group for the particular user // name group after username
             val privateGroup = groupService.create(email, organizationId = null)
@@ -119,7 +119,7 @@ class AccountService(private val groupService: GroupService, private val produce
     fun remove(userId: UUID): Unit = transactionMain {
         Users.deleteWhere {
             Users.id eq userId
-        }.validate(1, ExceptionReason.ACCOUNT_NOT_FOUND)
+        }.validate(1, ExceptionReason.UserNotFound)
     }
 
     /**
@@ -157,7 +157,7 @@ class AccountService(private val groupService: GroupService, private val produce
      * Throws [ValidationException] if the specified [userId] doesn't exist.
      */
     fun getUser(userId: UUID): User = transactionMain {
-        User.findById(userId).validateNotNull(ExceptionReason.ACCOUNT_NOT_FOUND)
+        User.findById(userId).validateNotNull(ExceptionReason.UserNotFound)
     }
 
     /**

@@ -51,13 +51,13 @@ fun Route.WorkspacesApi() {
         post<Paths.Workspaces> { path ->
             val principal = call.authentication.principal<ApiUser>()!!
             val newWorkspace = runCatching { call.receiveNullable<NewWorkspace>() }.getOrNull()
-                ?: throw ApiException(ExceptionReason.UNPARSABLE_DATA)
+                ?: throw ApiException(ExceptionReason.UnparsableData)
 
             // The user must be a member of the organization, but does not require any privileges, as the privileges are related only to user and group management
             principal.ensureUserBelongsToOrganization(newWorkspace.organizationId, OrganizationRole.none)
 
             if (newWorkspace.name.isEmpty()) {
-                throw ApiException(ExceptionReason.WORKSPACE_NAME_IS_REQUIRED)
+                throw ApiException(ExceptionReason.WorkspaceNameRequired)
             }
 
             val workspaceId = workspaceService.create(newWorkspace.name, principal.userId, newWorkspace.organizationId)
@@ -86,7 +86,7 @@ fun Route.WorkspacesApi() {
             val principal = call.authentication.principal<ApiUser>()!!
 
             val workspace = runCatching { call.receiveNullable<Workspace>() }.getOrNull()
-                ?: throw ApiException(ExceptionReason.UNPARSABLE_DATA)
+                ?: throw ApiException(ExceptionReason.UnparsableData)
 
             aclService.checkAccess(principal.userId, Workspaces, path.workspaceId, RoleType.Writer)
             workspaceService.update(path.workspaceId, workspace.name)
@@ -115,7 +115,7 @@ fun Route.WorkspacesApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             val workspaceComponent = runCatching { call.receiveNullable<AbstractComponent>() }.let {
                 it.getOrThrow() ?: throw ApiException(
-                    ExceptionReason.UNPARSABLE_DATA,
+                    ExceptionReason.UnparsableData,
                     message = it.exceptionOrNull()!!.message
                 )
             }
@@ -171,7 +171,7 @@ fun Route.WorkspacesApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             val workspaceLayout =
                 runCatching { call.receiveNullable<LayoutCollectionMessageBody>() }.getOrNull()?.data
-                    ?: throw ApiException(ExceptionReason.UNPARSABLE_DATA)
+                    ?: throw ApiException(ExceptionReason.UnparsableData)
 
             aclService.checkAccess(principal.userId, Workspaces, workspace.workspaceId, RoleType.Reader)
 

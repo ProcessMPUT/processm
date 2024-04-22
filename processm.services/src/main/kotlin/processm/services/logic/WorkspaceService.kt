@@ -56,7 +56,7 @@ class WorkspaceService(
      */
     fun create(name: String, userId: UUID, organizationId: UUID): UUID =
         transactionMain {
-            name.isNotBlank().validate(ExceptionReason.WORKSPACE_NAME_IS_REQUIRED)
+            name.isNotBlank().validate(ExceptionReason.WorkspaceNameRequired)
 
             val user = accountService.getUser(userId)
             val sharedGroup = Group.find {
@@ -91,7 +91,7 @@ class WorkspaceService(
         transactionMain {
 
             Workspace.findById(workspaceId)
-                .validateNotNull(ExceptionReason.WORKSPACE_NOT_FOUND, workspaceId)
+                .validateNotNull(ExceptionReason.WorkspaceNotFound, workspaceId)
                 .deleted = true
 
             WorkspaceComponent.find {
@@ -165,8 +165,8 @@ class WorkspaceService(
             )
         }
 
-        name.isNullOrBlank().validateNot(ExceptionReason.NAME_IS_BLANK)
-        query.isNullOrBlank().validateNot(ExceptionReason.MISSING_QUERY)
+        name.isNullOrBlank().validateNot(ExceptionReason.BlankName)
+        query.isNullOrBlank().validateNot(ExceptionReason.QueryRequired)
 
         // data is ignored here on purpose under the assumption that a new component's data is populated server-side
         addComponent(
@@ -174,8 +174,8 @@ class WorkspaceService(
             workspaceId,
             name!!,
             query!!,
-            dataStore.validateNotNull(ExceptionReason.MISSING_DATA_STORE),
-            componentType.validateNotNull(ExceptionReason.MISSING_COMPONENT_TYPE),
+            dataStore.validateNotNull(ExceptionReason.DataStoreRequired),
+            componentType.validateNotNull(ExceptionReason.ComponentTypeRequired),
             customizationData,
             layoutData,
             customProperties
@@ -190,7 +190,7 @@ class WorkspaceService(
         workspaceComponentId: UUID,
     ): Unit = transactionMain {
         WorkspaceComponent.findById(workspaceComponentId)
-            .validateNotNull(ExceptionReason.WORKSPACE_COMPONENT_NOT_FOUND)
+            .validateNotNull(ExceptionReason.WorkspaceComponentNotFound)
             .apply { triggerEvent(producer, DELETE) }
             .deleted = true
     }

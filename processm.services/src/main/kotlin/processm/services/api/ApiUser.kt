@@ -9,10 +9,10 @@ import java.util.*
 data class ApiUser(private val claims: Map<String, Claim>) : Principal {
     val userId: UUID =
         UUID.fromString(
-            claims["userId"]?.asString() ?: throw ApiException(ExceptionReason.NO_FIELD_IN_TOKEN, arrayOf("userId"))
+            claims["userId"]?.asString() ?: throw ApiException(ExceptionReason.NoFieldInToken, arrayOf("userId"))
         )
     val username: String =
-        claims["username"]?.asString() ?: throw ApiException(ExceptionReason.NO_FIELD_IN_TOKEN, arrayOf("username"))
+        claims["username"]?.asString() ?: throw ApiException(ExceptionReason.NoFieldInToken, arrayOf("username"))
     val organizations: Map<UUID, OrganizationRole> =
         claims["organizations"]?.asString()?.split(JwtAuthentication.MULTIVALUE_CLAIM_SEPARATOR)?.mapNotNull {
             if (it.isEmpty())
@@ -20,7 +20,7 @@ data class ApiUser(private val claims: Map<String, Claim>) : Principal {
             val (organizationId, organizationRole) = it.split(':')
             return@mapNotNull UUID.fromString(organizationId) to OrganizationRole.valueOf(organizationRole)
         }?.toMap()
-            ?: throw ApiException(ExceptionReason.NO_FIELD_IN_TOKEN, arrayOf("organizations"))
+            ?: throw ApiException(ExceptionReason.NoFieldInToken, arrayOf("organizations"))
 }
 
 /**
@@ -33,8 +33,8 @@ internal fun ApiUser.ensureUserBelongsToOrganization(
     organizationRole: OrganizationRole = OrganizationRole.reader
 ) {
     if (!organizations.containsKey(organizationId)) {
-        throw ApiException(ExceptionReason.NOT_MEMBER_OF_ORGANIZATION)
+        throw ApiException(ExceptionReason.NotAMemberOfOrganization)
     } else if ((organizations[organizationId]?.ordinal ?: -1) > organizationRole.ordinal) {
-        throw ApiException(ExceptionReason.INSUFFICIENT_PERMISSION_IN_ORGANIZATION)
+        throw ApiException(ExceptionReason.InsufficientPermissionInOrganization)
     }
 }

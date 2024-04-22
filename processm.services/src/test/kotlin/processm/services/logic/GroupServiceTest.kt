@@ -23,7 +23,7 @@ class GroupServiceTest : ServiceTestBase() {
             groupService.attachUserToGroup(userId, groupId.value)
         }
 
-        assertEquals(ExceptionReason.USER_OR_GROUP_NOT_FOUND, exception.reason)
+        assertEquals(ExceptionReason.UserOrGroupNotFound, exception.reason)
     }
 
     @Test
@@ -37,7 +37,7 @@ class GroupServiceTest : ServiceTestBase() {
             groupService.attachUserToGroup(userId, groupId)
         }
 
-        assertEquals(ExceptionReason.USER_OR_GROUP_NOT_FOUND, exception.reason)
+        assertEquals(ExceptionReason.UserOrGroupNotFound, exception.reason)
     }
 
     @Test
@@ -76,7 +76,7 @@ class GroupServiceTest : ServiceTestBase() {
             groupService.getGroup(UUID.randomUUID())
         }
 
-        assertEquals(ExceptionReason.GROUP_NOT_FOUND, exception.reason)
+        assertEquals(ExceptionReason.GroupNotFound, exception.reason)
     }
 
     @Test
@@ -94,7 +94,7 @@ class GroupServiceTest : ServiceTestBase() {
             groupService.getSubgroups(UUID.randomUUID())
         }
 
-        assertEquals(ExceptionReason.GROUP_NOT_FOUND, exception.reason)
+        assertEquals(ExceptionReason.GroupNotFound, exception.reason)
     }
 
     @Test
@@ -118,7 +118,7 @@ class GroupServiceTest : ServiceTestBase() {
             groupService.getRootGroupId(UUID.randomUUID())
         }
 
-        assertEquals(ExceptionReason.GROUP_NOT_FOUND, exception.reason)
+        assertEquals(ExceptionReason.GroupNotFound, exception.reason)
     }
 
     @Test
@@ -254,7 +254,7 @@ class GroupServiceTest : ServiceTestBase() {
                 groupService.remove(group)
                 assertFalse(true)
             } catch (e: ValidationException) {
-                assertEquals(ExceptionReason.GROUP_IS_SOLE_OWNER, e.reason)
+                assertEquals(ExceptionReason.SoleOwner, e.reason)
             }
             assertFalse { aclService.getEntries(urn1).isEmpty() }
             assertFalse { Workspaces.select { (Workspaces.id eq w1) and (Workspaces.deleted eq false) }.empty() }

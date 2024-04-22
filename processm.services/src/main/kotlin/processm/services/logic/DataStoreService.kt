@@ -464,7 +464,7 @@ class DataStoreService(
         assertDataStoreExists(dataStoreId)
         transaction(DBCache.get("$dataStoreId").database) {
             val etlProcess =
-                EtlProcessMetadata.findById(etlProcessId).validateNotNull(ExceptionReason.ETL_PROCESS_NOT_FOUND)
+                EtlProcessMetadata.findById(etlProcessId).validateNotNull(ExceptionReason.ETLProcessNotFound)
             etlProcess.isActive = isActive
 
             when (etlProcess.processType) {
@@ -514,7 +514,7 @@ class DataStoreService(
         assertDataStoreExists(dataStoreId)
         transaction(DBCache.get("$dataStoreId").database) {
             val etlProcess =
-                EtlProcessMetadata.findById(etlProcessId).validateNotNull(ExceptionReason.ETL_PROCESS_NOT_FOUND)
+                EtlProcessMetadata.findById(etlProcessId).validateNotNull(ExceptionReason.ETLProcessNotFound)
 
             when (etlProcess.processType) {
                 ProcessTypeDto.Automatic.processTypeName -> {
@@ -547,7 +547,7 @@ class DataStoreService(
             ETLConfiguration
                 .find { ETLConfigurations.metadata eq etlProcessId }
                 .firstOrNull()
-                .validateNotNull(ExceptionReason.ETL_PROCESS_NOT_FOUND)
+                .validateNotNull(ExceptionReason.ETLProcessNotFound)
                 .notifyUsers(TRIGGER)
         }
     }
@@ -565,7 +565,7 @@ class DataStoreService(
      * Returns data store struct by its identifier.
      */
     private fun getById(dataStoreId: UUID) = transactionMain {
-        return@transactionMain DataStore.findById(dataStoreId).validateNotNull(ExceptionReason.DATA_STORE_NOT_FOUND)
+        return@transactionMain DataStore.findById(dataStoreId).validateNotNull(ExceptionReason.DataStoreNotFound)
     }
 
     private fun assertDataStoreExists(dataStoreId: UUID) = getById(dataStoreId)

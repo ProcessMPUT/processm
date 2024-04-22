@@ -41,7 +41,7 @@ class AccountServiceTest : ServiceTestBase() {
         val exception = assertFailsWith<ValidationException>("Specified user account does not exist") {
             accountService.verifyUsersCredentials("user2", correctPassword)
         }
-        assertEquals(ExceptionReason.ACCOUNT_NOT_FOUND, exception.reason)
+        assertEquals(ExceptionReason.UserNotFound, exception.reason)
     }
 
     @Test
@@ -71,7 +71,7 @@ class AccountServiceTest : ServiceTestBase() {
             assertFailsWith<ValidationException>("The user with the given email already exists.") {
                 accountService.create("user@example.com", null, "passW0RD")
             }
-        assertEquals(ExceptionReason.USER_ALREADY_EXISTS, exception.reason)
+        assertEquals(ExceptionReason.UserAlreadyExists, exception.reason)
     }
 
     @Test
@@ -84,7 +84,7 @@ class AccountServiceTest : ServiceTestBase() {
             assertFailsWith<ValidationException>("The user with the given email already exists.") {
                 accountService.create("uSeR@eXaMpLe.com", null, "passW0RD")
             }
-        assertEquals(ExceptionReason.USER_ALREADY_EXISTS, exception.reason)
+        assertEquals(ExceptionReason.UserAlreadyExists, exception.reason)
     }
 
     @Test
@@ -99,7 +99,7 @@ class AccountServiceTest : ServiceTestBase() {
         val exception = assertFailsWith<ValidationException>("Specified user account does not exist") {
             accountService.getUser(userId = UUID.randomUUID())
         }
-        assertEquals(ExceptionReason.ACCOUNT_NOT_FOUND, exception.reason)
+        assertEquals(ExceptionReason.UserNotFound, exception.reason)
     }
 
     @Test
@@ -109,7 +109,7 @@ class AccountServiceTest : ServiceTestBase() {
                 userId = UUID.randomUUID(), currentPassword = correctPassword, newPassword = "new_pass"
             )
         }
-        assertEquals(ExceptionReason.ACCOUNT_NOT_FOUND, exception.reason)
+        assertEquals(ExceptionReason.UserNotFound, exception.reason)
     }
 
     @Test
@@ -143,7 +143,7 @@ class AccountServiceTest : ServiceTestBase() {
         val exception = assertFailsWith<ValidationException> {
             accountService.changeLocale(userId, unsupportedLocale)
         }
-        assertEquals(ExceptionReason.CANNOT_CHANGE_LOCALE, exception.reason)
+        assertEquals(ExceptionReason.CannotChangeLocale, exception.reason)
     }
 
     @ParameterizedTest
@@ -156,7 +156,7 @@ class AccountServiceTest : ServiceTestBase() {
             val exception = assertFailsWith<ValidationException> {
                 accountService.changeLocale(userId, unsupportedLocale)
             }
-            assertEquals(ExceptionReason.INVALID_LOCALE, exception.reason)
+            assertEquals(ExceptionReason.InvalidLocale, exception.reason)
         }
 
     @Test
@@ -164,7 +164,7 @@ class AccountServiceTest : ServiceTestBase() {
         val exception = assertFailsWith<ValidationException>("Specified user account does not exist") {
             accountService.changeLocale(userId = UUID.randomUUID(), locale = "en_US")
         }
-        assertEquals(ExceptionReason.ACCOUNT_NOT_FOUND, exception.reason)
+        assertEquals(ExceptionReason.UserNotFound, exception.reason)
     }
 
     @Test
@@ -191,7 +191,7 @@ class AccountServiceTest : ServiceTestBase() {
         val exception = assertFailsWith<ValidationException> {
             accountService.getRolesAssignedToUser(userId = UUID.randomUUID())
         }
-        assertEquals(ExceptionReason.ACCOUNT_NOT_FOUND, exception.reason)
+        assertEquals(ExceptionReason.UserNotFound, exception.reason)
     }
 
     @Test

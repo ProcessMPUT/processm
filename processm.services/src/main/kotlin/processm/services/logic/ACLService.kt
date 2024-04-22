@@ -60,7 +60,7 @@ class ACLService {
         urn: URN,
         role: RoleType
     ): Unit = transactionMain {
-        hasPermission(userId, urn, role).validate(ExceptionReason.INSUFFICIENT_PERMISSION_TO_URN, urn.urn, role.name)
+        hasPermission(userId, urn, role).validate(ExceptionReason.InsufficientPermissionToURN, urn.urn, role.name)
     }
 
     /**
@@ -114,7 +114,7 @@ class ACLService {
             }
                 .limit(1)
                 .firstOrNull()
-                .validateNotNull(ExceptionReason.ENTRY_NOT_FOUND)
+                .validateNotNull(ExceptionReason.ACENotFound)
             ace.role = role.role
 
             ace
@@ -133,7 +133,7 @@ class ACLService {
     fun removeEntry(id: UUID) = transactionMain {
         AccessControlList.deleteWhere {
             AccessControlList.id eq id
-        }.validate(1, ExceptionReason.ENTRY_NOT_FOUND)
+        }.validate(1, ExceptionReason.ACENotFound)
     }
 
     /**
@@ -143,7 +143,7 @@ class ACLService {
     fun removeEntry(urn: URN, groupId: UUID) = transactionMain {
         AccessControlList.deleteWhere {
             (AccessControlList.urn.column eq urn.urn) and (AccessControlList.group_id eq groupId)
-        }.validate(1, ExceptionReason.ENTRY_NOT_FOUND)
+        }.validate(1, ExceptionReason.ACENotFound)
     }
 
     /**
@@ -160,7 +160,7 @@ class ACLService {
     fun removeEntries(urn: URN) = transactionMain {
         AccessControlList.deleteWhere {
             AccessControlList.urn.column eq urn.urn
-        }.validateNot(0, ExceptionReason.ENTRY_NOT_FOUND)
+        }.validateNot(0, ExceptionReason.ACENotFound)
     }
 
 

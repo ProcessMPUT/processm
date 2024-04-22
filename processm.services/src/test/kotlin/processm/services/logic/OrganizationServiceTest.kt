@@ -18,7 +18,7 @@ class OrganizationServiceTest : ServiceTestBase() {
             organizationService.getMembers(UUID.randomUUID())
         }
 
-        assertEquals(ExceptionReason.ORGANIZATION_NOT_FOUND, exception.reason)
+        assertEquals(ExceptionReason.OrganizationNotFound, exception.reason)
     }
 
     @Test
@@ -49,7 +49,7 @@ class OrganizationServiceTest : ServiceTestBase() {
             organizationService.getOrganizationGroups(UUID.randomUUID())
         }
 
-        assertEquals(ExceptionReason.ORGANIZATION_NOT_FOUND, exception.reason)
+        assertEquals(ExceptionReason.OrganizationNotFound, exception.reason)
     }
 
     @Test
@@ -90,7 +90,7 @@ class OrganizationServiceTest : ServiceTestBase() {
                 organizationService.getOrganizationBySharedGroupId(UUID.randomUUID())
             }
 
-        assertEquals(ExceptionReason.SHARED_GROUP_NOT_ASSIGNED, exception.reason)
+        assertEquals(ExceptionReason.SharedGroupNotAssigned, exception.reason)
     }
 
     @Test

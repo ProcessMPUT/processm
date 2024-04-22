@@ -113,7 +113,7 @@ fun Route.OrganizationsApi() {
 
                 organizationService.get(path.subOrganizationId).parentOrganization?.id?.value?.validate(
                     path.organizationId,
-                    ExceptionReason.NOT_A_DIRECT_SUBORGANIZATION, path.subOrganizationId, path.organizationId
+                    ExceptionReason.NotADirectSuborganization, path.subOrganizationId, path.organizationId
                 )
 
                 organizationService.detachSubOrganization(path.subOrganizationId)
@@ -162,7 +162,7 @@ fun Route.OrganizationsApi() {
 
             params.userId.validateNot(
                 principal.userId,
-                ExceptionReason.CANNOT_CHANGE_ROLE
+                ExceptionReason.CannotChangeRole
             )
             organizationService.updateMember(params.organizationId, params.userId, member.organizationRole.toRoleType())
 
@@ -173,7 +173,7 @@ fun Route.OrganizationsApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(params.organizationId, OrganizationRole.owner)
 
-            params.userId.validateNot(principal.userId, ExceptionReason.CANNOT_DELETE)
+            params.userId.validateNot(principal.userId, ExceptionReason.CannotDelete)
             organizationService.removeMember(params.organizationId, params.userId)
 
             call.respond(HttpStatusCode.NoContent)

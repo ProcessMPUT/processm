@@ -113,7 +113,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
             assertFailsWith<ValidationException>("The specified workspace does not exist or the user has insufficient permissions to it") {
                 workspaceService.remove(UUID.randomUUID())
             }
-        assertEquals(ExceptionReason.WORKSPACE_NOT_FOUND, exception.reason)
+        assertEquals(ExceptionReason.WorkspaceNotFound, exception.reason)
         assertTrue { Workspaces.select { Workspaces.id eq workspaceId }.any() }
     }
 
@@ -317,6 +317,6 @@ class WorkspaceServiceTest : ServiceTestBase() {
                 workspaceService.removeComponent(UUID.randomUUID())
             }
 
-        assertEquals(ExceptionReason.WORKSPACE_COMPONENT_NOT_FOUND, exception.reason)
+        assertEquals(ExceptionReason.WorkspaceComponentNotFound, exception.reason)
     }
 }

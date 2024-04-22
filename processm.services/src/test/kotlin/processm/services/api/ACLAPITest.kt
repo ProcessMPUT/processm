@@ -294,7 +294,7 @@ class ACLAPITest : BaseApiTest() {
         )
         every {
             aclService.updateEntry(urn, groupId, RoleType.Reader)
-        } throws ValidationException(ExceptionReason.ENTRY_NOT_FOUND)
+        } throws ValidationException(ExceptionReason.ACENotFound)
         withAuthentication(userId, role = OrganizationRole.owner to organizationId) {
             with(handleRequest(HttpMethod.Put, "/api/acl/ace/$groupId/${urn.urn}") {
                 withSerializedBody(OrganizationRole.reader)

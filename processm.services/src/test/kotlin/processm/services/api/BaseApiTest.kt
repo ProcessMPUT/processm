@@ -176,7 +176,7 @@ abstract class BaseApiTest : KoinTest {
                     }
                 }
             }
-            throw ValidationException(ExceptionReason.INSUFFICIENT_PERMISSION_TO_URN, arrayOf("", ""))
+            throw ValidationException(ExceptionReason.InsufficientPermissionToURN, arrayOf("", ""))
         }
 
         callback(JwtAuthenticationTrackingEngine(this, login, password))

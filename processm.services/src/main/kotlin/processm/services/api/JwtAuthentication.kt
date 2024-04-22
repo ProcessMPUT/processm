@@ -3,7 +3,6 @@ package processm.services.api
 import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTVerifier
 import com.auth0.jwt.algorithms.Algorithm
-import io.ktor.http.*
 import io.ktor.server.config.*
 import processm.services.api.models.OrganizationRole
 import processm.services.helpers.ExceptionReason
@@ -31,7 +30,7 @@ object JwtAuthentication {
         var expiredToken = createProlongingTokenVerifier(issuer, secret, acceptableExpiration).verify(encodedToken)
 
         if (Duration.between(expiredToken.expiresAt.toInstant(), Instant.now()) > acceptableExpiration) {
-            throw ApiException(ExceptionReason.TOKEN_EXPIRED)
+            throw ApiException(ExceptionReason.TokenExpired)
         }
         val apiUser = ApiUser(expiredToken.claims)
         val newExpirationDate = Instant
