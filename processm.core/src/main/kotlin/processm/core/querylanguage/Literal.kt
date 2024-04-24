@@ -83,7 +83,7 @@ class UUIDLiteral(literal: String, line: Int, charPositionInLine: Int) :
 
     override fun parse(literal: String): UUID =
         literal.toUUID()
-            ?: throw IllegalArgumentException("Line $line position $charPositionInLine: Invalid format of UUID literal: $literal.")
+            ?: throw PQLSyntaxError(PQLSyntaxError.Problem.InvalidUUID, line, charPositionInLine, literal)
 }
 
 /**
@@ -183,10 +183,7 @@ class DateTimeLiteral(literal: String, line: Int, charPositionInLine: Int) :
                     exception.addSuppressed(e)
             }
         }
-        throw IllegalArgumentException(
-            "Line $line position $charPositionInLine: Invalid format of datetime literal: $literal.",
-            exception!!
-        )
+        throw PQLSyntaxError(PQLSyntaxError.Problem.InvalidDateTime, line, charPositionInLine, literal)
     }
 
     override fun toString(): String = "${scope.prefix}D$value"
@@ -201,8 +198,14 @@ class NumberLiteral(literal: String, line: Int, charPositionInLine: Int) :
     override val type: Type
         get() = Type.Number
 
-    override fun parse(literal: String): Double = literal.toDouble()
-}
+    override fun parse(literal: String): Double =
+        try {
+            literal.toDouble()
+        }
+        catch (e: NumberFormatException) {
+            throw PQLSyntaxError(PQLSyntaxError.Problem.InvalidNumber, line, charPositionInLine, literal)
+        }
+    }
 
 /**
  * Represents a boolean literal in a PQL query.
@@ -216,9 +219,7 @@ class BooleanLiteral(literal: String, line: Int, charPositionInLine: Int) :
     override fun parse(literal: String): Boolean = when (literal) {
         "true" -> true
         "false" -> false
-        else -> throw IllegalArgumentException(
-            "Line $line position $charPositionInLine: Invalid format of boolean literal: $literal."
-        )
+        else -> throw PQLSyntaxError(PQLSyntaxError.Problem.InvalidBoolean, line, charPositionInLine, literal)
     }
 }
 

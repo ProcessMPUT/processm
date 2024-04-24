@@ -1,7 +1,10 @@
 package processm.services.helpers
 
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.EnumSource
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import processm.core.querylanguage.PQLParserError
+import processm.core.querylanguage.PQLSyntaxError
 import java.util.*
 import kotlin.test.assertTrue
 
@@ -11,17 +14,24 @@ import kotlin.test.assertTrue
  */
 class LocalizedExceptionTest {
 
-    val PL = Locale("pl")
+    companion object {
+        @JvmStatic
+        fun listReasons(): List<Arguments> =
+            listOf(Locale.US, Locale("pl")).flatMap { locale ->
+                listOf(
+                    ExceptionReason.values(),
+                    PQLSyntaxError.Problem.values(),
+                    PQLParserError.Problem.values()
+                ).flatMap { enum ->
+                    enum.map { Arguments.of(locale, it.toString()) }
+                }
+            }
 
-    @ParameterizedTest
-    @EnumSource(ExceptionReason::class)
-    fun `ExceptionReasons are translated to Polish`(reason: ExceptionReason) {
-        assertTrue { PL.getErrorMessage(reason.toString()).isNotBlank() }
     }
 
     @ParameterizedTest
-    @EnumSource(ExceptionReason::class)
-    fun `ExceptionReasons are translated to English`(reason: ExceptionReason) {
-        assertTrue { Locale.US.getErrorMessage(reason.toString()).isNotBlank() }
+    @MethodSource("listReasons")
+    fun `translation is not blank`(locale: Locale, reason: String) {
+        assertTrue { locale.getErrorMessage(reason).isNotBlank() }
     }
 }

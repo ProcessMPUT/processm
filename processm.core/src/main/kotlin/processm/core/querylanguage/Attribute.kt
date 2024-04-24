@@ -71,7 +71,7 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
 
     override fun calculateEffectiveScope(): Scope? =
         hoistingPrefix.fold(scope!!) { s, _ ->
-            requireNotNull(s.upper) { "Line $line position $charPositionInLine: It is not supported to hoist a scope beyond the log scope." }
+            s.upper ?: throw PQLSyntaxError(PQLSyntaxError.Problem.NoHoistingBeyondLong, line, charPositionInLine)
         }
 
     override val type: Type
@@ -85,7 +85,12 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
                 DB_ID, COST_TOTAL -> Type.Number
                 IDENTITY_ID -> Type.UUID
                 TIME_TIMESTAMP -> Type.Datetime
-                else -> throw IllegalArgumentException("Line $line position $charPositionInLine: Unknown type of attribute $standardName.")
+                else -> throw PQLSyntaxError(
+                    PQLSyntaxError.Problem.UnknownAttributeType,
+                    line,
+                    charPositionInLine,
+                    standardAttributes
+                )
             }
         } else {
             Type.Unknown
@@ -137,16 +142,19 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
                     // the remaining standard attributes
                     else name == "${it.first}:${it.second}" || name == it.second
                 }?.run { "$first:${second ?: name.substringAfterLast(':')}" }
-                ?: throw NoSuchElementException(
-                    "Line $line position $charPositionInLine: No such attribute: $attribute. Try using the square-bracket syntax for non-standard attributes."
+                ?: throw PQLSyntaxError(
+                    PQLSyntaxError.Problem.NoSuchAttribute,
+                    line,
+                    charPositionInLine,
+                    attribute
                 )
         } else {
             // other attribute
             standardName = ""
         }
 
-        require(!isClassifier || effectiveScope != Scope.Log) {
-            "Line $line position $charPositionInLine: Use of the classifier $this on the log scope is not allowed."
+        if (!(!isClassifier || effectiveScope != Scope.Log)) {
+            throw PQLSyntaxError(PQLSyntaxError.Problem.ClassifierOnLog, line, charPositionInLine, this)
         }
     }
 
