@@ -1,7 +1,6 @@
 package processm.enhancement.kpi
 
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
@@ -231,7 +230,7 @@ class AlignerKPIServiceTests {
                 componentType = ComponentTypeDto.CausalNet
                 dataStoreId = dataStore
                 query = _query
-                data = Json.encodeToString(arrayOf(ComponentData(_modelId.toString(), "")))
+                data = JsonObject(mapOf("1" to ComponentData(_modelId.toString(), "").toJsonElement())).toString()
                 workspace = Workspace.all().firstOrNull() ?: Workspace.new { name = "test-workspace" }
             }
         }

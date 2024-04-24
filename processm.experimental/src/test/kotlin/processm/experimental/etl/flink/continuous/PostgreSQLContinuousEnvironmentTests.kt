@@ -88,7 +88,7 @@ class PostgreSQLContinuousEnvironmentTests {
     private fun getJDBCConnection(): Connection = DriverManager.getConnection(jdbcConnectionString)
 
     private fun setUpPostgreSQL(): PostgreSQLContainer<*> {
-        val imageName = DockerImageName.parse("debezium/postgres:12")
+        val imageName = DockerImageName.parse("debezium/postgres:16-alpine")
             .asCompatibleSubstituteFor("postgres")
         val postgresContainer = PostgreSQLContainer(imageName)
             .withDatabaseName(dbName)

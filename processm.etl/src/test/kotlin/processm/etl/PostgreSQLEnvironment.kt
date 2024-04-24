@@ -64,7 +64,7 @@ class PostgreSQLEnvironment(
         )
 
     override fun initContainer(): PostgreSQLContainer<*> {
-        val imageName = DockerImageName.parse("debezium/postgres:12")
+        val imageName = DockerImageName.parse("debezium/postgres:16-alpine")
             .asCompatibleSubstituteFor("postgres")
         return PostgreSQLContainer(imageName)
     }

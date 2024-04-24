@@ -279,7 +279,7 @@ abstract class SeleniumBase(
     private fun setupMainDB() {
         if (!useManuallyStartedServices) {
             mainDbContainer = PostgreSQLContainer(
-                DockerImageName.parse("timescale/timescaledb:latest-pg12-oss").asCompatibleSubstituteFor("postgres")
+                DockerImageName.parse("timescale/timescaledb:latest-pg16-oss").asCompatibleSubstituteFor("postgres")
             ).withUsername("postgres").withPassword("password")
             Startables.deepStart(listOf(mainDbContainer)).join()
 
