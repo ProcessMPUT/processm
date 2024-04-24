@@ -572,7 +572,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 sakila.populate()
 
                 val infos = etlProcesses.parallelMap { etlProcess ->
-                    for (i in 0..60) {
+                    for (i in 0..90) {
                         val info = get<Paths.EtlProcess, EtlProcessInfo>(etlProcess) {
                             return@get body<EtlProcessInfo>()
                         }
