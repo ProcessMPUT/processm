@@ -3,7 +3,7 @@ package processm.core.models.dfg
 import processm.core.log.hierarchical.LogInputStream
 import processm.core.models.commons.*
 import processm.core.models.processtree.ProcessTreeActivity
-import processm.helpers.asList
+import processm.helpers.flatSetOf
 import processm.helpers.map2d.DoublingMap2D
 import java.util.concurrent.ConcurrentHashMap
 
@@ -31,7 +31,7 @@ class DirectlyFollowsGraph : ProcessModel {
     val graph = DoublingMap2D<Activity, Activity, Arc>()
 
     override val activities: List<Activity>
-        get() = (graph.rows + graph.columns + initialActivities.keys + finalActivities.keys).asList()
+        get() = flatSetOf(graph.rows, graph.columns, initialActivities.keys, finalActivities.keys).toList()
 
     /**
      * Map with start activities (first activity in trace) + arc statistics
@@ -47,7 +47,7 @@ class DirectlyFollowsGraph : ProcessModel {
     val initialActivities = HashMap<Activity, Arc>()
 
     override val startActivities: List<Activity>
-        get() = initialActivities.keys.asList()
+        get() = initialActivities.keys.toList()
 
     /**
      * Map with end activities (last activity in trace) + arc statistics
@@ -63,7 +63,7 @@ class DirectlyFollowsGraph : ProcessModel {
     val finalActivities = HashMap<Activity, Arc>()
 
     override val endActivities: List<Activity>
-        get() = finalActivities.keys.asList()
+        get() = finalActivities.keys.toList()
 
     override val controlStructures: Sequence<ControlStructure>
         get() = emptySequence()

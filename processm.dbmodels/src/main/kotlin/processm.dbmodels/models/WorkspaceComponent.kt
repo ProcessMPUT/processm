@@ -127,11 +127,6 @@ class WorkspaceComponent(id: EntityID<UUID>) : UUIDEntity(id) {
                 ?: emptyMap()
         }
     )
-    var modelType by WorkspaceComponents.modelType.transform(
-        { it?.typeName },
-        { ModelTypeDto.byTypeNameInDatabase(it) }
-    )
-    var modelId by WorkspaceComponents.modelId
     var dataStoreId by WorkspaceComponents.dataStoreId
     var componentType by WorkspaceComponents.componentType.transform(
         { it.typeName },
