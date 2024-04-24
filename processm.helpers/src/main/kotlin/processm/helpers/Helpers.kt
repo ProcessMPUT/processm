@@ -358,3 +358,55 @@ fun Iterable<Int>.longSum(): Long {
     }
     return sum
 }
+
+/**
+ * Returns the smallest value among all not null values produced by [selector] function
+ * applied to each element in the collection or `null` if there are no elements.
+ */
+@OptIn(ExperimentalContracts::class)
+inline fun <T, R : Comparable<R>> Iterable<T>.minOfNotNullOrNull(selector: (T) -> R?): R? {
+    contract {
+        callsInPlace(selector)
+    }
+    val iterator = iterator()
+    var minValue: R? = null
+    while (minValue === null && iterator.hasNext())
+        minValue = selector(iterator.next())
+
+    while (iterator.hasNext()) {
+        var v: R? = null
+        while (v === null && iterator.hasNext())
+            v = selector(iterator.next())
+
+        if (v !== null && minValue!! > v) {
+            minValue = v
+        }
+    }
+    return minValue
+}
+
+/**
+ * Returns the largest value among all not null values produced by [selector] function
+ * applied to each element in the collection or `null` if there are no elements.
+ */
+@OptIn(ExperimentalContracts::class)
+inline fun <T, R : Comparable<R>> Iterable<T>.maxOfNotNullOrNull(selector: (T) -> R?): R? {
+    contract {
+        callsInPlace(selector)
+    }
+    val iterator = iterator()
+    var maxValue: R? = null
+    while (maxValue === null && iterator.hasNext())
+        maxValue = selector(iterator.next())
+
+    while (iterator.hasNext()) {
+        var v: R? = null
+        while (v === null && iterator.hasNext())
+            v = selector(iterator.next())
+
+        if (v !== null && maxValue!! < v) {
+            maxValue = v
+        }
+    }
+    return maxValue
+}

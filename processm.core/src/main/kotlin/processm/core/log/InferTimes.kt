@@ -7,6 +7,8 @@ import processm.core.models.metadata.BasicMetadata.SERVICE_TIME
 import processm.core.models.metadata.BasicMetadata.SUSPENSION_TIME
 import processm.core.models.metadata.BasicMetadata.WAITING_TIME
 import processm.helpers.map2d.DoublingMap2D
+import processm.helpers.maxOfNotNullOrNull
+import processm.helpers.minOfNotNullOrNull
 import java.time.Duration
 import java.time.Instant
 
@@ -30,8 +32,8 @@ class InferTimes(val base: XESInputStream) : XESInputStream {
         suspend fun SequenceScope<XESComponent>.flushBuffer() {
             if (traceBuffer !== null) with(traceBuffer!!) {
                 // set trace statistics
-                val earliestTimestamp = eventBuffer.firstOrNull { it.timeTimestamp !== null }?.timeTimestamp
-                val latestTimestamp = eventBuffer.lastOrNull { it.timeTimestamp !== null }?.timeTimestamp
+                val earliestTimestamp = eventBuffer.minOfNotNullOrNull { it.timeTimestamp }
+                val latestTimestamp = eventBuffer.maxOfNotNullOrNull { it.timeTimestamp }
                 val lead = earliestTimestamp?.let { Duration.between(it, latestTimestamp) } ?: Duration.ZERO
                 // at this moment [nameInstanceToEvent] consists of the total service times spotted in the trace
                 val service = Duration.ofMillis(nameInstanceToEvent.rows.sumOf { row ->
