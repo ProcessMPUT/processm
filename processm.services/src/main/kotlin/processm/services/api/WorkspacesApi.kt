@@ -187,7 +187,7 @@ fun Route.WorkspacesApi() {
             val channel = Channel<UUID>(Channel.CONFLATED)
             try {
                 workspaceNotificationService.subscribe(workspace.workspaceId, channel)
-                call.eventStream {
+                call.eventStream(this) {
                     while (!channel.isClosedForReceive) {
                         val componentId = channel.receive()
                         writeEvent(ComponentUpdateEventPayload(componentId))

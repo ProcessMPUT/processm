@@ -69,8 +69,10 @@ object DBSerializer {
             for (place in petriNet.places) {
                 PlaceModel.new(place.id) {
                     petrinet = petriNetModel
-                    initialMarking = petriNet.initialMarking[place]
-                    finalMarking = petriNet.finalMarking[place]
+                    initialMarking = petriNet.initialMarking[place]?.size
+                    // It is not important what is the cause for having the token(s) in the end place(s).
+                    // Hence, it is enough to store just the number of tokens.
+                    finalMarking = petriNet.finalMarking[place]?.size
                 }
             }
             for (transition in petriNet.transitions) {
@@ -103,12 +105,17 @@ object DBSerializer {
         val places = HashMap<String, Place>()
         val initialMarking = Marking()
         val finalMarking = Marking()
+        val sharedToken = Token(null) // tokens have no identity, so we can share them to save memory
         for (placeModel in petriNetModel.places) {
             val id = placeModel.id.value.toString()
             val place = Place(UUID.fromString(id))
             places[id] = place
-            placeModel.initialMarking?.let { initialMarking[place] = it }
-            placeModel.finalMarking?.let { finalMarking[place] = it }
+            placeModel.initialMarking?.let {
+                initialMarking[place] = ArrayDeque<Token>().apply { (1..it).forEach { add(sharedToken) } }
+            }
+            placeModel.finalMarking?.let {
+                finalMarking[place] = ArrayDeque<Token>().apply { (1..it).forEach { add(sharedToken) } }
+            }
         }
         val transitions = ArrayList<Transition>()
         for (transitionModel in petriNetModel.transitions) {

@@ -2,115 +2,141 @@ package processm.enhancement.kpi
 
 import jakarta.jms.MapMessage
 import jakarta.jms.Message
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.select
+import kotlinx.serialization.json.JsonObject
 import org.quartz.*
 import processm.core.communication.Producer
 import processm.core.esb.AbstractJobService
 import processm.core.esb.ServiceJob
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
-import processm.core.models.causalnet.DBSerializer
 import processm.core.models.commons.ProcessModel
+import processm.core.persistence.DurablePersistenceProvider
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.core.querylanguage.Query
+import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
 import processm.helpers.toUUID
 import processm.logging.loggedScope
+import java.net.URI
 import java.time.Instant
 import java.util.*
+import processm.core.models.causalnet.DBSerializer as CausalNetDBSerializer
+import processm.core.models.petrinet.DBSerializer as PetriNetDBSerializer
 
 class AlignerKPIService : AbstractJobService(
     QUARTZ_CONFIG,
     WORKSPACE_COMPONENTS_TOPIC,
-    "$WORKSPACE_COMPONENT_TYPE = '${ComponentTypeDto.AlignerKpi}'"
+    "$WORKSPACE_COMPONENT_EVENT = '$DATA_CHANGE' AND $WORKSPACE_COMPONENT_EVENT_DATA = '$DATA_CHANGE_MODEL'"
 ) {
     companion object {
+
         private const val QUARTZ_CONFIG = "quartz-alignerkpi.properties"
+
+        private const val COMPONENT_ID = "componentId"
+
+        private val producer = Producer()
     }
 
     override val name: String
-        get() = "Aligner-based KPI"
+        get() = "Aligner KPI"
 
-    override fun loadJobs(): List<Pair<JobDetail, Trigger>> = loggedScope {
-        val components = transactionMain {
-            WorkspaceComponents.slice(WorkspaceComponents.id).select {
-                WorkspaceComponents.componentType eq ComponentTypeDto.AlignerKpi.toString() and WorkspaceComponents.data.isNull()
-            }.map { it[WorkspaceComponents.id].value }
-        }
-        return components.map { createJob(it) }
+    override fun loadJobs(): List<Pair<JobDetail, Trigger>> {
+        return emptyList()
     }
 
-    override fun messageToJobs(message: Message): List<Pair<JobDetail, Trigger>> = loggedScope {
+    override fun messageToJobs(message: Message): List<Pair<JobDetail, Trigger>> {
         require(message is MapMessage) { "Unrecognized message $message." }
-
-        val type = ComponentTypeDto.byTypeNameInDatabase(message.getStringProperty(WORKSPACE_COMPONENT_TYPE))
-        require(type == ComponentTypeDto.AlignerKpi) { "Expected ${ComponentTypeDto.AlignerKpi}, got $type." }
 
         val id = message.getString(WORKSPACE_COMPONENT_ID)
         val event = message.getStringProperty(WORKSPACE_COMPONENT_EVENT)
+        val eventData = message.getStringProperty(WORKSPACE_COMPONENT_EVENT_DATA)
 
-        return when (event) {
-            CREATE_OR_UPDATE -> listOf(createJob(id.toUUID()!!))
-            DELETE -> emptyList() /* ignore for now */
-            DATA_CHANGE -> emptyList() // ignore
-            else -> throw IllegalArgumentException("Unknown event type: $event.")
+        require(event == DATA_CHANGE)
+        require(eventData == DATA_CHANGE_MODEL)
+        // TODO: listen to delete messagaes to remove reports
+
+        return listOf(createJob(id.toUUID()!!))
+    }
+
+    private fun createJob(id: UUID): Pair<JobDetail, Trigger> =
+        loggedScope {
+            val job = JobBuilder
+                .newJob(AlignerKPIJob::class.java)
+                .usingJobData(COMPONENT_ID, id.toString())
+                .build()
+            val trigger = TriggerBuilder
+                .newTrigger()
+                .startNow()
+                .build()
+
+            return job to trigger
         }
-    }
 
-    private fun createJob(id: UUID): Pair<JobDetail, Trigger> = loggedScope {
-        val job = JobBuilder
-            .newJob(AlignerKPIJob::class.java)
-            .withIdentity(id.toString())
-            .build()
-        val trigger = TriggerBuilder
-            .newTrigger()
-            .withIdentity(id.toString())
-            .startNow()
-            .build()
-
-        return job to trigger
-    }
 
     class AlignerKPIJob : ServiceJob {
-        override fun execute(context: JobExecutionContext): Unit = loggedScope { logger ->
-            val id = requireNotNull(context.jobDetail.key.name?.toUUID())
+        override fun execute(context: JobExecutionContext?) = loggedScope { logger ->
+            val ctx = requireNotNull(context)
+            val componentId = requireNotNull((ctx.mergedJobDataMap[COMPONENT_ID] as String).toUUID())
 
-            logger.debug("Calculating aligner-based KPI for component $id...")
+            logger.debug("Calculating alignment-based KPI for component $componentId...")
             transactionMain {
-                val component = WorkspaceComponent.findById(id)
+                val component = WorkspaceComponent.findById(componentId)
                 if (component === null) {
                     logger.error("Component with id $id is not found.")
                     return@transactionMain
                 }
 
+                val dataObject = checkNotNull(component.dataAsJsonObject()).toMutableMap()
+                val mostRecentVersion = checkNotNull(dataObject.mostRecentVersion()).toString()
+                val data = checkNotNull(dataObject[mostRecentVersion]?.asComponentData())
+
                 try {
-                    val model: ProcessModel = component.getModel()
+                    val model = getModel(component.componentType, component.dataStoreId, data.modelId)
                     val calculator = Calculator(model)
                     val log = DBHierarchicalXESInputStream(
-                        component.dataStoreId.toString(),
-                        Query(component.query),
-                        false
+                        component.dataStoreId.toString(), Query(component.query), false
                     )
                     val report = calculator.calculate(log)
+                    val reportId = URI("urn:processm:alignmentkpireport:${UUID.randomUUID()}")
+                    DurablePersistenceProvider(component.dataStoreId.toString()).use {
+                        it.put(reportId, report)
+                    }
 
-
-                    component.data = report.toJson()
+                    dataObject[mostRecentVersion] = data.copy(alignmentKPIId = reportId.toString()).toJsonElement()
+                    component.data = JsonObject(dataObject).toString()
                     component.dataLastModified = Instant.now()
                     component.lastError = null
-                } catch (e: Exception) {
-                    component.lastError = e.message
-                    logger.warn("Cannot calculate aligner-based KPI for component with id $id.", e)
+
+                    component.afterCommit {
+                        this as WorkspaceComponent
+                        triggerEvent(producer, event = DATA_CHANGE, eventData = DATA_CHANGE_ALIGNMENT_KPI)
+                    }
+                } catch (exception: Exception) {
+                    logger.error("Error calculating alignment-based KPI for component $componentId", exception)
+                    component.lastError = exception.message
+
+                    component.afterCommit {
+                        this as WorkspaceComponent
+                        triggerEvent(producer, event = DATA_CHANGE, eventData = DATA_CHANGE_LAST_ERROR)
+                    }
                 }
-                component.triggerEvent(Producer(), DATA_CHANGE)
+
             }
         }
 
-        private fun WorkspaceComponent.getModel(): ProcessModel = when (modelType) {
-            null -> throw IllegalArgumentException("Model type is not set for component $id")
-            ModelTypeDto.CausalNet -> DBSerializer.fetch(
+        private fun getModel(
+            modelType: ComponentTypeDto?,
+            dataStoreId: UUID?,
+            modelId: String
+        ): ProcessModel = when (modelType) {
+            ComponentTypeDto.CausalNet -> CausalNetDBSerializer.fetch(
                 DBCache.get(dataStoreId.toString()).database,
-                modelId!!.toInt()
+                modelId.toInt()
+            )
+
+            ComponentTypeDto.PetriNet -> PetriNetDBSerializer.fetch(
+                DBCache.get(dataStoreId.toString()).database,
+                requireNotNull(modelId.toUUID())
             )
 
             else -> TODO("Retrieval of model type $modelType is not implemented.")

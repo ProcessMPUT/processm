@@ -15,6 +15,9 @@ open class DecoupledNodeExecution(
     val split: Split? = null
 ) : ActivityExecution, Activity {
 
+    override val cause: Collection<Activity>
+        get() = join?.sources.orEmpty()
+
     override val name: String
         get() = activity.name
 

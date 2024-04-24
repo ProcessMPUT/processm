@@ -22,15 +22,21 @@ open class LRUAlignmentCache<EventsSummary>(val summarizer: EventsSummarizer<Eve
 
     protected fun cacheKey(model: ProcessModel, events: List<Event>) = model to summarizer(events)
 
-    @Synchronized
-    override fun get(model: ProcessModel, events: List<Event>): Alignment? = cache[cacheKey(model, events)].also {
-        if (it !== null)
-            hitCounter++
+    override fun get(model: ProcessModel, events: List<Event>): Alignment? {
+        val key = cacheKey(model, events)
+        synchronized(cache) {
+            return cache[key].also {
+                if (it !== null)
+                    hitCounter++
+            }
+        }
     }
 
-    @Synchronized
     override fun put(model: ProcessModel, events: List<Event>, alignment: Alignment) {
-        cache[cacheKey(model, events)] = alignment
+        val key = cacheKey(model, events)
+        synchronized(cache) {
+            cache[key] = alignment
+        }
     }
 
 }

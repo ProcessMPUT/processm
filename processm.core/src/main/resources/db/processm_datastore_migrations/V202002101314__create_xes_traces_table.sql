@@ -9,6 +9,6 @@ CREATE TABLE traces
     event_stream    BOOLEAN
 );
 
-SELECT create_hypertable('traces', 'id', chunk_time_interval => 100000, if_not_exists => TRUE);
+SELECT create_hypertable('traces', by_range('id', 32768), if_not_exists => TRUE);
 
 CREATE INDEX traces_log_id_index ON traces (log_id);

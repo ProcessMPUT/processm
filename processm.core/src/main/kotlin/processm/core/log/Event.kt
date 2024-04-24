@@ -13,7 +13,7 @@ import processm.core.log.attribute.Attribute.ORG_RESOURCE
 import processm.core.log.attribute.Attribute.ORG_ROLE
 import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
 import processm.core.log.attribute.MutableAttributeMap
-import processm.helpers.parseISO8601
+import processm.helpers.time.parseISO8601
 import processm.helpers.toUUID
 import java.time.Instant
 import java.util.*

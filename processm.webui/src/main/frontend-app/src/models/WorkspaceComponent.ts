@@ -1,11 +1,10 @@
 // TODO add PetriNet = "petriNet" to ComponentType
 import {
   AbstractComponent,
-  AlignerKpiComponent,
-  AlignerKpiReport,
-  Alignment,
+  AlignmentKPIReport,
   BPMNComponent,
   CausalNetComponent,
+  CausalNetComponentDataAllOfNodes,
   ComponentType,
   CustomProperty,
   DirectlyFollowsGraphComponent,
@@ -36,9 +35,9 @@ export abstract class ComponentData {
 }
 
 export class CNetComponentData extends ComponentData {
-  nodes!: Array<CNetNodeConfig>;
+  nodes!: Array<CNetNodeConfig | CausalNetComponentDataAllOfNodes>;
   edges!: Array<EdgeConfig>;
-  alignments?: Array<Alignment>;
+  alignmentKPIReport?: AlignmentKPIReport;
 
   get isDisplayable() {
     return this.nodes != null && this.edges != null && this.nodes.length > 0;
@@ -47,14 +46,6 @@ export class CNetComponentData extends ComponentData {
 
 export class KpiComponentData extends ComponentData {
   value?: number;
-
-  get isDisplayable() {
-    return this.value != null;
-  }
-}
-
-export class AlignerKpiComponentData extends ComponentData {
-  value?: AlignerKpiReport;
 
   get isDisplayable() {
     return this.value != null;
@@ -73,6 +64,7 @@ export class PetriNetComponentData extends ComponentData {
   transitions?: Array<any>;
   initialMarking?: { [key: string]: number };
   finalMarking?: { [key: string]: number };
+  alignmentKPIReport?: AlignmentKPIReport;
 
   get isDisplayable() {
     return this.initialMarking !== undefined && this.finalMarking !== undefined && this?.places?.length != 0 && this.transitions?.length != 0;
@@ -120,10 +112,6 @@ export class WorkspaceComponent {
       }
       case ComponentType.Kpi: {
         this.data = new KpiComponentData((init as KpiComponent).data ?? {});
-        break;
-      }
-      case ComponentType.AlignerKpi: {
-        this.data = new AlignerKpiComponentData((init as AlignerKpiComponent).data ?? {});
         break;
       }
       case ComponentType.PetriNet: {

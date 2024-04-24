@@ -15,9 +15,11 @@ import processm.core.models.petrinet.Place
 import processm.core.models.petrinet.Transition
 import processm.core.models.processtree.ProcessTreeActivity
 import processm.helpers.map2d.DoublingMap2D
+import processm.helpers.map2d.Map2D
 import processm.helpers.stats.Distribution
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ReportTests {
     @Test
@@ -32,7 +34,7 @@ class ReportTests {
                 set("e", null, Distribution(doubleArrayOf(0.11, 0.99)))
                 set("f", ProcessTreeActivity("pt"), Distribution(doubleArrayOf(-.1, -101.0)))
             },
-            inboundArcKPI = DoublingMap2D<String, CausalArc, Distribution>().apply {
+            arcKPI = DoublingMap2D<String, CausalArc, Distribution>().apply {
                 set(
                     "e",
                     Dependency(Node("a"), Node("b")),
@@ -44,48 +46,24 @@ class ReportTests {
                     Distribution(doubleArrayOf(12.0, 17.0)),
                 )
             },
-            outboundArcKPI = DoublingMap2D<String, CausalArc, Distribution>().apply {
-                set(
-                    "e",
-                    Dependency(Node("a"), Node("b")),
-                    Distribution(doubleArrayOf(25.0, 26.0))
-                )
-                set(
-                    "e",
-                    Dependency(Node("c"), Node("d")),
-                    Distribution(doubleArrayOf(22.0, 27.0))
-                )
-                set(
-                    "e",
-                    VirtualPetriNetCausalArc(
-                        Transition("z", outPlaces = listOf(place)),
-                        Transition("x", inPlaces = listOf(place)),
-                        place
-                    ),
-                    Distribution(doubleArrayOf(32.0, 37.0))
-                )
-                set(
-                    "e",
-                    VirtualProcessTreeCausalArc(ProcessTreeActivity("z"), ProcessTreeActivity("x")),
-                    Distribution(doubleArrayOf(42.0, 69.0))
-                )
-            },
             alignments = listOf(
                 Alignment(
                     steps = listOf(
                         Step(
-                            Transition("a"),
-                            null,
-                            event("a"),
-                            null,
-                            DeviationType.None
+                            modelMove = Transition("a"),
+                            modelState = null,
+                            modelCause = emptyList(),
+                            logMove = event("a"),
+                            logState = null,
+                            type = DeviationType.None
                         ),
                         Step(
-                            null,
-                            null,
-                            event("b"),
-                            null,
-                            DeviationType.LogDeviation
+                            modelMove = null,
+                            modelState = null,
+                            modelCause = emptyList(),
+                            logMove = event("b"),
+                            logState = null,
+                            type = DeviationType.LogDeviation
                         )
                     ),
                     cost = 1
@@ -96,7 +74,30 @@ class ReportTests {
         val json = report.toJson()
         val deserializedReport = Report.fromJson(json)
 
-        assertEquals(report, deserializedReport)
+        assertEquals(report.logKPI, deserializedReport.logKPI)
+        assertEquals(report.traceKPI, deserializedReport.traceKPI)
+        assertTrue(report.eventKPI.equals(deserializedReport.eventKPI) { k1, k2 -> k1?.name == k2?.name })
+        assertTrue(report.arcKPI.equals(deserializedReport.arcKPI) { k1, k2 -> k1.source.name == k2.source.name && k1.target.name == k2.target.name })
+        assertEquals(report.alignments, deserializedReport.alignments)
+    }
+
+    private fun <Col> Map2D<String, Col, Distribution>.equals(
+        other: Map2D<String, Col, Distribution>,
+        eqCol: (key1: Col, key2: Col) -> Boolean
+    ): Boolean {
+        if (this.rows.size != other.rows.size)
+            return false
+
+        if (this.columns.size != other.columns.size)
+            return false
+
+        for (col in columns) {
+            val matchingOtherCol = other.columns.first { eqCol(col, it) }
+            if (getColumn(col).entries != other.getColumn(matchingOtherCol).entries)
+                return false
+        }
+
+        return true
     }
 
     @Test

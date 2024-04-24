@@ -36,6 +36,7 @@ export default class Graph extends Vue {
   mounted() {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
+    // wait until height of the component is calculated
     waitForRepaint(() => {
       // get the container size
       const container = this.$refs.graph as HTMLElement;
@@ -243,7 +244,6 @@ export default class Graph extends Vue {
         "quadratic"
       );
 
-      // wait until height of the component is calculated
       this.markSelfLoops(self.data);
       this.calcSize(self.data);
       this.calcLayers(self.data);
@@ -256,6 +256,7 @@ export default class Graph extends Vue {
   }
 
   markSelfLoops(data: GraphData) {
+    if (data.edges === undefined) return;
     const selfLoops = data.edges!.filter((edge) => edge.source === edge.target);
     for (const edge of selfLoops) {
       edge.type = "loop";
@@ -263,7 +264,7 @@ export default class Graph extends Vue {
   }
 
   calcSize(data: GraphData) {
-    if (data.nodes!.some((node) => node.size !== undefined)) return;
+    if (data.nodes === undefined || data.nodes!.some((node) => node.size !== undefined)) return;
 
     for (const node of data.nodes!) {
       const chars = node.label!.toString().length;
@@ -274,7 +275,7 @@ export default class Graph extends Vue {
   }
 
   calcLayers(data: GraphData) {
-    if (data.nodes!.some((node) => node.layer !== undefined)) return;
+    if (data.nodes === undefined || data.nodes!.some((node) => node.layer !== undefined)) return;
     // begin with start nodes
     const queue = data.nodes!.filter((node) => !data.edges!.some((edge) => edge.source !== node.id && edge.target === node.id));
     for (let node of queue) {
@@ -306,6 +307,7 @@ export default class Graph extends Vue {
   }
 
   updateEdges() {
+    if (this.data.edges === undefined) return;
     for (const edge of this.data.edges!) {
       if (!edge.id) throw new Error("Missing edge id!");
       const edgeObj = this.graph.findById(edge.id);

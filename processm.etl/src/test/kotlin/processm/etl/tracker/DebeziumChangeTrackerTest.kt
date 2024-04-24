@@ -115,7 +115,7 @@ class DebeziumChangeTrackerTest {
     @BeforeAll
     fun setupDB() {
         val image =
-            DockerImageName.parse("debezium/postgres:12").asCompatibleSubstituteFor("postgres")
+            DockerImageName.parse("debezium/postgres:16-alpine").asCompatibleSubstituteFor("postgres")
         val user = "postgres"
         val password = "postgres"
         container = PostgreSQLContainer(image)

@@ -3,7 +3,6 @@ package processm.miners
 import jakarta.jms.MapMessage
 import jakarta.jms.Message
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
@@ -16,6 +15,7 @@ import processm.core.models.commons.ProcessModel
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.core.querylanguage.Query
+import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
 import processm.helpers.toUUID
 import processm.logging.loggedScope
@@ -56,13 +56,17 @@ interface MinerJob<T : ProcessModel> : ServiceJob {
     fun delete(database: Database, id: String)
 
     fun batchDelete(database: Database, component: WorkspaceComponent) {
-        for (element in component.dataAsJsonObject()?.values.orEmpty())
-            if (element is JsonPrimitive)
-                delete(database, element.content)
+        for (element in component.dataAsJsonObject()?.values.orEmpty()) {
+            element.asComponentData()?.let { delete(database, it.modelId) }
+        }
     }
 }
 
 abstract class CalcJob<T : ProcessModel> : MinerJob<T> {
+    companion object {
+        private val producer = Producer()
+    }
+
     override fun execute(context: JobExecutionContext): Unit = loggedScope { logger ->
         val id = requireNotNull(context.jobDetail.key.name?.toUUID())
 
@@ -90,7 +94,7 @@ abstract class CalcJob<T : ProcessModel> : MinerJob<T> {
                 val previousData = component.dataAsJsonObject()
                 if (previousData !== null) {
                     val mostRecentVersion = previousData.mostRecentVersion()
-                    if (mostRecentVersion == null || (version !== null && mostRecentVersion >= version)) {
+                    if (mostRecentVersion == null || mostRecentVersion >= version) {
                         logger.debug(
                             "Component {} is already populated with data (most recent data in the component: {}, log version: {}), skipping",
                             id, mostRecentVersion, version
@@ -101,18 +105,26 @@ abstract class CalcJob<T : ProcessModel> : MinerJob<T> {
 
                 val model = mine(component, stream)
                 val newData = previousData.orEmpty().toMutableMap().apply {
-                    this[version.toString()] =
-                        JsonPrimitive(store(database, model))
+                    this[version.toString()] = ComponentData(
+                        modelId = store(database, model),
+                        alignmentKPIId = ""
+                    ).toJsonElement()
                 }
                 component.data = JsonObject(newData).toString()
                 component.dataLastModified = Instant.now()
                 component.customizationData = updateCustomizationData(model, component.customizationData)
                 component.lastError = null
+                component.afterCommit {
+                    component.triggerEvent(producer, DATA_CHANGE, DATA_CHANGE_MODEL)
+                }
             } catch (e: Exception) {
                 component.lastError = e.message
                 logger.warn("Cannot calculate model for component with id $id.", e)
+                component.afterCommit {
+                    component.triggerEvent(producer, DATA_CHANGE, DATA_CHANGE_LAST_ERROR)
+                }
             }
-            component.triggerEvent(Producer(), DATA_CHANGE)
+
         }
     }
 }
@@ -136,7 +148,7 @@ abstract class DeleteJob<T : ProcessModel> : MinerJob<T> {
                 batchDelete(DBCache.get(component.dataStoreId.toString()).database, component)
             } catch (e: Exception) {
                 component.lastError = e.message
-                logger.warn("Error deleting model for component with id $id.")
+                logger.warn("Error deleting model for component with id $id.", e)
             }
 
             if (component.deleted) {

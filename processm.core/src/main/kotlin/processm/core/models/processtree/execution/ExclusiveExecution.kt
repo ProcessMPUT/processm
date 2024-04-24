@@ -2,14 +2,17 @@ package processm.core.models.processtree.execution
 
 import processm.core.models.commons.ProcessModelState
 import processm.core.models.processtree.Exclusive
+import processm.core.models.processtree.ProcessTreeActivity
+import processm.helpers.ifNullOrEmpty
 
 /**
  * An [ExecutionNode] for [Exclusive]
  */
 class ExclusiveExecution(
     override val base: Exclusive,
-    parent: ExecutionNode?
-) : ExecutionNode(base, parent) {
+    parent: ExecutionNode?,
+    cause: Collection<ProcessTreeActivity> = parent?.lastExecuted.ifNullOrEmpty { parent?.cause.orEmpty() }
+) : ExecutionNode(base, parent, cause) {
 
     private var selected: ExecutionNode? = null
 
@@ -24,6 +27,9 @@ class ExclusiveExecution(
     override var isComplete: Boolean = false
         private set
 
+    override val lastExecuted: Collection<ProcessTreeActivity>
+        get() = if (selected !== null) selected!!.lastExecuted else emptyList()
+
     override fun postExecution(child: ExecutionNode) {
         require(child.parent === this)
         selected = child
@@ -32,7 +38,7 @@ class ExclusiveExecution(
         parent?.postExecution(this)
     }
 
-    override fun copy(): ProcessModelState = ExclusiveExecution(base, parent).also {
+    override fun copy(): ProcessModelState = ExclusiveExecution(base, parent, cause).also {
         it.selected = this.selected?.copy() as ExecutionNode?
         it.selected?.parent = it
         it.isComplete = this.isComplete

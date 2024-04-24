@@ -4,11 +4,9 @@ import kotlinx.serialization.Serializable
 import processm.helpers.SerializableUUID
 import java.util.*
 
-/**
- * A place in a Petri net.
- */
+
 @Serializable
-open class Place(
+class Place(
     /**
      * A unique identifier to maintain identity of a [Place] during serialization
      */

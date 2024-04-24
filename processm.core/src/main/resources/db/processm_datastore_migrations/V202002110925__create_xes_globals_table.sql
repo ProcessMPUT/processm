@@ -14,7 +14,5 @@ CREATE TABLE globals
     in_list_attr BOOLEAN
 );
 
-SELECT create_hypertable('globals', 'id', chunk_time_interval => 100000, if_not_exists => TRUE);
-
 CREATE INDEX globals_log_id_index ON globals (log_id);
 CREATE INDEX globals_parent_id_index ON globals (parent_id);

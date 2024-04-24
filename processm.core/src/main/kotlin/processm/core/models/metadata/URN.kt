@@ -50,5 +50,14 @@ value class URN(val urn: String) {
                 { re, (old, new) -> re.replace(old, new) }),
             RegexOption.IGNORE_CASE
         )
+
+        /**
+         * Parses the given string to URN or returns null for a non-parsable string.
+         */
+        fun tryParse(urn: String): URN? {
+            if (reURN.matches(urn))
+                return URN(urn)
+            return null
+        }
     }
 }

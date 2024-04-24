@@ -1,7 +1,9 @@
 package processm.core.models.processtree.execution
 
 import processm.core.models.commons.ProcessModelState
+import processm.core.models.processtree.ProcessTreeActivity
 import processm.core.models.processtree.RedoLoop
+import processm.helpers.ifNullOrEmpty
 
 /**
  * An [ExecutionNode] for [RedoLoop]
@@ -11,7 +13,8 @@ class RedoLoopExecution(
     parent: ExecutionNode?,
     current: ExecutionNode? = null,
     overrideCurrent: Boolean = false,
-) : ExecutionNode(base, parent) {
+    cause: Collection<ProcessTreeActivity> = parent?.lastExecuted.ifNullOrEmpty { parent?.cause.orEmpty() }
+) : ExecutionNode(base, parent, cause) {
 
     private var doPhase = true
 
@@ -33,12 +36,17 @@ class RedoLoopExecution(
     override var isComplete: Boolean = false
         private set
 
+    override var lastExecuted: Collection<ProcessTreeActivity> = emptyList()
+        private set
+
     override fun postExecution(child: ExecutionNode) {
         require(child.parent === this)
         require(current === null || child === current)
         if (child.base === base.endLoopActivity) {
             check(redoPhase)
             isComplete = true
+        } else {
+            lastExecuted = child.lastExecuted
         }
         if (child.isComplete) {
             doPhase = !doPhase
@@ -53,9 +61,10 @@ class RedoLoopExecution(
     }
 
     override fun copy(): ProcessModelState =
-        RedoLoopExecution(base, parent, this.current?.copy() as ExecutionNode?, true).also {
+        RedoLoopExecution(base, parent, this.current?.copy() as ExecutionNode?, true, cause).also {
             it.doPhase = this.doPhase
             it.isComplete = this.isComplete
+            it.lastExecuted = this.lastExecuted
             it.current?.parent = it
         }
 

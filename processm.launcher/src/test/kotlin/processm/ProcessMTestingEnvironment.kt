@@ -71,7 +71,7 @@ class ProcessMTestingEnvironment {
 
         private val sharedDbContainer: PostgreSQLContainer<*> by lazy {
             val image =
-                DockerImageName.parse("timescale/timescaledb:latest-pg12-oss").asCompatibleSubstituteFor("postgres")
+                DockerImageName.parse("timescale/timescaledb:latest-pg16-oss").asCompatibleSubstituteFor("postgres")
             //TODO investigate - it seems that if user != "postgres" processm.core.persistence.Migrator.ensureDatabaseExists fails while creating a new datastore
             val user = "postgres"
             val password = "postgres"
