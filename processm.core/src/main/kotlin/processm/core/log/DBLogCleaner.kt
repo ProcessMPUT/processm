@@ -57,16 +57,14 @@ object DBLogCleaner {
      */
     internal fun removeTraces(connection: Connection, traceIds: Collection<Long>) {
         connection.prepareStatement(
-            """DELETE FROM traces WHERE id=ANY(?);
-                DELETE FROM traces_attributes WHERE trace_id=ANY(?);
-                WITH deleted_events AS (DELETE FROM events WHERE trace_id=ANY(?) RETURNING id)
+            """WITH deleted_traces AS (DELETE FROM traces WHERE id=ANY(?) RETURNING id),
+                ignore AS (DELETE FROM traces_attributes WHERE trace_id=ANY(SELECT id FROM deleted_traces)),
+                deleted_events AS (DELETE FROM events WHERE trace_id=ANY(SELECT id FROM deleted_traces) RETURNING id)
                 DELETE FROM events_attributes WHERE event_id = ANY(SELECT id FROM deleted_events)
             """.trimMargin()
         ).use {
             val array = connection.createArrayOf("bigint", traceIds.toTypedArray())
             it.setArray(1, array)
-            it.setArray(2, array)
-            it.setArray(3, array)
 
             it.execute()
         }
@@ -80,11 +78,11 @@ object DBLogCleaner {
      */
     internal fun removeEvents(connection: Connection, eventIds: Collection<Long>) {
         connection.prepareStatement(
-            "DELETE FROM events WHERE id=ANY(?); DELETE FROM events_attributes WHERE event_id=ANY(?)"
+            """WITH deleted_events AS (DELETE FROM events WHERE id=ANY(?) RETURNING id)
+                DELETE FROM events_attributes WHERE event_id=ANY(SELECT id FROM deleted_events)"""
         ).use {
             val array = connection.createArrayOf("bigint", eventIds.toTypedArray())
             it.setArray(1, array)
-            it.setArray(2, array)
 
             it.execute()
         }
@@ -92,18 +90,14 @@ object DBLogCleaner {
 
     private fun removeLogRecord(connection: Connection, logIds: Collection<Int>) {
         connection.prepareStatement(
-            """DELETE FROM logs WHERE id=ANY(?);
-            |DELETE FROM globals WHERE log_id=ANY(?); 
-            |DELETE FROM classifiers WHERE log_id=ANY(?); 
-            |DELETE FROM extensions WHERE log_id=ANY(?); 
-            |DELETE FROM logs_attributes WHERE log_id=ANY(?)""".trimMargin()
+            """WITH deleted_logs AS (DELETE FROM logs WHERE id=ANY(?) RETURNING id),
+            |ignore1 AS (DELETE FROM globals WHERE log_id=ANY(SELECT id FROM deleted_logs)),
+            |ignore2 AS (DELETE FROM classifiers WHERE log_id=ANY(SELECT id FROM deleted_logs)),
+            |ignore3 AS (DELETE FROM extensions WHERE log_id=ANY(SELECT id FROM deleted_logs))
+            |DELETE FROM logs_attributes WHERE log_id=ANY(SELECT id FROM deleted_logs)""".trimMargin()
         ).use {
             val array = connection.createArrayOf("int", logIds.toTypedArray())
             it.setArray(1, array)
-            it.setArray(2, array)
-            it.setArray(3, array)
-            it.setArray(4, array)
-            it.setArray(5, array)
             it.execute()
         }
     }
