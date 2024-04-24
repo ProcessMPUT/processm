@@ -32,7 +32,7 @@ class CausalNetMinerService : AbstractMinerService(
     interface CNetJob : MinerJob<CausalNet> {
         override fun mine(component: WorkspaceComponent, stream: DBHierarchicalXESInputStream): CausalNet {
 
-            val miner = minerFromURN(component.algorithm)
+            val miner = minerFromProperties(component.properties)
 
             val model = miner.processLog(stream)
             return when (model) {

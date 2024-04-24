@@ -89,6 +89,15 @@
                 item-value="id"
                 required
               />
+              <v-text-field
+                v-if="property.type == 'non-negative-integer'"
+                v-model="property.value"
+                type="number"
+                :rules="nonNegativeIntegerRules"
+                :label="$t(`workspace.component.edit.${property.name}`)"
+                :hint="$te(`workspace.component.edit.${property.name}-hint`) ? $t(`workspace.component.edit.${property.name}-hint`) : ''"
+                required
+              />
             </v-list-item-content>
           </v-list-item>
         </v-list>
@@ -120,6 +129,7 @@ import DataStore from "@/models/DataStore";
 import { ComponentType } from "@/openapi";
 import { kebabize } from "@/utils/StringCaseConverter";
 import { waitForRepaint } from "@/utils/waitForRepaint";
+import { isNonNegativeIntegerRule } from "@/utils/FormValidationRules";
 
 @Component({
   components: { WorkspaceComponent }
@@ -147,6 +157,8 @@ export default class EditComponentView extends Vue {
   @Inject() dataStoreService!: DataStoreService;
 
   isMounted = false;
+
+  nonNegativeIntegerRules = [(v: string) => isNonNegativeIntegerRule(v, this.$t("workspace.component.edit.validation.not-a-non-negative-integer").toString())];
 
   /**
    * A shallow copy of [componentDetails]. This object replaces the [componentDetails] when saved or is discarded.

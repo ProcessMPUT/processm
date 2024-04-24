@@ -297,12 +297,15 @@ fun WorkspaceComponent.updateData(data: String) = loggedScope { logger ->
 /**
  * Gets the list of custom properties for this component.
  */
-fun WorkspaceComponent.getCustomProperties() = getCustomProperties(componentType, algorithm)
+fun WorkspaceComponent.getCustomProperties() = getCustomProperties(componentType, properties)
 
 /**
  * Gets the list of custom properties for the component of the [componentType] type
  */
-fun getCustomProperties(componentType: ComponentTypeDto, algorithm: String? = null): Array<CustomProperty> =
+fun getCustomProperties(
+    componentType: ComponentTypeDto,
+    properties: Map<String, String>? = null
+): Array<CustomProperty> =
     when (componentType) {
         ComponentTypeDto.CausalNet, ComponentTypeDto.BPMN, ComponentTypeDto.PetriNet ->
             arrayOf(
@@ -320,7 +323,13 @@ fun getCustomProperties(componentType: ComponentTypeDto, algorithm: String? = nu
                             name = "Online Inductive Miner"
                         )
                     ),
-                    value = algorithm ?: ALGORITHM_HEURISTIC_MINER
+                    value = properties?.get("algorithm") ?: ALGORITHM_HEURISTIC_MINER
+                ),
+                CustomProperty(
+                    id = 1,
+                    name = "horizon",
+                    type = "non-negative-integer",
+                    value = properties?.get("horizon") ?: "3"
                 )
             )
 

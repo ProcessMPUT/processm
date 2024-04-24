@@ -34,7 +34,7 @@ class PetriNetMinerService : AbstractMinerService(
 
     interface PetriNetJob : MinerJob<PetriNet> {
         override fun mine(component: WorkspaceComponent, stream: DBHierarchicalXESInputStream): PetriNet {
-            val miner = minerFromURN(component.algorithm)
+            val miner = minerFromProperties(component.properties)
 
             val model = miner.processLog(stream)
             return when (model) {

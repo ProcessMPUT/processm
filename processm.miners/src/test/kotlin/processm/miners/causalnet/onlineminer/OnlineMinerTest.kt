@@ -3,12 +3,17 @@ package processm.miners.causalnet.onlineminer
 import ch.qos.logback.classic.Level
 import processm.core.log.Helpers.logFromModel
 import processm.core.log.Helpers.logFromString
+import processm.core.log.XMLXESInputStream
+import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
+import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.Log
 import processm.core.models.causalnet.*
 import processm.core.models.metadata.BasicMetadata
 import processm.core.models.metadata.SingleDoubleMetadata
 import processm.logging.logger
 import processm.miners.causalnet.onlineminer.replayer.SingleReplayer
+import java.io.File
+import java.util.zip.GZIPInputStream
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.test.Ignore
@@ -181,6 +186,32 @@ class OnlineMinerTest {
             (hm.result.getMetadata(Dependency(c, d), BasicMetadata.DEPENDENCY_MEASURE) as SingleDoubleMetadata)
                 .value
         )
+    }
+
+    @OptIn(InMemoryXESProcessing::class)
+    @Test
+    fun `split size is a non-decreasing non-constant function of the horizon`() {
+        val averageSplitSizes = ArrayList<Double>()
+        val maxSplitSizes = ArrayList<Int>()
+        File("../xes-logs/BPIC15_2.xes.gz").inputStream().use { raw ->
+            GZIPInputStream(raw).use { gzip ->
+                val hb = HoneyBadgerHierarchicalXESInputStream(XMLXESInputStream(gzip))
+                val traces = hb.first().traces.take(10).toList()
+                for (horizon in 1..10) {
+                    val om = OnlineMiner(SingleReplayer(horizon = horizon))
+                    om.processLog(Log(traces.asSequence()))
+                    val avgSplitSize = om.result.splits.values.let {
+                        it.sumOf { it.sumOf { it.size } }.toDouble() / it.sumOf { it.size }
+                    }
+                    val maxSplitSize = om.result.splits.values.maxOf { it.maxOf { it.size } }
+                    averageSplitSizes.add(avgSplitSize)
+                    maxSplitSizes.add(maxSplitSize)
+                }
+            }
+        }
+        assertTrue { averageSplitSizes.indices.all { it == 0 || averageSplitSizes[it - 1] < averageSplitSizes[it] } }
+        assertTrue { maxSplitSizes.indices.all { it == 0 || maxSplitSizes[it - 1] <= maxSplitSizes[it] } }
+        assertTrue { maxSplitSizes.first() < maxSplitSizes.last() }
     }
 
 }
