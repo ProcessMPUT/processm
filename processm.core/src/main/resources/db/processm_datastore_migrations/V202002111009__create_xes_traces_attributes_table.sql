@@ -13,7 +13,7 @@ CREATE TABLE traces_attributes
     in_list_attr BOOLEAN
 );
 
-SELECT create_hypertable('traces_attributes', 'id', chunk_time_interval => 100000, if_not_exists => TRUE);
+SELECT create_hypertable('traces_attributes', by_range('id', 131072), if_not_exists => TRUE);
 
 CREATE INDEX traces_attributes_log_id_index ON traces_attributes (trace_id);
 CREATE INDEX traces_attributes_parent_id_index ON traces_attributes (parent_id);
