@@ -53,6 +53,9 @@ class OnlineInductiveMiner : InductiveMiner() {
      * Runs in: O(|traces| * |activities|^2)
      */
     override fun processLog(log: LogInputStream): ProcessTree {
+        if (log.none())
+            throw IllegalArgumentException("The event log is empty and cannot be used to discover process model.")
+
         discover(log)
 
         // Check - apply statistics?

@@ -172,8 +172,17 @@ inline fun <T, R> Sequence<T>.mapToSet(transform: (T) -> R): Set<R> = mapTo(Hash
  * Returns an [Array] containing the results of applying the given [transform] function
  * to each element in the original [Collection].
  */
-inline fun <T, reified R> Collection<T>.mapToArray(transform: (T) -> R): Array<R> = this.iterator().let {
-    Array<R>(this.size) { _ -> transform(it.next()) }
+@OptIn(ExperimentalContracts::class)
+inline fun <T, reified R> Collection<T>.mapToArray(transform: (T) -> R): Array<R> {
+    contract {
+        callsInPlace(transform)
+    }
+    // Read size first, then create iterator; The order is important if this is SequenceWithMemory<T>, as the read of
+    // the size property may change the underlying buffer on which the iterator is defined.
+    // Otherwise, iterator.next() may throw ConcurrentModificationException
+    val size = this.size
+    val iterator = this.iterator()
+    return Array<R>(size) { _ -> transform(iterator.next()) }
 }
 
 /**

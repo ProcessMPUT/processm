@@ -271,7 +271,8 @@ class AlignerKPIServiceTests {
                 WorkspaceComponents.dataStoreId eq dataStore
             }.first()
 
-            val report = persistenceProvider.get<Report>(URI(component.dataAsObject!![0].alignmentKPIId))
+            val report =
+                persistenceProvider.get<Report>(URI(component.mostRecentData()!!.asComponentData()!!.alignmentKPIId))
             assertEquals(1, report.logKPI.size)
             assertEquals(6, report.traceKPI.size)
             assertEquals(20.0, report.traceKPI[COST_TOTAL]!!.median)
@@ -338,7 +339,8 @@ class AlignerKPIServiceTests {
                 (WorkspaceComponents.name eq "test-aligner-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
             }.first()
 
-            val report = persistenceProvider.get<Report>(URI(component.dataAsObject!![0].alignmentKPIId))
+            val report =
+                persistenceProvider.get<Report>(URI(component.mostRecentData()!!.asComponentData()!!.alignmentKPIId))
             assertEquals(1, report.logKPI.size)
             assertEquals(6, report.traceKPI.size)
             assertEquals(20.0, report.traceKPI[COST_TOTAL]!!.median)
@@ -404,7 +406,7 @@ class AlignerKPIServiceTests {
                 (WorkspaceComponents.name eq "test-aligner-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
             }.first()
 
-            assertEquals("", component.dataAsObject!![0].alignmentKPIId)
+            assertEquals("", component.mostRecentData()!!.asComponentData()!!.alignmentKPIId)
             assertNull(component.dataLastModified)
             assertNotNull(component.lastError)
             assertTrue("Line 1 position 0: mismatched input 'just'" in component.lastError!!, component.lastError)
@@ -448,7 +450,8 @@ class AlignerKPIServiceTests {
                 (WorkspaceComponents.name eq "test-aligner-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
             }.first()
 
-            val report = persistenceProvider.get<Report>(URI(component.dataAsObject!![0].alignmentKPIId))
+            val report =
+                persistenceProvider.get<Report>(URI(component.mostRecentData()!!.asComponentData()!!.alignmentKPIId))
             assertEquals(2, report.logKPI.size)
             assertEquals(5, report.traceKPI.size)
             assertEquals(1, report.eventKPI.size)

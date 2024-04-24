@@ -63,11 +63,8 @@ export default class WorkspaceService extends BaseService {
     return response.status == 204;
   }
 
-  public async updateComponent(workspaceId: string, componentId: string, component: WorkspaceComponent) {
-    const payload = Object.assign({}, component) as { data?: any };
-    const response = await this.workspacesApi.addOrUpdateWorkspaceComponent(workspaceId, componentId, payload as AbstractComponent);
-
-    return response.status == 204;
+  private get currentOrganizationId() {
+    return Vue.prototype.$sessionStorage.currentOrganization?.id;
   }
 
   public async getComponentData(workspaceId: string, componentId: string): Promise<unknown> {
@@ -98,8 +95,16 @@ export default class WorkspaceService extends BaseService {
     const response = await this.workspacesApi.removeWorkspaceComponent(workspaceId, componentId);
   }
 
-  private get currentOrganizationId() {
-    return Vue.prototype.$sessionStorage.currentOrganization.id;
+  public async updateComponent(workspaceId: string, componentId: string, component: WorkspaceComponent) {
+    const payload = Object.assign({}, component) as { data?: any };
+    switch (component.type) {
+      case "directlyFollowsGraph":
+        delete payload.data;
+        break;
+    }
+    const response = await this.workspacesApi.addOrUpdateWorkspaceComponent(workspaceId, componentId, payload as AbstractComponent);
+
+    return response.status == 204;
   }
 
   public observeWorkspace(workspaceId: string, callback: (componentId: string) => void) {

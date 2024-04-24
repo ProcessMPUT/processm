@@ -2,8 +2,7 @@ package processm.enhancement.kpi
 
 import jakarta.jms.MapMessage
 import jakarta.jms.Message
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import org.quartz.*
 import processm.core.communication.Producer
 import processm.core.esb.AbstractJobService
@@ -54,6 +53,7 @@ class AlignerKPIService : AbstractJobService(
 
         require(event == DATA_CHANGE)
         require(eventData == DATA_CHANGE_MODEL)
+        // TODO: listen to delete messagaes to remove reports
 
         return listOf(createJob(id.toUUID()!!))
     }
@@ -86,10 +86,12 @@ class AlignerKPIService : AbstractJobService(
                     return@transactionMain
                 }
 
-                val data = checkNotNull(component.dataAsObject)
+                val dataObject = checkNotNull(component.dataAsJsonObject()).toMutableMap()
+                val mostRecentVersion = checkNotNull(dataObject.mostRecentVersion()).toString()
+                val data = checkNotNull(dataObject[mostRecentVersion]?.asComponentData())
 
                 try {
-                    val model = getModel(component.componentType, component.dataStoreId, data[0].modelId)
+                    val model = getModel(component.componentType, component.dataStoreId, data.modelId)
                     val calculator = Calculator(model)
                     val log = DBHierarchicalXESInputStream(
                         component.dataStoreId.toString(), Query(component.query), false
@@ -100,8 +102,8 @@ class AlignerKPIService : AbstractJobService(
                         it.put(reportId, report)
                     }
 
-                    data[0] = data[0].copy(alignmentKPIId = reportId.toString())
-                    component.data = Json.encodeToString(data)
+                    dataObject[mostRecentVersion] = data.copy(alignmentKPIId = reportId.toString()).toJsonElement()
+                    component.data = JsonObject(dataObject).toString()
                     component.dataLastModified = Instant.now()
                     component.lastError = null
 

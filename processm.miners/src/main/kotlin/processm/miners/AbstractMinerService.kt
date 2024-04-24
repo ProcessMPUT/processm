@@ -3,9 +3,6 @@ package processm.miners
 import jakarta.jms.MapMessage
 import jakarta.jms.Message
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
@@ -54,9 +51,9 @@ interface MinerJob<T : ProcessModel> : ServiceJob {
     fun delete(database: Database, id: String)
 
     fun batchDelete(database: Database, component: WorkspaceComponent) {
-        for (element in component.dataAsJsonObject()?.values.orEmpty())
-            if (element is JsonPrimitive)
-                delete(database, element.content)
+        for (element in component.dataAsJsonObject()?.values.orEmpty()) {
+            element.asComponentData()?.let { delete(database, it.modelId) }
+        }
     }
 }
 
@@ -92,7 +89,7 @@ abstract class CalcJob<T : ProcessModel> : MinerJob<T> {
                 val previousData = component.dataAsJsonObject()
                 if (previousData !== null) {
                     val mostRecentVersion = previousData.mostRecentVersion()
-                    if (mostRecentVersion == null || (version !== null && mostRecentVersion >= version)) {
+                    if (mostRecentVersion == null || mostRecentVersion >= version) {
                         logger.debug(
                             "Component {} is already populated with data (most recent data in the component: {}, log version: {}), skipping",
                             id, mostRecentVersion, version
@@ -103,8 +100,10 @@ abstract class CalcJob<T : ProcessModel> : MinerJob<T> {
 
                 val model = mine(component, stream)
                 val newData = previousData.orEmpty().toMutableMap().apply {
-                    this[version.toString()] =
-                        JsonPrimitive(store(database, model))
+                    this[version.toString()] = ComponentData(
+                        modelId = store(database, model),
+                        alignmentKPIId = ""
+                    ).toJsonElement()
                 }
                 component.data = JsonObject(newData).toString()
                 component.dataLastModified = Instant.now()

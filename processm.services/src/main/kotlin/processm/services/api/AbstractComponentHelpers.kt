@@ -12,11 +12,7 @@ import processm.core.models.petrinet.Transition
 import processm.core.persistence.DurablePersistenceProvider
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.get
-import processm.dbmodels.models.ComponentTypeDto
-import processm.dbmodels.models.WorkspaceComponent
-import processm.dbmodels.models.dataAsObject
-import processm.dbmodels.models.load
-import processm.dbmodels.models.mostRecentData
+import processm.dbmodels.models.*
 import processm.enhancement.kpi.Report
 import processm.helpers.mapToArray
 import processm.helpers.time.toLocalDateTime
@@ -93,10 +89,11 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
     try {
         when (componentType) {
             ComponentTypeDto.CausalNet -> {
-                val cnet = mostRecentData()?.let {
+                val recentData = mostRecentData()?.asComponentData()
+                val cnet = recentData?.let {
                     DBSerializer.fetch(
                         DBCache.get(dataStoreId.toString()).database,
-                        it.toInt()
+                        it.modelId.toInt()
                     )
                 } ?: return null.apply {
                     logger.warn("Missing C-net id for component $id.")
@@ -124,7 +121,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                     )
                 }
 
-                val alignmentKPIReport = if (cnet.alignmentKPIId.isNotBlank())
+                val alignmentKPIReport = if (recentData.alignmentKPIId.isNotBlank())
                     DurablePersistenceProvider(dataStoreId.toString()).use { it.get<Report>(URI(recentData.alignmentKPIId)) }
                 else null
                 CausalNetComponentData(
@@ -143,17 +140,20 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
             }
 
             ComponentTypeDto.BPMN -> {
+                val recentData = mostRecentData()?.asComponentData()
+                    ?: return null.apply { logger.warn("Missing BMPN id for component $id.") }
+
                 BPMNComponentData(
                     type = ComponentType.bpmn,
                     xml = processm.core.models.bpmn.DBSerializer.fetchXML(
                         DBCache.get(dataStoreId.toString()).database,
-                        UUID.fromString(requireNotNull(mostRecentData()) { "Missing BPMN model id" })
-                    )
+                        UUID.fromString(recentData.modelId)
+                    ) // TODO: add KPIs/alignments
                 )
             }
 
             ComponentTypeDto.PetriNet -> {
-                val recentData = mostRecentData() // dataAsObject?
+                val recentData = mostRecentData()?.asComponentData()
                 val petriNet = recentData?.modelId?.let {
                     processm.core.models.petrinet.DBSerializer.fetch(
                         DBCache.get(dataStoreId.toString()).database,
@@ -197,7 +197,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
             }
 
             ComponentTypeDto.DirectlyFollowsGraph -> {
-                val recentData = mostRecentData()
+                val recentData = mostRecentData()?.asComponentData()
                 val dfg = recentData?.modelId?.let {
                     DirectlyFollowsGraph.load(
                         DBCache.get(dataStoreId.toString()).database,
@@ -207,7 +207,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                     logger.warn("Missing DFG id for component $id.")
                 }
 
-                assert(recentData.alignmentKPIId.isEmpty()) { "DFG does not have executable semantics" }
+                assert(recentData.alignmentKPIId.isEmpty()) { "DFG does not have executable semantics; got alignment KPI report for component $id" }
 
                 DirectlyFollowsGraphComponentData(
                     type = ComponentType.directlyFollowsGraph,
@@ -236,10 +236,6 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
             }
 
             ComponentTypeDto.FlatLogView -> {
-                null
-            }
-
-            ComponentTypeDto.AlignerKpi -> {
                 null
             }
 

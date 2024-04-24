@@ -1,8 +1,7 @@
 package processm.dbmodels.models
 
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.*
 import processm.core.communication.Producer
 
 private val WCEproducer = Producer()
@@ -45,12 +44,27 @@ internal fun Iterable<String>.mostRecentVersion(): Long? = this.fold<String, Lon
  * keys that were successfully parsed, or  `null` otherwise (i.e., if the object is empty or none of the keys were
  * successfully parsed).
  */
-fun JsonObject.mostRecentVersion(): Long? = this.keys.mostRecentVersion()
+fun Map<String, JsonElement>.mostRecentVersion(): Long? = this.keys.mostRecentVersion()
 
 /**
  * Assumes [WorkspaceComponent.data] is a JSON Object with keys suitable for [mostRecentVersion].
- * Returns the primitive associated with the key returned by [mostRecentVersion].
- * If any of the assumptions is not fulfilled, returns null (e.g., not a JSON Object, not a JSON Primitive within the object)
+ * Returns the [JsonElement] associated with the key returned by [mostRecentVersion].
+ * If any of the assumptions is not fulfilled, returns null (e.g., not a JSON Object)
  */
-fun WorkspaceComponent.mostRecentData() =
-    dataAsJsonObject()?.let { (it[it.mostRecentVersion().toString()] as? JsonPrimitive)?.content }
+fun WorkspaceComponent.mostRecentData(): JsonElement? =
+    dataAsJsonObject()?.let { it[it.mostRecentVersion().toString()] }
+
+@Serializable
+data class ComponentData(
+    val modelId: String,
+    val alignmentKPIId: String
+) {
+    fun toJsonElement(): JsonElement = Json.encodeToJsonElement(this)
+}
+
+/**
+ * Converts [JsonElement] to [ComponentData].
+ */
+fun JsonElement.asComponentData(): ComponentData = Json.decodeFromJsonElement<ComponentData>(this)
+
+

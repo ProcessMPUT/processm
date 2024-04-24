@@ -122,8 +122,8 @@ class CausalNetMinerServiceTest {
 
             val cnet = transactionMain {
                 component.refresh()
-                component.mostRecentData()?.let {
-                    DBSerializer.fetch(DBCache.get(DBTestHelper.dbName).database, it[0].modelId.toInt())
+                component.mostRecentData()?.asComponentData()?.let {
+                    DBSerializer.fetch(DBCache.get(DBTestHelper.dbName).database, it.modelId.toInt())
                 }
             }
 
@@ -147,7 +147,7 @@ class CausalNetMinerServiceTest {
 
         val cnetId = transactionMain {
             component.refresh()
-            component.mostRecentData()?.let { it[0].modelId.toInt() }
+            component.mostRecentData()?.asComponentData()?.let { it.modelId.toInt() }
         }
 
         assertNotNull(cnetId, "Expecting a C-net to be created.")

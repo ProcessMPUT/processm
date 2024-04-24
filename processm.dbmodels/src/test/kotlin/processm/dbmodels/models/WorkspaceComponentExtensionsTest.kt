@@ -2,6 +2,7 @@ package processm.dbmodels.models
 
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.serialization.json.JsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -38,7 +39,7 @@ class WorkspaceComponentExtensionsTest {
         val component = mockk<WorkspaceComponent> {
             every { data } returns """{"1": "a", "2": "b"}"""
         }
-        assertEquals("b", component.mostRecentData())
+        assertEquals("b", (component.mostRecentData() as JsonPrimitive).content)
     }
 
     @Test
@@ -46,7 +47,7 @@ class WorkspaceComponentExtensionsTest {
         val component = mockk<WorkspaceComponent> {
             every { data } returns """{"blah": "a", "2": "b"}"""
         }
-        assertEquals("b", component.mostRecentData())
+        assertEquals("b", (component.mostRecentData() as JsonPrimitive).content)
     }
 
     @Test
@@ -54,7 +55,7 @@ class WorkspaceComponentExtensionsTest {
         val component = mockk<WorkspaceComponent> {
             every { data } returns """{"blah": "a", "null": "b"}"""
         }
-        assertEquals("b", component.mostRecentData())
+        assertEquals("b", (component.mostRecentData() as JsonPrimitive).content)
     }
 
     @Test

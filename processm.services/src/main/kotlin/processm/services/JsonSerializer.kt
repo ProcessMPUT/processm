@@ -14,11 +14,11 @@ import kotlinx.serialization.json.*
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.serializer
 import processm.dbmodels.models.ComponentTypeDto
-import processm.enhancement.kpi.Report
 import processm.helpers.UUIDSerializer
 import processm.helpers.serialization.SerializersModuleProvider
 import processm.services.api.models.BPMNComponentData
 import processm.services.api.models.CausalNetComponentData
+import processm.services.api.models.DirectlyFollowsGraphComponentData
 import processm.services.api.models.PetriNetComponentData
 import java.time.LocalDateTime
 import java.util.*
@@ -61,6 +61,9 @@ private object AnySerializer : KSerializer<Any?> {
 
             ComponentTypeDto.CausalNet ->
                 decoder.json.decodeFromJsonElement<CausalNetComponentData>(jsonElement)
+
+            ComponentTypeDto.DirectlyFollowsGraph ->
+                decoder.json.decodeFromJsonElement<DirectlyFollowsGraphComponentData>(jsonElement)
 
             else -> deserializeJsonElement(jsonElement)
         }

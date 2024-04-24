@@ -1,7 +1,5 @@
 package processm.dbmodels.models
 
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
@@ -137,7 +135,7 @@ enum class ComponentTypeDto(val typeName: String) {
     BPMN("bpmn"),
     Kpi("kpi"),
 
-    @Deprecated("This is not a separate UI component")
+    @Deprecated("This is not a separate UI component", level = DeprecationLevel.ERROR)
     AlignerKpi("alignerKpi"),
     PetriNet("petriNet"),
     TreeLogView("treeLogView"),
@@ -154,16 +152,3 @@ enum class ComponentTypeDto(val typeName: String) {
 
     override fun toString(): String = typeName
 }
-
-@Serializable
-data class ComponentData(
-    val modelId: String,
-    val alignmentKPIId: String
-)
-
-/**
- * The contents of [WorkspaceComponent.data] converted to [ComponentData].
- */
-val WorkspaceComponent.dataAsObject: Array<ComponentData>?
-    get() = data?.let { Json.decodeFromString<Array<ComponentData>>(it) }
-

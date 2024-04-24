@@ -16,6 +16,7 @@ import java.sql.JDBCType
 import java.sql.Timestamp
 import java.time.Instant
 import kotlin.LazyThreadSafetyMode.NONE
+import kotlin.math.max
 
 @Suppress("MapGetWithNotNullAssertionOperator")
 internal class TranslatedQuery(
@@ -47,6 +48,7 @@ internal class TranslatedQuery(
             )
             it.params.add(idPlaceholder)
         }
+        private const val VERSION_CHECK_CHUNK_SIZE = 32768
     }
 
     private val connection: NestableAutoCloseable<Connection> = NestableAutoCloseable {
@@ -288,7 +290,7 @@ internal class TranslatedQuery(
         with(sql.query) {
             append(" WHERE 1=1 ")
 
-            if(!readNestedAttributes)
+            if (!readNestedAttributes)
                 append("AND NOT starts_with(key, '$SEPARATOR') ")
 
             if (pql.selectAll[scope]!!)
@@ -1093,10 +1095,9 @@ internal class TranslatedQuery(
                         val queries = parent.traces!!.values.map { it.queryIds }
                         connection.use {
                             val events = ArrayList<ArrayList<Long>>()
-                            queries.executeMultipleTimes(it) { index, result ->
+                            queries.executeMany(it).forEachIndexed { index, result ->
                                 assert(index == events.size)
                                 events.add(result.toIdList { it.getLong(1) })
-                                true
                             }
                             for ((index, trace) in parent.traces!!.values.withIndex()) {
                                 trace.events = events[index]
@@ -1237,6 +1238,7 @@ internal class TranslatedQuery(
                         sql, null, if (expression.type != Type.Unknown) expression.type else expectedType, 1,
                         ignoreHoisting = false, attributeToIndex = attributeToIndex
                     )
+
                     is Literal<*> -> {
                         if (expression.scope != null)
                             sql.scopes.add(ScopeWithMetadata(expression.scope!!, 0))
@@ -1247,12 +1249,14 @@ internal class TranslatedQuery(
                                 append("?::timestamptz")
                                 sql.params.add(Timestamp.from(expression.value))
                             }
+
                             else -> {
                                 append("?::${expression.type.asDBType}")
                                 sql.params.add(expression.value!!)
                             }
                         }
                     }
+
                     is Operator -> {
                         when (expression.operatorType) {
                             OperatorType.Prefix -> {
@@ -1260,6 +1264,7 @@ internal class TranslatedQuery(
                                 append(" ${expression.value} ")
                                 walk(expression.children[0], expression.expectedChildrenTypes[0])
                             }
+
                             OperatorType.Infix -> {
                                 assert(expression.children.size >= 2)
                                 append(' ')
@@ -1281,6 +1286,7 @@ internal class TranslatedQuery(
                                     append(")/$secondsPerDay")
                                 append(' ')
                             }
+
                             OperatorType.Postfix -> {
                                 assert(expression.children.size == 1)
                                 walk(expression.children[0], expression.expectedChildrenTypes[0])
@@ -1288,6 +1294,7 @@ internal class TranslatedQuery(
                             }
                         }
                     }
+
                     is Function -> {
                         when (expression.name) {
                             "min", "max", "avg", "count", "sum" -> {
@@ -1307,18 +1314,21 @@ internal class TranslatedQuery(
                                 walk(expression.children[0], expression.expectedChildrenTypes[0])
                                 append(")) s(id, a0)) s)")
                             }
+
                             "round", "lower", "upper" -> {
                                 append(expression.name)
                                 append('(')
                                 walk(expression.children[0], expression.expectedChildrenTypes[0])
                                 append(')')
                             }
+
                             "date", "time" -> {
                                 assert(expression.children.size == 1)
                                 walk(expression.children[0], expression.expectedChildrenTypes[0])
                                 append("::")
                                 append(expression.name)
                             }
+
                             "year", "month", "day", "hour", "minute", "quarter" -> {
                                 assert(expression.children.size == 1)
                                 append("extract(")
@@ -1327,37 +1337,44 @@ internal class TranslatedQuery(
                                 walk(expression.children[0], expression.expectedChildrenTypes[0])
                                 append(')')
                             }
+
                             "second" -> {
                                 assert(expression.children.size == 1)
                                 append("floor(extract(second from ")
                                 walk(expression.children[0], expression.expectedChildrenTypes[0])
                                 append("))")
                             }
+
                             "millisecond" -> {
                                 assert(expression.children.size == 1)
                                 append("extract(milliseconds from ") // note the plural form
                                 walk(expression.children[0], expression.expectedChildrenTypes[0])
                                 append(")%1000")
                             }
+
                             "dayofweek" -> {
                                 assert(expression.children.size == 1)
                                 append("extract(dow from ")
                                 walk(expression.children[0], expression.expectedChildrenTypes[0])
                                 append(")+1")
                             }
+
                             "now" -> {
                                 assert(expression.children.isEmpty())
                                 append("?::timestamptz")
                                 sql.params.add(now)
                             }
+
                             else -> throw IllegalArgumentException("Undefined function ${expression.name}.")
                         }
 
                     }
+
                     is AnyExpression -> append(expression.value)
                     // Expression must be the last but one because other classes inherit from this one.
                     is Expression -> expression.children.withIndex()
                         .forEach { walk(it.value, expression.expectedChildrenTypes[it.index]) }
+
                     else -> throw IllegalArgumentException("Unknown expression type: $expression")
                 }
             }
@@ -1426,16 +1443,26 @@ internal class TranslatedQuery(
             }
         }
         if (allEventIds.isEmpty()) return 0L
+
+        // help DBMS reading versions in continuous chunks
+        allEventIds.sort()
+
         return connection.use { conn ->
+            var max = 0L
             conn.prepareStatement("select max(version) from events where id=any(?::bigint[])").use { stmt ->
-                stmt.setArray(1, conn.createArrayOf(JDBCType.BIGINT.name, allEventIds.toTypedArray()))
-                stmt.executeQuery().use { rs ->
-                    if (rs.next())
-                        rs.getLong(1)
-                    else
-                        0L
+                for (startIndex in 0 until allEventIds.size step VERSION_CHECK_CHUNK_SIZE) {
+                    val ids = allEventIds.subList(
+                        startIndex,
+                        (startIndex + VERSION_CHECK_CHUNK_SIZE).coerceAtMost(allEventIds.size)
+                    )
+                    stmt.setArray(1, conn.createArrayOf(JDBCType.BIGINT.name, ids.toTypedArray()))
+                    stmt.executeQuery().use { rs ->
+                        if (rs.next())
+                            max = max(max, rs.getLong(1))
+                    }
                 }
             }
+            max
         }
     }
 }
