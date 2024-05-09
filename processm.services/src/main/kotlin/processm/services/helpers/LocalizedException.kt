@@ -1,8 +1,10 @@
 package processm.services.helpers
 
 import io.ktor.http.*
+import processm.helpers.AbstractLocalizedException
 import processm.logging.logger
 import java.util.*
+
 
 /**
  * An exception supporting localization according to the remote user's locale
@@ -15,15 +17,10 @@ open class LocalizedException(
     val reason: ExceptionReason,
     val arguments: Array<out Any?> = emptyArray(),
     message: String? = null
-) : Exception(message ?: reason.toString()) {
+) : AbstractLocalizedException(message ?: reason.toString()) {
 
-    fun localizedMessage(locale: Locale): String = try {
-        val formatString = try {
-            locale.getErrorMessage(reason.toString())
-        } catch (e: MissingResourceException) {
-            logger().warn("Missing translation of {} to {}", reason.toString(), locale)
-            Locale.US.getErrorMessage(reason.toString())
-        }
+    override fun localizedMessage(locale: Locale): String = try {
+        val formatString = getFormatString(locale, reason.toString())
         String.format(locale, formatString, *arguments)
     } catch (e: Exception) {
         logger().error("An exception was thrown while preparing localized exception", e)
@@ -44,7 +41,7 @@ enum class ExceptionReason(val statusCode: HttpStatusCode = HttpStatusCode.BadRe
     ACLCannotBeRead(HttpStatusCode.Forbidden),
     InvalidUsernameOrPassword(HttpStatusCode.Unauthorized),
 
-    @Deprecated("A temporary patch until PQL errors are translated (TODO)")
+    @Deprecated("In principle this error should not happen. It is left just in case.")
     PQLError,
 
     UnexpectedRequestParameter,
@@ -99,5 +96,3 @@ enum class ExceptionReason(val statusCode: HttpStatusCode = HttpStatusCode.BadRe
     ETLProcessNotFound(HttpStatusCode.NotFound)
 }
 
-
-internal fun Locale.getErrorMessage(key: String): String = ResourceBundle.getBundle("exceptions", this).getString(key)

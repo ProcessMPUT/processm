@@ -5,6 +5,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import processm.core.querylanguage.PQLParserError
 import processm.core.querylanguage.PQLSyntaxError
+import processm.helpers.getErrorMessage
 import java.util.*
 import kotlin.test.assertTrue
 

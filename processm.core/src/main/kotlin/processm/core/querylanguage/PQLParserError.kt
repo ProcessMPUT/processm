@@ -1,6 +1,9 @@
 package processm.core.querylanguage
 
 import org.antlr.v4.runtime.RecognitionException
+import processm.helpers.AbstractLocalizedException
+import processm.logging.logger
+import java.util.*
 
 internal class ProxyRecognitionException(
     val problem: PQLParserError.Problem,
@@ -45,10 +48,20 @@ class PQLParserError(
     val expectedTokens: Collection<String>?,
     originalMessage: String?,
     val baseException: RecognitionException?
-) : Exception(
-    "Line $line position $charPositionInLine: $originalMessage (offendingToken='$offendingToken' expectedTokens='$expectedTokens' problem=$problem)",
-    baseException
+) : AbstractLocalizedException(
+    "Line $line position $charPositionInLine: $originalMessage (offendingToken='$offendingToken' expectedTokens='$expectedTokens' problem=$problem)"
 ) {
+    override fun localizedMessage(locale: Locale): String = try {
+        val prefixFormatString = getFormatString(locale, "PQLErrorPrefix")
+        val formatString = getFormatString(locale, problem.toString())
+        String.format(locale, prefixFormatString, line, charPositionInLine) +
+                ": " +
+                String.format(locale, formatString, offendingToken, expectedTokens?.joinToString())
+    } catch (e: Exception) {
+        logger().error("An exception was thrown while preparing localized exception", e)
+        message ?: problem.toString()
+    }
+
     enum class Problem {
         Unknown,
 
@@ -87,12 +100,23 @@ class PQLParserError(
 
 class PQLSyntaxError(
     val problem: Problem,
-    line: Int,
-    charPositionInLine: Int,
+    val line: Int,
+    val charPositionInLine: Int,
     vararg val args: Any
-) : Exception(
+) : AbstractLocalizedException(
     "Line $line position $charPositionInLine: $problem $args"
 ) {
+    override fun localizedMessage(locale: Locale): String = try {
+        val prefixFormatString = getFormatString(locale, "PQLErrorPrefix")
+        val formatString = getFormatString(locale, problem.toString())
+        String.format(locale, prefixFormatString, line, charPositionInLine) +
+                ": " +
+                String.format(locale, formatString, *args)
+    } catch (e: Exception) {
+        logger().error("An exception was thrown while preparing localized exception", e)
+        message ?: problem.toString()
+    }
+
     enum class Problem {
         //The aggregation function call is not supported in the where clause.
         AggregationFunctionInWhere,

@@ -11,6 +11,7 @@ import io.ktor.server.plugins.hsts.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.util.logging.*
+import processm.helpers.AbstractLocalizedException
 import processm.logging.loggedScope
 import processm.services.api.models.ErrorMessage
 import processm.services.helpers.LocalizedException
@@ -42,6 +43,10 @@ internal fun ApplicationStatusPageConfiguration(): StatusPagesConfig.() -> Unit 
         exception<LocalizedException> { call, cause ->
             logger.trace(cause.message)
             call.respond(cause.reason.statusCode, ErrorMessage(cause.localizedMessage(call.locale)))
+        }
+        exception<AbstractLocalizedException> { call, cause ->
+            logger.trace(cause.message)
+            call.respond(HttpStatusCode.BadRequest, ErrorMessage(cause.localizedMessage(call.locale)))
         }
         exception<TokenExpiredException> { call, cause ->
             call.respond(HttpStatusCode.Unauthorized, ErrorMessage(cause.message.orEmpty()))
