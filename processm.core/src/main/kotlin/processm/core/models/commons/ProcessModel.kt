@@ -7,17 +7,17 @@ interface ProcessModel {
     /**
      * All activities present in the model
      */
-    val activities: Sequence<Activity>
+    val activities: List<Activity>
 
     /**
      * All activities that can be the first one during an execution
      */
-    val startActivities: Sequence<Activity>
+    val startActivities: List<Activity>
 
     /**
      * All activities that can be the last one during an execution
      */
-    val endActivities: Sequence<Activity>
+    val endActivities: List<Activity>
 
     /**
      * Decision points, i.e., places where there may be a decision to make

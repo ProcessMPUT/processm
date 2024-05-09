@@ -6,10 +6,13 @@ import processm.conformance.PetriNets.fig32
 import processm.conformance.PetriNets.fig34c
 import processm.conformance.PetriNets.fig73
 import processm.conformance.PetriNets.parallelFlowers
+import processm.conformance.alignment
 import processm.core.log.Helpers.event
 import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.Trace
 import processm.helpers.allPermutations
+import processm.helpers.mapToSet
+import processm.logging.loggedScope
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -39,13 +42,15 @@ class AStarPetriNetTests {
 
             assertEquals(0, alignment.cost)
             assertEquals(trace.events.count(), alignment.steps.size)
-            for (step in alignment.steps)
+            for (step in alignment.steps) {
                 assertEquals(step.logMove!!.conceptName, step.modelMove!!.name)
+                assertTrue(step.modelMove!!.name == "a" || step.modelCause.isNotEmpty())
+            }
         }
     }
 
     @Test
-    fun `PM book Fig 3 2 non-conforming log`() {
+    fun `PM book Fig 3 2 non-conforming log`() = loggedScope { logger ->
         val log = logFromString(
             """
                 a c e f b e f d b e g
@@ -58,15 +63,292 @@ class AStarPetriNetTests {
             """
         )
 
-        val expectedCosts = listOf(
-            2,
-            1,
-            1,
-            1,
-            2,
-            3,
-            4
+        val expected = arrayOf(
+            arrayOf(
+                alignment {// [a, c, model only: d, e, f, b, model only: d, e, f, d, b, e, g]
+                    "a" executing "a"
+                    "c" executing ("c" to listOf("a"))
+                    null executing ("d" to listOf("a"))
+                    "e" executing ("e" to listOf("c", "d"))
+                    "f" executing ("f" to listOf("e"))
+                    "b" executing ("b" to listOf("f"))
+                    null executing ("d" to listOf("f"))
+                    "e" executing ("e" to listOf("b", "d"))
+                    "f" executing ("f" to listOf("e"))
+                    "d" executing ("d" to listOf("f"))
+                    "b" executing ("b" to listOf("f"))
+                    "e" executing ("e" to listOf("b", "d"))
+                    "g" executing ("g" to listOf("e"))
+                    cost = 2
+                },
+                alignment {// [a, model only: d, c, e, f, b, model only: d, e, f, d, b, e, g]
+                    "a" executing "a"
+                    null executing ("d" to listOf("a"))
+                    "c" executing ("c" to listOf("a"))
+                    "e" executing ("e" to listOf("c", "d"))
+                    "f" executing ("f" to listOf("e"))
+                    "b" executing ("b" to listOf("f"))
+                    null executing ("d" to listOf("f"))
+                    "e" executing ("e" to listOf("b", "d"))
+                    "f" executing ("f" to listOf("e"))
+                    "d" executing ("d" to listOf("f"))
+                    "b" executing ("b" to listOf("f"))
+                    "e" executing ("e" to listOf("b", "d"))
+                    "g" executing ("g" to listOf("e"))
+                    cost = 2
+                },
+                alignment {// [a, c, model only: d, e, f, model only: d, b, e, f, d, b, e, g]
+                    "a" executing "a"
+                    "c" executing ("c" to listOf("a"))
+                    null executing ("d" to listOf("a"))
+                    "e" executing ("e" to listOf("c", "d"))
+                    "f" executing ("f" to listOf("e"))
+                    null executing ("d" to listOf("f"))
+                    "b" executing ("b" to listOf("f"))
+                    "e" executing ("e" to listOf("b", "d"))
+                    "f" executing ("f" to listOf("e"))
+                    "d" executing ("d" to listOf("f"))
+                    "b" executing ("b" to listOf("f"))
+                    "e" executing ("e" to listOf("b", "d"))
+                    "g" executing ("g" to listOf("e"))
+                    cost = 2
+                },
+                alignment {// [a, model only: d, c, e, f, model only: d, b, e, f, d, b, e, g]
+                    "a" executing "a"
+                    null executing ("d" to listOf("a"))
+                    "c" executing ("c" to listOf("a"))
+                    "e" executing ("e" to listOf("c", "d"))
+                    "f" executing ("f" to listOf("e"))
+                    null executing ("d" to listOf("f"))
+                    "b" executing ("b" to listOf("f"))
+                    "e" executing ("e" to listOf("b", "d"))
+                    "f" executing ("f" to listOf("e"))
+                    "d" executing ("d" to listOf("f"))
+                    "b" executing ("b" to listOf("f"))
+                    "e" executing ("e" to listOf("b", "d"))
+                    "g" executing ("g" to listOf("e"))
+                    cost = 2
+                },
+            ),
+            arrayOf(
+                alignment {// [a, b, log only: c, d, e, h]
+                    "a" executing "a"
+                    "b" executing ("b" to listOf("a"))
+                    "c" executing null
+                    "d" executing ("d" to listOf("a"))
+                    "e" executing ("e" to listOf("b", "d"))
+                    "h" executing ("h" to listOf("e"))
+                    cost = 1
+                },
+                alignment {// [a, log only: b, c, d, e, h]
+                    "a" executing "a"
+                    "b" executing null
+                    "c" executing ("c" to listOf("a"))
+                    "d" executing ("d" to listOf("a"))
+                    "e" executing ("e" to listOf("c", "d"))
+                    "h" executing ("h" to listOf("e"))
+                    cost = 1
+                }),
+            arrayOf(alignment {// [model only: a, b, d, e, f, c, d, e, h]
+                null executing "a"
+                "b" executing ("b" to listOf("a"))
+                "d" executing ("d" to listOf("a"))
+                "e" executing ("e" to listOf("b", "d"))
+                "f" executing ("f" to listOf("e"))
+                "c" executing ("c" to listOf("f"))
+                "d" executing ("d" to listOf("f"))
+                "e" executing ("e" to listOf("c", "d"))
+                "h" executing ("h" to listOf("e"))
+                cost = 1
+            }),
+            arrayOf(alignment {// [a, c, d, model only: e, f, b, d, e, g]
+                "a" executing "a"
+                "c" executing ("c" to listOf("a"))
+                "d" executing ("d" to listOf("a"))
+                null executing ("e" to listOf("c", "d"))
+                "f" executing ("f" to listOf("e"))
+                "b" executing ("b" to listOf("f"))
+                "d" executing ("d" to listOf("f"))
+                "e" executing ("e" to listOf("b", "d"))
+                "g" executing ("g" to listOf("e"))
+                cost = 1
+            }),
+            arrayOf(alignment {// [a, c, d, e, log only: f, log only: e, h]
+                "a" executing "a"
+                "c" executing ("c" to listOf("a"))
+                "d" executing ("d" to listOf("a"))
+                "e" executing ("e" to listOf("c", "d"))
+                "f" executing null
+                "e" executing null
+                "h" executing ("h" to listOf("e"))
+                cost = 2
+            }),
+            arrayOf(
+                alignment {// [a, model only: b, model only: d, model only: e, g]
+                    "a" executing "a"
+                    null executing ("b" to listOf("a"))
+                    null executing ("d" to listOf("a"))
+                    null executing ("e" to listOf("b", "d"))
+                    "g" executing ("g" to listOf("e"))
+                    cost = 3
+                },
+                alignment {// [a, model only: b, model only: d, model only: e, g]
+                    "a" executing "a"
+                    null executing ("d" to listOf("a"))
+                    null executing ("b" to listOf("a"))
+                    null executing ("e" to listOf("b", "d"))
+                    "g" executing ("g" to listOf("e"))
+                    cost = 3
+                },
+                alignment {// [a, model only: b, model only: d, model only: e, g]
+                    "a" executing "a"
+                    null executing ("c" to listOf("a"))
+                    null executing ("d" to listOf("a"))
+                    null executing ("e" to listOf("c", "d"))
+                    "g" executing ("g" to listOf("e"))
+                    cost = 3
+                },
+                alignment {// [a, model only: b, model only: d, model only: e, g]
+                    "a" executing "a"
+                    null executing ("d" to listOf("a"))
+                    null executing ("c" to listOf("a"))
+                    null executing ("e" to listOf("c", "d"))
+                    "g" executing ("g" to listOf("e"))
+                    cost = 3
+                },
+            ),
+            arrayOf(
+                alignment {// [a, b, log only: c, d, e, f, d, c, log only: b, e, log only: f, g, log only: h]
+                    "a" executing "a"
+                    "b" executing ("b" to listOf("a"))
+                    "c" executing null
+                    "d" executing ("d" to listOf("a"))
+                    "e" executing ("e" to listOf("b", "d"))
+                    "f" executing ("f" to listOf("e"))
+                    "d" executing ("d" to listOf("f"))
+                    "c" executing ("c" to listOf("f"))
+                    "b" executing null
+                    "e" executing ("e" to listOf("c", "d"))
+                    "f" executing null
+                    "g" executing ("g" to listOf("e"))
+                    "h" executing null
+                    cost = 4
+                },
+                alignment {// [a, log only: b, c, d, e, f, d, c, log only: b, e, log only: f, g, log only: h]
+                    "a" executing "a"
+                    "b" executing null
+                    "c" executing ("c" to listOf("a"))
+                    "d" executing ("d" to listOf("a"))
+                    "e" executing ("e" to listOf("b", "d"))
+                    "f" executing ("f" to listOf("e"))
+                    "d" executing ("d" to listOf("f"))
+                    "c" executing ("c" to listOf("f"))
+                    "b" executing null
+                    "e" executing ("e" to listOf("c", "d"))
+                    "f" executing null
+                    "g" executing ("g" to listOf("e"))
+                    "h" executing null
+                    cost = 4
+                },
+                alignment {// [a, b, log only: c, d, e, f, d, log only: c, b, e, log only: f, g, log only: h]
+                    "a" executing "a"
+                    "b" executing ("b" to listOf("a"))
+                    "c" executing null
+                    "d" executing ("d" to listOf("a"))
+                    "e" executing ("e" to listOf("b", "d"))
+                    "f" executing ("f" to listOf("e"))
+                    "d" executing ("d" to listOf("f"))
+                    "c" executing null
+                    "b" executing ("b" to listOf("f"))
+                    "e" executing ("e" to listOf("c", "d"))
+                    "f" executing null
+                    "g" executing ("g" to listOf("e"))
+                    "h" executing null
+                    cost = 4
+                },
+                alignment {// [a, b, log only: c, d, e, f, d, c, log only: b, e, log only: f, log only: g, h]
+                    "a" executing "a"
+                    "b" executing ("b" to listOf("a"))
+                    "c" executing null
+                    "d" executing ("d" to listOf("a"))
+                    "e" executing ("e" to listOf("b", "d"))
+                    "f" executing ("f" to listOf("e"))
+                    "d" executing ("d" to listOf("f"))
+                    "c" executing ("c" to listOf("f"))
+                    "b" executing null
+                    "e" executing ("e" to listOf("c", "d"))
+                    "f" executing null
+                    "g" executing null
+                    "h" executing ("h" to listOf("e"))
+                    cost = 4
+                },
+                alignment {// [a, log only: b, c, d, e, f, d, log only: c, b, e, log only: f, g, log only: h]
+                    "a" executing "a"
+                    "b" executing null
+                    "c" executing ("c" to listOf("a"))
+                    "d" executing ("d" to listOf("a"))
+                    "e" executing ("e" to listOf("b", "d"))
+                    "f" executing ("f" to listOf("e"))
+                    "d" executing ("d" to listOf("f"))
+                    "c" executing null
+                    "b" executing ("b" to listOf("f"))
+                    "e" executing ("e" to listOf("c", "d"))
+                    "f" executing null
+                    "g" executing ("g" to listOf("e"))
+                    "h" executing null
+                    cost = 4
+                },
+                alignment {// [a, log only: b, c, d, e, f, d, c, log only: b, e, log only: f, log only: g, h]
+                    "a" executing "a"
+                    "b" executing null
+                    "c" executing ("c" to listOf("a"))
+                    "d" executing ("d" to listOf("a"))
+                    "e" executing ("e" to listOf("b", "d"))
+                    "f" executing ("f" to listOf("e"))
+                    "d" executing ("d" to listOf("f"))
+                    "c" executing ("c" to listOf("f"))
+                    "b" executing null
+                    "e" executing ("e" to listOf("c", "d"))
+                    "f" executing null
+                    "g" executing null
+                    "h" executing ("h" to listOf("e"))
+                    cost = 4
+                },
+                alignment {// [a, b, log only: c, d, e, f, d, c, log only: b, e, log only: f, log only: g, h]
+                    "a" executing "a"
+                    "b" executing ("b" to listOf("a"))
+                    "c" executing null
+                    "d" executing ("d" to listOf("a"))
+                    "e" executing ("e" to listOf("b", "d"))
+                    "f" executing ("f" to listOf("e"))
+                    "d" executing ("d" to listOf("f"))
+                    "c" executing ("c" to listOf("f"))
+                    "b" executing null
+                    "e" executing ("e" to listOf("c", "d"))
+                    "f" executing null
+                    "g" executing null
+                    "h" executing ("h" to listOf("e"))
+                    cost = 4
+                },
+                alignment {// [a, log only: b, c, d, e, f, d, log only: c, b, e, log only: f, log only: g, h]
+                    "a" executing "a"
+                    "b" executing null
+                    "c" executing ("c" to listOf("a"))
+                    "d" executing ("d" to listOf("a"))
+                    "e" executing ("e" to listOf("b", "d"))
+                    "f" executing ("f" to listOf("e"))
+                    "d" executing ("d" to listOf("f"))
+                    "c" executing null
+                    "b" executing ("b" to listOf("f"))
+                    "e" executing ("e" to listOf("c", "d"))
+                    "f" executing null
+                    "g" executing null
+                    "h" executing ("h" to listOf("e"))
+                    cost = 4
+                },
+            )
         )
+
 
         val expectedVisitedStatesCount = listOf(34, 6, 10, 16, 19, 16, 76)
 
@@ -76,10 +358,26 @@ class AStarPetriNetTests {
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
 
-            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost} #visited states: ${astar.visitedStatesCount}")
+            logger.info("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost} #visited states: ${astar.visitedStatesCount}")
 
-            assertEquals(expectedCosts[i], alignment.cost)
             assertTrue { astar.visitedStatesCount <= expectedVisitedStatesCount[i] }
+
+            val results = expected[i].map { expected ->
+                runCatching {
+                    assertEquals(expected.cost, alignment.cost)
+                    assertEquals(expected.steps.size, alignment.steps.size)
+                    for ((exp, act) in expected.steps zip alignment.steps) {
+                        assertEquals(exp.type, act.type, "exp: ${exp}\nact: ${act}")
+                        assertEquals(exp.logMove?.conceptName, act.logMove?.conceptName)
+                        assertEquals(exp.modelMove?.name, act.modelMove?.name)
+                        assertEquals(exp.modelCause.mapToSet { it.name }, act.modelCause.mapToSet { it.name })
+                    }
+                }
+            }
+
+            if (results.none { it.isSuccess }) {
+                results.forEach { it.getOrThrow() }
+            }
         }
     }
 

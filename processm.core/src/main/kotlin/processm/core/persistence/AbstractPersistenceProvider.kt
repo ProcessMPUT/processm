@@ -3,9 +3,12 @@ package processm.core.persistence
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.serializer
 import processm.core.persistence.connection.DBCache
+import processm.helpers.serialization.SerializersModuleProvider
 import java.net.URI
+import java.util.*
 import kotlin.reflect.KClass
 
 /**
@@ -14,9 +17,12 @@ import kotlin.reflect.KClass
  * This class is not thread safe.
  */
 @Suppress("SqlResolve")
-abstract class AbstractPersistenceProvider(protected val tableName: String) : PersistenceProvider, AutoCloseable {
+abstract class AbstractPersistenceProvider(
+    protected val dbName: String,
+    protected val tableName: String
+) : PersistenceProvider, AutoCloseable {
 
-    protected val connection = DBCache.getMainDBPool().getConnection()
+    protected val connection = DBCache.get(dbName).getConnection()
 
     private val insert by lazy {
         connection.prepareStatement(
@@ -30,13 +36,20 @@ abstract class AbstractPersistenceProvider(protected val tableName: String) : Pe
     private val delete by lazy {
         connection.prepareStatement("DELETE FROM $tableName WHERE urn=?")
     }
-    private val json = Json { allowStructuredMapKeys = true }
+    private val json = Json {
+        allowStructuredMapKeys = true
+        serializersModule = SerializersModule {
+            for (provider in ServiceLoader.load(SerializersModuleProvider::class.java)) {
+                include(provider.getSerializersModule())
+            }
+        }
+    }
 
     init {
         assert(connection.autoCommit)
     }
 
-    @InternalSerializationApi
+    @OptIn(InternalSerializationApi::class)
     @Suppress("UNCHECKED_CAST")
     override fun put(uri: URI, obj: Any) {
         insert.setString(1, uri.toString())
@@ -45,7 +58,7 @@ abstract class AbstractPersistenceProvider(protected val tableName: String) : Pe
         insert.execute()
     }
 
-    @InternalSerializationApi
+    @OptIn(InternalSerializationApi::class)
     @Suppress("UNCHECKED_CAST")
     override fun <T> get(uri: URI, klass: KClass<*>): T {
         select.setString(1, uri.toString())

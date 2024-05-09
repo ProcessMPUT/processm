@@ -1,5 +1,7 @@
 package processm.conformance.models.alignments
 
+import processm.conformance.alignment
+import processm.conformance.models.DeviationType
 import processm.core.log.Helpers
 import processm.core.models.causalnet.CausalNets.azFlower
 import processm.core.models.causalnet.CausalNets.fig312
@@ -8,13 +10,17 @@ import processm.core.models.causalnet.CausalNets.parallelDecisionsInLoop
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.helpers.allSubsets
+import processm.helpers.mapToSet
+import processm.helpers.zipOrThrow
+import processm.logging.loggedScope
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class AStarCausalNetTests {
     @Test
-    fun `PM book Fig 3 12 conforming log`() {
+    fun `PM book Fig 3 12 conforming log`() = loggedScope { logger ->
         val log = Helpers.logFromString(
             """
                 a b d e g z
@@ -32,14 +38,21 @@ class AStarCausalNetTests {
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
 
-            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+            logger.info("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
 
             assertEquals(0, alignment.cost)
+
+            for ((step, event) in alignment.steps.asSequence() zipOrThrow trace.events) {
+                assertEquals(event, step.logMove)
+                assertEquals(DeviationType.None, step.type)
+                assertEquals(event.conceptName, step.modelMove!!.name)
+                assertTrue(step.modelMove?.name == "a" || step.modelCause.isNotEmpty())
+            }
         }
     }
 
     @Test
-    fun `PM book Fig 3 12 non-conforming log`() {
+    fun `PM book Fig 3 12 non-conforming log`() = loggedScope { logger ->
         val log = Helpers.logFromString(
             """
                 a b c d e g z
@@ -51,13 +64,83 @@ class AStarCausalNetTests {
                 """
         )
 
-        val expectedCost = arrayOf(
-            1,
-            1,
-            1,
-            1,
-            1,
-            1
+        val expected = arrayOf(
+            arrayOf( // alternatives
+                alignment {//  [a, b, log only: c, d, e, g, z]
+                    "a" executing "a"
+                    "b" executing ("b" to listOf("a"))
+                    "c" executing null
+                    "d" executing ("d" to listOf("a"))
+                    "e" executing ("e" to listOf("b", "d"))
+                    "g" executing ("g" to listOf("e"))
+                    "z" executing ("z" to listOf("g"))
+                    cost = 1
+                },
+                alignment {// [a, log only: b, c, d, e, g, z]
+                    "a" executing "a"
+                    "b" executing null
+                    "c" executing ("c" to listOf("a"))
+                    "d" executing ("d" to listOf("a"))
+                    "e" executing ("e" to listOf("c", "d"))
+                    "g" executing ("g" to listOf("e"))
+                    "z" executing ("z" to listOf("g"))
+                    cost = 1
+                }),
+            arrayOf(alignment {// [a, d, b, e, g, model only: z]
+                "a" executing "a"
+                "d" executing ("d" to listOf("a"))
+                "b" executing ("b" to listOf("a"))
+                "e" executing ("e" to listOf("b", "d"))
+                "g" executing ("g" to listOf("e"))
+                null executing ("z" to listOf("g"))
+                cost = 1
+            }),
+            arrayOf(alignment {// [a, c, d, e, g, z, log only: x]
+                "a" executing "a"
+                "c" executing ("c" to listOf("a"))
+                "d" executing ("d" to listOf("a"))
+                "e" executing ("e" to listOf("c", "d"))
+                "g" executing ("g" to listOf("e"))
+                "z" executing ("z" to listOf("g"))
+                "x" executing null
+                cost = 1
+            }),
+            arrayOf(alignment {// [a, d, c, e, g, log only: x, z]
+                "a" executing "a"
+                "d" executing ("d" to listOf("a"))
+                "c" executing ("c" to listOf("a"))
+                "e" executing ("e" to listOf("c", "d"))
+                "g" executing ("g" to listOf("e"))
+                "x" executing null
+                "z" executing ("z" to listOf("g"))
+                cost = 1
+            }),
+            arrayOf(alignment {// [a, d, c, e, model only: f, b, d, e, g, z]
+                "a" executing "a"
+                "d" executing ("d" to listOf("a"))
+                "c" executing ("c" to listOf("a"))
+                "e" executing ("e" to listOf("c", "d"))
+                null executing ("f" to listOf("e"))
+                "b" executing ("b" to listOf("f"))
+                "d" executing ("d" to listOf("f"))
+                "e" executing ("e" to listOf("b", "d"))
+                "g" executing ("g" to listOf("e"))
+                "z" executing ("z" to listOf("g"))
+                cost = 1
+            }),
+            arrayOf(alignment {// [a, d, c, e, model only: f, b, d, e, h, z]
+                "a" executing "a"
+                "d" executing ("d" to listOf("a"))
+                "c" executing ("c" to listOf("a"))
+                "e" executing ("e" to listOf("c", "d"))
+                null executing ("f" to listOf("e"))
+                "b" executing ("b" to listOf("f"))
+                "d" executing ("d" to listOf("f"))
+                "e" executing ("e" to listOf("b", "d"))
+                "h" executing ("h" to listOf("e"))
+                "z" executing ("z" to listOf("h"))
+                cost = 1
+            }),
         )
 
         val astar = AStar(fig312)
@@ -66,9 +149,25 @@ class AStarCausalNetTests {
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
 
-            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+            logger.info("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
 
-            assertEquals(expectedCost[i], alignment.cost)
+
+            val results = expected[i].map { expected ->
+                runCatching {
+                    assertEquals(expected.cost, alignment.cost)
+                    assertEquals(expected.steps.size, alignment.steps.size)
+                    for ((exp, act) in expected.steps zip alignment.steps) {
+                        assertEquals(exp.type, act.type)
+                        assertEquals(exp.logMove?.conceptName, act.logMove?.conceptName)
+                        assertEquals(exp.modelMove?.name, act.modelMove?.name)
+                        assertEquals(exp.modelCause.mapToSet { it.name }, act.modelCause.mapToSet { it.name })
+                    }
+                }
+            }
+
+            if (results.none { it.isSuccess }) {
+                results.forEach { it.getOrThrow() }
+            }
         }
     }
 

@@ -5,7 +5,9 @@ import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Timeout
 import processm.core.DBTestHelper
+import processm.core.TopicObserver
 import processm.core.communication.Producer
 import processm.core.esb.Artemis
 import processm.core.esb.ServiceStatus
@@ -14,8 +16,10 @@ import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.*
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.test.*
 
+@Timeout(5L, unit = TimeUnit.SECONDS)
 class DirectlyFollowsGraphMinerServiceTest {
 
     companion object {
@@ -23,19 +27,25 @@ class DirectlyFollowsGraphMinerServiceTest {
         val dataStore = UUID.fromString(DBTestHelper.dbName)
 
         @Suppress("unused") // make sure that the lazy field JournalReviewExtra is initialized
-        val journal = DBTestHelper.JournalReviewExtra
-        val artemis = Artemis()
+        private val journal = DBTestHelper.JournalReviewExtra
+        private val artemis = Artemis()
+        private val wctObserver = TopicObserver(
+            WORKSPACE_COMPONENTS_TOPIC,
+            "$WORKSPACE_COMPONENT_EVENT = '$DATA_CHANGE'"
+        )
 
         @JvmStatic
         @BeforeAll
         fun setUp() {
             artemis.register()
             artemis.start()
+            wctObserver.start()
         }
 
         @JvmStatic
         @AfterAll
         fun tearDown() {
+            wctObserver.close()
             artemis.stop()
         }
     }
@@ -50,6 +60,11 @@ class DirectlyFollowsGraphMinerServiceTest {
                 workspace = Workspace.all().firstOrNull() ?: Workspace.new { name = "test-workspace" }
             }
         }.triggerEvent(Producer())
+    }
+
+    @BeforeTest
+    fun before() {
+        wctObserver.reset()
     }
 
     @AfterTest
@@ -68,7 +83,7 @@ class DirectlyFollowsGraphMinerServiceTest {
             service.start()
             assertEquals(ServiceStatus.Started, service.status)
 
-            Thread.sleep(1000L) // wait for calculation
+            wctObserver.waitForMessage()
         } finally {
             service.stop()
         }
@@ -78,8 +93,10 @@ class DirectlyFollowsGraphMinerServiceTest {
                 WorkspaceComponents.dataStoreId eq dataStore
             }.first()
 
-            val dfg =
-                DirectlyFollowsGraph.load(DBCache.get(dataStore.toString()).database, UUID.fromString(component.mostRecentData()!!))
+            val dfg = DirectlyFollowsGraph.load(
+                DBCache.get(dataStore.toString()).database,
+                UUID.fromString(component.mostRecentData()?.asComponentData()?.modelId)
+            )
             assertEquals(1, dfg.initialActivities.size)
             assertEquals(3, dfg.finalActivities.size)
             val invite = dfg.activities.first { it.name == "invite reviewers" }
@@ -113,7 +130,7 @@ class DirectlyFollowsGraphMinerServiceTest {
 
             createDFGComponent()
 
-            Thread.sleep(1000L) // wait for calculation
+            wctObserver.waitForMessage()
         } finally {
             service.stop()
         }
@@ -123,8 +140,10 @@ class DirectlyFollowsGraphMinerServiceTest {
                 WorkspaceComponents.dataStoreId eq dataStore
             }.first()
 
-            val dfg =
-                DirectlyFollowsGraph.load(DBCache.get(dataStore.toString()).database, UUID.fromString(component.mostRecentData()!!))
+            val dfg = DirectlyFollowsGraph.load(
+                DBCache.get(dataStore.toString()).database,
+                UUID.fromString(component.mostRecentData()?.asComponentData()?.modelId)
+            )
             assertEquals(1, dfg.initialActivities.size)
             assertEquals(3, dfg.finalActivities.size)
             val invite = dfg.activities.first { it.name == "invite reviewers" }

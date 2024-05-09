@@ -13,7 +13,7 @@ import java.util.*
  */
 @Serializable
 data class Node(
-    val activity: String,
+    override val name: String,
     val instanceId: String = "",
     override val isSilent: Boolean = false,
     @Deprecated("Use isSilent instead", replaceWith = ReplaceWith("isSilent"))
@@ -26,14 +26,15 @@ data class Node(
     }
 
     private val hash: Int by lazy {
-        Objects.hash(activity, instanceId, isSilent)
+        Objects.hash(name, instanceId, isSilent)
     }
 
-    override val name: String
-        get() = activity
+    @Deprecated("Use name instead", replaceWith = ReplaceWith("name"))
+    val activity: String
+        get() = name
 
     override fun toString(): String {
-        return activity + (if (instanceId.isNotEmpty()) "($instanceId)" else "") + (if (isSilent) "*" else "")
+        return name + (if (instanceId.isNotEmpty()) "($instanceId)" else "") + (if (isSilent) "*" else "")
     }
 
     override fun hashCode(): Int = hash

@@ -14,7 +14,7 @@ import org.antlr.v4.runtime.RecognitionException
 import org.koin.ktor.ext.inject
 import processm.dbmodels.models.RoleType
 import processm.helpers.mapToArray
-import processm.helpers.toLocalDateTime
+import processm.helpers.time.toLocalDateTime
 import processm.services.api.models.*
 import processm.services.helpers.ExceptionReason
 import processm.services.logic.DataStoreService

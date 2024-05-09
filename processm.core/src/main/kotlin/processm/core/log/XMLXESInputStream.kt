@@ -3,7 +3,7 @@ package processm.core.log
 import processm.core.log.attribute.AttributeMap.Companion.LIST_TAG
 import processm.core.log.attribute.MutableAttributeMap
 import processm.helpers.HashMapWithDefault
-import processm.helpers.fastParseISO8601
+import processm.helpers.time.fastParseISO8601
 import processm.helpers.toUUID
 import processm.logging.logger
 import java.io.InputStream

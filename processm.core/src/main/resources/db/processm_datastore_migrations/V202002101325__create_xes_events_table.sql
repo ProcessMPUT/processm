@@ -15,6 +15,6 @@ CREATE TABLE events
     "time:timestamp"       timestamptz
 );
 
-SELECT create_hypertable('events', 'id', chunk_time_interval => 100000, if_not_exists => TRUE);
+SELECT create_hypertable('events', by_range('id', 65536), if_not_exists => TRUE);
 
 CREATE INDEX events_log_id_index ON events (trace_id);

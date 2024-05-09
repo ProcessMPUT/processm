@@ -4,6 +4,7 @@ import processm.core.models.commons.*
 import processm.core.models.commons.DecisionPoint
 import processm.core.models.metadata.DefaultMutableMetadataHandler
 import processm.core.models.metadata.MetadataHandler
+import processm.helpers.asList
 import processm.helpers.cartesianProduct
 import processm.helpers.optimize
 import java.util.*
@@ -23,11 +24,11 @@ class PetriNet(
     val finalMarking: Marking = places.lastOrNull()?.let { Marking(it) } ?: Marking.empty,
     private val metadataHandler: MetadataHandler = DefaultMutableMetadataHandler()
 ) : ProcessModel, MetadataHandler by metadataHandler {
-    override val activities: Sequence<Activity> = transitions.asSequence()
+    override val activities: List<Activity> = transitions
 
-    override val startActivities: Sequence<Activity> = available(initialMarking)
+    override val startActivities: List<Activity> = available(initialMarking).asList()
 
-    override val endActivities: Sequence<Activity> = backwardAvailable(finalMarking)
+    override val endActivities: List<Activity> = backwardAvailable(finalMarking).asList()
 
     override val decisionPoints: Sequence<DecisionPoint> = sequence {
         // FIXME: This sequence works in O(|T|^2*|P|^2). It can be reduced to O(|T|*|P|) using a mapping from places to transitions.
@@ -140,7 +141,7 @@ class PetriNet(
                     if (visited.put(transition, Unit) !== null)
                         continue
 
-                    if (isAvailable(transition, marking))
+                    if (transition.inPlaces.size <= 1 || isAvailable(transition, marking))
                         yield(transition)
                 }
             }
@@ -154,7 +155,7 @@ class PetriNet(
      */
     fun isAvailable(transition: Transition, marking: Marking): Boolean {
         val inPlaces = transition.inPlaces
-        return inPlaces.size <= 1 || (inPlaces.size <= marking.size && inPlaces.all(marking::containsKey))
+        return inPlaces.size <= marking.size && inPlaces.all(marking::containsKey)
     }
 
     /**
@@ -171,14 +172,21 @@ class PetriNet(
                     if (visited.put(transition, Unit) !== null)
                         continue
 
-                    val outPlaces = transition.outPlaces
-                    if (outPlaces.size <= markingSize && markingKeys.containsAll(outPlaces))
+                    if (transition.outPlaces.size <= 1 || isBackwardAvailable(transition, marking))
                         yield(transition)
                 }
             }
         }
 
         yieldAll(placeToPrecedingTransition[null].orEmpty())
+    }
+
+    /**
+     * Verifies whether the given [transition] is enabled in [marking] if all arcs are reversed.
+     */
+    fun isBackwardAvailable(transition: Transition, marking: Marking): Boolean {
+        val outPlaces = transition.outPlaces
+        return outPlaces.size <= marking.size && outPlaces.all(marking::containsKey)
     }
 
     /**
@@ -365,5 +373,39 @@ class PetriNet(
      */
     fun forwardSearch(start: Place): List<Set<Transition>> = forwardSearchCache.computeIfAbsent(start) {
         forwardSearchInternal(it, emptySet())
+    }
+
+    /**
+     * Calculates the collection of transitions that are the direct cause of firing the given [transition] in
+     * the given [marking]. The results of this method rely on the [Token.producer] property indicating the transition
+     * that produced the token. For [marking] consisting of places with multiple tokens, the FIFO order of
+     * production/consumption is assumed.
+     * @param transition Transition to find cause for.
+     * @param marking The marking before running [transition].
+     * @return The collection of transitions immediately preceding the input places of the given [transition]. The empty
+     * collection for the start transition.
+     */
+    fun getCause(transition: Transition, marking: Marking): Collection<Transition> {
+        check(isAvailable(transition, marking)) { "Transition $transition is not available in marking $marking." }
+
+        return transition.inPlaces.mapNotNullTo(HashSet()) { marking[it]!!.first().producer }
+    }
+
+    /**
+     * Calculates the collection of dependent transitions that are the direct consequence of firing the given [transition]
+     * resulting in the given [marking]. The results of this method rely on the [Token.producer] property indicating the
+     * transition that produced the token. For [marking] consisting of places with multiple tokens, the LIFO order of
+     * production/consumption is assumed.
+     * @param transition Transition to find consequence for.
+     * @param marking The marking after running [transition].
+     * @return The collection of transitions immediately following the output places of the given [transition]. The empty
+     * collection for the end transition.
+     */
+    fun getConsequence(transition: Transition, marking: Marking): Collection<Transition> {
+        check(isBackwardAvailable(transition, marking)) {
+            "Transition $transition is not backward available in marking $marking."
+        }
+
+        return transition.outPlaces.mapNotNullTo(HashSet()) { marking[it]!!.last().producer }
     }
 }

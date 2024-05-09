@@ -3,8 +3,8 @@ package processm.core.log.hierarchical
 import processm.core.log.attribute.Attribute.COST_TOTAL
 import processm.core.log.attribute.valueToString
 import processm.helpers.mapToSet
-import processm.helpers.parseISO8601
-import processm.helpers.toDateTime
+import processm.helpers.time.parseISO8601
+import processm.helpers.time.toDateTime
 import java.time.DayOfWeek
 import java.util.*
 import kotlin.test.*

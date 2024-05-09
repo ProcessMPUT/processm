@@ -29,7 +29,7 @@ import processm.etl.jdbc.notifyUsers
 import processm.etl.metamodel.DAGBusinessPerspectiveExplorer
 import processm.etl.metamodel.buildMetaModel
 import processm.helpers.mapToArray
-import processm.helpers.toLocalDateTime
+import processm.helpers.time.toLocalDateTime
 import processm.logging.loggedScope
 import processm.services.api.models.*
 import processm.services.helpers.ExceptionReason

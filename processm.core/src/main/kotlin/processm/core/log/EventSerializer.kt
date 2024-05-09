@@ -8,7 +8,7 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.*
 import processm.core.log.attribute.MutableAttributeMap
-import processm.helpers.fastParseISO8601
+import processm.helpers.time.fastParseISO8601
 import java.time.format.DateTimeParseException
 
 /**

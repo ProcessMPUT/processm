@@ -5,6 +5,7 @@ import processm.core.log.attribute.MutableAttributeMap
 import processm.core.models.commons.Activity
 import processm.core.models.petrinet.Marking
 import processm.core.models.petrinet.PetriNetInstance
+import processm.core.models.petrinet.Token
 import processm.core.models.petrinet.Transition
 import processm.helpers.HashMapWithDefault
 import processm.helpers.map2d.DoublingMap2D
@@ -37,11 +38,13 @@ class InferConceptInstanceFromStandardLifecycle(val base: XESInputStream) : XESI
                     }
                     yield(component)
                 }
+
                 is Trace -> {
                     // start over when new log/trace occurs
                     activityInstanceToLifecycle.clear()
                     yield(component)
                 }
+
                 is Event -> {
                     if (component.conceptName.isNullOrEmpty() || component.lifecycleTransition !in transitions) {
                         yield(component)
@@ -51,8 +54,11 @@ class InferConceptInstanceFromStandardLifecycle(val base: XESInputStream) : XESI
                             component.conceptName!!,
                             component.conceptInstance!!
                         ) { _, _, old ->
-                            val marking =
-                                Marking(transitions[component.lifecycleTransition!!]!!.outPlaces.associateWith { 1 })
+                            val transition = transitions[component.lifecycleTransition!!]!!
+                            val sharedToken = Token(transition)
+                            val tokens =
+                                transition.outPlaces.associateWith { ArrayDeque<Token>().apply { add(sharedToken) } }
+                            val marking = Marking(tokens)
                             (old ?: StandardLifecycle.createInstance()).apply { setState(marking) }
                         }
                         yield(component)
@@ -84,6 +90,7 @@ class InferConceptInstanceFromStandardLifecycle(val base: XESInputStream) : XESI
                         yield(event)
                     }
                 }
+
                 else -> throw IllegalArgumentException("Unrecognized XES component $component.")
             }
         }

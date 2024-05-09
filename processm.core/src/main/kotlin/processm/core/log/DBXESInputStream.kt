@@ -3,8 +3,11 @@ package processm.core.log
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.toFlatSequence
 import processm.core.querylanguage.Query
-import java.sql.Connection
 
+/**
+ * A flat input steam of XES components returned by [query].
+ * @see XESInputStream
+ */
 class DBXESInputStream(dbName: String, query: Query) :
     XESInputStream by DBHierarchicalXESInputStream(dbName, query).toFlatSequence() {
     /**

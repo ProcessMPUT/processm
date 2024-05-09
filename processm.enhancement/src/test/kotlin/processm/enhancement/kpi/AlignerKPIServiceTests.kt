@@ -1,11 +1,14 @@
 package processm.enhancement.kpi
 
+import kotlinx.serialization.json.JsonObject
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Timeout
 import processm.core.DBTestHelper
+import processm.core.TopicObserver
 import processm.core.communication.Producer
 import processm.core.esb.Artemis
 import processm.core.esb.ServiceStatus
@@ -13,18 +16,29 @@ import processm.core.log.attribute.Attribute.COST_TOTAL
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
+import processm.core.persistence.DurablePersistenceProvider
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
+import processm.core.persistence.get
+import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
+import java.net.URI
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.test.*
 
+@Timeout(5L, unit = TimeUnit.SECONDS)
 class AlignerKPIServiceTests {
     companion object {
 
         val dataStore = UUID.fromString(DBTestHelper.dbName)
+        val persistenceProvider = DurablePersistenceProvider(DBTestHelper.dbName)
         val logUUID = DBTestHelper.JournalReviewExtra
         val artemis = Artemis()
+        val wctObserver = TopicObserver(
+            topic = WORKSPACE_COMPONENTS_TOPIC,
+            filter = "$WORKSPACE_COMPONENT_EVENT = '$DATA_CHANGE' AND $WORKSPACE_COMPONENT_EVENT_DATA <> '$DATA_CHANGE_MODEL'"
+        )
         var perfectCNetId: Long = -1L
         var mainstreamCNetId: Long = -1L
 
@@ -36,16 +50,18 @@ class AlignerKPIServiceTests {
 
             artemis.register()
             artemis.start()
+            wctObserver.start()
         }
 
         @JvmStatic
         @AfterAll
         fun tearDown() {
+            wctObserver.close()
             artemis.stop()
             DBSerializer.delete(DBCache.get(dataStore.toString()).database, perfectCNetId.toInt())
             DBSerializer.delete(DBCache.get(dataStore.toString()).database, mainstreamCNetId.toInt())
+            persistenceProvider.close()
         }
-
 
         fun createPerfectCNet(): Long {
             val inviteReviewers = Node("invite reviewers")
@@ -202,32 +218,39 @@ class AlignerKPIServiceTests {
         }
     }
 
-    fun createKPIComponent(_query: String, _modelId: Long) {
-        transactionMain {
+    @BeforeTest
+    fun before() {
+        wctObserver.reset()
+    }
+
+    fun createComponent(_query: String, _modelId: Long): UUID {
+        val component = transactionMain {
             WorkspaceComponent.new {
                 name = "test-aligner-kpi"
-                componentType = ComponentTypeDto.AlignerKpi
+                componentType = ComponentTypeDto.CausalNet
                 dataStoreId = dataStore
                 query = _query
-                modelType = ModelTypeDto.CausalNet
-                modelId = _modelId
+                data = JsonObject(mapOf("1" to ComponentData(_modelId.toString(), "").toJsonElement())).toString()
                 workspace = Workspace.all().firstOrNull() ?: Workspace.new { name = "test-workspace" }
             }
-        }.triggerEvent(Producer())
+        }
+
+        component.triggerEvent(Producer(), event = DATA_CHANGE, eventData = DATA_CHANGE_MODEL)
+        return component.id.value
     }
 
     @AfterTest
-    fun deleteKPIComponent() {
+    fun deleteComponent() {
         transactionMain {
             WorkspaceComponents.deleteWhere {
-                (WorkspaceComponents.name eq "test-aligner-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
+                (name eq "test-aligner-kpi") and (dataStoreId eq dataStore)
             }
         }
     }
 
     @Test
     fun `create KPI component based on the perfect model then run service`() {
-        createKPIComponent(
+        createComponent(
             "select l:*, t:*, e:name, max(e:timestamp)-min(e:timestamp) where l:id=$logUUID group by e:name, e:instance",
             perfectCNetId
         )
@@ -237,7 +260,7 @@ class AlignerKPIServiceTests {
             alignerKpiService.start()
             assertEquals(ServiceStatus.Started, alignerKpiService.status)
 
-            Thread.sleep(1000L) // wait for calculation
+            wctObserver.waitForMessage()
         } finally {
             alignerKpiService.stop()
         }
@@ -247,9 +270,10 @@ class AlignerKPIServiceTests {
                 WorkspaceComponents.dataStoreId eq dataStore
             }.first()
 
-            val report = Report.fromJson(component.data!!)
-            assertEquals(0, report.logKPI.size)
-            assertEquals(1, report.traceKPI.size)
+            val report =
+                persistenceProvider.get<Report>(URI(component.mostRecentData()!!.asComponentData()!!.alignmentKPIId))
+            assertEquals(1, report.logKPI.size)
+            assertEquals(6, report.traceKPI.size)
             assertEquals(20.0, report.traceKPI[COST_TOTAL]!!.median)
             assertEquals(50, report.traceKPI[COST_TOTAL]!!.raw.size)
 
@@ -276,7 +300,7 @@ class AlignerKPIServiceTests {
                 assertEquals(0.0, entries.first { (k, _) -> k?.name == "invite additional reviewer" }.value.min)
                 assertEquals(2.0, entries.first { (k, _) -> k?.name == "invite additional reviewer" }.value.median)
                 assertEquals(11.0, entries.first { (k, _) -> k?.name == "invite additional reviewer" }.value.max)
-                assertEquals(399, entries.first { (k, _) -> k?.name == "invite additional reviewer" }.value.raw.size)
+                assertEquals(90, entries.first { (k, _) -> k?.name == "invite additional reviewer" }.value.raw.size)
                 assertEquals(0.0, entries.first { (k, _) -> k?.name == "accept" }.value.min)
                 assertEquals(1.0, entries.first { (k, _) -> k?.name == "accept" }.value.median)
                 assertEquals(12.0, entries.first { (k, _) -> k?.name == "accept" }.value.max)
@@ -299,24 +323,25 @@ class AlignerKPIServiceTests {
             alignerKpiService.start()
             assertEquals(ServiceStatus.Started, alignerKpiService.status)
 
-            createKPIComponent(
+            val componentId = createComponent(
                 "select l:*, t:*, e:name, max(e:timestamp)-min(e:timestamp) where l:id=$logUUID group by e:name, e:instance",
                 mainstreamCNetId
             )
 
-            Thread.sleep(1000L) // wait for calculation
+            wctObserver.waitForMessage()
         } finally {
             alignerKpiService.stop()
         }
 
         transactionMain {
             val component = WorkspaceComponent.find {
-                WorkspaceComponents.dataStoreId eq dataStore
+                (WorkspaceComponents.name eq "test-aligner-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
             }.first()
 
-            val report = Report.fromJson(component.data!!)
-            assertEquals(0, report.logKPI.size)
-            assertEquals(1, report.traceKPI.size)
+            val report =
+                persistenceProvider.get<Report>(URI(component.mostRecentData()!!.asComponentData()!!.alignmentKPIId))
+            assertEquals(1, report.logKPI.size)
+            assertEquals(6, report.traceKPI.size)
             assertEquals(20.0, report.traceKPI[COST_TOTAL]!!.median)
             assertEquals(50, report.traceKPI[COST_TOTAL]!!.raw.size)
 
@@ -328,7 +353,7 @@ class AlignerKPIServiceTests {
                 assertEquals(0.0, get(null)!!.min)
                 assertEquals(0.0, get(null)!!.median)
                 assertEquals(11.0, get(null)!!.max)
-                assertEquals(798, get(null)!!.raw.size)
+                assertEquals(242, get(null)!!.raw.size)
 
                 // instant activities
                 assertEquals(0.0, entries.first { (k, _) -> k?.name == "get review 1" }.value.max)
@@ -363,24 +388,24 @@ class AlignerKPIServiceTests {
 
     @Test
     fun `create invalid KPI`() {
-        createKPIComponent("just invalid query", mainstreamCNetId)
+        createComponent("just invalid query", mainstreamCNetId)
         val alignerKpiService = AlignerKPIService()
         try {
             alignerKpiService.register()
             alignerKpiService.start()
             assertEquals(ServiceStatus.Started, alignerKpiService.status)
 
-            Thread.sleep(1000L) // wait for calculation
+            wctObserver.waitForMessage()
         } finally {
             alignerKpiService.stop()
         }
 
         transactionMain {
             val component = WorkspaceComponent.find {
-                WorkspaceComponents.dataStoreId eq dataStore
+                (WorkspaceComponents.name eq "test-aligner-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
             }.first()
 
-            assertNull(component.data)
+            assertEquals("", component.mostRecentData()!!.asComponentData()!!.alignmentKPIId)
             assertNull(component.dataLastModified)
             assertNotNull(component.lastError)
             assertTrue("Line 1 position 0: mismatched input 'just'" in component.lastError!!, component.lastError)
@@ -389,38 +414,46 @@ class AlignerKPIServiceTests {
 
     @Test
     fun `create invalid KPI then fix it`() {
-        createKPIComponent("just invalid query", mainstreamCNetId)
+        createComponent("just invalid query", mainstreamCNetId)
         val alignerKpiService = AlignerKPIService()
         try {
             alignerKpiService.register()
             alignerKpiService.start()
             assertEquals(ServiceStatus.Started, alignerKpiService.status)
 
-            Thread.sleep(1000L) // wait for calculation
+            wctObserver.waitForMessage()
 
             transactionMain {
                 val component = WorkspaceComponent.find {
                     (WorkspaceComponents.name eq "test-aligner-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
                 }.first()
                 component.query = "select count(^t:name) where l:id=$logUUID"
-                component
-            }.triggerEvent(Producer())
+                component.afterCommit {
+                    this as WorkspaceComponent
+                    // simulate that miner actually ran
+                    triggerEvent(
+                        Producer(),
+                        event = DATA_CHANGE,
+                        eventData = DATA_CHANGE_MODEL
+                    )
+                }
+            }
 
-
-            Thread.sleep(1000L) // wait for calculation
+            wctObserver.waitForMessage()
         } finally {
             alignerKpiService.stop()
         }
 
         transactionMain {
             val component = WorkspaceComponent.find {
-                WorkspaceComponents.dataStoreId eq dataStore
+                (WorkspaceComponents.name eq "test-aligner-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
             }.first()
 
-            val report = Report.fromJson(component.data!!)
-            assertEquals(1, report.logKPI.size)
-            assertEquals(0, report.traceKPI.size)
-            assertEquals(0, report.eventKPI.size)
+            val report =
+                persistenceProvider.get<Report>(URI(component.mostRecentData()!!.asComponentData()!!.alignmentKPIId))
+            assertEquals(2, report.logKPI.size)
+            assertEquals(5, report.traceKPI.size)
+            assertEquals(1, report.eventKPI.size)
 
             val kpi = report.logKPI["count(^trace:concept:name)"]!!
             assertEquals(101.0, kpi.min)

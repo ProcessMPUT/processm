@@ -53,14 +53,17 @@
         "validation": {
           "datastore-empty": "The datastore cannot be empty",
           "name-empty": "The name cannot be empty",
-          "query-empty": "The query cannot be empty"
+          "query-empty": "The query cannot be empty",
+          "not-a-non-negative-integer": "The value must be a non-negative integer"
         },
-        "algorithm": "Discovery algorithm"
+        "algorithm": "Discovery algorithm",
+        "horizon": "Valid only for Online Heuristic Miner. How many events forward in the trace to consider as possible effects of an activity."
       },
       "flat-log-view": "Flat log view",
       "flat-log": {
         "log-deviation": "An event in the log not corresponding to the process model",
         "model-deviation": "An activity in the model not corresponding to the event in the log",
+        "model-deviation-silent": "A silent activity in the model. Silent activities, by design, do not correspond to the events in the log.",
         "no-data": "(no data)"
       }
     }

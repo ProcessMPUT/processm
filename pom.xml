@@ -6,7 +6,7 @@
 
     <groupId>processm</groupId>
     <artifactId>root</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>0.6-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>ProcessM</name>

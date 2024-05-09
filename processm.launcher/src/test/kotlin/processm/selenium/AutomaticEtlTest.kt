@@ -42,7 +42,7 @@ class AutomaticEtlTest : SeleniumBase() {
     @BeforeAll
     fun setupInputDB() {
         dbContainer = PostgreSQLContainer(
-            DockerImageName.parse("debezium/postgres:12")
+            DockerImageName.parse("debezium/postgres:16-alpine")
                 .asCompatibleSubstituteFor("postgres")
         )
             .withUsername("postgres")

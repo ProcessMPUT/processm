@@ -1,16 +1,19 @@
 package processm.core.models.processtree.execution
 
 import processm.core.models.commons.ProcessModelState
+import processm.core.models.processtree.ProcessTreeActivity
 import processm.core.models.processtree.Sequence
+import processm.helpers.ifNullOrEmpty
 
 /**
- * An [ExecutionNode] for [Sequence]
+ * An [ExecutionNode] for [Sequence].
  */
 class SequenceExecution(
     override val base: Sequence,
     parent: ExecutionNode?,
-    current: ExecutionNode? = null
-) : ExecutionNode(base, parent) {
+    current: ExecutionNode? = null,
+    cause: Collection<ProcessTreeActivity> = parent?.lastExecuted.ifNullOrEmpty { parent?.cause.orEmpty() }
+) : ExecutionNode(base, parent, cause) {
 
     private var index = 0
     private var current = current ?: base.children[index].executionNode(this)
@@ -21,8 +24,13 @@ class SequenceExecution(
     override var isComplete: Boolean = false
         private set
 
+    override var lastExecuted: Collection<ProcessTreeActivity> = emptyList()
+        private set
+
     override fun postExecution(child: ExecutionNode) {
         require(child.parent === this)
+        lastExecuted = current.lastExecuted
+
         if (child.isComplete) {
             if (index + 1 < base.children.size) {
                 current = base.children[++index].executionNode(this)
@@ -35,9 +43,10 @@ class SequenceExecution(
     }
 
     override fun copy(): ProcessModelState =
-        SequenceExecution(base, parent, this.current.copy() as ExecutionNode).also {
+        SequenceExecution(base, parent, this.current.copy() as ExecutionNode, cause).also {
             it.index = this.index
             it.isComplete = this.isComplete
+            it.lastExecuted = this.lastExecuted
             it.current.parent = it
         }
 

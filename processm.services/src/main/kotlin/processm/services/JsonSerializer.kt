@@ -14,10 +14,11 @@ import kotlinx.serialization.json.*
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.serializer
 import processm.dbmodels.models.ComponentTypeDto
-import processm.enhancement.kpi.Report
 import processm.helpers.UUIDSerializer
+import processm.helpers.serialization.SerializersModuleProvider
 import processm.services.api.models.BPMNComponentData
 import processm.services.api.models.CausalNetComponentData
+import processm.services.api.models.DirectlyFollowsGraphComponentData
 import processm.services.api.models.PetriNetComponentData
 import java.time.LocalDateTime
 import java.util.*
@@ -28,7 +29,10 @@ val JsonSerializer = Json {
     explicitNulls = false
     prettyPrint = false
     serializersModule = SerializersModule {
-        include(Report.Json.serializersModule)
+        for (provider in ServiceLoader.load(SerializersModuleProvider::class.java)) {
+            include(provider.getSerializersModule())
+        }
+
         contextual(Any::class, AnySerializer as KSerializer<Any>)
         contextual(LocalDateTime::class, LocalDateTimeSerializer)
         contextual(UUID::class, UUIDSerializer)
@@ -58,6 +62,9 @@ private object AnySerializer : KSerializer<Any?> {
             ComponentTypeDto.CausalNet ->
                 decoder.json.decodeFromJsonElement<CausalNetComponentData>(jsonElement)
 
+            ComponentTypeDto.DirectlyFollowsGraph ->
+                decoder.json.decodeFromJsonElement<DirectlyFollowsGraphComponentData>(jsonElement)
+
             else -> deserializeJsonElement(jsonElement)
         }
     }
@@ -86,7 +93,8 @@ private object LocalDateTimeSerializer : KSerializer<LocalDateTime> {
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("LocalDateTime", PrimitiveKind.STRING)
 
     override fun deserialize(decoder: Decoder): LocalDateTime {
-        return LocalDateTime.parse(decoder.decodeString())
+        // FIXME: LocalDateTime does not store timezone; better use Instant that is in UTC by definition
+        return LocalDateTime.parse(decoder.decodeString().trimEnd('Z'))
     }
 
     override fun serialize(encoder: Encoder, value: LocalDateTime) {

@@ -40,7 +40,7 @@ object PetriNets {
         val t4 = Transition("t4", listOf(i4), listOf(out))
         val t5 = Transition("t5", listOf(i5), listOf(out))
         PetriNet(
-            listOf(i1, i2, i3, i4, i5),
+            listOf(i1, i2, i3, i4, i5, out),
             listOf(t1, t2, t3, t4, t5),
             Marking(mapOf(i1 to 5, i2 to 5, i3 to 5, i4 to 5, i5 to 5)),
             Marking(mapOf(out to 25))

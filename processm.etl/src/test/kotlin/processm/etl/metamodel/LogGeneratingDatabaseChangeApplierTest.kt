@@ -14,7 +14,7 @@ import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import processm.dbmodels.models.*
 import processm.etl.tracker.DatabaseChangeApplier
-import processm.helpers.toLocalDateTime
+import processm.helpers.time.toLocalDateTime
 import java.time.Instant
 import java.util.*
 import kotlin.test.BeforeTest

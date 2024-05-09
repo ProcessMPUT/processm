@@ -15,8 +15,8 @@ export default abstract class BaseService {
     this.axiosInstance.interceptors.response.use(
       (response) => response,
       (error) => {
-        const response = error.response;
-        throw new Error(response?.data?.error ?? response?.statusText ?? error.message);
+        const response = error?.response;
+        throw new Error(response?.data?.error ?? response?.statusText ?? error?.message ?? "Unknown error");
       }
     );
   }

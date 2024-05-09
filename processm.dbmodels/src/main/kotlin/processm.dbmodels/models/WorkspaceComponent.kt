@@ -1,5 +1,9 @@
 package processm.dbmodels.models
 
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
@@ -26,12 +30,20 @@ const val WORKSPACE_ID = "workspace_id"
 const val WORKSPACE_COMPONENT_TYPE = "componentType"
 
 const val WORKSPACE_COMPONENT_EVENT = "event"
+const val WORKSPACE_COMPONENT_EVENT_DATA = "eventData"
 
 const val CREATE_OR_UPDATE = "create_or_update"
 
 const val DELETE = "delete"
 
+/**
+ * Event triggered when the system changed the component data.
+ */
 const val DATA_CHANGE = "data_change"
+
+const val DATA_CHANGE_MODEL = "model"
+const val DATA_CHANGE_ALIGNMENT_KPI = "alignmentKPI"
+const val DATA_CHANGE_LAST_ERROR = "lastError"
 
 object WorkspaceComponents : UUIDTable("workspace_components") {
     /**
@@ -50,20 +62,9 @@ object WorkspaceComponents : UUIDTable("workspace_components") {
     val query = text("query")
 
     /**
-     * The algorithm used to calculate data. The interpretation of this property is component-specific.
+     * Component-specific properties stored as a json map.
      */
-    val algorithm = text("algorithm").nullable()
-
-    /**
-     * The type of the model associated with this component (the configuration parameter).
-     */
-    val modelType = text("model_type").nullable()
-
-    /**
-     * The id of the model associated with this component (the configuration parameter).
-     */
-    val modelId = long("model_id").nullable()
-
+    val properties = text("properties").nullable()
     /**
      * The id of the data store holding the underlying log data (the configuration parameter).
      */
@@ -119,12 +120,13 @@ class WorkspaceComponent(id: EntityID<UUID>) : UUIDEntity(id) {
     var name by WorkspaceComponents.name
     var workspace by Workspace referencedOn WorkspaceComponents.workspaceId
     var query by WorkspaceComponents.query
-    var algorithm by WorkspaceComponents.algorithm
-    var modelType by WorkspaceComponents.modelType.transform(
-        { it?.typeName },
-        { ModelTypeDto.byTypeNameInDatabase(it) }
+    var properties by WorkspaceComponents.properties.transform(
+        { Json.encodeToString(it) },
+        {
+            it?.let { (Json.parseToJsonElement(it) as? JsonObject)?.mapValues { it.value.jsonPrimitive.content } }
+                ?: emptyMap()
+        }
     )
-    var modelId by WorkspaceComponents.modelId
     var dataStoreId by WorkspaceComponents.dataStoreId
     var componentType by WorkspaceComponents.componentType.transform(
         { it.typeName },
@@ -142,6 +144,8 @@ enum class ComponentTypeDto(val typeName: String) {
     CausalNet("causalNet"),
     BPMN("bpmn"),
     Kpi("kpi"),
+
+    @Deprecated("This is not a separate UI component", level = DeprecationLevel.ERROR)
     AlignerKpi("alignerKpi"),
     PetriNet("petriNet"),
     TreeLogView("treeLogView"),
@@ -158,17 +162,3 @@ enum class ComponentTypeDto(val typeName: String) {
 
     override fun toString(): String = typeName
 }
-
-enum class ModelTypeDto(val typeName: String) {
-    CausalNet("causalNet"),
-    ProcessTree("processTree"),
-    PetriNet("petriNet");
-
-    companion object {
-        fun byTypeNameInDatabase(typeNameInDatabase: String?) =
-            ModelTypeDto.values().firstOrNull { it.typeName == typeNameInDatabase }
-    }
-}
-
-
-

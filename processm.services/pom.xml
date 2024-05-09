@@ -7,7 +7,7 @@
     <parent>
         <groupId>processm</groupId>
         <artifactId>root</artifactId>
-        <version>0.1-SNAPSHOT</version>
+        <version>0.6-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -54,10 +54,12 @@
                             </typeMappings>
                             <importMappings>
                                 Alignment=processm.conformance.models.alignments.Alignment,
+                                AlignmentKPIReport=processm.enhancement.kpi.Report,
                                 Config=processm.services.api.Config
                             </importMappings>
                             <schemaMappings>
                                 Alignment=processm.conformance.models.alignments.Alignment,
+                                AlignmentKPIReport=processm.enhancement.kpi.Report,
                                 Config=processm.services.api.Config
                             </schemaMappings>
                             <instantiationTypes>array=kotlin.Array</instantiationTypes>

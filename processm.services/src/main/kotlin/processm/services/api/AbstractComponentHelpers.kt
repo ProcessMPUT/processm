@@ -9,18 +9,19 @@ import processm.core.models.petrinet.Marking
 import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.Place
 import processm.core.models.petrinet.Transition
+import processm.core.persistence.DurablePersistenceProvider
 import processm.core.persistence.connection.DBCache
-import processm.dbmodels.models.ComponentTypeDto
-import processm.dbmodels.models.WorkspaceComponent
-import processm.dbmodels.models.load
-import processm.dbmodels.models.mostRecentData
+import processm.core.persistence.get
+import processm.dbmodels.models.*
+import processm.enhancement.kpi.Report
 import processm.helpers.mapToArray
-import processm.helpers.toLocalDateTime
+import processm.helpers.time.toLocalDateTime
 import processm.logging.loggedScope
 import processm.miners.ALGORITHM_HEURISTIC_MINER
 import processm.miners.ALGORITHM_INDUCTIVE_MINER
 import processm.services.JsonSerializer
 import processm.services.api.models.*
+import java.net.URI
 import java.util.*
 
 /**
@@ -88,13 +89,14 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
     try {
         when (componentType) {
             ComponentTypeDto.CausalNet -> {
-                val cnet = mostRecentData()?.let {
+                val recentData = mostRecentData()?.asComponentData()
+                val cnet = recentData?.let {
                     DBSerializer.fetch(
                         DBCache.get(dataStoreId.toString()).database,
-                        it.toInt()
+                        it.modelId.toInt()
                     )
                 } ?: return null.apply {
-                    logger.debug("Missing C-net id for component $id.")
+                    logger.warn("Missing C-net id for component $id.")
                 }
                 val nodes = ArrayList<Node>().apply {
                     add(cnet.start)
@@ -102,9 +104,10 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                     add(cnet.end)
                 }.mapToArray {
                     CausalNetComponentDataAllOfNodes(
-                        it.name,
-                        cnet.splits[it].orEmpty().mapToArray { split -> split.targets.mapToArray { t -> t.name } },
-                        cnet.joins[it].orEmpty().mapToArray { join -> join.sources.mapToArray { s -> s.name } }
+                        id = "${it.name}${it.instanceId}",
+                        name = it.name,
+                        splits = cnet.splits[it].orEmpty().mapToArray { spl -> spl.targets.mapToArray { t -> t.name } },
+                        joins = cnet.joins[it].orEmpty().mapToArray { join -> join.sources.mapToArray { s -> s.name } }
                     )
                 }
                 val edges = cnet.dependencies.mapToArray {
@@ -112,16 +115,20 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                         (cnet.getAllMetadata(it)[BasicMetadata.DEPENDENCY_MEASURE] as SingleDoubleMetadata?)?.value
                             ?: 0.0
                     CausalNetComponentDataAllOfEdges(
-                        it.source.name,
-                        it.target.name,
-                        dependencyMeasure
+                        sourceNodeId = "${it.source.name}${it.source.instanceId}",
+                        targetNodeId = "${it.target.name}${it.target.instanceId}",
+                        support = dependencyMeasure
                     )
                 }
 
+                val alignmentKPIReport = if (recentData.alignmentKPIId.isNotBlank())
+                    DurablePersistenceProvider(dataStoreId.toString()).use { it.get<Report>(URI(recentData.alignmentKPIId)) }
+                else null
                 CausalNetComponentData(
                     type = ComponentType.causalNet,
                     nodes = nodes,
-                    edges = edges
+                    edges = edges,
+                    alignmentKPIReport = alignmentKPIReport
                 )
             }
 
@@ -133,20 +140,29 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
             }
 
             ComponentTypeDto.BPMN -> {
+                val recentData = mostRecentData()?.asComponentData()
+                    ?: return null.apply { logger.warn("Missing BMPN id for component $id.") }
+
                 BPMNComponentData(
                     type = ComponentType.bpmn,
                     xml = processm.core.models.bpmn.DBSerializer.fetchXML(
                         DBCache.get(dataStoreId.toString()).database,
-                        UUID.fromString(requireNotNull(mostRecentData()) { "Missing BPMN model id" })
-                    )
+                        UUID.fromString(recentData.modelId)
+                    ) // TODO: add KPIs/alignments
                 )
             }
 
             ComponentTypeDto.PetriNet -> {
-                val petriNet = processm.core.models.petrinet.DBSerializer.fetch(
-                    DBCache.get(dataStoreId.toString()).database,
-                    UUID.fromString(requireNotNull(mostRecentData()) { "Missing PetriNet id" })
-                )
+                val recentData = mostRecentData()?.asComponentData()
+                val petriNet = recentData?.modelId?.let {
+                    processm.core.models.petrinet.DBSerializer.fetch(
+                        DBCache.get(dataStoreId.toString()).database,
+                        UUID.fromString(it)
+                    )
+                } ?: return null.apply {
+                    logger.warn("Missing Petri-net id for component $id.")
+                }
+
                 val componentDataTransitions = petriNet.transitions.mapToArray {
                     PetriNetComponentDataAllOfTransitions(
                         it.id.toString(),
@@ -157,20 +173,41 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                     )
                 }
 
+                val alignmentKPIReport = if (recentData.alignmentKPIId.isNotBlank())
+                    DurablePersistenceProvider(dataStoreId.toString()).use { it.get<Report>(URI(recentData.alignmentKPIId)) }
+                else null
                 PetriNetComponentData(
                     type = ComponentType.petriNet,
-                    initialMarking = petriNet.initialMarking.mapKeys { it.key.id.toString() },
-                    finalMarking = petriNet.finalMarking.mapKeys { it.key.id.toString() },
+                    initialMarking = HashMap<String, Int>().apply {
+                        for ((p, t) in petriNet.initialMarking) put(
+                            p.toString(),
+                            t.size
+                        )
+                    },
+                    finalMarking = HashMap<String, Int>().apply {
+                        for ((p, t) in petriNet.finalMarking) put(
+                            p.toString(),
+                            t.size
+                        )
+                    },
                     places = petriNet.places.mapToArray { PetriNetComponentDataAllOfPlaces(it.id.toString()) },
-                    transitions = componentDataTransitions
+                    transitions = componentDataTransitions,
+                    alignmentKPIReport = alignmentKPIReport
                 )
             }
 
             ComponentTypeDto.DirectlyFollowsGraph -> {
-                val dfg = DirectlyFollowsGraph.load(
-                    DBCache.get(dataStoreId.toString()).database,
-                    UUID.fromString(requireNotNull(mostRecentData()) { "Missing DFG id" })
-                )
+                val recentData = mostRecentData()?.asComponentData()
+                val dfg = recentData?.modelId?.let {
+                    DirectlyFollowsGraph.load(
+                        DBCache.get(dataStoreId.toString()).database,
+                        UUID.fromString(it)
+                    )
+                } ?: return null.apply {
+                    logger.warn("Missing DFG id for component $id.")
+                }
+
+                assert(recentData.alignmentKPIId.isEmpty()) { "DFG does not have executable semantics; got alignment KPI report for component $id" }
 
                 DirectlyFollowsGraphComponentData(
                     type = ComponentType.directlyFollowsGraph,
@@ -199,10 +236,6 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
             }
 
             ComponentTypeDto.FlatLogView -> {
-                null
-            }
-
-            ComponentTypeDto.AlignerKpi -> {
                 null
             }
 
@@ -264,12 +297,15 @@ fun WorkspaceComponent.updateData(data: String) = loggedScope { logger ->
 /**
  * Gets the list of custom properties for this component.
  */
-fun WorkspaceComponent.getCustomProperties() = getCustomProperties(componentType, algorithm)
+fun WorkspaceComponent.getCustomProperties() = getCustomProperties(componentType, properties)
 
 /**
  * Gets the list of custom properties for the component of the [componentType] type
  */
-fun getCustomProperties(componentType: ComponentTypeDto, algorithm: String? = null): Array<CustomProperty> =
+fun getCustomProperties(
+    componentType: ComponentTypeDto,
+    properties: Map<String, String>? = null
+): Array<CustomProperty> =
     when (componentType) {
         ComponentTypeDto.CausalNet, ComponentTypeDto.BPMN, ComponentTypeDto.PetriNet ->
             arrayOf(
@@ -287,7 +323,13 @@ fun getCustomProperties(componentType: ComponentTypeDto, algorithm: String? = nu
                             name = "Online Inductive Miner"
                         )
                     ),
-                    value = algorithm ?: ALGORITHM_HEURISTIC_MINER
+                    value = properties?.get("algorithm") ?: ALGORITHM_HEURISTIC_MINER
+                ),
+                CustomProperty(
+                    id = 1,
+                    name = "horizon",
+                    type = "non-negative-integer",
+                    value = properties?.get("horizon") ?: "3"
                 )
             )
 

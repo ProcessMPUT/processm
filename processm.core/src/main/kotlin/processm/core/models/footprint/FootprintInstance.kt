@@ -17,7 +17,7 @@ class FootprintInstance(override val model: Footprint) : ProcessModelInstance {
 
     override val availableActivities: Sequence<FootprintActivity>
         get() =
-            if (currentState === emptyState) model.startActivities
+            if (currentState === emptyState) model.startActivities.asSequence()
             else model.matrix.getRow(currentState as FootprintActivity)
                 .filterValues { it == Order.Parallel || it == Order.FollowedBy }.keys.asSequence()
 
