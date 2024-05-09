@@ -14,7 +14,7 @@
           <v-list-item-icon>
             <v-icon>settings</v-icon>
           </v-list-item-icon>
-          <v-list-item-content>{{ $t("topbar.user-profile") }} </v-list-item-content>
+          <v-list-item-content>{{ $t("topbar.user-profile") }}</v-list-item-content>
         </v-list-item>
         <v-list-item @click.stop="signOut" name="btn-logout">
           <v-list-item-icon>
@@ -59,7 +59,7 @@ import AccountService from "@/services/AccountService";
 export default class TopBar extends Vue {
   @Inject() accountService!: AccountService;
 
-  currentOrganization: number = this.$sessionStorage.currentOrganizationIndex;
+  currentOrganization: number = this.$sessionStorage.currentOrganizationIndex ?? -1;
   organizationsExpanded: boolean = true;
 
   get username() {

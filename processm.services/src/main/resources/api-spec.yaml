@@ -2032,7 +2032,7 @@ components:
           type: boolean
     NewWorkspace:
       type: object
-      required: [ organizationId, name ]
+      required: [ name ]
       properties:
         organizationId:
           type: string

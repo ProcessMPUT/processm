@@ -31,25 +31,21 @@ fun Route.ACLApi() {
     val aclService by inject<ACLService>()
 
     fun ApiUser.ensureCanRead(urn: URN) {
-        val canRead = organizations.keys.any { organizationId ->
-            aclService.hasPermission(
-                userId,
-                urn,
-                leastRoleToReadACL
-            )
-        }
+        val canRead = aclService.hasPermission(
+            userId,
+            urn,
+            leastRoleToReadACL
+        )
         if (!canRead)
             throw ApiException(ExceptionReason.ACLCannotBeRead, arrayOf(urn))
     }
 
     fun ApiUser.ensureCanModify(urn: URN) {
-        val canModify = organizations.keys.any { organizationId ->
-            aclService.hasPermission(
-                userId,
-                urn,
-                leastRoleToModifyACL
-            )
-        }
+        val canModify = aclService.hasPermission(
+            userId,
+            urn,
+            leastRoleToModifyACL
+        )
         if (!canModify)
             throw ApiException(ExceptionReason.ACLCannotBeModified, arrayOf(urn))
     }

@@ -59,14 +59,16 @@ class WorkspaceService(
      * Creates new workspace with the given [name] within the given [organizationId] and assigns it to private group of
      * the specified [userId].
      */
-    fun create(name: String, userId: UUID, organizationId: UUID): UUID =
+    fun create(name: String, userId: UUID, organizationId: UUID?): UUID =
         transactionMain {
             name.isNotBlank().validate(ExceptionReason.WorkspaceNameRequired)
 
             val user = accountService.getUser(userId)
-            val sharedGroup = Group.find {
-                (Groups.isShared eq true) and (Groups.organizationId eq organizationId)
-            }.first()
+            val sharedGroup = organizationId?.let {
+                Group.find {
+                    (Groups.isShared eq true) and (Groups.organizationId eq organizationId)
+                }.first()
+            }
 
             val workspace = Workspace.new {
                 this.name = name
@@ -75,8 +77,10 @@ class WorkspaceService(
             // Add ACL entry for the user being the owner
             aclService.addEntry(workspace.urn, user.privateGroup.id.value, RoleType.Owner)
 
-            // Add ACL entry for the organization just to connect the workspace with the organization
-            aclService.addEntry(workspace.urn, sharedGroup.id.value, RoleType.None)
+            sharedGroup?.let {
+                // Add ACL entry for the organization just to connect the workspace with the organization
+                aclService.addEntry(workspace.urn, it.id.value, RoleType.None)
+            }
 
             return@transactionMain workspace.id.value
         }
