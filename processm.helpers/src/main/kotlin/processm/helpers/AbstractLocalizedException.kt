@@ -17,6 +17,9 @@ abstract class AbstractLocalizedException(
             Locale.US.getErrorMessage(key)
         }
 
+    /**
+     * Returns formatted message in the specified locale
+     */
     abstract fun localizedMessage(locale: Locale): String
 
 
