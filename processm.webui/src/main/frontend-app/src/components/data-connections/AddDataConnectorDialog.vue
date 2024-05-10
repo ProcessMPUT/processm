@@ -173,7 +173,7 @@ export default class AddDataConnectorDialog extends Vue {
       this.$emit("submitted", dataConnector);
       this.resetForms();
     } catch (error) {
-      this.app.error(`${this.$t("common.saving.failure")}`);
+      this.app.error(error);
     } finally {
       this.isSubmitting = false;
     }

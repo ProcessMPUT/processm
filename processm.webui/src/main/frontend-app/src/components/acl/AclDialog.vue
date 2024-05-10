@@ -113,7 +113,7 @@ export default class AclDialog extends Vue {
       this.loading = false;
     } catch (e) {
       console.warn(e);
-      this.app.error(`${this.$t("common.operation-error")}`);
+      this.app.error(e);
       this.close();
     }
   }
@@ -133,7 +133,7 @@ export default class AclDialog extends Vue {
       await this.aclService.removeACE(this.urn, ace.groupId);
       await this.refresh();
     } catch (e) {
-      this.app.error(`${this.$t("common.saving.failure")}`);
+      this.app.error(e);
     }
   }
 
@@ -162,7 +162,7 @@ export default class AclDialog extends Vue {
       this.closeEditor();
       await this.refresh();
     } catch (e) {
-      this.app.error(`${this.$t("common.saving.failure")}`);
+      this.app.error(e);
     }
   }
 

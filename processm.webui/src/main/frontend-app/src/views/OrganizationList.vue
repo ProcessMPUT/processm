@@ -269,7 +269,7 @@ export default class OrganizationList extends Vue {
       await this.load();
     } catch (e) {
       console.error(e);
-      this.app.error(this.$t("common.operation-error").toString());
+      this.app.error(e);
     } finally {
       this.orgToAttach = null;
     }
@@ -354,7 +354,7 @@ export default class OrganizationList extends Vue {
       await this.load();
       this.app.success(this.$t("common.saving.success").toString());
     } catch (e) {
-      this.app.error(this.$t("common.saving.failure").toString());
+      this.app.error(e);
     }
   }
 
@@ -366,7 +366,7 @@ export default class OrganizationList extends Vue {
       await this.load();
       this.app.success(this.$t("common.saving.success").toString());
     } catch (e) {
-      this.app.error(this.$t("common.saving.failure").toString());
+      this.app.error(e);
     }
   }
 
