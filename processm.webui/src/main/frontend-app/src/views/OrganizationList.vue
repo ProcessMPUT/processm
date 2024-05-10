@@ -96,6 +96,8 @@
             @change="item.dirty = true"
             @focus="item.focus = true"
             v-else
+            :readonly="!item.canEdit"
+            @keyup.enter.native="editName(item)"
           >
             <template v-slot:append>
               <v-tooltip bottom>
@@ -108,7 +110,6 @@
                     v-bind="attrs"
                     @click="editName(item)"
                     v-on="on"
-                    @keyup.enter.native="editName(item)"
                   >
                     <v-icon v-show="(item.dirty || item.focus) && item.canEdit" small>edit</v-icon>
                   </v-btn>
