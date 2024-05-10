@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="value" @click:outside="close" max-width="600">
+  <v-dialog v-model="value" @click:outside="close" max-width="600" @keydown.esc="close">
     <v-card>
       <v-card-title class="headline">
         {{ $t("acl.dialog-title") }}

@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 <template>
-  <v-dialog v-model="value" @click:outside="cancel" max-width="600">
+  <v-dialog v-model="value" @click:outside="cancel" max-width="600" @keydown.esc="cancel">
     <v-card>
       <v-card-title class="headline">
         {{ $t("xes-preview-dialog.title") }}

@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="value" max-width="400">
+  <v-dialog v-model="value" max-width="400" @click:outside="cancel" @keydown.esc="cancel">
     <v-card>
       <v-card-title class="headline">
         {{ $t("password-change-dialog.dialog-title") }}
