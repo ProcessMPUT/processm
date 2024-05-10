@@ -100,7 +100,7 @@ class OrganizationService(
 
             // detach the user from all groups in this organization
             UsersInGroups.deleteWhere {
-                (UsersInGroups.userId eq userId) and (UsersInGroups.groupId inSubQuery Groups.select { Groups.organizationId eq organizationId })
+                (UsersInGroups.userId eq userId) and (UsersInGroups.groupId inSubQuery Groups.slice(Groups.id).select { Groups.organizationId eq organizationId })
             }
             logger.debug { "Removed member $userId from organization $organizationId." }
         }

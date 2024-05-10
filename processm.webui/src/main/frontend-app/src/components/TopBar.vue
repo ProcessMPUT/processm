@@ -29,7 +29,7 @@
             </v-list-item-content>
           </template>
           <v-list-item-group v-model="currentOrganization" mandatory>
-            <v-list-item v-for="(roleInOrganization, i) in this.$sessionStorage.userOrganizations" :key="i" :value="i">
+            <v-list-item v-for="(roleInOrganization, i) in this.organizations" :key="i" :value="i">
               <v-list-item-icon></v-list-item-icon>
               <v-tooltip bottom>
                 <template v-slot:activator="{ on, attrs }">
@@ -54,6 +54,7 @@
 import Vue from "vue";
 import { Component, Inject } from "vue-property-decorator";
 import AccountService from "@/services/AccountService";
+import { UserRoleInOrganization } from "@/openapi";
 
 @Component
 export default class TopBar extends Vue {
@@ -61,6 +62,12 @@ export default class TopBar extends Vue {
 
   currentOrganization: number = this.$sessionStorage.currentOrganizationIndex;
   organizationsExpanded: boolean = true;
+
+  organizations: UserRoleInOrganization[] = [];
+
+  async created() {
+    this.organizations = await this.accountService.getUserOrganizations();
+  }
 
   get username() {
     return this.$sessionStorage.userInfo?.username || "";

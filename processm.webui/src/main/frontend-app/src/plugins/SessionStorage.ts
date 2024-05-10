@@ -40,12 +40,12 @@ class SessionStorage {
     }
 
     static get userOrganizations(): UserRoleInOrganization[] {
-        return this.session.get(this.UserOrganizationsKey);
+        return this.session.get(this.UserOrganizationsKey) ?? [];
     }
 
     static set userOrganizations(userOrganizations: UserRoleInOrganization[]) {
         let orgId: string | undefined = undefined;
-        if (this.sessionExists && this.session !== undefined && this.userOrganizations?.length > this.currentOrganizationIndex)
+        if (this.sessionExists && this.session !== undefined)
             orgId = this.currentOrganization?.id;
         this.session.set(this.UserOrganizationsKey, userOrganizations);
         if (orgId !== undefined && this.currentOrganization?.id != orgId)
@@ -61,6 +61,7 @@ class SessionStorage {
     }
 
     static get currentOrganization(): Organization|undefined {
+        if(this.currentOrganizationIndex < 0 || this.currentOrganizationIndex >= this.userOrganizations.length) return undefined;
         return this.userOrganizations[this.currentOrganizationIndex]?.organization;
     }
 
