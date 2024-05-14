@@ -32,9 +32,6 @@ class DataConnector(id: EntityID<UUID>) : UUIDEntity(id) {
     var lastConnectionStatusTimestamp by DataConnectors.lastConnectionStatusTimestamp
     var connectionProperties by DataConnectors.connectionProperties
     var dataModel by DataModel optionalReferencedOn DataConnectors.dataModelId
-
-    fun toDto() =
-        DataConnectorDto(id.value, name, lastConnectionStatus, lastConnectionStatusTimestamp, dataModel?.id?.value)
 }
 
 /**

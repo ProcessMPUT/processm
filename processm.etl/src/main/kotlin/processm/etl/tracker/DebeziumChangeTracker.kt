@@ -8,13 +8,16 @@ import kotlinx.serialization.json.*
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.update
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.AutomaticEtlProcesses
+import processm.dbmodels.models.DataConnectors
 import processm.dbmodels.models.EtlProcessesMetadata
 import processm.etl.helpers.reportETLError
 import processm.etl.tracker.DatabaseChangeApplier.*
 import processm.logging.loggedScope
 import java.io.Closeable
+import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -46,6 +49,13 @@ class DebeziumChangeTracker(
                     logger.error("Tracker failed: $message", error)
                     reportError(error)
                 }
+            }
+            transaction(DBCache.get("$dataStoreId").database) {
+                DataConnectors.update({ DataConnectors.id eq dataConnectorId }) {
+                    it[lastConnectionStatus] = success
+                    it[lastConnectionStatusTimestamp] = LocalDateTime.now()
+                }
+                commit()
             }
         }
         .notifying(this)

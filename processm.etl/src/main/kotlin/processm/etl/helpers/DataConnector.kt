@@ -7,18 +7,35 @@ import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import oracle.jdbc.datasource.impl.OracleDataSource
+import org.jetbrains.exposed.sql.transactions.transaction
 import org.postgresql.ds.PGSimpleDataSource
 import processm.dbmodels.models.ConnectionType
 import processm.dbmodels.models.DataConnector
 import java.sql.Connection
 import java.sql.DriverManager
+import java.time.LocalDateTime
 import javax.sql.DataSource
 
 fun DataConnector.getConnection(): Connection {
-    return if (connectionProperties.startsWith("jdbc")) DriverManager.getConnection(connectionProperties)
-    else getDataSource(
-        Json.decodeFromString(MapSerializer(String.serializer(), String.serializer()), connectionProperties)
-    ).connection
+    try {
+        val connection = if (connectionProperties.startsWith("jdbc")) DriverManager.getConnection(connectionProperties)
+        else getDataSource(
+            Json.decodeFromString(MapSerializer(String.serializer(), String.serializer()), connectionProperties)
+        ).connection
+        transaction {
+            lastConnectionStatusTimestamp = LocalDateTime.now()
+            lastConnectionStatus = true
+            commit()
+        }
+        return connection
+    } catch (e: Exception) {
+        transaction {
+            lastConnectionStatusTimestamp = LocalDateTime.now()
+            lastConnectionStatus = false
+            commit()
+        }
+        throw e
+    }
 }
 
 fun getDataSource(connectionProperties: Map<String, String>): DataSource {
