@@ -222,7 +222,7 @@ private fun toAttributes(rs: ResultSet, columnMap: Map<String, ETLColumnToAttrib
                     null
 
                 Types.OTHER ->
-                    rs.getObject(colIndex).forceToUUID()!!
+                    rs.getObject(colIndex).forceToUUID()
 
                 else -> throw UnsupportedOperationException("Unsupported value type $colType for expression $colName.")
             }
