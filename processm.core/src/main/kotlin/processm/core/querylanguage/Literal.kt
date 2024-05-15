@@ -83,7 +83,7 @@ class UUIDLiteral(literal: String, line: Int, charPositionInLine: Int) :
 
     override fun parse(literal: String): UUID =
         literal.toUUID()
-            ?: throw PQLSyntaxError(PQLSyntaxError.Problem.InvalidUUID, line, charPositionInLine, literal)
+            ?: throw PQLSyntaxException(PQLSyntaxException.Problem.InvalidUUID, line, charPositionInLine, literal)
 }
 
 /**
@@ -183,7 +183,7 @@ class DateTimeLiteral(literal: String, line: Int, charPositionInLine: Int) :
                     exception.addSuppressed(e)
             }
         }
-        throw PQLSyntaxError(PQLSyntaxError.Problem.InvalidDateTime, line, charPositionInLine, literal)
+        throw PQLSyntaxException(PQLSyntaxException.Problem.InvalidDateTime, line, charPositionInLine, literal)
     }
 
     override fun toString(): String = "${scope.prefix}D$value"
@@ -203,7 +203,7 @@ class NumberLiteral(literal: String, line: Int, charPositionInLine: Int) :
             literal.toDouble()
         }
         catch (e: NumberFormatException) {
-            throw PQLSyntaxError(PQLSyntaxError.Problem.InvalidNumber, line, charPositionInLine, literal)
+            throw PQLSyntaxException(PQLSyntaxException.Problem.InvalidNumber, line, charPositionInLine, literal)
         }
     }
 
@@ -219,7 +219,7 @@ class BooleanLiteral(literal: String, line: Int, charPositionInLine: Int) :
     override fun parse(literal: String): Boolean = when (literal) {
         "true" -> true
         "false" -> false
-        else -> throw PQLSyntaxError(PQLSyntaxError.Problem.InvalidBoolean, line, charPositionInLine, literal)
+        else -> throw PQLSyntaxException(PQLSyntaxException.Problem.InvalidBoolean, line, charPositionInLine, literal)
     }
 }
 

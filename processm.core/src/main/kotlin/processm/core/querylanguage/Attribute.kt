@@ -71,7 +71,7 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
 
     override fun calculateEffectiveScope(): Scope? =
         hoistingPrefix.fold(scope!!) { s, _ ->
-            s.upper ?: throw PQLSyntaxError(PQLSyntaxError.Problem.NoHoistingBeyondLong, line, charPositionInLine)
+            s.upper ?: throw PQLSyntaxException(PQLSyntaxException.Problem.NoHoistingBeyondLong, line, charPositionInLine)
         }
 
     override val type: Type
@@ -85,8 +85,8 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
                 DB_ID, COST_TOTAL -> Type.Number
                 IDENTITY_ID -> Type.UUID
                 TIME_TIMESTAMP -> Type.Datetime
-                else -> throw PQLSyntaxError(
-                    PQLSyntaxError.Problem.UnknownAttributeType,
+                else -> throw PQLSyntaxException(
+                    PQLSyntaxException.Problem.UnknownAttributeType,
                     line,
                     charPositionInLine,
                     standardAttributes
@@ -142,8 +142,8 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
                     // the remaining standard attributes
                     else name == "${it.first}:${it.second}" || name == it.second
                 }?.run { "$first:${second ?: name.substringAfterLast(':')}" }
-                ?: throw PQLSyntaxError(
-                    PQLSyntaxError.Problem.NoSuchAttribute,
+                ?: throw PQLSyntaxException(
+                    PQLSyntaxException.Problem.NoSuchAttribute,
                     line,
                     charPositionInLine,
                     attribute
@@ -154,7 +154,7 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
         }
 
         if (!(!isClassifier || effectiveScope != Scope.Log)) {
-            throw PQLSyntaxError(PQLSyntaxError.Problem.ClassifierOnLog, line, charPositionInLine, this)
+            throw PQLSyntaxException(PQLSyntaxException.Problem.ClassifierOnLog, line, charPositionInLine, this)
         }
     }
 

@@ -5,9 +5,9 @@ import processm.logging.logger
 import java.util.*
 
 /**
- * A syntax error in PQL other than [PQLParserError]
+ * A syntax error in PQL other than [PQLParserException]
  */
-class PQLSyntaxError(
+class PQLSyntaxException(
     val problem: Problem,
     val line: Int,
     val charPositionInLine: Int,

@@ -55,15 +55,12 @@ fun parseLocale(locale: String): Locale {
 val ApplicationCall.locale: Locale
     get() {
         var locale = authentication.principal<LocalePrincipal>()?.locale
-        if (!isSupported(locale)) {
-            for (acceptLanguage in request.acceptLanguageItems()) {
-                locale = parseLocale(acceptLanguage.value)
-                if (isSupported(locale))
-                    break
-            }
+        if (isSupported(locale))
+            return locale
+        for (acceptLanguage in request.acceptLanguageItems()) {
+            locale = parseLocale(acceptLanguage.value)
+            if (isSupported(locale))
+                return locale
         }
-        return if (isSupported(locale))
-            locale
-        else
-            Locale.US
+        return Locale.US
     }

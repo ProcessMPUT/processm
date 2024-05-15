@@ -3,8 +3,8 @@ package processm.services.helpers
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import processm.core.querylanguage.PQLParserError
-import processm.core.querylanguage.PQLSyntaxError
+import processm.core.querylanguage.PQLParserException
+import processm.core.querylanguage.PQLSyntaxException
 import processm.helpers.getErrorMessage
 import java.util.*
 import kotlin.test.assertTrue
@@ -21,8 +21,8 @@ class LocalizedExceptionTest {
             listOf(Locale.US, Locale("pl")).flatMap { locale ->
                 listOf(
                     ExceptionReason.values(),
-                    PQLSyntaxError.Problem.values(),
-                    PQLParserError.Problem.values()
+                    PQLSyntaxException.Problem.values(),
+                    PQLParserException.Problem.values()
                 ).flatMap { enum ->
                     enum.map { Arguments.of(locale, it.toString()) }
                 }

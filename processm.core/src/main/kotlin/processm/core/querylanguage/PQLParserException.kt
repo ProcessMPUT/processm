@@ -8,7 +8,7 @@ import java.util.*
 /**
  * A PQL error detected by the ANTLR
  */
-class PQLParserError(
+class PQLParserException(
     val problem: Problem,
     val line: Int,
     val charPositionInLine: Int,

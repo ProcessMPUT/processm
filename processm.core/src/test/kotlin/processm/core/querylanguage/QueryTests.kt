@@ -75,10 +75,10 @@ class QueryTests {
         assertEquals(0, query.selectExpressions[Scope.Event]!!.size)
 
         assertNotNull(query.warning)
-        assertIs<PQLSyntaxError>(query.warning)
+        assertIs<PQLSyntaxException>(query.warning)
         assertEquals(
-            PQLSyntaxError.Problem.SelectAllConflictsWithReferencingByName,
-            (query.warning as PQLSyntaxError).problem
+            PQLSyntaxException.Problem.SelectAllConflictsWithReferencingByName,
+            (query.warning as PQLSyntaxException).problem
         )
     }
 
@@ -525,8 +525,8 @@ class QueryTests {
             )
 
         invalidSyntax.forEach {
-            assertFailsWith<PQLParserError>(it) { Query(it) }.apply {
-                assertNotEquals(PQLParserError.Problem.Unknown, problem)
+            assertFailsWith<PQLParserException>(it) { Query(it) }.apply {
+                assertNotEquals(PQLParserException.Problem.Unknown, problem)
                 assertNotNull(offendingToken)
                 assertNotNull(message)
             }
@@ -539,8 +539,8 @@ class QueryTests {
             "select e:t:timestamp"
         )
         invalidAttributes.forEach {
-            assertFailsWith<PQLSyntaxError>(it) { Query(it) }.apply {
-                assertEquals(PQLSyntaxError.Problem.NoSuchAttribute, problem)
+            assertFailsWith<PQLSyntaxException>(it) { Query(it) }.apply {
+                assertEquals(PQLSyntaxException.Problem.NoSuchAttribute, problem)
                 assertEquals(1, args.size)
                 assertNotNull(args[0])
             }
@@ -567,7 +567,7 @@ class QueryTests {
             "offset l:0"
         )
         illegalOperations.forEach {
-            assertFailsWith<PQLSyntaxError>(it) { Query(it) }.apply {
+            assertFailsWith<PQLSyntaxException>(it) { Query(it) }.apply {
                 assertNotNull(message)
             }
         }
@@ -583,11 +583,11 @@ class QueryTests {
         )
 
         invalidHoisting.forEach {
-            assertFailsWith<PQLSyntaxError>(it) { Query(it) }.apply {
+            assertFailsWith<PQLSyntaxException>(it) { Query(it) }.apply {
                 assertTrue {
                     problem in setOf(
-                        PQLSyntaxError.Problem.ClassifierInWhere,
-                        PQLSyntaxError.Problem.ClassifierOnLog
+                        PQLSyntaxException.Problem.ClassifierInWhere,
+                        PQLSyntaxException.Problem.ClassifierOnLog
                     )
                 }
             }
@@ -884,8 +884,8 @@ class QueryTests {
         assertEquals(0, query.orderByExpressions[Scope.Event]!!.size)
 
         // It is meaningless to order results here, as there is returned only one entity for each scope
-        assertIs<PQLSyntaxError>(query.warning)
-        assertEquals(PQLSyntaxError.Problem.OrderByClauseRemoved, (query.warning as PQLSyntaxError).problem)
+        assertIs<PQLSyntaxException>(query.warning)
+        assertEquals(PQLSyntaxException.Problem.OrderByClauseRemoved, (query.warning as PQLSyntaxException).problem)
     }
 
     @Test
@@ -1068,8 +1068,8 @@ class QueryTests {
         assertEquals(null, query.offset[Scope.Event])
 
         assertNotNull(query.warning)
-        assertIs<PQLSyntaxError>(query.warning)
-        assertEquals(PQLSyntaxError.Problem.DuplicateLimit, (query.warning as PQLSyntaxError).problem)
+        assertIs<PQLSyntaxException>(query.warning)
+        assertEquals(PQLSyntaxException.Problem.DuplicateLimit, (query.warning as PQLSyntaxException).problem)
     }
 
     @Test
@@ -1083,8 +1083,8 @@ class QueryTests {
         assertEquals(null, query.offset[Scope.Event])
 
         assertNotNull(query.warning)
-        assertIs<PQLSyntaxError>(query.warning)
-        assertEquals(PQLSyntaxError.Problem.DecimalPartDropped, (query.warning as PQLSyntaxError).problem)
+        assertIs<PQLSyntaxException>(query.warning)
+        assertEquals(PQLSyntaxException.Problem.DecimalPartDropped, (query.warning as PQLSyntaxException).problem)
     }
 
     @Test
@@ -1120,8 +1120,8 @@ class QueryTests {
         assertEquals(10, query.offset[Scope.Event])
 
         assertNotNull(query.warning)
-        assertIs<PQLSyntaxError>(query.warning)
-        assertEquals(PQLSyntaxError.Problem.DuplicateOffset, (query.warning as PQLSyntaxError).problem)
+        assertIs<PQLSyntaxException>(query.warning)
+        assertEquals(PQLSyntaxException.Problem.DuplicateOffset, (query.warning as PQLSyntaxException).problem)
     }
 
     @Test
@@ -1135,8 +1135,8 @@ class QueryTests {
         assertEquals(3, query.offset[Scope.Event])
 
         assertNotNull(query.warning)
-        assertIs<PQLSyntaxError>(query.warning)
-        assertEquals(PQLSyntaxError.Problem.DecimalPartDropped, (query.warning as PQLSyntaxError).problem)
+        assertIs<PQLSyntaxException>(query.warning)
+        assertEquals(PQLSyntaxException.Problem.DecimalPartDropped, (query.warning as PQLSyntaxException).problem)
     }
 
     @Test
@@ -1244,21 +1244,21 @@ class QueryTests {
 
     @Test
     fun deleteWithGroupByNotAllowed() {
-        val ex = assertFailsWith<PQLParserError> {
+        val ex = assertFailsWith<PQLParserException> {
             Query("delete event group by l:name")
         }
-        assertEquals(PQLParserError.Problem.InputMismatch, ex.problem)
+        assertEquals(PQLParserException.Problem.InputMismatch, ex.problem)
         assertEquals("group by", ex.offendingToken.value)
         assertEquals(true, ex.expectedTokens?.isNotEmpty())
     }
 
     @Test
     fun deleteWithSelectNotAllowed() {
-        val ex = assertFailsWith<PQLParserError> {
+        val ex = assertFailsWith<PQLParserException> {
             Query("select e:name delete event where l:name='abc'")
         }
-        assertIs<PQLParserError>(ex)
-        assertEquals(PQLParserError.Problem.InputMismatch, ex.problem)
+        assertIs<PQLParserException>(ex)
+        assertEquals(PQLParserException.Problem.InputMismatch, ex.problem)
         assertEquals("delete", ex.offendingToken.value)
         assertEquals(true, ex.expectedTokens?.isNotEmpty())
     }

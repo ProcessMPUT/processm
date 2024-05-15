@@ -253,8 +253,8 @@ class Query(val query: String) {
         if (standard.isNotEmpty() || other.isNotEmpty()) {
             val first = standard.firstOrNull() ?: other.first()
             errorListener.emitWarning(
-                PQLSyntaxError(
-                    PQLSyntaxError.Problem.SelectAllConflictsWithReferencingByName,
+                PQLSyntaxException(
+                    PQLSyntaxException.Problem.SelectAllConflictsWithReferencingByName,
                     first.line,
                     first.charPositionInLine,
                     (standard + other).joinToString(", ")
@@ -290,7 +290,7 @@ class Query(val query: String) {
             while (true) {
                 if (isGroupBy[scope]!!) {
                     errorListener.delayedThrow(
-                        PQLSyntaxError(PQLSyntaxError.Problem.MixedScopes, -1, -1, _scope, scope)
+                        PQLSyntaxException(PQLSyntaxException.Problem.MixedScopes, -1, -1, _scope, scope)
                     )
                 }
                 scope = scope.upper ?: break
@@ -353,8 +353,8 @@ class Query(val query: String) {
                 return@filter groupByEnabled
             }.forEach {
                 errorListener.delayedThrow(
-                    PQLSyntaxError(
-                        PQLSyntaxError.Problem.AttributeNotInGroupBy,
+                    PQLSyntaxException(
+                        PQLSyntaxException.Problem.AttributeNotInGroupBy,
                         it.line,
                         it.charPositionInLine,
                         it
@@ -381,8 +381,8 @@ class Query(val query: String) {
             val orderByExpression = _orderByExpressions[scope]!!.firstOrNull()
             if (orderByExpression !== null) {
                 errorListener.emitWarning(
-                    PQLSyntaxError(
-                        PQLSyntaxError.Problem.OrderByClauseRemoved,
+                    PQLSyntaxException(
+                        PQLSyntaxException.Problem.OrderByClauseRemoved,
                         orderByExpression.line,
                         orderByExpression.charPositionInLine
                     )
@@ -396,7 +396,7 @@ class Query(val query: String) {
                 if (_selectAll[currentOrLowerScope] == true) {
                     // query uses scoped select all or explicit select all
                     errorListener.delayedThrow(
-                        PQLSyntaxError(PQLSyntaxError.Problem.ExplicitSelectAllWithImplicitGroupBy, -1, -1)
+                        PQLSyntaxException(PQLSyntaxException.Problem.ExplicitSelectAllWithImplicitGroupBy, -1, -1)
                     )
                 }
 
@@ -410,8 +410,8 @@ class Query(val query: String) {
                 if (nonaggregated.any()) {
                     // nonaggregated attributes exist
                     errorListener.delayedThrow(
-                        PQLSyntaxError(
-                            PQLSyntaxError.Problem.MissingAttributesInAggregation,
+                        PQLSyntaxException(
+                            PQLSyntaxException.Problem.MissingAttributesInAggregation,
                             -1,
                             -1,
                             nonaggregated.joinToString(", ")
@@ -474,8 +474,8 @@ class Query(val query: String) {
                 .firstOrNull()
             if (aggregation !== null)
                 errorListener.delayedThrow(
-                    PQLSyntaxError(
-                        PQLSyntaxError.Problem.AggregationFunctionInWhere,
+                    PQLSyntaxException(
+                        PQLSyntaxException.Problem.AggregationFunctionInWhere,
                         aggregation.line,
                         aggregation.charPositionInLine
                     )
@@ -485,8 +485,8 @@ class Query(val query: String) {
             val classifier = whereExpression.filter { it is Attribute && it.isClassifier }.firstOrNull()
             if (classifier !== null)
                 errorListener.delayedThrow(
-                    PQLSyntaxError(
-                        PQLSyntaxError.Problem.ClassifierInWhere,
+                    PQLSyntaxException(
+                        PQLSyntaxException.Problem.ClassifierInWhere,
                         classifier.line,
                         classifier.charPositionInLine
                     )
@@ -529,7 +529,7 @@ class Query(val query: String) {
         override fun exitLimit_number(ctx: QLParser.Limit_numberContext?) {
             parseLimitOrOffsetNumber(ctx!!.getChild(0).payload as Token, "limit") { scope, value, number ->
                 fun warn() = errorListener.emitWarning(
-                    PQLSyntaxError(PQLSyntaxError.Problem.DuplicateLimit, number.line, number.charPositionInLine)
+                    PQLSyntaxException(PQLSyntaxException.Problem.DuplicateLimit, number.line, number.charPositionInLine)
                 )
 
                 if (_limit[scope] !== null)
@@ -541,7 +541,7 @@ class Query(val query: String) {
         override fun exitOffset_number(ctx: QLParser.Offset_numberContext?) {
             parseLimitOrOffsetNumber(ctx!!.getChild(0).payload as Token, "offset") { scope, value, number ->
                 fun warn() = errorListener.emitWarning(
-                    PQLSyntaxError(PQLSyntaxError.Problem.DuplicateOffset, number.line, number.charPositionInLine)
+                    PQLSyntaxException(PQLSyntaxException.Problem.DuplicateOffset, number.line, number.charPositionInLine)
                 )
 
                 if (_offset[scope] !== null)
@@ -560,8 +560,8 @@ class Query(val query: String) {
 
             if (intValue <= 0.0 || number.value.isNaN() || number.value.isInfinite())
                 errorListener.delayedThrow(
-                    PQLSyntaxError(
-                        PQLSyntaxError.Problem.PositiveIntegerRequired,
+                    PQLSyntaxException(
+                        PQLSyntaxException.Problem.PositiveIntegerRequired,
                         number.line,
                         number.charPositionInLine,
                         clause,
@@ -571,8 +571,8 @@ class Query(val query: String) {
 
             if (number.value != intValue)
                 errorListener.emitWarning(
-                    PQLSyntaxError(
-                        PQLSyntaxError.Problem.DecimalPartDropped,
+                    PQLSyntaxException(
+                        PQLSyntaxException.Problem.DecimalPartDropped,
                         number.line,
                         number.charPositionInLine,
                         number
@@ -581,8 +581,8 @@ class Query(val query: String) {
 
             if (number.scope === null) {
                 errorListener.delayedThrow(
-                    PQLSyntaxError(
-                        PQLSyntaxError.Problem.ScopeRequired,
+                    PQLSyntaxException(
+                        PQLSyntaxException.Problem.ScopeRequired,
                         number.line,
                         number.charPositionInLine,
                         number, clause
@@ -602,8 +602,8 @@ class Query(val query: String) {
 
             if (hoisted !== null)
                 errorListener.delayedThrow(
-                    PQLSyntaxError(
-                        PQLSyntaxError.Problem.ScopeHoistingInSelectOrOrderBy,
+                    PQLSyntaxException(
+                        PQLSyntaxException.Problem.ScopeHoistingInSelectOrOrderBy,
                         hoisted.line,
                         hoisted.charPositionInLine
                     )
@@ -619,8 +619,8 @@ class Query(val query: String) {
                 if (expression.expectedChildrenTypes[i] != Type.Any && expression.children[i].type != Type.Unknown /* determined at run time */) {
                     if (expression.expectedChildrenTypes[i] != expression.children[i].type) {
                         errorListener.delayedThrow(
-                            PQLSyntaxError(
-                                PQLSyntaxError.Problem.UnexpectedChild,
+                            PQLSyntaxException(
+                                PQLSyntaxException.Problem.UnexpectedChild,
                                 expression.line,
                                 expression.charPositionInLine,
                                 expression.expectedChildrenTypes[i],
@@ -731,8 +731,8 @@ class Query(val query: String) {
                     val offendingToken = toTokenSequence(e.offendingToken, e.offendingToken);
                     val expectedTokens =
                         e.expectedTokens.toList().map { recognizer?.vocabulary?.getDisplayName(it) ?: it.toString() }
-                    PQLParserError(
-                        PQLParserError.Problem.InputMismatch,
+                    PQLParserException(
+                        PQLParserException.Problem.InputMismatch,
                         line,
                         charPositionInLine,
                         offendingToken,
@@ -744,8 +744,8 @@ class Query(val query: String) {
 
                 is LexerNoViableAltException -> {
                     val text = lexer._input.getText(Interval(e.startIndex, lexer._input.index())).lexerToTokenSequence()
-                    PQLParserError(
-                        PQLParserError.Problem.LexerNoViableAlt,
+                    PQLParserException(
+                        PQLParserException.Problem.LexerNoViableAlt,
                         line,
                         charPositionInLine,
                         text,
@@ -757,8 +757,8 @@ class Query(val query: String) {
 
                 is NoViableAltException -> {
                     val offendingToken = toTokenSequence(e.startToken, e.offendingToken)
-                    PQLParserError(
-                        PQLParserError.Problem.NoViableAlt,
+                    PQLParserException(
+                        PQLParserException.Problem.NoViableAlt,
                         line,
                         charPositionInLine,
                         offendingToken,
@@ -769,7 +769,7 @@ class Query(val query: String) {
                 }
 
                 is ProxyRecognitionException -> {
-                    PQLParserError(
+                    PQLParserException(
                         e.problem,
                         line,
                         charPositionInLine,
@@ -782,8 +782,8 @@ class Query(val query: String) {
 
                 else -> {
                     logger().warn("Unsupported RecognitionException", e)
-                    PQLParserError(
-                        PQLParserError.Problem.Unknown,
+                    PQLParserException(
+                        PQLParserException.Problem.Unknown,
                         line,
                         charPositionInLine,
                         TokenSequence.Unknown,
@@ -827,7 +827,7 @@ class Query(val query: String) {
             val msg = "missing " + expecting.toString(recognizer.vocabulary) +
                     " at " + getTokenErrorDisplay(t)
             val e = ProxyRecognitionException(
-                PQLParserError.Problem.MissingToken,
+                PQLParserException.Problem.MissingToken,
                 t.toTokenSequence(),
                 expecting.toList().map { recognizer.vocabulary.getDisplayName(it) })
             recognizer.notifyErrorListeners(t, msg, e)
@@ -844,7 +844,7 @@ class Query(val query: String) {
             val msg = "extraneous input " + tokenName + " expecting " +
                     expecting.toString(recognizer.vocabulary)
             val e = ProxyRecognitionException(
-                PQLParserError.Problem.UnwantedToken,
+                PQLParserException.Problem.UnwantedToken,
                 t.toTokenSequence(),
                 expecting.toList().map { recognizer.vocabulary.getDisplayName(it) })
             recognizer.notifyErrorListeners(t, msg, e)
