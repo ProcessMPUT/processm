@@ -217,7 +217,8 @@ export default class OrganizationList extends Vue {
 
   async load() {
     const perm: { [id: string]: OrganizationRole } = {};
-    for (const item of this.$sessionStorage.userOrganizations) {
+    const userOrganizations = await this.accountService.getUserOrganizations();
+    for (const item of userOrganizations) {
       if (item.organization.id !== undefined) perm[item.organization.id] = item.role;
     }
     const organizations = await this.organizationService.getOrganizations();

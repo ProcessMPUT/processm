@@ -1,4 +1,4 @@
-import _Vue from "vue";
+import _Vue, { Ref, ref, watch } from "vue";
 import VueSession from "vue-session";
 import UserAccount from "@/models/UserAccount";
 import { Organization, UserRoleInOrganization } from "@/openapi";
@@ -7,6 +7,7 @@ class SessionStorage {
   static install(Vue: typeof _Vue, options = {}) {
     Vue.use(VueSession, options);
     Vue.prototype.$sessionStorage = this;
+    this.userOrganizationsRef.value = this.session.get(this.UserOrganizationsKey);
   }
 
   private static readonly TokenKey = "session_token";
@@ -14,6 +15,11 @@ class SessionStorage {
   private static readonly UserOrganizationsKey = "user_organizations";
   private static readonly CurrentOrganizationIndexKey = "current_organization";
   private static readonly DefaultDataStoreKey = "default_data_source";
+
+  /**
+   * This is exposed only to be used in `watch` clauses. To access, use the getter/setter
+   */
+  public static readonly userOrganizationsRef: Ref<UserRoleInOrganization[]> = ref([]);
 
   private static get session() {
     return _Vue.prototype.$session;
@@ -40,12 +46,13 @@ class SessionStorage {
   }
 
   static get userOrganizations(): UserRoleInOrganization[] {
-    return this.session.get(this.UserOrganizationsKey) ?? [];
+    return this.userOrganizationsRef.value;
   }
 
   static set userOrganizations(userOrganizations: UserRoleInOrganization[]) {
     let orgId: string | undefined = undefined;
     if (this.sessionExists && this.session !== undefined) orgId = this.currentOrganization?.id;
+    this.userOrganizationsRef.value = userOrganizations;
     this.session.set(this.UserOrganizationsKey, userOrganizations);
     if (orgId !== undefined && this.currentOrganization?.id != orgId) this.switchToOrganization(orgId);
   }
