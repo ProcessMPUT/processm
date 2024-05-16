@@ -21,7 +21,6 @@ import processm.helpers.getPropertyIgnoreCase
 import processm.logging.loggedScope
 import processm.services.helpers.ExceptionReason
 import processm.services.helpers.Patterns
-import processm.services.helpers.parseLocale
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -103,7 +102,7 @@ class AccountService(private val groupService: GroupService, private val produce
      * Throws [ValidationException] if the specified [userId] doesn't exist or the [locale] cannot be parsed.
      */
     fun changeLocale(userId: UUID, locale: String) = update(userId) {
-        val localeObject = parseLocale(locale)
+        val localeObject = Locale.forLanguageTag(locale)
         this.locale = localeObject.toString()
     }
 
@@ -189,7 +188,7 @@ class AccountService(private val groupService: GroupService, private val produce
         val notBefore = Instant.now()
         val notAfter = notBefore.plus(getTimeToResetPassword())
         val requestId = UUID.randomUUID()
-        val locale = parseLocale(user.locale)
+        val locale = Locale.forLanguageTag(user.locale)
         val bundle = safeGetBundle("PasswordResetEmail", locale)
         val message = MimeMessage(Session.getInstance(Properties())).apply {
             addRecipients(Message.RecipientType.TO, user.email)

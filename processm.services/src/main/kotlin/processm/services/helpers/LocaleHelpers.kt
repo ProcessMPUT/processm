@@ -29,25 +29,6 @@ data class LocalePrincipal(private val claims: Map<String, Claim>) : Principal {
     val locale: Locale? = claims["locale"]?.let { Locale.forLanguageTag(it.asString()) }
 }
 
-fun parseLocale(locale: String): Locale {
-    val localeTags = locale.split("_", "-")
-    val localeObject = when (localeTags.size) {
-        3 -> Locale(localeTags[0], localeTags[1], localeTags[2])
-        2 -> Locale(localeTags[0], localeTags[1])
-        1 -> Locale(localeTags[0])
-        else -> throw ValidationException(ExceptionReason.InvalidLocale)
-    }
-
-    try {
-        localeObject.isO3Language
-        localeObject.isO3Country
-    } catch (e: MissingResourceException) {
-        throw ValidationException(ExceptionReason.CannotChangeLocale, message = e.message)
-    }
-
-    return localeObject
-}
-
 /**
  * Reads the preferred locale from the user claims with a fall-back to the Accept-Language header, and then defaults to
  * en-US
@@ -58,7 +39,7 @@ val ApplicationCall.locale: Locale
         if (isSupported(locale))
             return locale
         for (acceptLanguage in request.acceptLanguageItems()) {
-            locale = parseLocale(acceptLanguage.value)
+            locale = Locale.forLanguageTag(acceptLanguage.value)
             if (isSupported(locale))
                 return locale
         }
