@@ -94,6 +94,7 @@ private class Generator(
     }
 }
 
+@Tag("slow")
 @Tag("ETL")
 @Timeout(300, unit = TimeUnit.SECONDS)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -125,7 +126,7 @@ class SapHanaJdbcEtlTest {
     }
 
     private val dataStoreName = DBTestHelper.dbName
-    private val etlConfigurationName = "Oracle Sample DB ETL Test"
+    private val etlConfigurationName = "SAP HANA ETL Test"
 
     private fun getEventSQL(batch: Boolean): String =
         """
