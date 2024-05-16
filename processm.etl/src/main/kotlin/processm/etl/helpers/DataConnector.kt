@@ -7,6 +7,7 @@ import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import oracle.jdbc.datasource.impl.OracleDataSource
+import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.postgresql.ds.PGSimpleDataSource
 import processm.dbmodels.models.ConnectionType
@@ -16,24 +17,32 @@ import java.sql.DriverManager
 import java.time.LocalDateTime
 import javax.sql.DataSource
 
+/**
+ * Used by [getConnection] to update [DataConnector.lastConnectionStatus] and [DataConnector.lastConnectionStatusTimestamp]
+ */
+private fun DataConnector.timestamp() {
+    if (TransactionManager.currentOrNull()?.db == db) {
+        lastConnectionStatusTimestamp = LocalDateTime.now()
+        lastConnectionStatus = true
+    } else {
+        transaction(db) {
+            lastConnectionStatusTimestamp = LocalDateTime.now()
+            lastConnectionStatus = true
+            commit()
+        }
+    }
+}
+
 fun DataConnector.getConnection(): Connection {
     try {
         val connection = if (connectionProperties.startsWith("jdbc")) DriverManager.getConnection(connectionProperties)
         else getDataSource(
             Json.decodeFromString(MapSerializer(String.serializer(), String.serializer()), connectionProperties)
         ).connection
-        transaction(db) {
-            lastConnectionStatusTimestamp = LocalDateTime.now()
-            lastConnectionStatus = true
-            commit()
-        }
+        timestamp()
         return connection
     } catch (e: Exception) {
-        transaction(db) {
-            lastConnectionStatusTimestamp = LocalDateTime.now()
-            lastConnectionStatus = false
-            commit()
-        }
+        timestamp()
         throw e
     }
 }
