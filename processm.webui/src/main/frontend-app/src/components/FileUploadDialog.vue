@@ -22,6 +22,7 @@
                   ]"
                   :label="$t('file-upload-dialog.label')"
                   @change="selectFile"
+                  accept=".xml,.xml.gz,.xes,.xes.gz,.log,.log.gz"
                 ></v-file-input>
               </v-col>
             </v-row>
