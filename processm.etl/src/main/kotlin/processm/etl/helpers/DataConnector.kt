@@ -22,14 +22,14 @@ fun DataConnector.getConnection(): Connection {
         else getDataSource(
             Json.decodeFromString(MapSerializer(String.serializer(), String.serializer()), connectionProperties)
         ).connection
-        transaction {
+        transaction(db) {
             lastConnectionStatusTimestamp = LocalDateTime.now()
             lastConnectionStatus = true
             commit()
         }
         return connection
     } catch (e: Exception) {
-        transaction {
+        transaction(db) {
             lastConnectionStatusTimestamp = LocalDateTime.now()
             lastConnectionStatus = false
             commit()
