@@ -19,15 +19,17 @@ import javax.sql.DataSource
 
 /**
  * Used by [getConnection] to update [DataConnector.lastConnectionStatus] and [DataConnector.lastConnectionStatusTimestamp]
+ *
+ * @param success The value to put into [DataConnector.lastConnectionStatus]
  */
-private fun DataConnector.timestamp() {
+private fun DataConnector.timestamp(success: Boolean) {
     if (TransactionManager.currentOrNull()?.db == db) {
         lastConnectionStatusTimestamp = LocalDateTime.now()
-        lastConnectionStatus = true
+        lastConnectionStatus = success
     } else {
         transaction(db) {
             lastConnectionStatusTimestamp = LocalDateTime.now()
-            lastConnectionStatus = true
+            lastConnectionStatus = success
             commit()
         }
     }
@@ -39,10 +41,10 @@ fun DataConnector.getConnection(): Connection {
         else getDataSource(
             Json.decodeFromString(MapSerializer(String.serializer(), String.serializer()), connectionProperties)
         ).connection
-        timestamp()
+        timestamp(true)
         return connection
     } catch (e: Exception) {
-        timestamp()
+        timestamp(false)
         throw e
     }
 }
