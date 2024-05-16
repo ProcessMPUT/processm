@@ -254,7 +254,7 @@ class UsersApiTest : BaseApiTest() {
             every { accountService.getUser(userId = uuid) } returns mockk {
                 every { id } returns EntityID(uuid, Users)
                 every { email } returns "user@example.com"
-                every { locale } returns "en_US"
+                every { locale } returns "en-US"
             }
 
             withAuthentication(uuid) {
@@ -263,7 +263,7 @@ class UsersApiTest : BaseApiTest() {
                     val account = response.deserializeContent<UserAccountInfo>()
                     assertEquals(uuid, account.id)
                     assertEquals("user@example.com", account.email)
-                    assertEquals("en_US", account.locale)
+                    assertEquals("en-US", account.locale)
                 }
             }
 
@@ -495,30 +495,6 @@ class UsersApiTest : BaseApiTest() {
 
         verify { accountService.changeLocale(userId = any(), locale = "pl_PL") }
     }
-
-    @Test
-    fun `responds to locale change attempt with invalid locale format with 400 and error message`() =
-        withConfiguredTestApplication {
-            val accountService = declareMock<AccountService>()
-
-            every {
-                accountService.changeLocale(
-                    userId = any(), locale = "eng_ENG"
-                )
-            } throws ValidationException(ExceptionReason.CannotChangeLocale)
-
-            withAuthentication {
-                with(handleRequest(HttpMethod.Patch, "/api/users/me/locale") {
-                    addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    withSerializedBody(LocaleChange("eng_ENG"))
-                }) {
-                    assertEquals(HttpStatusCode.BadRequest, response.status())
-                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("The current locale could not be changed"))
-                }
-            }
-
-            verify { accountService.changeLocale(userId = any(), locale = "eng_ENG") }
-        }
 
     @Test
     fun `responds to locale change attempt with invalid data with 400 and error message`() =

@@ -21,6 +21,7 @@ import processm.helpers.getPropertyIgnoreCase
 import processm.logging.loggedScope
 import processm.services.helpers.ExceptionReason
 import processm.services.helpers.Patterns
+import processm.services.helpers.isSupported
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -66,7 +67,7 @@ class AccountService(private val groupService: GroupService, private val produce
             val user = User.new {
                 this.email = email
                 this.password = calculatePasswordHash(pass)
-                this.locale = accountLocale ?: defaultLocale.toString()
+                this.locale = accountLocale ?: defaultLocale.toLanguageTag()
                 this.privateGroup = privateGroup
             }
 
@@ -103,7 +104,12 @@ class AccountService(private val groupService: GroupService, private val produce
      */
     fun changeLocale(userId: UUID, locale: String) = update(userId) {
         val localeObject = Locale.forLanguageTag(locale)
-        this.locale = localeObject.toString()
+        val languageTag = localeObject.toLanguageTag()
+        if (languageTag != locale)
+            throw ValidationException(ExceptionReason.InvalidLocale)
+        if (!isSupported(localeObject))
+            throw ValidationException(ExceptionReason.CannotChangeLocale)
+        this.locale = languageTag
     }
 
     fun update(userId: UUID, update: (User.() -> Unit)): Unit = transactionMain {

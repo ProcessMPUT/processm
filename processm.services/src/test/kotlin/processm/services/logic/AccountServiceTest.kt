@@ -11,7 +11,6 @@ import processm.core.communication.email.Emails
 import processm.dbmodels.models.*
 import processm.services.helpers.ExceptionReason
 import java.util.*
-import kotlin.NoSuchElementException
 import kotlin.test.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -128,7 +127,7 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["pl_PL", "en", "de-DE", "es-ES_tradnl", "eng", "eng_US"])
+    @ValueSource(strings = ["pl-PL", "en"])
     fun `successful locale change runs successfully`(supportedLocale: String) = withCleanTables(Users) {
         val userId = createUser("user@example.com", correctPasswordHash).id.value
 
@@ -136,14 +135,14 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["goofy", "US", "ab_YZ", "yz_AB", "eng-ENG"])
-    fun `changing locale throws if locale is not supported`(unsupportedLocale: String) = withCleanTables(Users) {
+    @ValueSource(strings = ["goofy", "US", "ab_YZ", "yz_AB", "eng-ENG", "de-DE", "es-ES-tradnl", "eng", "eng-US"])
+    fun `changing locale throws if locale is invalid or not supported`(unsupportedLocale: String) = withCleanTables(Users) {
         val userId = createUser("user@example.com", correctPasswordHash).id.value
 
         val exception = assertFailsWith<ValidationException> {
             accountService.changeLocale(userId, unsupportedLocale)
         }
-        assertEquals(ExceptionReason.CannotChangeLocale, exception.reason)
+        assertTrue { exception.reason == ExceptionReason.CannotChangeLocale || exception.reason == ExceptionReason.InvalidLocale }
     }
 
     @ParameterizedTest

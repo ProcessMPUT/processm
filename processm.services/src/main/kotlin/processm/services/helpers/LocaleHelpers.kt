@@ -4,7 +4,6 @@ import com.auth0.jwt.interfaces.Claim
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
-import processm.services.logic.ValidationException
 import java.util.*
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
@@ -17,8 +16,11 @@ import kotlin.contracts.contract
  */
 private val supportedLanguages = setOf("pl", "en")
 
+/**
+ * @return `true` if the language is supported by ProcessM, `false` otherwise
+ */
 @OptIn(ExperimentalContracts::class)
-private fun isSupported(locale: Locale?): Boolean {
+fun isSupported(locale: Locale?): Boolean {
     contract {
         returns(true) implies (locale !== null)
     }

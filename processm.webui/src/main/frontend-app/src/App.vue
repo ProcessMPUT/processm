@@ -79,7 +79,7 @@ export default class App extends Vue {
    * Otherwise, sets the locale to the first available language in the order of preference reported by the web browser
    */
   resetLocale() {
-    if (this.setLocale(this.$sessionStorage.userInfo?.locale?.replace("_", "-"))) return;
+    if (this.setLocale(this.$sessionStorage.userInfo?.locale)) return;
     for (const language of navigator.languages) {
       if (this.setLocale(language)) return;
     }
