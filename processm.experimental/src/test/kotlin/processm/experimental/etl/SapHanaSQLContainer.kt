@@ -23,7 +23,7 @@ class SapHanaSQLContainer<SELF : SapHanaSQLContainer<SELF>>(dockerImageName: Doc
         withCommand("--passwords-url", "file://$path", "--agree-to-sap-license")
         waitStrategy = LogMessageWaitStrategy()
             .withRegEx(".*Startup finished!*\\s")
-            .withStartupTimeout(Duration.of(300, ChronoUnit.SECONDS));
+            .withStartupTimeout(Duration.of(600, ChronoUnit.SECONDS));
     }
 
     override fun waitUntilContainerStarted() {
