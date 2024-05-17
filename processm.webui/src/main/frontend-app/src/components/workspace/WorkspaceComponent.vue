@@ -50,7 +50,7 @@
       <p v-else class="no-data">{{ $t("workspace.component.no-data") }}</p>
       <div class="last-updated">
         {{ $t("common.last-updated") }}:
-        {{ new Date(lastModified+'Z').toLocaleString() }}
+        {{ new Date(lastModified + "Z").toLocaleString() }}
       </div>
     </div>
   </div>
@@ -159,7 +159,7 @@ export default class WorkspaceComponent extends Vue {
   @Prop({ default: false })
   readonly updateData = false;
 
-  readonly lastModified = this.componentDetails?.dataLastModified ?? this.componentDetails?.userLastModified;
+  readonly lastModified = this.componentDetails?.dataLastModified ?? this.componentDetails?.userLastModified ?? null;
 
   private get loading(): boolean {
     switch (this.componentDetails?.type) {
