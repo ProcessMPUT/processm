@@ -1,5 +1,5 @@
 <template>
-  <v-container :fluid="true">
+  <v-container :fluid="true" v-if="hasOrganization()">
     <v-data-table
       show-expand
       @update:expanded="expanded"
@@ -254,6 +254,9 @@
       </v-card>
     </v-dialog>
   </v-container>
+  <v-card v-else>
+    <v-card-text>{{ $t("users.no-organization-error") }}</v-card-text>
+  </v-card>
 </template>
 
 <script lang="ts">
@@ -316,6 +319,7 @@ export default class UserGroupList extends Vue {
   }
 
   async refreshGroups() {
+    if (!this.hasOrganization()) return;
     try {
       this.loading = true;
       const groups = await this.groupService.getUserGroups(this.organization?.id!);
@@ -464,6 +468,10 @@ export default class UserGroupList extends Vue {
     } catch (e) {
       this.app.error(e);
     }
+  }
+
+  hasOrganization() {
+    return this.organization !== undefined;
   }
 }
 </script>

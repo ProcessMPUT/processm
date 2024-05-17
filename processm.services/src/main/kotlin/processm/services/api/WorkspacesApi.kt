@@ -53,8 +53,10 @@ fun Route.WorkspacesApi() {
             val newWorkspace = runCatching { call.receiveNullable<NewWorkspace>() }.getOrNull()
                 ?: throw ApiException(ExceptionReason.UnparsableData)
 
-            // The user must be a member of the organization, but does not require any privileges, as the privileges are related only to user and group management
-            principal.ensureUserBelongsToOrganization(newWorkspace.organizationId, OrganizationRole.none)
+            newWorkspace.organizationId?.let { organizationId ->
+                // The user must be a member of the organization, but does not require any privileges, as the privileges are related only to user and group management
+                principal.ensureUserBelongsToOrganization(organizationId, OrganizationRole.none)
+            }
 
             if (newWorkspace.name.isEmpty()) {
                 throw ApiException(ExceptionReason.WorkspaceNameRequired)

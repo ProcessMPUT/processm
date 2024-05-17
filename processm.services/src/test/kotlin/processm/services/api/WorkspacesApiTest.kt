@@ -166,7 +166,7 @@ class WorkspacesApiTest : BaseApiTest() {
             withAuthentication(role = OrganizationRole.writer to organizationId) {
                 with(handleRequest(HttpMethod.Post, "/api/workspaces") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    withSerializedBody(NewWorkspace(organizationId, ""))
+                    withSerializedBody(NewWorkspace("", organizationId))
                 }) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
                     assertTrue(
@@ -190,7 +190,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 every { workspaceService.create(workspaceName, userId, organizationId) } returns workspaceId
                 with(handleRequest(HttpMethod.Post, "/api/workspaces") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    withSerializedBody(NewWorkspace(organizationId, workspaceName))
+                    withSerializedBody(NewWorkspace(workspaceName, organizationId))
                 }) {
                     assertEquals(HttpStatusCode.Created, response.status())
                     assertEquals(workspaceId, response.deserializeContent<Workspace>().id)
@@ -207,7 +207,7 @@ class WorkspacesApiTest : BaseApiTest() {
             withAuthentication() {
                 with(handleRequest(HttpMethod.Post, "/api/workspaces") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    withSerializedBody(NewWorkspace(organizationId, "Workspace1"))
+                    withSerializedBody(NewWorkspace("Workspace1", organizationId))
                 }) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
                 }

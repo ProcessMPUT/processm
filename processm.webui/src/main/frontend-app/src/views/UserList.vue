@@ -1,5 +1,6 @@
 <template>
   <v-data-table
+    v-if="hasOrganization()"
     :headers="[
       {
         text: $t('users.user'),
@@ -92,6 +93,9 @@
       </v-tooltip>
     </template>
   </v-data-table>
+  <v-card v-else>
+    <v-card-text>{{ $t("users.no-organization-error") }}</v-card-text>
+  </v-card>
 </template>
 
 <script lang="ts">
@@ -133,9 +137,11 @@ export default class UserList extends Vue {
   }
 
   async loadMembers() {
-    this.loading = true;
-    this.members = await this.organizationService.getOrganizationMembers(this.organization?.id!);
-    this.loading = false;
+    if (this.organization !== undefined) {
+      this.loading = true;
+      this.members = await this.organizationService.getOrganizationMembers(this.organization?.id!);
+      this.loading = false;
+    } else this.members = [];
   }
 
   resetNewDialog() {
@@ -188,6 +194,10 @@ export default class UserList extends Vue {
     } catch (e) {
       this.app.error(e);
     }
+  }
+
+  hasOrganization() {
+    return this.organization !== undefined;
   }
 }
 </script>
