@@ -32,6 +32,7 @@ import processm.helpers.mapToArray
 import processm.helpers.time.toLocalDateTime
 import processm.logging.loggedScope
 import processm.services.api.models.*
+import processm.services.helpers.ExceptionReason
 import java.sql.Connection
 import java.sql.DriverManager
 import java.time.Instant
@@ -462,7 +463,8 @@ class DataStoreService(
     fun changeEtlProcessActivationState(dataStoreId: UUID, etlProcessId: UUID, isActive: Boolean) {
         assertDataStoreExists(dataStoreId)
         transaction(DBCache.get("$dataStoreId").database) {
-            val etlProcess = EtlProcessMetadata.findById(etlProcessId).validateNotNull(Reason.ResourceNotFound)
+            val etlProcess =
+                EtlProcessMetadata.findById(etlProcessId).validateNotNull(ExceptionReason.ETLProcessNotFound)
             etlProcess.isActive = isActive
 
             when (etlProcess.processType) {
@@ -511,7 +513,8 @@ class DataStoreService(
     fun removeEtlProcess(dataStoreId: UUID, etlProcessId: UUID) {
         assertDataStoreExists(dataStoreId)
         transaction(DBCache.get("$dataStoreId").database) {
-            val etlProcess = EtlProcessMetadata.findById(etlProcessId).validateNotNull(Reason.ResourceNotFound)
+            val etlProcess =
+                EtlProcessMetadata.findById(etlProcessId).validateNotNull(ExceptionReason.ETLProcessNotFound)
 
             when (etlProcess.processType) {
                 ProcessTypeDto.Automatic.processTypeName -> {
@@ -544,10 +547,7 @@ class DataStoreService(
             ETLConfiguration
                 .find { ETLConfigurations.metadata eq etlProcessId }
                 .firstOrNull()
-                .validateNotNull(
-                    Reason.ResourceNotFound,
-                    "The specified process ID does not correspond to a JDBC ETCL process"
-                )
+                .validateNotNull(ExceptionReason.ETLProcessNotFound)
                 .notifyUsers(TRIGGER)
         }
     }
@@ -565,10 +565,7 @@ class DataStoreService(
      * Returns data store struct by its identifier.
      */
     private fun getById(dataStoreId: UUID) = transactionMain {
-        return@transactionMain DataStore.findById(dataStoreId) ?: throw ValidationException(
-            Reason.ResourceNotFound,
-            "The specified data store does not exist or the user has insufficient permissions to it"
-        )
+        return@transactionMain DataStore.findById(dataStoreId).validateNotNull(ExceptionReason.DataStoreNotFound)
     }
 
     private fun assertDataStoreExists(dataStoreId: UUID) = getById(dataStoreId)

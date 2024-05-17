@@ -2,6 +2,7 @@ package processm.core.log.hierarchical
 
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
+import processm.core.querylanguage.PQLSyntaxException
 import processm.helpers.implies
 import processm.helpers.time.parseISO8601
 import processm.helpers.time.toDateTime
@@ -147,9 +148,10 @@ class DBHierarchicalXESInputStreamWithSelectQueryTests : DBHierarchicalXESInputS
 
     @Test
     fun scopedSelectAllWithGroupBy() {
-        assertFailsWith<IllegalArgumentException> {
+        val ex = assertFailsWith<PQLSyntaxException> {
             q("select l:*, t:*, e:*, max(e:timestamp)-min(e:timestamp) where l:name like 'Jour%Rev%' and l:id=$journal group by e:instance")
         }
+        assertEquals(PQLSyntaxException.Problem.MixedScopes, ex.problem)
     }
 
     @Test

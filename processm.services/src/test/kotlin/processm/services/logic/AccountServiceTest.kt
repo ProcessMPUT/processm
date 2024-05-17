@@ -1,6 +1,5 @@
 package processm.services.logic
 
-import io.mockk.*
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.junit.jupiter.api.TestInstance
@@ -10,8 +9,8 @@ import org.junit.jupiter.params.provider.ValueSource
 import processm.core.communication.email.Email
 import processm.core.communication.email.Emails
 import processm.dbmodels.models.*
+import processm.services.helpers.ExceptionReason
 import java.util.*
-import kotlin.NoSuchElementException
 import kotlin.test.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -41,7 +40,7 @@ class AccountServiceTest : ServiceTestBase() {
         val exception = assertFailsWith<ValidationException>("Specified user account does not exist") {
             accountService.verifyUsersCredentials("user2", correctPassword)
         }
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.UserNotFound, exception.reason)
     }
 
     @Test
@@ -71,7 +70,7 @@ class AccountServiceTest : ServiceTestBase() {
             assertFailsWith<ValidationException>("The user with the given email already exists.") {
                 accountService.create("user@example.com", null, "passW0RD")
             }
-        assertEquals(Reason.ResourceAlreadyExists, exception.reason)
+        assertEquals(ExceptionReason.UserAlreadyExists, exception.reason)
     }
 
     @Test
@@ -84,7 +83,7 @@ class AccountServiceTest : ServiceTestBase() {
             assertFailsWith<ValidationException>("The user with the given email already exists.") {
                 accountService.create("uSeR@eXaMpLe.com", null, "passW0RD")
             }
-        assertEquals(Reason.ResourceAlreadyExists, exception.reason)
+        assertEquals(ExceptionReason.UserAlreadyExists, exception.reason)
     }
 
     @Test
@@ -99,7 +98,7 @@ class AccountServiceTest : ServiceTestBase() {
         val exception = assertFailsWith<ValidationException>("Specified user account does not exist") {
             accountService.getUser(userId = UUID.randomUUID())
         }
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.UserNotFound, exception.reason)
     }
 
     @Test
@@ -109,7 +108,7 @@ class AccountServiceTest : ServiceTestBase() {
                 userId = UUID.randomUUID(), currentPassword = correctPassword, newPassword = "new_pass"
             )
         }
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.UserNotFound, exception.reason)
     }
 
     @Test
@@ -128,7 +127,7 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["pl_PL", "en", "de-DE", "es-ES_tradnl", "eng", "eng_US"])
+    @ValueSource(strings = ["pl-PL", "en"])
     fun `successful locale change runs successfully`(supportedLocale: String) = withCleanTables(Users) {
         val userId = createUser("user@example.com", correctPasswordHash).id.value
 
@@ -136,14 +135,14 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["goofy", "US", "ab_YZ", "yz_AB", "eng-ENG"])
-    fun `changing locale throws if locale is not supported`(unsupportedLocale: String) = withCleanTables(Users) {
+    @ValueSource(strings = ["goofy", "US", "ab_YZ", "yz_AB", "eng-ENG", "de-DE", "es-ES-tradnl", "eng", "eng-US"])
+    fun `changing locale throws if locale is invalid or not supported`(unsupportedLocale: String) = withCleanTables(Users) {
         val userId = createUser("user@example.com", correctPasswordHash).id.value
 
         val exception = assertFailsWith<ValidationException> {
             accountService.changeLocale(userId, unsupportedLocale)
         }
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertTrue { exception.reason == ExceptionReason.CannotChangeLocale || exception.reason == ExceptionReason.InvalidLocale }
     }
 
     @ParameterizedTest
@@ -156,7 +155,7 @@ class AccountServiceTest : ServiceTestBase() {
             val exception = assertFailsWith<ValidationException> {
                 accountService.changeLocale(userId, unsupportedLocale)
             }
-            assertEquals(Reason.ResourceFormatInvalid, exception.reason)
+            assertEquals(ExceptionReason.InvalidLocale, exception.reason)
         }
 
     @Test
@@ -164,7 +163,7 @@ class AccountServiceTest : ServiceTestBase() {
         val exception = assertFailsWith<ValidationException>("Specified user account does not exist") {
             accountService.changeLocale(userId = UUID.randomUUID(), locale = "en_US")
         }
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.UserNotFound, exception.reason)
     }
 
     @Test
@@ -191,7 +190,7 @@ class AccountServiceTest : ServiceTestBase() {
         val exception = assertFailsWith<ValidationException> {
             accountService.getRolesAssignedToUser(userId = UUID.randomUUID())
         }
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.UserNotFound, exception.reason)
     }
 
     @Test

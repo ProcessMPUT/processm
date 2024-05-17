@@ -14,8 +14,8 @@ import processm.dbmodels.models.Groups
 import processm.dbmodels.models.Organizations
 import processm.dbmodels.models.RoleType
 import processm.services.api.models.OrganizationRole
+import processm.services.helpers.ExceptionReason
 import processm.services.logic.ACLService
-import processm.services.logic.Reason
 import processm.services.logic.ValidationException
 import java.util.*
 import java.util.stream.Stream
@@ -210,7 +210,7 @@ class ACLAPITest : BaseApiTest() {
         every { aclService.removeEntry(urn, organizationId) } returns null
         withAuthentication(userId, role = OrganizationRole.owner to organizationId) {
             with(handleRequest(HttpMethod.Delete, "/api/acl/ace/$groupId/${urn.urn}")) {
-                assertEquals(HttpStatusCode.Forbidden, response.status())
+                assertEquals(HttpStatusCode.UnprocessableEntity, response.status())
             }
         }
         verify(exactly = 0) { aclService.removeEntry(urn, organizationId) }
@@ -271,7 +271,7 @@ class ACLAPITest : BaseApiTest() {
             with(handleRequest(HttpMethod.Put, "/api/acl/ace/$organizationId/${urn.urn}") {
                 withSerializedBody(OrganizationRole.reader)
             }) {
-                assertEquals(HttpStatusCode.Forbidden, response.status())
+                assertEquals(HttpStatusCode.UnprocessableEntity, response.status())
             }
         }
         verify(exactly = 0) { aclService.updateEntry(urn, organizationId, RoleType.Reader) }
@@ -294,7 +294,7 @@ class ACLAPITest : BaseApiTest() {
         )
         every {
             aclService.updateEntry(urn, groupId, RoleType.Reader)
-        } throws ValidationException(Reason.ResourceNotFound, "")
+        } throws ValidationException(ExceptionReason.ACENotFound)
         withAuthentication(userId, role = OrganizationRole.owner to organizationId) {
             with(handleRequest(HttpMethod.Put, "/api/acl/ace/$groupId/${urn.urn}") {
                 withSerializedBody(OrganizationRole.reader)

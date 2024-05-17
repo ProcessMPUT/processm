@@ -1,6 +1,5 @@
 package processm.core.querylanguage
 
-import org.antlr.v4.runtime.RecognitionException
 import org.junit.jupiter.api.Tag
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.COST_CURRENCY
@@ -76,7 +75,11 @@ class QueryTests {
         assertEquals(0, query.selectExpressions[Scope.Event]!!.size)
 
         assertNotNull(query.warning)
-        assertTrue("select all" in query.warning!!.message!!)
+        assertIs<PQLSyntaxException>(query.warning)
+        assertEquals(
+            PQLSyntaxException.Problem.SelectAllConflictsWithReferencingByName,
+            (query.warning as PQLSyntaxException).problem
+        )
     }
 
     @Test
@@ -517,11 +520,14 @@ class QueryTests {
                 "limit l:${Double.NEGATIVE_INFINITY}",
                 "offset e:${Double.NaN}",
                 "offset e:${Double.POSITIVE_INFINITY}",
-                "offset e:${Double.NEGATIVE_INFINITY}"
+                "offset e:${Double.NEGATIVE_INFINITY}",
+                "offset offset 1" // UnwantedToken
             )
 
         invalidSyntax.forEach {
-            assertFailsWith<RecognitionException>(it) { Query(it) }.apply {
+            assertFailsWith<PQLParserException>(it) { Query(it) }.apply {
+                assertNotEquals(PQLParserException.Problem.Unknown, problem)
+                assertNotNull(offendingToken)
                 assertNotNull(message)
             }
         }
@@ -533,8 +539,10 @@ class QueryTests {
             "select e:t:timestamp"
         )
         invalidAttributes.forEach {
-            assertFailsWith<NoSuchElementException>(it) { Query(it) }.apply {
-                assertNotNull(message)
+            assertFailsWith<PQLSyntaxException>(it) { Query(it) }.apply {
+                assertEquals(PQLSyntaxException.Problem.NoSuchAttribute, problem)
+                assertEquals(1, args.size)
+                assertNotNull(args[0])
             }
         }
 
@@ -559,7 +567,7 @@ class QueryTests {
             "offset l:0"
         )
         illegalOperations.forEach {
-            assertFailsWith<IllegalArgumentException>(it) { Query(it) }.apply {
+            assertFailsWith<PQLSyntaxException>(it) { Query(it) }.apply {
                 assertNotNull(message)
             }
         }
@@ -575,9 +583,13 @@ class QueryTests {
         )
 
         invalidHoisting.forEach {
-            assertFailsWith<IllegalArgumentException>(it) { Query(it) }.apply {
-                assertNotNull(message)
-                assertTrue("classifier" in message!!)
+            assertFailsWith<PQLSyntaxException>(it) { Query(it) }.apply {
+                assertTrue {
+                    problem in setOf(
+                        PQLSyntaxException.Problem.ClassifierInWhere,
+                        PQLSyntaxException.Problem.ClassifierOnLog
+                    )
+                }
             }
         }
     }
@@ -872,8 +884,8 @@ class QueryTests {
         assertEquals(0, query.orderByExpressions[Scope.Event]!!.size)
 
         // It is meaningless to order results here, as there is returned only one entity for each scope
-        assertTrue(query.warning is IllegalArgumentException)
-        assertTrue("implicit" in (query.warning as IllegalArgumentException).message!!)
+        assertIs<PQLSyntaxException>(query.warning)
+        assertEquals(PQLSyntaxException.Problem.OrderByClauseRemoved, (query.warning as PQLSyntaxException).problem)
     }
 
     @Test
@@ -1056,7 +1068,8 @@ class QueryTests {
         assertEquals(null, query.offset[Scope.Event])
 
         assertNotNull(query.warning)
-        assertTrue("duplicate" in query.warning!!.message!!)
+        assertIs<PQLSyntaxException>(query.warning)
+        assertEquals(PQLSyntaxException.Problem.DuplicateLimit, (query.warning as PQLSyntaxException).problem)
     }
 
     @Test
@@ -1070,7 +1083,8 @@ class QueryTests {
         assertEquals(null, query.offset[Scope.Event])
 
         assertNotNull(query.warning)
-        assertTrue("decimal" in query.warning!!.message!!)
+        assertIs<PQLSyntaxException>(query.warning)
+        assertEquals(PQLSyntaxException.Problem.DecimalPartDropped, (query.warning as PQLSyntaxException).problem)
     }
 
     @Test
@@ -1106,7 +1120,8 @@ class QueryTests {
         assertEquals(10, query.offset[Scope.Event])
 
         assertNotNull(query.warning)
-        assertTrue("duplicate" in query.warning!!.message!!)
+        assertIs<PQLSyntaxException>(query.warning)
+        assertEquals(PQLSyntaxException.Problem.DuplicateOffset, (query.warning as PQLSyntaxException).problem)
     }
 
     @Test
@@ -1120,7 +1135,8 @@ class QueryTests {
         assertEquals(3, query.offset[Scope.Event])
 
         assertNotNull(query.warning)
-        assertTrue("decimal" in query.warning!!.message!!)
+        assertIs<PQLSyntaxException>(query.warning)
+        assertEquals(PQLSyntaxException.Problem.DecimalPartDropped, (query.warning as PQLSyntaxException).problem)
     }
 
     @Test
@@ -1228,21 +1244,22 @@ class QueryTests {
 
     @Test
     fun deleteWithGroupByNotAllowed() {
-        val ex = assertFailsWith<RecognitionException> {
+        val ex = assertFailsWith<PQLParserException> {
             Query("delete event group by l:name")
         }
-        assertTrue("mismatched input" in ex.message!!)
-        assertTrue("group by" in ex.message!!)
-        assertTrue("expecting" in ex.message!!)
+        assertEquals(PQLParserException.Problem.InputMismatch, ex.problem)
+        assertEquals("group by", ex.offendingToken.value)
+        assertEquals(true, ex.expectedTokens?.isNotEmpty())
     }
 
     @Test
     fun deleteWithSelectNotAllowed() {
-        val ex = assertFailsWith<RecognitionException> {
+        val ex = assertFailsWith<PQLParserException> {
             Query("select e:name delete event where l:name='abc'")
         }
-        assertTrue("mismatched input" in ex.message!!)
-        assertTrue("delete" in ex.message!!)
-        assertTrue("expecting" in ex.message!!)
+        assertIs<PQLParserException>(ex)
+        assertEquals(PQLParserException.Problem.InputMismatch, ex.problem)
+        assertEquals("delete", ex.offendingToken.value)
+        assertEquals(true, ex.expectedTokens?.isNotEmpty())
     }
 }

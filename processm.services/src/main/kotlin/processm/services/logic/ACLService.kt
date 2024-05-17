@@ -5,6 +5,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import processm.core.models.metadata.URN
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.*
+import processm.services.helpers.ExceptionReason
 import java.util.*
 
 class ACLService {
@@ -48,7 +49,7 @@ class ACLService {
         itemType: Table,
         itemId: UUID,
         role: RoleType
-    ) = checkAccess(userId, getURN(itemType, itemId), role)
+    ): Unit = checkAccess(userId, getURN(itemType, itemId), role)
 
     /**
      * Verifies whether the given [userId] has at least the given [role] to access the object identified by the [urn].
@@ -58,13 +59,8 @@ class ACLService {
         userId: UUID,
         urn: URN,
         role: RoleType
-    ) = transactionMain {
-        if (!hasPermission(userId, urn, role)) {
-            throw ValidationException(
-                Reason.Forbidden,
-                "The specified item (identified by ${urn.urn}) does not exist or the user does not have the required ${role.name} role."
-            )
-        }
+    ): Unit = transactionMain {
+        hasPermission(userId, urn, role).validate(ExceptionReason.InsufficientPermissionToURN, urn.urn, role.name)
     }
 
     /**
@@ -118,7 +114,7 @@ class ACLService {
             }
                 .limit(1)
                 .firstOrNull()
-                .validateNotNull(Reason.ResourceNotFound) { "Access control entry is not found." }
+                .validateNotNull(ExceptionReason.ACENotFound)
             ace.role = role.role
 
             ace
@@ -137,7 +133,7 @@ class ACLService {
     fun removeEntry(id: UUID) = transactionMain {
         AccessControlList.deleteWhere {
             AccessControlList.id eq id
-        }.validate(1, Reason.ResourceNotFound) { "Access control entry is not found." }
+        }.validate(1, ExceptionReason.ACENotFound)
     }
 
     /**
@@ -147,7 +143,7 @@ class ACLService {
     fun removeEntry(urn: URN, groupId: UUID) = transactionMain {
         AccessControlList.deleteWhere {
             (AccessControlList.urn.column eq urn.urn) and (AccessControlList.group_id eq groupId)
-        }.validate(1, Reason.ResourceNotFound) { "Access control entry is not found." }
+        }.validate(1, ExceptionReason.ACENotFound)
     }
 
     /**
@@ -164,7 +160,7 @@ class ACLService {
     fun removeEntries(urn: URN) = transactionMain {
         AccessControlList.deleteWhere {
             AccessControlList.urn.column eq urn.urn
-        }.validateNot(0, Reason.ResourceNotFound) { "Access control entry is not found." }
+        }.validateNot(0, ExceptionReason.ACENotFound)
     }
 
 

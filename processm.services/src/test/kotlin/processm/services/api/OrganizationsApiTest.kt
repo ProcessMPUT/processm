@@ -11,6 +11,7 @@ import processm.helpers.mapToSet
 import processm.services.api.models.ErrorMessage
 import processm.services.api.models.OrganizationMember
 import processm.services.api.models.OrganizationRole
+import processm.services.helpers.ExceptionReason
 import processm.services.logic.*
 import java.util.*
 import java.util.stream.Stream
@@ -105,10 +106,7 @@ class OrganizationsApiTest : BaseApiTest() {
                     })
 
             withAuthentication(role = null) {
-                every { organizationService.getMembers(removedOrganizationId) } throws ApiException(
-                    publicMessage = "",
-                    responseCode = HttpStatusCode.NotFound
-                )
+                every { organizationService.getMembers(removedOrganizationId) } throws ApiException(ExceptionReason.NotFound)
 
                 with(handleRequest(HttpMethod.Get, "/api/organizations/$removedOrganizationId/members")) {
                     assertEquals(HttpStatusCode.NotFound, response.status())
@@ -157,10 +155,7 @@ class OrganizationsApiTest : BaseApiTest() {
         withAuthentication(userId = userId, login = email, role = OrganizationRole.owner to organizationId) {
             every {
                 organizationService.addMember(organizationId, email, RoleType.Reader)
-            } throws ValidationException(
-                Reason.ResourceAlreadyExists,
-                "User already exists in the organization."
-            )
+            } throws ValidationException(ExceptionReason.UserAlreadyInOrganization)
 
             with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/members") {
                 withSerializedBody(
@@ -213,12 +208,12 @@ class OrganizationsApiTest : BaseApiTest() {
 
             every {
                 organizationService.removeMember(organizationId, memberToDelete)
-            } throws ValidationException(Reason.ResourceNotFound, "User is not found.")
+            } throws ValidationException(ExceptionReason.UserNotFound)
 
             with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/members/$memberToDelete")) {
                 assertEquals(HttpStatusCode.NotFound, response.status())
                 val error = response.deserializeContent<ErrorMessage>()
-                assertEquals("User is not found.", error.error)
+                assertEquals("The specified user account does not exist", error.error)
             }
         }
 
@@ -284,14 +279,14 @@ class OrganizationsApiTest : BaseApiTest() {
 
             every {
                 organizationService.updateMember(organizationId, memberToUpdate, RoleType.Writer)
-            } throws ValidationException(Reason.ResourceNotFound, "User is not found.")
+            } throws ValidationException(ExceptionReason.UserNotFound)
 
             with(handleRequest(HttpMethod.Patch, "/api/organizations/$organizationId/members/$memberToUpdate") {
                 withSerializedBody(OrganizationMember(organizationRole = OrganizationRole.writer))
             }) {
                 assertEquals(HttpStatusCode.NotFound, response.status())
                 val error = response.deserializeContent<ErrorMessage>()
-                assertEquals("User is not found.", error.error)
+                assertEquals("The specified user account does not exist", error.error)
             }
         }
 
@@ -420,7 +415,10 @@ class OrganizationsApiTest : BaseApiTest() {
     fun `responds with 403 to the nonexistent organization`() = withConfiguredTestApplication {
         val organizationId = UUID.randomUUID()
         val organizationService = declareMock<OrganizationService> {
-            every { get(organizationId) } throws ValidationException(Reason.ResourceNotFound, "Not found.")
+            every { get(organizationId) } throws ValidationException(
+                ExceptionReason.OrganizationNotFound,
+                arrayOf(organizationId)
+            )
         }
         withAuthentication {
             with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId")) {
@@ -438,7 +436,10 @@ class OrganizationsApiTest : BaseApiTest() {
         withConfiguredTestApplication {
             val organizationId = UUID.randomUUID()
             val organizationService = declareMock<OrganizationService> {
-                every { get(organizationId) } throws ValidationException(Reason.ResourceNotFound, "Not found.")
+                every { get(organizationId) } throws ValidationException(
+                    ExceptionReason.OrganizationNotFound,
+                    arrayOf(organizationId)
+                )
             }
             withAuthentication(role = OrganizationRole.none to organizationId) {
                 with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId")) {
@@ -477,7 +478,10 @@ class OrganizationsApiTest : BaseApiTest() {
     fun `responds with 404 to the update of a nonexistent organization`() = withConfiguredTestApplication {
         val organizationId = UUID.randomUUID()
         val organizationService = declareMock<OrganizationService> {
-            every { update(organizationId, any()) } throws ValidationException(Reason.ResourceNotFound, "Not found.")
+            every { update(organizationId, any()) } throws ValidationException(
+                ExceptionReason.OrganizationNotFound,
+                arrayOf(organizationId)
+            )
         }
         withAuthentication(role = OrganizationRole.writer to organizationId) {
             with(handleRequest(HttpMethod.Put, "/api/organizations/$organizationId") {
@@ -530,7 +534,10 @@ class OrganizationsApiTest : BaseApiTest() {
     fun `responds with 404 to the deletion of an nonexistent organization`() = withConfiguredTestApplication {
         val organizationId = UUID.randomUUID()
         val organizationService = declareMock<OrganizationService> {
-            every { remove(organizationId) } throws ValidationException(Reason.ResourceNotFound, "Not found.")
+            every { remove(organizationId) } throws ValidationException(
+                ExceptionReason.OrganizationNotFound,
+                arrayOf(organizationId)
+            )
         }
         withAuthentication(role = OrganizationRole.owner to organizationId) {
             with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId")) {

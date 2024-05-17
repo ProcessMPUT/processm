@@ -5,6 +5,7 @@ import org.junit.jupiter.api.assertThrows
 import processm.core.models.metadata.URN
 import processm.dbmodels.models.*
 import processm.dbmodels.urn
+import processm.services.helpers.ExceptionReason
 import java.util.*
 import kotlin.test.*
 
@@ -17,7 +18,7 @@ class OrganizationServiceTest : ServiceTestBase() {
             organizationService.getMembers(UUID.randomUUID())
         }
 
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.OrganizationNotFound, exception.reason)
     }
 
     @Test
@@ -48,7 +49,7 @@ class OrganizationServiceTest : ServiceTestBase() {
             organizationService.getOrganizationGroups(UUID.randomUUID())
         }
 
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.OrganizationNotFound, exception.reason)
     }
 
     @Test
@@ -89,7 +90,7 @@ class OrganizationServiceTest : ServiceTestBase() {
                 organizationService.getOrganizationBySharedGroupId(UUID.randomUUID())
             }
 
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.SharedGroupNotAssigned, exception.reason)
     }
 
     @Test

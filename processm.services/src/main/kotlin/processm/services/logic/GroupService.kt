@@ -9,6 +9,7 @@ import processm.core.models.metadata.URN
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.*
 import processm.logging.loggedScope
+import processm.services.helpers.ExceptionReason
 import java.util.*
 
 class GroupService {
@@ -37,21 +38,19 @@ class GroupService {
                     logger.debug("The user $userId has been successfully assigned to the group $groupId")
                 } catch (e: ExposedSQLException) {
                     logger.debug("The non-existing userId $userId or groupId $groupId was specified")
-                    throw ValidationException(
-                        Reason.ResourceNotFound, "The specified user or group does not exist."
-                    )
+                    throw ValidationException(ExceptionReason.UserOrGroupNotFound)
                 }
             }
         }
 
     fun detachUserFromGroup(userId: UUID, groupId: UUID): Unit = loggedScope { logger ->
         transactionMain {
-            val group = Group.findById(groupId).validateNotNull(Reason.ResourceNotFound)
-            group.isShared.validateNot { "Cannot detach a user from a shared group" }
-            group.isImplicit.validateNot { "Cannot detach a user from their implicit group" }
+            val group = Group.findById(groupId).validateNotNull(ExceptionReason.GroupNotFound)
+            group.isShared.validateNot(ExceptionReason.CannotDetachFromSharedGroup)
+            group.isImplicit.validateNot(ExceptionReason.CannotDetachFromImplicitGroup)
             UsersInGroups.deleteWhere {
                 (UsersInGroups.userId eq userId) and (UsersInGroups.groupId eq groupId)
-            }.validate(1, Reason.ResourceNotFound) { "The specified user or group is not found." }
+            }.validate(1, ExceptionReason.UserOrGroupNotFound)
         }
     }
 
@@ -73,10 +72,7 @@ class GroupService {
         } while (parentGroup != null && parentGroup[Groups.parentGroupId] != null)
 
         if (parentGroup == null) {
-            throw ValidationException(
-                Reason.ResourceNotFound,
-                "The specified group does not exist"
-            )
+            throw ValidationException(ExceptionReason.GroupNotFound)
         }
 
         return@transactionMain parentGroup[Groups.id].value
@@ -96,7 +92,7 @@ class GroupService {
      * Throws [ValidationException] if the specified [groupId] doesn't exist.
      */
     fun getGroup(groupId: UUID): Group = transactionMain {
-        Group.findById(groupId).validateNotNull(Reason.ResourceNotFound) { "The specified group does not exist." }
+        Group.findById(groupId).validateNotNull(ExceptionReason.GroupNotFound)
             .load(Group::members)
     }
 
@@ -112,8 +108,8 @@ class GroupService {
         organizationId: UUID? = null,
         isShared: Boolean = false
     ): Group = transactionMain {
-        name.validateNot("", Reason.ResourceFormatInvalid) { "The group name must not be empty." }
-        (organizationId !== null || !isShared).validate(Reason.ResourceFormatInvalid)
+        name.isNotBlank().validate(ExceptionReason.BlankName)
+        (organizationId !== null || !isShared).validate(ExceptionReason.InvalidGroupSpecification)
 
         val isImplicit = organizationId === null
         Group.new {
@@ -130,7 +126,7 @@ class GroupService {
      * @throws ValidationException if the group does not exist.
      */
     fun update(id: UUID, update: (Group.() -> Unit)): Unit = transactionMain {
-        val group = Group[id].validateNotNull { "Group is not found." }
+        val group = Group[id].validateNotNull(ExceptionReason.GroupNotFound)
         group.update()
     }
 
@@ -162,12 +158,12 @@ class GroupService {
      */
     fun remove(id: UUID): Unit = transactionMain {
         getSoleOwnershipURNs(id).isEmpty()
-            .validate(Reason.UnprocessableResource) { "The group is a sole owner of an object" }
+            .validate(ExceptionReason.SoleOwner)
         AccessControlList.deleteWhere { group_id eq id }
         UsersInGroups.deleteWhere { groupId eq id }
         Groups.deleteWhere {
             (Groups.id eq id) and (isShared eq false) and (isImplicit eq false)
-        }.validate(1, Reason.ResourceNotFound) { "Group is not found." }
+        }.validate(1, ExceptionReason.GroupNotFound)
     }
 }
 

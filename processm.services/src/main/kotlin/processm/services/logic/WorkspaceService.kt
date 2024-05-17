@@ -17,6 +17,7 @@ import processm.services.api.models.AbstractComponent
 import processm.services.api.models.CustomProperty
 import processm.services.api.toComponentType
 import processm.services.api.updateData
+import processm.services.helpers.ExceptionReason
 import java.time.Instant
 import java.util.*
 
@@ -60,7 +61,7 @@ class WorkspaceService(
      */
     fun create(name: String, userId: UUID, organizationId: UUID): UUID =
         transactionMain {
-            name.isNotBlank().validate(Reason.ResourceFormatInvalid) { "Workspace name must not be blank." }
+            name.isNotBlank().validate(ExceptionReason.WorkspaceNameRequired)
 
             val user = accountService.getUser(userId)
             val sharedGroup = Group.find {
@@ -95,7 +96,7 @@ class WorkspaceService(
         transactionMain {
 
             Workspace.findById(workspaceId)
-                .validateNotNull(Reason.ResourceNotFound) { "Workspace $workspaceId is not found." }
+                .validateNotNull(ExceptionReason.WorkspaceNotFound, workspaceId)
                 .deleted = true
 
             WorkspaceComponent.find {
@@ -169,10 +170,8 @@ class WorkspaceService(
             )
         }
 
-        name.isNullOrBlank().validateNot { "Missing name." }
-        query.isNullOrBlank().validateNot { "Missing query. " }
-        dataStore.validateNotNull { "Missing data store. " }
-        componentType.validateNotNull { "Missing component type. " }
+        name.isNullOrBlank().validateNot(ExceptionReason.BlankName)
+        query.isNullOrBlank().validateNot(ExceptionReason.QueryRequired)
 
         // data is ignored here on purpose under the assumption that a new component's data is populated server-side
         addComponent(
@@ -180,8 +179,8 @@ class WorkspaceService(
             workspaceId,
             name!!,
             query!!,
-            dataStore,
-            componentType,
+            dataStore.validateNotNull(ExceptionReason.DataStoreRequired),
+            componentType.validateNotNull(ExceptionReason.ComponentTypeRequired),
             customizationData,
             layoutData,
             customProperties
@@ -196,7 +195,7 @@ class WorkspaceService(
         workspaceComponentId: UUID,
     ): Unit = transactionMain {
         WorkspaceComponent.findById(workspaceComponentId)
-            .validateNotNull(Reason.ResourceNotFound) { "Workspace component is not found." }
+            .validateNotNull(ExceptionReason.WorkspaceComponentNotFound)
             .apply { triggerEvent(producer, DELETE) }
             .deleted = true
     }

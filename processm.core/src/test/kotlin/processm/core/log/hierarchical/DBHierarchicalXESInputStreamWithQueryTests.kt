@@ -4,6 +4,7 @@ import processm.core.DBTestHelper.dbName
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR
 import processm.core.log.attribute.AttributeMap.Companion.STRING_MARKER
+import processm.core.querylanguage.PQLSyntaxException
 import processm.core.querylanguage.Query
 import java.time.Instant
 import kotlin.math.max
@@ -30,14 +31,13 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
 
     @Test
     fun invalidUseOfClassifiers() {
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<PQLSyntaxException> {
             val log =
                 q("where [e:classifier:concept:name+lifecycle:transition] in ('acceptcomplete', 'rejectcomplete') and l:id=$journal").first()
             val trace = log.traces.first()
             trace.events.first() // exception is thrown here
         }.apply {
-            assertNotNull(message)
-            assertTrue("in" in message!!)
+            assertEquals(PQLSyntaxException.Problem.ClassifierInWhere, problem)
         }
 
         val validUse = q("select [e:c:Event Name] where l:id=$journal")

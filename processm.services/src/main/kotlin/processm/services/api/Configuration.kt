@@ -11,10 +11,11 @@ import io.ktor.server.plugins.hsts.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.util.logging.*
+import processm.helpers.AbstractLocalizedException
 import processm.logging.loggedScope
 import processm.services.api.models.ErrorMessage
-import processm.services.logic.Reason
-import processm.services.logic.ValidationException
+import processm.services.helpers.LocalizedException
+import processm.services.helpers.locale
 import java.time.Duration
 import java.util.*
 import io.ktor.util.converters.DataConversion.Configuration as DataConversionConfig
@@ -39,20 +40,13 @@ internal fun ApplicationCompressionConfiguration(): CompressionConfig.() -> Unit
 
 internal fun ApplicationStatusPageConfiguration(): StatusPagesConfig.() -> Unit = {
     loggedScope { logger ->
-        exception<ValidationException> { call, cause ->
-            val responseStatusCode = when (cause.reason) {
-                Reason.ResourceAlreadyExists -> HttpStatusCode.Conflict
-                Reason.ResourceNotFound -> HttpStatusCode.NotFound
-                Reason.ResourceFormatInvalid -> HttpStatusCode.BadRequest
-                Reason.UnprocessableResource -> HttpStatusCode.UnprocessableEntity
-                Reason.Unauthorized -> HttpStatusCode.Unauthorized
-                Reason.Forbidden -> HttpStatusCode.Forbidden
-            }
+        exception<LocalizedException> { call, cause ->
             logger.trace(cause.message)
-            call.respond(responseStatusCode, ErrorMessage(cause.userMessage))
+            call.respond(cause.reason.statusCode, ErrorMessage(cause.localizedMessage(call.locale)))
         }
-        exception<ApiException> { call, cause ->
-            call.respond(cause.responseCode, ErrorMessage(cause.publicMessage.orEmpty()))
+        exception<AbstractLocalizedException> { call, cause ->
+            logger.trace(cause.message)
+            call.respond(HttpStatusCode.BadRequest, ErrorMessage(cause.localizedMessage(call.locale)))
         }
         exception<TokenExpiredException> { call, cause ->
             call.respond(HttpStatusCode.Unauthorized, ErrorMessage(cause.message.orEmpty()))

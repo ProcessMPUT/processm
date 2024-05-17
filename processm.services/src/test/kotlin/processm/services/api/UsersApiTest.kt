@@ -10,6 +10,7 @@ import org.koin.test.mock.declareMock
 import processm.dbmodels.models.*
 import processm.dbmodels.models.Organization
 import processm.services.api.models.*
+import processm.services.helpers.ExceptionReason
 import processm.services.logic.*
 import java.util.*
 import java.util.stream.Stream
@@ -53,21 +54,42 @@ class UsersApiTest : BaseApiTest() {
     }
 
     @Test
-    fun `responds to unsuccessful authentication with 401 and error message`() = withConfiguredTestApplication {
-        val accountService = declareMock<AccountService>()
+    fun `responds to unsuccessful authentication with 401 and error message in English`() =
+        withConfiguredTestApplication {
+            val accountService = declareMock<AccountService>()
 
-        every { accountService.verifyUsersCredentials(username = any(), password = any()) } returns null
+            every { accountService.verifyUsersCredentials(username = any(), password = any()) } returns null
 
-        with(handleRequest(HttpMethod.Post, "/api/users/session") {
-            addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            withSerializedBody(UserCredentials("user", "wrong_password"))
-        }) {
-            assertEquals(HttpStatusCode.Unauthorized, response.status())
-            assertTrue(response.deserializeContent<ErrorMessage>().error.contains("Invalid username or password"))
+            with(handleRequest(HttpMethod.Post, "/api/users/session") {
+                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                addHeader(HttpHeaders.AcceptLanguage, "ja;q=1.0,en;q=0.9,pl;q=0.8")
+                withSerializedBody(UserCredentials("user", "wrong_password"))
+            }) {
+                assertEquals(HttpStatusCode.Unauthorized, response.status())
+                assertTrue(response.deserializeContent<ErrorMessage>().error.contains("Invalid username or password"))
+            }
+
+            verify { accountService.verifyUsersCredentials(username = any(), password = any()) }
         }
 
-        verify { accountService.verifyUsersCredentials(username = any(), password = any()) }
-    }
+    @Test
+    fun `responds to unsuccessful authentication with 401 and error message in Polish`() =
+        withConfiguredTestApplication {
+            val accountService = declareMock<AccountService>()
+
+            every { accountService.verifyUsersCredentials(username = any(), password = any()) } returns null
+
+            with(handleRequest(HttpMethod.Post, "/api/users/session") {
+                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                addHeader(HttpHeaders.AcceptLanguage, "ja;q=1.0,en;q=0.8,de,pl;q=0.9")
+                withSerializedBody(UserCredentials("user", "wrong_password"))
+            }) {
+                assertEquals(HttpStatusCode.Unauthorized, response.status())
+                assertTrue(response.deserializeContent<ErrorMessage>().error.contains("Nieprawidłowa nazwa użytkownika lub hasło"))
+            }
+
+            verify { accountService.verifyUsersCredentials(username = any(), password = any()) }
+        }
 
     @Test
     fun `responds to request with expired token with 401`() = withConfiguredTestApplication({
@@ -232,7 +254,7 @@ class UsersApiTest : BaseApiTest() {
             every { accountService.getUser(userId = uuid) } returns mockk {
                 every { id } returns EntityID(uuid, Users)
                 every { email } returns "user@example.com"
-                every { locale } returns "en_US"
+                every { locale } returns "en-US"
             }
 
             withAuthentication(uuid) {
@@ -241,7 +263,7 @@ class UsersApiTest : BaseApiTest() {
                     val account = response.deserializeContent<UserAccountInfo>()
                     assertEquals(uuid, account.id)
                     assertEquals("user@example.com", account.email)
-                    assertEquals("en_US", account.locale)
+                    assertEquals("en-US", account.locale)
                 }
             }
 
@@ -253,14 +275,12 @@ class UsersApiTest : BaseApiTest() {
         withConfiguredTestApplication {
             val accountService = declareMock<AccountService>()
 
-            every { accountService.getUser(userId = any()) } throws ValidationException(
-                Reason.ResourceNotFound, "Specified user account does not exist"
-            )
+            every { accountService.getUser(userId = any()) } throws ValidationException(ExceptionReason.UserNotFound)
 
             withAuthentication {
                 with(handleRequest(HttpMethod.Get, "/api/users/me")) {
                     assertEquals(HttpStatusCode.NotFound, response.status())
-                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("Specified user account does not exist"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("The specified user account does not exist"))
                 }
             }
 
@@ -321,10 +341,7 @@ class UsersApiTest : BaseApiTest() {
                 accountService.create(
                     "user@example.com", accountLocale = any(), pass = any()
                 )
-            } throws ValidationException(
-                Reason.ResourceAlreadyExists,
-                "User with specified name already exists"
-            )
+            } throws ValidationException(ExceptionReason.UserAlreadyExists)
 
             withAuthentication {
                 with(handleRequest(HttpMethod.Post, "/api/users") {
@@ -339,7 +356,7 @@ class UsersApiTest : BaseApiTest() {
                     )
                 }) {
                     assertEquals(HttpStatusCode.Conflict, response.status())
-                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("User with specified name already exists"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("A user with the given email already exists."))
                 }
             }
 
@@ -357,7 +374,7 @@ class UsersApiTest : BaseApiTest() {
                     withSerializedBody(Object())
                 }) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
-                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("The provided account details cannot be parsed"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("cannot be parsed"))
                 }
             }
 
@@ -442,7 +459,7 @@ class UsersApiTest : BaseApiTest() {
                     withSerializedBody(Object())
                 }) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
-                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("The provided password data cannot be parsed"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("data cannot be parsed"))
                 }
             }
 
@@ -480,32 +497,6 @@ class UsersApiTest : BaseApiTest() {
     }
 
     @Test
-    fun `responds to locale change attempt with invalid locale format with 400 and error message`() =
-        withConfiguredTestApplication {
-            val accountService = declareMock<AccountService>()
-
-            every {
-                accountService.changeLocale(
-                    userId = any(), locale = "eng_ENG"
-                )
-            } throws ValidationException(
-                Reason.ResourceFormatInvalid, "The current locale could not be changed"
-            )
-
-            withAuthentication {
-                with(handleRequest(HttpMethod.Patch, "/api/users/me/locale") {
-                    addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    withSerializedBody(LocaleChange("eng_ENG"))
-                }) {
-                    assertEquals(HttpStatusCode.BadRequest, response.status())
-                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("The current locale could not be changed"))
-                }
-            }
-
-            verify { accountService.changeLocale(userId = any(), locale = "eng_ENG") }
-        }
-
-    @Test
     fun `responds to locale change attempt with invalid data with 400 and error message`() =
         withConfiguredTestApplication {
             val accountService = declareMock<AccountService>()
@@ -515,7 +506,7 @@ class UsersApiTest : BaseApiTest() {
                     withSerializedBody(Object())
                 }) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
-                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("The provided locale data cannot be parsed"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("data cannot be parsed"))
                 }
             }
 

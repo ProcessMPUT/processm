@@ -1,17 +1,19 @@
 package processm.services.api
 
-import io.ktor.http.HttpStatusCode
+import io.ktor.http.*
+import processm.services.helpers.ExceptionReason
+import processm.services.helpers.LocalizedException
 
 /**
  * Represents failure during processing of API request.
  *
- * @property publicMessage message to be sent to API client, informing about the reason of failed processing.
- * @property responseCode HTTP status code to be sent with response. 400 Bad Request by default.
- * @property message message passed to parent [Exception]. If not provided, [publicMessage] is used.
+ * @property reason the cause of the exception, to be translated and sent to the client, informing about the reason of failed processing.
+ * @property arguments the arguments that may be necessary to correctly format the message
+ * @property message message passed to parent [Exception]. If not provided, [reason] is used.
  */
 class ApiException(
-    val publicMessage: String?,
-    val responseCode: HttpStatusCode = HttpStatusCode.BadRequest,
+    reason: ExceptionReason,
+    arguments: Array<Any?> = emptyArray(),
     message: String? = null
-) : Exception(message ?: publicMessage)
+) : LocalizedException(reason, arguments, message)
 

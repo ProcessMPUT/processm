@@ -15,6 +15,7 @@ import processm.dbmodels.models.Group
 import processm.dbmodels.models.RoleType
 import processm.helpers.mapToArray
 import processm.services.api.models.OrganizationRole
+import processm.services.helpers.ExceptionReason
 import processm.services.logic.ACLService
 import processm.services.logic.ValidationException
 import processm.services.logic.toApi
@@ -38,10 +39,7 @@ fun Route.ACLApi() {
             )
         }
         if (!canRead)
-            throw ApiException(
-                "The user cannot read the ACL of the object identified by $urn",
-                HttpStatusCode.Forbidden
-            )
+            throw ApiException(ExceptionReason.ACLCannotBeRead, arrayOf(urn))
     }
 
     fun ApiUser.ensureCanModify(urn: URN) {
@@ -53,10 +51,7 @@ fun Route.ACLApi() {
             )
         }
         if (!canModify)
-            throw ApiException(
-                "The user cannot modify the ACL of the object identified by $urn",
-                HttpStatusCode.Forbidden
-            )
+            throw ApiException(ExceptionReason.ACLCannotBeModified, arrayOf(urn))
     }
 
     authenticate {
@@ -82,7 +77,7 @@ fun Route.ACLApi() {
             val urn = URN(it.urn)
             principal.ensureCanModify(urn)
             val entry = kotlin.runCatching { call.receiveNullable<APIAccessControlEntry>() }.getOrNull()
-                ?: throw ApiException("The provided ACE data cannot be parsed")
+                ?: throw ApiException(ExceptionReason.UnparsableData)
             try {
                 aclService.addEntry(urn, entry.groupId, entry.role.toRoleType())
                 call.respond(HttpStatusCode.NoContent)
@@ -100,17 +95,14 @@ fun Route.ACLApi() {
             principal.ensureCanModify(urn)
             val groupId = it.groupId
             val role = kotlin.runCatching { call.receiveNullable<OrganizationRole>() }.getOrNull()
-                ?: throw ApiException("The provided ACE data cannot be parsed")
+                ?: throw ApiException(ExceptionReason.UnparsableData)
             transactionMain {
                 if (role.toRoleType() > leastRoleToModifyACL && isLastAbleToModify(urn, groupId))
-                    throw ApiException(
-                        "The last entry allowing to modify the ACL cannot be downgraded",
-                        HttpStatusCode.Forbidden
-                    )
+                    throw ApiException(ExceptionReason.LastACECannotBeDowngraded)
                 try {
                     aclService.updateEntry(urn, groupId, role.toRoleType())
                 } catch (_: ValidationException) {
-                    throw ApiException("Entry not found", HttpStatusCode.NotFound)
+                    throw ApiException(ExceptionReason.ACENotFound)
                 }
             }
             call.respond(HttpStatusCode.NoContent)
@@ -123,14 +115,11 @@ fun Route.ACLApi() {
             val groupId = it.groupId
             transactionMain {
                 if (isLastAbleToModify(urn, groupId))
-                    throw ApiException(
-                        "The last entry allowing to modify the ACL cannot be removed",
-                        HttpStatusCode.Forbidden
-                    )
+                    throw ApiException(ExceptionReason.LastACECannotBeRemoved)
                 try {
                     aclService.removeEntry(urn, groupId)
                 } catch (_: ValidationException) {
-                    throw ApiException("Entry not found", HttpStatusCode.NotFound)
+                    throw ApiException(ExceptionReason.ACENotFound)
                 }
             }
             call.respond(HttpStatusCode.NoContent)

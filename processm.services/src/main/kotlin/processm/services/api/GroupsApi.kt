@@ -11,10 +11,6 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
 import processm.core.persistence.connection.transactionMain
-import processm.dbmodels.models.DataStore
-import processm.dbmodels.models.DataStores
-import processm.dbmodels.models.Workspace
-import processm.dbmodels.models.Workspaces
 import processm.dbmodels.toEntityID
 import processm.helpers.mapToArray
 import processm.helpers.toUUID
@@ -23,6 +19,7 @@ import processm.services.api.models.Group
 import processm.services.api.models.Organization
 import processm.services.api.models.OrganizationRole
 import processm.services.api.models.UserInfo
+import processm.services.helpers.ExceptionReason
 import processm.services.logic.*
 import processm.services.respondCreated
 import java.util.*
@@ -54,7 +51,8 @@ fun Route.GroupsApi() = loggedScope { logger ->
             principal.ensureUserBelongsToOrganization(path.organizationId, OrganizationRole.writer)
 
             val newGroup =
-                kotlin.runCatching { call.receiveNullable<Group>() }.getOrNull().validateNotNull { "Invalid group." }
+                kotlin.runCatching { call.receiveNullable<Group>() }.getOrNull()
+                    .validateNotNull(ExceptionReason.InvalidGroupSpecification)
             if (path.organizationId != newGroup.organizationId) {
                 logger.warn("path.organizationId '${path.organizationId}' does not equal newGroup.organizationId '${newGroup.organizationId}'; ignoring the latter.")
             }
@@ -140,7 +138,8 @@ fun Route.GroupsApi() = loggedScope { logger ->
             principal.ensureUserBelongsToOrganization(path.organizationId, OrganizationRole.writer)
 
             val newMemberId =
-                kotlin.runCatching { call.receiveNullable<String>() }.getOrNull().validateNotNull { "Invalid user id." }
+                kotlin.runCatching { call.receiveNullable<String>() }.getOrNull()
+                    .validateNotNull(ExceptionReason.InvalidUserID)
                     .toUUID()!!
             groupService.attachUserToGroup(newMemberId, path.groupId)
 

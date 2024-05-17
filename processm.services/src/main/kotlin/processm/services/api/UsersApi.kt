@@ -14,7 +14,11 @@ import processm.core.persistence.connection.transactionMain
 import processm.helpers.mapToArray
 import processm.logging.loggedScope
 import processm.services.api.models.*
-import processm.services.logic.*
+import processm.services.helpers.ExceptionReason
+import processm.services.logic.AccountService
+import processm.services.logic.OrganizationService
+import processm.services.logic.ValidationException
+import processm.services.logic.toApi
 import java.time.Duration
 import java.time.Instant
 
@@ -33,7 +37,7 @@ fun Route.UsersApi() {
                 credentials != null -> {
                     val token = transactionMain {
                         val user = accountService.verifyUsersCredentials(credentials.login, credentials.password)
-                            ?: throw ApiException("Invalid username or password", HttpStatusCode.Unauthorized)
+                            ?: throw ApiException(ExceptionReason.InvalidUsernameOrPassword)
                         val userRolesInOrganizations = accountService.getRolesAssignedToUser(user.id.value)
                             .associate { it.organization.id.value to it.role.toApi() }
                         val token = JwtAuthentication.createToken(
@@ -55,7 +59,7 @@ fun Route.UsersApi() {
                 call.request.authorization() !== null -> {
                     val authorizationHeader =
                         call.request.parseAuthorizationHeader() as? HttpAuthHeader.Single ?: throw ApiException(
-                            "Invalid authorization token format", HttpStatusCode.Unauthorized
+                            ExceptionReason.InvalidTokenFormat
                         )
                     val prolongedToken = JwtAuthentication.verifyAndProlongToken(
                         authorizationHeader.blob, jwtIssuer, jwtSecret, jwtTokenTtl
@@ -83,7 +87,7 @@ fun Route.UsersApi() {
                     call.respond(HttpStatusCode.Created, AuthenticationResult(prolongedToken))
                 }
 
-                else -> throw ApiException("Either user credentials or authentication token needs to be provided")
+                else -> throw ApiException(ExceptionReason.CredentialsOrTokenRequired)
             }
         }
     }
@@ -91,14 +95,11 @@ fun Route.UsersApi() {
     post<Paths.Users> {
         loggedScope { logger ->
             val accountInfo = runCatching { call.receiveNullable<AccountRegistrationInfo>() }.getOrNull()
-                ?: throw ApiException("The provided account details cannot be parsed")
+                ?: throw ApiException(ExceptionReason.UnparsableData)
             val locale = call.request.acceptLanguageItems().getOrNull(0)
 
             with(accountInfo) {
-                (!newOrganization || !organizationName.isNullOrBlank()) || throw ValidationException(
-                    Reason.ResourceFormatInvalid,
-                    "Organization name must not be empty."
-                )
+                (!newOrganization || !organizationName.isNullOrBlank()) || throw ValidationException(ExceptionReason.BlankName)
 
                 transactionMain {
                     val user = accountService.create(userEmail, locale?.value, userPassword)
@@ -120,7 +121,7 @@ fun Route.UsersApi() {
     post<Paths.ResetPasswordRequest> {
         loggedScope { logger ->
             val request = runCatching { call.receiveNullable<ResetPasswordRequest>() }.getOrNull()
-                ?: throw ApiException("The provided information cannot be parsed")
+                ?: throw ApiException(ExceptionReason.UnparsableData)
             try {
                 accountService.sendPasswordResetEmail(request.email)
             } catch (e: Throwable) {
@@ -136,7 +137,7 @@ fun Route.UsersApi() {
             val token = path.token
             val request =
                 runCatching { call.receiveNullable<PasswordChange>() }.getOrNull()
-                    ?: throw ApiException("The provided information cannot be parsed")
+                    ?: throw ApiException(ExceptionReason.UnparsableData)
             if (accountService.resetPasswordWithToken(token, request.newPassword))
                 call.respond(HttpStatusCode.OK)
             else
@@ -165,7 +166,7 @@ fun Route.UsersApi() {
                     loggedScope { logger ->
                         val principal = call.authentication.principal<ApiUser>()!!
                         val passwordData = runCatching { call.receiveNullable<PasswordChange>() }.getOrNull()
-                            ?: throw ApiException("The provided password data cannot be parsed")
+                            ?: throw ApiException(ExceptionReason.UnparsableData)
 
                         if (accountService.changePassword(
                                 principal.userId, passwordData.currentPassword, passwordData.newPassword
@@ -185,7 +186,7 @@ fun Route.UsersApi() {
                 patch {
                     val principal = call.authentication.principal<ApiUser>()!!
                     val localeData = runCatching { call.receiveNullable<LocaleChange>() }.getOrNull()
-                        ?: throw ApiException("The provided locale data cannot be parsed")
+                        ?: throw ApiException(ExceptionReason.UnparsableData)
 
                     accountService.changeLocale(principal.userId, localeData.locale)
                     val userAccount = accountService.getUser(principal.userId)

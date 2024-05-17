@@ -7,6 +7,7 @@ import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import processm.dbmodels.models.*
 import processm.dbmodels.urn
+import processm.services.helpers.ExceptionReason
 import java.util.*
 import kotlin.test.*
 
@@ -22,7 +23,7 @@ class GroupServiceTest : ServiceTestBase() {
             groupService.attachUserToGroup(userId, groupId.value)
         }
 
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.UserOrGroupNotFound, exception.reason)
     }
 
     @Test
@@ -36,7 +37,7 @@ class GroupServiceTest : ServiceTestBase() {
             groupService.attachUserToGroup(userId, groupId)
         }
 
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.UserOrGroupNotFound, exception.reason)
     }
 
     @Test
@@ -75,7 +76,7 @@ class GroupServiceTest : ServiceTestBase() {
             groupService.getGroup(UUID.randomUUID())
         }
 
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.GroupNotFound, exception.reason)
     }
 
     @Test
@@ -93,7 +94,7 @@ class GroupServiceTest : ServiceTestBase() {
             groupService.getSubgroups(UUID.randomUUID())
         }
 
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.GroupNotFound, exception.reason)
     }
 
     @Test
@@ -117,7 +118,7 @@ class GroupServiceTest : ServiceTestBase() {
             groupService.getRootGroupId(UUID.randomUUID())
         }
 
-        assertEquals(Reason.ResourceNotFound, exception.reason)
+        assertEquals(ExceptionReason.GroupNotFound, exception.reason)
     }
 
     @Test
@@ -253,7 +254,7 @@ class GroupServiceTest : ServiceTestBase() {
                 groupService.remove(group)
                 assertFalse(true)
             } catch (e: ValidationException) {
-                assertEquals(Reason.UnprocessableResource, e.reason)
+                assertEquals(ExceptionReason.SoleOwner, e.reason)
             }
             assertFalse { aclService.getEntries(urn1).isEmpty() }
             assertFalse { Workspaces.select { (Workspaces.id eq w1) and (Workspaces.deleted eq false) }.empty() }
