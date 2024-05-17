@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="value" @click:outside="cancel" max-width="600">
+  <v-dialog v-model="value" @click:outside="cancel" max-width="600" @keydown.esc="cancel">
     <v-card>
       <v-card-title class="headline">
         {{ $t("jdbc-etl-process-dialog.dialog-title") }}

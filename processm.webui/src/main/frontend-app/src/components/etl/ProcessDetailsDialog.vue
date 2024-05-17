@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="value" @click:outside="cancel" max-width="40%" max-height="80%">
+  <v-dialog v-model="value" @click:outside="cancel" max-width="40%" max-height="80%" @keydown.esc="cancel">
     <v-card>
       <v-card-title class="headline">
         {{ $t("process-details-dialog.title", { name: this.etlProcess !== null && this.etlProcess !== undefined ? this.etlProcess.name : "" }) }}
