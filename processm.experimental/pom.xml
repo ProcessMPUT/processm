@@ -172,7 +172,28 @@
             <artifactId>gson</artifactId>
             <version>2.10.1</version>
         </dependency>
-
+        <!-- The license for the connector is quite convoluted, so we don't include it in the bundle
+        https://tools.hana.ondemand.com/developer-license-3_1.txt
+         -->
+        <dependency>
+            <groupId>com.sap.cloud.db.jdbc</groupId>
+            <artifactId>ngdbc</artifactId>
+            <version>2.20.17</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>processm</groupId>
+            <artifactId>etl</artifactId>
+            <version>0.6-SNAPSHOT</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>processm</groupId>
+            <artifactId>etl</artifactId>
+            <version>0.6-SNAPSHOT</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
