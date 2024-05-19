@@ -86,7 +86,7 @@ export default class UserProfile extends Vue {
         if (result === undefined) this.app.error(this.$t("common.saving.failure").toString());
       } catch (error) {
         console.error(error);
-        this.app.error(this.$t("common.saving.failure").toString());
+        this.app.error(error);
       }
     }
   }

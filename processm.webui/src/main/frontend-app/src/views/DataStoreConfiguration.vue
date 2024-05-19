@@ -600,7 +600,7 @@ export default class DataStoreConfiguration extends Vue {
         if (dataConnector != null) dataConnector.name = newName;
       }
     } catch (error) {
-      this.app.error(`${this.$t("common.operation-error")}`);
+      this.app.error(error);
     } finally {
       this.dataConnectorIdToRename = null;
     }
@@ -720,7 +720,7 @@ export default class DataStoreConfiguration extends Vue {
       etlProcess.isActive = !etlProcess.isActive;
       this.app.success(`${this.$t("common.operation-successful")}`);
     } catch (error) {
-      this.app.error(`${this.$t("common.operation-error")}`);
+      this.app.error(error);
     }
   }
 

@@ -242,7 +242,7 @@ export default class AutomaticEtlProcessDialog extends Vue {
       this.$emit("submitted", etlProcess);
       this.resetForm();
     } catch (error) {
-      this.app.error(`${this.$t("common.saving.failure")}`);
+      this.app.error(error);
     } finally {
       this.isSubmitting = false;
     }

@@ -187,7 +187,7 @@ export default class EditComponentView extends Vue {
       this.app.success(`${this.$t("common.saving.success")}`);
     } catch (e) {
       console.error(e);
-      this.app.error(`${this.$t("common.saving.failure")}: ${e.message}`);
+      this.app.error(e);
     } finally {
       this.updateData = false;
     }

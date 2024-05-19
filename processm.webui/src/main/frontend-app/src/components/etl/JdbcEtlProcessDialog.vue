@@ -253,7 +253,7 @@ export default class JdbcEtlProcessDialog extends Vue {
       this.resetForm();
     } catch (error) {
       console.log(error);
-      this.app.error(`${this.$t("common.saving.failure")}`);
+      this.app.error(error);
     } finally {
       this.isSubmitting = false;
     }
