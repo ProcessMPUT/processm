@@ -21,17 +21,7 @@
       </v-tooltip>
       <v-tooltip bottom :open-delay="tooltipOpenDelay">
         <template v-slot:activator="{ on, attrs }">
-          <v-btn
-            fab
-            small
-            depressed
-            :disabled="componentsWithLayoutsToBeUpdated.size == 0"
-            color="primary"
-            class="ma-1"
-            @click="saveLayout"
-            v-bind="attrs"
-            v-on="on"
-          >
+          <v-btn fab small depressed :disabled="!dirtyLayout" color="primary" class="ma-1" @click="saveLayout" v-bind="attrs" v-on="on">
             <v-icon>save</v-icon>
           </v-btn>
         </template>
@@ -151,7 +141,7 @@ export default class WorkspaceArea extends Vue {
   readonly defaultComponentWidth = 4;
   readonly defaultComponentHeight = 4;
   readonly tooltipOpenDelay = 200;
-  readonly componentsWithLayoutsToBeUpdated = new Set<string>();
+  dirtyLayout = false;
   unlocked = false;
   displayViewModal = false;
   displayEditModal = false;
@@ -233,17 +223,34 @@ export default class WorkspaceArea extends Vue {
     this.componentsDetails.set(componentData.id, componentData);
     this.closeModals();
     this.$children.find((v, _) => v.$data?.component?.id == componentData.id)?.$forceUpdate();
+    // saveLayout in cast that was a new component and thus it modified the layout
+    this.saveLayout();
   }
 
   async saveLayout() {
     const updatedLayoutElements = {} as Record<string, LayoutElement>;
-    this.componentsWithLayoutsToBeUpdated.forEach((componentId) => {
-      const component = this.componentsDetails.get(componentId);
-
-      if (component?.layout !== undefined) updatedLayoutElements[componentId] = component.layout;
+    this.layout.forEach((layoutElement) => {
+      const component = this.componentsDetails.get(layoutElement.i);
+      if (component === undefined) return;
+      // skip components whose layout did not change
+      if (
+        component.layout?.x === layoutElement.x &&
+        component.layout?.y === layoutElement.y &&
+        component.layout?.width === layoutElement.w &&
+        component.layout?.height === layoutElement.h
+      )
+        return;
+      const layout = {
+        x: layoutElement.x,
+        y: layoutElement.y,
+        width: layoutElement.w,
+        height: layoutElement.h
+      };
+      updatedLayoutElements[layoutElement.i] = layout;
+      component.layout = layout;
     });
-
-    if (await this.workspaceService.updateLayout(this.workspaceId, updatedLayoutElements)) this.componentsWithLayoutsToBeUpdated.clear();
+    await this.workspaceService.updateLayout(this.workspaceId, updatedLayoutElements);
+    this.dirtyLayout = false;
   }
 
   closeModals() {
@@ -252,11 +259,15 @@ export default class WorkspaceArea extends Vue {
   }
 
   updateComponentPosition(id: string, x: number, y: number) {
-    this.updateComponentLayout(id, { x, y });
+    // the update itself is already reflected in this.layout
+    // this function is only called for the components moved by the user
+    // and not for the components displaced by the movement of other components
+    this.dirtyLayout = true;
   }
 
   updateComponentSize(id: string, height: number, width: number) {
-    this.updateComponentLayout(id, { height, width });
+    // comments in updateComponentPosition apply
+    this.dirtyLayout = true;
   }
 
   async initializeEmptyComponent(componentId: string, componentType: ComponentType) {
@@ -284,22 +295,6 @@ export default class WorkspaceArea extends Vue {
     } else {
       await this.fullRefresh();
     }
-  }
-
-  private updateComponentLayout(id: string, layout: Partial<LayoutElement>) {
-    const component = this.componentsDetails.get(id);
-
-    if (component === undefined) return;
-
-    const componentLayout = component.layout ?? new LayoutElement({});
-
-    if (layout.x != null) componentLayout.x = layout.x;
-    if (layout.y != null) componentLayout.y = layout.y;
-    if (layout.width != null) componentLayout.width = layout.width;
-    if (layout.height != null) componentLayout.height = layout.height;
-
-    component.layout = componentLayout;
-    this.componentsWithLayoutsToBeUpdated.add(id);
   }
 }
 </script>
