@@ -32,7 +32,7 @@ class AlignerKPIServiceTests {
     companion object {
 
         val dataStore = UUID.fromString(DBTestHelper.dbName)
-        val persistenceProvider = DurablePersistenceProvider(DBTestHelper.dbName)
+        lateinit var persistenceProvider: DurablePersistenceProvider
         val logUUID = DBTestHelper.JournalReviewExtra
         val artemis = Artemis()
         val wctObserver = TopicObserver(
@@ -45,6 +45,8 @@ class AlignerKPIServiceTests {
         @JvmStatic
         @BeforeAll
         fun setUp() {
+            persistenceProvider = DurablePersistenceProvider(DBTestHelper.dbName)
+
             perfectCNetId = createPerfectCNet()
             mainstreamCNetId = createMainstreamCNet()
 
@@ -223,6 +225,12 @@ class AlignerKPIServiceTests {
         wctObserver.reset()
     }
 
+    /**
+     * Creates a workspace component and triggers a JMS event about creation.
+     *
+     * Remark: Make sure to call this function after starting the first instance of [AlignerKPIService] to guarantee
+     * that durable JMS topic consumer was registered before sending the first message.
+     */
     fun createComponent(_query: String, _modelId: Long): UUID {
         val component = transactionMain {
             WorkspaceComponent.new {
@@ -250,15 +258,16 @@ class AlignerKPIServiceTests {
 
     @Test
     fun `create KPI component based on the perfect model then run service`() {
-        createComponent(
-            "select l:*, t:*, e:name, max(e:timestamp)-min(e:timestamp) where l:id=$logUUID group by e:name, e:instance",
-            perfectCNetId
-        )
         val alignerKpiService = AlignerKPIService()
         try {
             alignerKpiService.register()
             alignerKpiService.start()
             assertEquals(ServiceStatus.Started, alignerKpiService.status)
+
+            createComponent(
+                "select l:*, t:*, e:name, max(e:timestamp)-min(e:timestamp) where l:id=$logUUID group by e:name, e:instance",
+                perfectCNetId
+            )
 
             wctObserver.waitForMessage()
         } finally {
@@ -388,12 +397,13 @@ class AlignerKPIServiceTests {
 
     @Test
     fun `create invalid KPI`() {
-        createComponent("just invalid query", mainstreamCNetId)
         val alignerKpiService = AlignerKPIService()
         try {
             alignerKpiService.register()
             alignerKpiService.start()
             assertEquals(ServiceStatus.Started, alignerKpiService.status)
+
+            createComponent("just invalid query", mainstreamCNetId)
 
             wctObserver.waitForMessage()
         } finally {
@@ -414,12 +424,13 @@ class AlignerKPIServiceTests {
 
     @Test
     fun `create invalid KPI then fix it`() {
-        createComponent("just invalid query", mainstreamCNetId)
         val alignerKpiService = AlignerKPIService()
         try {
             alignerKpiService.register()
             alignerKpiService.start()
             assertEquals(ServiceStatus.Started, alignerKpiService.status)
+
+            createComponent("just invalid query", mainstreamCNetId)
 
             wctObserver.waitForMessage()
 
