@@ -1,6 +1,7 @@
 package processm.etl.discovery
 
 import processm.helpers.mapToSet
+import schemacrawler.inclusionrule.RegularExpressionExclusionRule
 import schemacrawler.inclusionrule.RegularExpressionInclusionRule
 import schemacrawler.schema.Table
 import schemacrawler.schema.View
@@ -15,6 +16,7 @@ class SchemaCrawlerExplorer(private val connection: Connection, schema: String? 
     init {
         val limitOptionsBuilder: LimitOptionsBuilder = LimitOptionsBuilder.builder()
             .includeSchemas(RegularExpressionInclusionRule(schema))
+            .includeSchemas(RegularExpressionExclusionRule("_timescaledb_.*"))
         val loadOptionsBuilder: LoadOptionsBuilder = LoadOptionsBuilder.builder()
             .withSchemaInfoLevel(SchemaInfoLevelBuilder.standard())
 
@@ -26,8 +28,7 @@ class SchemaCrawlerExplorer(private val connection: Connection, schema: String? 
     override fun getClasses(): Set<Class> {
         val catalog = SchemaCrawlerUtility.getCatalog(connection, options)
 
-        return catalog.schemas
-            .flatMap { catalog.getTables(it) }
+        return catalog.tables
             .filter { it !is View }
             .mapToSet { it.convertToClass() }
     }
@@ -42,7 +43,12 @@ class SchemaCrawlerExplorer(private val connection: Connection, schema: String? 
                 it.importedForeignKeys.map {
                     val sourceColumn = it.columnReferences.first().foreignKeyColumn
                     val targetColumn = it.columnReferences.first().primaryKeyColumn
-                    Relationship(it.name, sourceColumn.parent.convertToClass(), targetColumn.parent.convertToClass(), sourceColumn.name)
+                    Relationship(
+                        it.name,
+                        sourceColumn.parent.convertToClass(),
+                        targetColumn.parent.convertToClass(),
+                        sourceColumn.name
+                    )
                 }
             }
     }
@@ -51,5 +57,6 @@ class SchemaCrawlerExplorer(private val connection: Connection, schema: String? 
         connection.close()
     }
 
-    private fun Table.convertToClass() = Class(this.name, this.columns.map {Attribute(it.name, it.columnDataType.name, it.isPartOfForeignKey) })
+    private fun Table.convertToClass() =
+        Class(this.name, this.columns.map { Attribute(it.name, it.columnDataType.name, it.isPartOfForeignKey) })
 }
