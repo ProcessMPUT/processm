@@ -6,7 +6,7 @@
 
 <script lang="ts">
 import Vue from "vue";
-import { Component, Inject, Prop } from "vue-property-decorator";
+import { Component, Inject, Prop, Watch } from "vue-property-decorator";
 import App from "@/App.vue";
 import LogsService from "@/services/LogsService";
 import { WorkspaceComponent } from "@/models/WorkspaceComponent";
@@ -38,7 +38,9 @@ export default class FlatLogViewComponent extends Vue {
 
   classifier: string = "concept:name";
 
-  async mounted() {
+  private async refresh() {
+    if (!this.data?.dataStore && !this.data?.query) return;
+
     this.loading = true;
 
     try {
@@ -63,6 +65,15 @@ export default class FlatLogViewComponent extends Vue {
     } finally {
       this.loading = false;
     }
+  }
+
+  async mounted() {
+    await this.refresh();
+  }
+
+  @Watch("data")
+  async update() {
+    await this.refresh();
   }
 }
 </script>

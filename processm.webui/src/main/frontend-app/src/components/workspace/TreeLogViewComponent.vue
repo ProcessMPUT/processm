@@ -42,7 +42,7 @@
 
 <script lang="ts">
 import Vue from "vue";
-import { Component, Inject, Prop } from "vue-property-decorator";
+import { Component, Inject, Prop, Watch } from "vue-property-decorator";
 import XesProcessor, { LogItem } from "@/utils/XesProcessor";
 import { WorkspaceComponent } from "@/models/WorkspaceComponent";
 import { ComponentMode } from "./WorkspaceComponent.vue";
@@ -70,7 +70,9 @@ export default class TreeLogViewComponent extends Vue {
 
   isLoadingData = false;
 
-  async mounted() {
+  private async refresh() {
+    if (!this.data?.dataStore && !this.data?.query) return;
+
     this.isLoadingData = true;
     try {
       if (!this.data?.dataStore) throw Error(this.$t("component.edit.validation.datastore-empty").toString());
@@ -92,6 +94,15 @@ export default class TreeLogViewComponent extends Vue {
     } finally {
       this.isLoadingData = false;
     }
+  }
+
+  async mounted() {
+    await this.refresh();
+  }
+
+  @Watch("data")
+  async update() {
+    await this.refresh();
   }
 }
 </script>
