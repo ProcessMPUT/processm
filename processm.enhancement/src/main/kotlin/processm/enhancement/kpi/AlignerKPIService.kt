@@ -26,7 +26,7 @@ import processm.core.models.petrinet.DBSerializer as PetriNetDBSerializer
 class AlignerKPIService : AbstractJobService(
     QUARTZ_CONFIG,
     WORKSPACE_COMPONENTS_TOPIC,
-    "$WORKSPACE_COMPONENT_EVENT = '$DATA_CHANGE' AND $WORKSPACE_COMPONENT_EVENT_DATA = '$DATA_CHANGE_MODEL'"
+    "($WORKSPACE_COMPONENT_EVENT = '$DATA_CHANGE' AND $WORKSPACE_COMPONENT_EVENT_DATA = '$DATA_CHANGE_MODEL') OR $WORKSPACE_COMPONENT_EVENT = '$DELETE'",
 ) {
     companion object {
 
@@ -51,27 +51,45 @@ class AlignerKPIService : AbstractJobService(
         val event = message.getStringProperty(WORKSPACE_COMPONENT_EVENT)
         val eventData = message.getStringProperty(WORKSPACE_COMPONENT_EVENT_DATA)
 
-        require(event == DATA_CHANGE)
-        require(eventData == DATA_CHANGE_MODEL)
-        // TODO: listen to delete messagaes to remove reports
+        when (event) {
+            DATA_CHANGE -> {
+                require(eventData == DATA_CHANGE_MODEL)
+                return listOf(createComputeJob(id.toUUID()!!))
+            }
 
-        return listOf(createJob(id.toUUID()!!))
+            DELETE -> {
+                return listOf(createDeleteJob(id.toUUID()!!))
+            }
+
+            else -> throw IllegalArgumentException("Unrecognized event: $event")
+        }
     }
 
-    private fun createJob(id: UUID): Pair<JobDetail, Trigger> =
-        loggedScope {
-            val job = JobBuilder
-                .newJob(AlignerKPIJob::class.java)
-                .usingJobData(COMPONENT_ID, id.toString())
-                .build()
-            val trigger = TriggerBuilder
-                .newTrigger()
-                .startNow()
-                .build()
+    private fun createComputeJob(id: UUID): Pair<JobDetail, Trigger> = loggedScope {
+        val job = JobBuilder
+            .newJob(AlignerKPIJob::class.java)
+            .usingJobData(COMPONENT_ID, id.toString())
+            .build()
+        val trigger = TriggerBuilder
+            .newTrigger()
+            .startNow()
+            .build()
 
-            return job to trigger
-        }
+        return job to trigger
+    }
 
+    private fun createDeleteJob(id: UUID): Pair<JobDetail, Trigger> = loggedScope {
+        val job = JobBuilder
+            .newJob(DeleteJob::class.java)
+            .usingJobData(COMPONENT_ID, id.toString())
+            .build()
+        val trigger = TriggerBuilder
+            .newTrigger()
+            .startNow()
+            .build()
+
+        return job to trigger
+    }
 
     class AlignerKPIJob : ServiceJob {
         override fun execute(context: JobExecutionContext?) = loggedScope { logger ->
@@ -140,6 +158,43 @@ class AlignerKPIService : AbstractJobService(
             )
 
             else -> TODO("Retrieval of model type $modelType is not implemented.")
+        }
+    }
+
+    class DeleteJob : ServiceJob {
+        override fun execute(context: JobExecutionContext?) = loggedScope { logger ->
+            val ctx = requireNotNull(context)
+            val componentId = requireNotNull((ctx.mergedJobDataMap[COMPONENT_ID] as String).toUUID())
+
+            transactionMain {
+                val component = WorkspaceComponent.findById(componentId)
+                if (component === null) {
+                    logger.error("Component with id $id is not found.")
+                    return@transactionMain
+                }
+
+                val dataObject = checkNotNull(component.dataAsJsonObject()).toMutableMap()
+                val reportIds = dataObject.values.map { it.asComponentData().alignmentKPIId }
+
+                try {
+                    DurablePersistenceProvider(component.dataStoreId.toString()).use {
+                        for (id in reportIds) {
+                            if (id.isBlank())
+                                continue
+                            it.delete(URI(id))
+                        }
+                    }
+                } catch (exception: Exception) {
+                    logger.error("Error deleting alignment-based KPI for component $componentId", exception)
+                    component.lastError = exception.message
+
+                    component.afterCommit {
+                        this as WorkspaceComponent
+                        triggerEvent(producer, event = DATA_CHANGE, eventData = DATA_CHANGE_LAST_ERROR)
+                    }
+                }
+
+            }
         }
     }
 }

@@ -280,7 +280,7 @@ class AlignerKPIServiceTests {
             }.first()
 
             val report =
-                persistenceProvider.get<Report>(URI(component.mostRecentData()!!.asComponentData()!!.alignmentKPIId))
+                persistenceProvider.get<Report>(URI(component.mostRecentData()!!.asComponentData().alignmentKPIId))
             assertEquals(1, report.logKPI.size)
             assertEquals(6, report.traceKPI.size)
             assertEquals(20.0, report.traceKPI[COST_TOTAL]!!.median)
@@ -348,7 +348,7 @@ class AlignerKPIServiceTests {
             }.first()
 
             val report =
-                persistenceProvider.get<Report>(URI(component.mostRecentData()!!.asComponentData()!!.alignmentKPIId))
+                persistenceProvider.get<Report>(URI(component.mostRecentData()!!.asComponentData().alignmentKPIId))
             assertEquals(1, report.logKPI.size)
             assertEquals(6, report.traceKPI.size)
             assertEquals(20.0, report.traceKPI[COST_TOTAL]!!.median)
@@ -415,7 +415,7 @@ class AlignerKPIServiceTests {
                 (WorkspaceComponents.name eq "test-aligner-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
             }.first()
 
-            assertEquals("", component.mostRecentData()!!.asComponentData()!!.alignmentKPIId)
+            assertEquals("", component.mostRecentData()!!.asComponentData().alignmentKPIId)
             assertNull(component.dataLastModified)
             assertNotNull(component.lastError)
             assertTrue("Line 1 position 0: mismatched input 'just'" in component.lastError!!, component.lastError)
@@ -461,7 +461,7 @@ class AlignerKPIServiceTests {
             }.first()
 
             val report =
-                persistenceProvider.get<Report>(URI(component.mostRecentData()!!.asComponentData()!!.alignmentKPIId))
+                persistenceProvider.get<Report>(URI(component.mostRecentData()!!.asComponentData().alignmentKPIId))
             assertEquals(2, report.logKPI.size)
             assertEquals(5, report.traceKPI.size)
             assertEquals(1, report.eventKPI.size)
@@ -472,6 +472,52 @@ class AlignerKPIServiceTests {
             assertEquals(1, kpi.raw.size)
             assertNotNull(component.dataLastModified)
             assertNull(component.lastError)
+        }
+    }
+
+    @Test
+    fun `delete existing KPI report on component removal`() {
+        val alignerKpiService = AlignerKPIService()
+        try {
+            alignerKpiService.register()
+            alignerKpiService.start()
+            assertEquals(ServiceStatus.Started, alignerKpiService.status)
+
+            val componentId = createComponent(
+                "select l:*, t:*, e:name, max(e:timestamp)-min(e:timestamp) where l:id=$logUUID group by e:name, e:instance",
+                mainstreamCNetId
+            )
+
+            wctObserver.waitForMessage()
+
+            transactionMain {
+                WorkspaceComponent.findById(componentId)!!.apply {
+                    deleted = true
+                    triggerEvent(Producer(), DELETE)
+                }
+            }
+
+            transactionMain {
+                val data = WorkspaceComponent.findById(componentId)!!.dataAsJsonObject()!!
+                assertEquals(1, data.size)
+                val componentData = data.values.first().asComponentData()
+                assertNotEquals("", componentData.alignmentKPIId)
+
+                for (attempt in 1..10) {
+                    val result = runCatching {
+                        persistenceProvider.get<Report>(URI(componentData.alignmentKPIId))
+                    }
+                    if (result.isFailure) {
+                        assertIs<IllegalArgumentException>(result.exceptionOrNull())
+                        break
+                    }
+
+                    Thread.sleep(50L)
+                }
+            }
+
+        } finally {
+            alignerKpiService.stop()
         }
     }
 }
