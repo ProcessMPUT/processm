@@ -108,10 +108,11 @@ class EnterpriseServiceBusTest {
 
         val jmxServer = ManagementFactory.getPlatformMBeanServer()
         for (s in ts) {
-            val name = jmxServer.getAttribute(ObjectName("processm:0=services,name=${s.name}"), "Name")
+            val name = jmxServer.getAttribute(ObjectName("${esb.jmxDomain}:0=services,name=${s.name}"), "Name")
             assertEquals(s.name, name)
 
-            val status = jmxServer.getAttribute(ObjectName("processm:0=services,name=${s.name}"), "Status") as String
+            val status =
+                jmxServer.getAttribute(ObjectName("${esb.jmxDomain}:0=services,name=${s.name}"), "Status") as String
             assertEquals(s.status, ServiceStatus.valueOf(status))
         }
     }
@@ -122,7 +123,7 @@ class EnterpriseServiceBusTest {
         esb.register(service)
 
         val jmxServer = ManagementFactory.getPlatformMBeanServer()
-        val mbean = jmxServer.getMBeanInfo(ObjectName("processm:0=services,name=${service.name}"))
+        val mbean = jmxServer.getMBeanInfo(ObjectName("${esb.jmxDomain}:0=services,name=${service.name}"))
 
         assertTrue(mbean.attributes.any { it.name == CustomMXBean::myCustomField.name.capitalize() })
     }

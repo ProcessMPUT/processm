@@ -39,7 +39,7 @@ class EnterpriseServiceBus : Closeable {
     /**
      * The JMX for this instance of [EnterpriseServiceBus].
      */
-    private val jmxDomain = getJMXDomain()
+    val jmxDomain = getJMXDomain()
 
     /**
      * List of all registered services. Uniqueness is ensured.
