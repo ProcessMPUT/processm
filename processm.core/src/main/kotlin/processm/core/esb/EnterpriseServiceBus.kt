@@ -19,7 +19,7 @@ class EnterpriseServiceBus : Closeable {
         private val instanceId = AtomicInteger(0)
         private const val jmxDomain = "processm"
         private fun getJMXDomain(): String =
-            jmxDomain + instanceId.getAndIncrement().let { if (it == 0) "" else "-it" }
+            jmxDomain + instanceId.getAndIncrement().let { if (it == 0) "" else "-$it" }
 
         internal fun computeDependencyGraph(services: Collection<Service>): DefaultDirectedGraph<Service, Int> {
             val graph = DefaultDirectedGraph<Service, Int>(Int::class.java)
