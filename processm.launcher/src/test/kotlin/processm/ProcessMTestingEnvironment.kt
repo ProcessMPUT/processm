@@ -36,8 +36,8 @@ import java.io.File
 import java.nio.file.Files
 import java.util.*
 import java.util.concurrent.ForkJoinPool
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipInputStream
-import kotlin.random.Random
 import kotlin.reflect.full.findAnnotation
 import kotlin.test.assertEquals
 
@@ -99,6 +99,17 @@ class ProcessMTestingEnvironment {
             val password = sharedDbContainer.password
             return "jdbc:postgresql://$ip:$port/$dbName?loggerLevel=OFF&user=$user&password=$password"
         }
+
+        private const val PORT_MIN = 7000
+        private const val PORT_MAX = 65535
+        private val lastPort = AtomicInteger(PORT_MIN)
+        private fun getHttpPort(): Int = lastPort.accumulateAndGet(1) { prev, add ->
+            val candidate = prev + add
+            if (candidate < PORT_MAX)
+                candidate
+            else
+                candidate - (PORT_MAX - PORT_MIN)
+        }
     }
 
     private val sakilaEnv = lazy { PostgreSQLEnvironment.getSakila() }
@@ -142,7 +153,7 @@ class ProcessMTestingEnvironment {
                 System.setProperty(DatabaseChecker.databaseConnectionURLProperty, jdbcUrl)
                 Migrator.reloadConfiguration()
             }
-            httpPort = Random.Default.nextInt(1025, 65535)
+            httpPort = getHttpPort()
             System.setProperty("ktor.deployment.port", httpPort.toString())
             EnterpriseServiceBus().use { esb ->
                 esb.autoRegister()
