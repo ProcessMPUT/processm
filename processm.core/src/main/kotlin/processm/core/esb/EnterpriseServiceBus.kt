@@ -7,6 +7,7 @@ import processm.logging.loggedScope
 import java.io.Closeable
 import java.lang.management.ManagementFactory
 import java.util.*
+import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
 import kotlin.concurrent.thread
 
@@ -15,7 +16,10 @@ import kotlin.concurrent.thread
  */
 class EnterpriseServiceBus : Closeable {
     companion object {
+        private val instanceId = AtomicInteger(0)
         private const val jmxDomain = "processm"
+        private fun getJMXDomain(): String =
+            jmxDomain + instanceId.getAndIncrement().let { if (it == 0) "" else "-it" }
 
         internal fun computeDependencyGraph(services: Collection<Service>): DefaultDirectedGraph<Service, Int> {
             val graph = DefaultDirectedGraph<Service, Int>(Int::class.java)
@@ -31,6 +35,11 @@ class EnterpriseServiceBus : Closeable {
         }
 
     }
+
+    /**
+     * The JMX for this instance of [EnterpriseServiceBus].
+     */
+    private val jmxDomain = getJMXDomain()
 
     /**
      * List of all registered services. Uniqueness is ensured.
