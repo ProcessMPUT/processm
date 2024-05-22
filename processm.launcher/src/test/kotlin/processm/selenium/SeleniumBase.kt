@@ -17,6 +17,7 @@ import processm.core.loadConfiguration
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DatabaseChecker
 import java.time.Duration
+import java.util.concurrent.Semaphore
 import kotlin.random.Random
 import kotlin.test.assertNotNull
 
@@ -244,6 +245,7 @@ abstract class SeleniumBase(
             System.setProperty("ktor.deployment.port", httpPort.toString())
 
             esb = EnterpriseServiceBus()
+            val mutex = Semaphore(0)
             backendThread = object : Thread() {
                 override fun run() {
                     loadConfiguration(true)
@@ -256,10 +258,11 @@ abstract class SeleniumBase(
                         autoRegister()
                         startAll()
                     }
+                    mutex.release()
                 }
             }
             backendThread.start()
-            Thread.sleep(10000)
+            mutex.acquire()
         }
     }
 
