@@ -28,6 +28,7 @@ import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DatabaseChecker
 import processm.etl.PostgreSQLEnvironment
 import processm.etl.metamodel.MetaModelDebeziumWatchingService.Companion.DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY
+import processm.helpers.AtomicIntegerSequence
 import processm.services.JsonSerializer
 import processm.services.api.Paths
 import processm.services.api.models.*
@@ -36,7 +37,6 @@ import java.io.File
 import java.nio.file.Files
 import java.util.*
 import java.util.concurrent.ForkJoinPool
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipInputStream
 import kotlin.reflect.full.findAnnotation
 import kotlin.test.assertEquals
@@ -100,16 +100,7 @@ class ProcessMTestingEnvironment {
             return "jdbc:postgresql://$ip:$port/$dbName?loggerLevel=OFF&user=$user&password=$password"
         }
 
-        private const val PORT_MIN = 7000
-        private const val PORT_MAX = 65535
-        private val lastPort = AtomicInteger(PORT_MIN)
-        private fun getHttpPort(): Int = lastPort.accumulateAndGet(1) { prev, add ->
-            val candidate = prev + add
-            if (candidate < PORT_MAX)
-                candidate
-            else
-                candidate - (PORT_MAX - PORT_MIN)
-        }
+        private val portSequence = AtomicIntegerSequence(9000, 9999, allowOverflow = true)
     }
 
     private val sakilaEnv = lazy { PostgreSQLEnvironment.getSakila() }
@@ -153,7 +144,7 @@ class ProcessMTestingEnvironment {
                 System.setProperty(DatabaseChecker.databaseConnectionURLProperty, jdbcUrl)
                 Migrator.reloadConfiguration()
             }
-            httpPort = getHttpPort()
+            httpPort = portSequence.next()
             System.setProperty("ktor.deployment.port", httpPort.toString())
             EnterpriseServiceBus().use { esb ->
                 esb.autoRegister()
