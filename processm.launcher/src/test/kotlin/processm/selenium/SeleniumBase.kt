@@ -57,7 +57,7 @@ abstract class SeleniumBase(
 ) : TestCaseAsAClass() {
 
     companion object {
-        private val portSequence = AtomicIntegerSequence(8000, 8999, allowOverflow = true)
+        private val portSequence = AtomicIntegerSequence(8100, 8999, allowOverflow = true)
     }
 
     /**
