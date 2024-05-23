@@ -9,16 +9,34 @@
 }
 </style>
 
+<style>
+.graph .g6-component-tooltip {
+  max-width: 50em;
+}
+
+.graph .g6-component-tooltip table {
+  margin: 0;
+  padding: 0;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.graph .g6-component-tooltip td {
+  padding: 0;
+}
+</style>
+
 <script lang="ts">
 import { Component, Prop, Vue, Watch } from "vue-property-decorator";
 import G6, { GraphData, IGroup } from "@antv/g6";
 import { EdgeConfig, NodeConfig } from "@antv/g6-core/lib/types";
 import { waitForRepaint } from "@/utils/waitForRepaint";
+import { AlignmentKPIReport, Distribution } from "@/openapi";
 
 @Component({})
 export default class Graph extends Vue {
   @Prop()
-  readonly data!: GraphData | CNetGraphData;
+  readonly data!: (GraphData | CNetGraphData) & AlignmentKPIHolder;
 
   @Prop({ default: (edge: EdgeConfig) => true })
   readonly filterEdge!: (edge: EdgeConfig) => boolean;
@@ -36,17 +54,82 @@ export default class Graph extends Vue {
   mounted() {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
+
+    const numberFormat = Intl.NumberFormat(self.$i18n.locale, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    const intFormat = Intl.NumberFormat(self.$i18n.locale, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    });
+    const dateFormat = Intl.DateTimeFormat(self.$i18n.locale);
+
     // wait until height of the component is calculated
     waitForRepaint(() => {
       // get the container size
       const container = this.$refs.graph as HTMLElement;
       if (container === undefined || self.data === undefined) return;
+      const tooltip = new G6.Tooltip({
+        offsetX: 10,
+        offsetY: 10,
+        itemTypes: ["node", "edge"],
+        getContent: (e) => {
+          const outDiv = document.createElement("div");
+          // TODO
+          const type = e?.item?.getType();
+          const model = e?.item?.getModel();
+          if (model === undefined || model.id === undefined) return outDiv;
+
+          const format = (kpi: string, d: Distribution): string => {
+            if (kpi == "time:timestamp") {
+              const f = (d: number) => dateFormat.format(new Date(d));
+              const days = d.standardDeviation! / 86400000;
+              return `${f(d.average!)} &pm; ${numberFormat.format(days)} ${self.$t("statistics.days")} [${f(d.min!)}, ${f(d.max!)}]`;
+            } else if (kpi == "urn:processm:statistics/count") {
+              return intFormat.format(d.median!);
+            } else {
+              const f = (d: number) => numberFormat.format(d);
+              const days = self.$t("statistics.days");
+              return `${f(d.average!)} ${days} &pm; ${f(d.standardDeviation!)} ${days} [${f(d.min!)} ${days}, ${f(d.max!)} ${days}]`;
+            }
+          };
+
+          switch (type) {
+            case "node":
+              outDiv.innerHTML = `<h4>${model.label}</h4>`;
+              if (self.data.alignmentKPIReport === undefined) break;
+
+              outDiv.innerHTML +=
+                "<table>" +
+                Object.entries(self.data.alignmentKPIReport.eventKPI)
+                  .map((kpi) => {
+                    const label = self.$te(`statistics.${kpi[0]}`) ? self.$t(`statistics.${kpi[0]}`) : kpi[0];
+                    const val = kpi[1][model.id!];
+                    console.log(JSON.stringify(val));
+                    if (val !== undefined) return `<tr><td>${label}:</td><td>${format(kpi[0], val)}</td></tr>`;
+                    else return "";
+                  })
+                  .join("") +
+                "</table>";
+              break;
+            case "edge":
+              outDiv.innerHTML = `<h4>${model.label}</h4>`;
+              break;
+          }
+          return outDiv;
+        }
+      });
       const graph = new G6.Graph({
         container: container, // String | HTMLElement, required, the id of DOM element or an HTML node
         width: container.offsetWidth, // Number, required, the width of the graph
         height: container.offsetHeight, // Number, required, the height of the graph
         fitView: true,
         fitCenter: true,
+        plugins: [tooltip],
+        modes: {
+          default: ["drag-node"]
+        },
         layout: {
           type: "comboCombined",
           preventOverlap: true,
@@ -332,5 +415,9 @@ export interface CNetGraphData extends GraphData {
 export interface CNetNodeConfig extends NodeConfig {
   joins: string[][];
   splits: string[][];
+}
+
+export interface AlignmentKPIHolder {
+  alignmentKPIReport?: AlignmentKPIReport;
 }
 </script>

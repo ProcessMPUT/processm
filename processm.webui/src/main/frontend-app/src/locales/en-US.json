@@ -399,5 +399,13 @@
     "security": "Security",
     "yes": "Yes",
     "no": "No"
+  },
+  "statistics": {
+    "urn:processm:statistics/count": "Count",
+    "urn:processm:statistics/lead_time": "Lead time",
+    "urn:processm:statistics/service_time": "Service time",
+    "urn:processm:statistics/suspension_time": "Suspension time",
+    "urn:processm:statistics/waiting_time": "Waiting time",
+    "days": "days"
   }
 }

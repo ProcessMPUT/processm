@@ -4,6 +4,7 @@ package processm.services
 
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -12,10 +13,12 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.*
 import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.overwriteWith
 import kotlinx.serialization.serializer
 import processm.dbmodels.models.ComponentTypeDto
 import processm.helpers.UUIDSerializer
 import processm.helpers.serialization.SerializersModuleProvider
+import processm.helpers.stats.Distribution
 import processm.services.api.models.BPMNComponentData
 import processm.services.api.models.CausalNetComponentData
 import processm.services.api.models.DirectlyFollowsGraphComponentData
@@ -36,7 +39,9 @@ val JsonSerializer = Json {
         contextual(Any::class, AnySerializer as KSerializer<Any>)
         contextual(LocalDateTime::class, LocalDateTimeSerializer)
         contextual(UUID::class, UUIDSerializer)
-    }
+    }.overwriteWith(SerializersModule {
+        contextual(Distribution::class, DistributionWebAPISerializer)
+    })
 }
 
 private object AnySerializer : KSerializer<Any?> {
@@ -99,6 +104,36 @@ private object LocalDateTimeSerializer : KSerializer<LocalDateTime> {
 
     override fun serialize(encoder: Encoder, value: LocalDateTime) {
         encoder.encodeString(value.toString())
+    }
+
+}
+
+private object DistributionWebAPISerializer : KSerializer<Distribution> {
+    override val descriptor: SerialDescriptor = buildClassSerialDescriptor("DistributionWebAPI") {
+        element("min", Double.serializer().descriptor)
+        element("Q1", Double.serializer().descriptor)
+        element("median", Double.serializer().descriptor)
+        element("Q3", Double.serializer().descriptor)
+        element("max", Double.serializer().descriptor)
+        element("average", Double.serializer().descriptor)
+        element("standardDeviation", Double.serializer().descriptor)
+    }
+
+    override fun deserialize(decoder: Decoder): Distribution {
+        throw UnsupportedOperationException()
+    }
+
+    override fun serialize(encoder: Encoder, value: Distribution) {
+        encoder as JsonEncoder
+        encoder.beginStructure(descriptor)
+        encoder.encodeDoubleElement(descriptor, 0, value.min)
+        encoder.encodeDoubleElement(descriptor, 1, value.Q1)
+        encoder.encodeDoubleElement(descriptor, 2, value.median)
+        encoder.encodeDoubleElement(descriptor, 3, value.Q3)
+        encoder.encodeDoubleElement(descriptor, 4, value.max)
+        encoder.encodeDoubleElement(descriptor, 5, value.average)
+        encoder.encodeDoubleElement(descriptor, 6, value.standardDeviation)
+        encoder.endStructure(descriptor)
     }
 
 }

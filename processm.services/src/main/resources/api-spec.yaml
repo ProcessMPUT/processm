@@ -2226,7 +2226,7 @@ components:
         average:
           type: number
           format: double
-        stddev:
+        standardDeviation:
           type: number
           format: double
     CausalNetComponentData:
