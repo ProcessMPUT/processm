@@ -16,7 +16,9 @@ import processm.core.esb.EnterpriseServiceBus
 import processm.core.loadConfiguration
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DatabaseChecker
+import processm.helpers.AtomicIntegerSequence
 import java.time.Duration
+import java.util.concurrent.Semaphore
 import kotlin.random.Random
 import kotlin.test.assertNotNull
 
@@ -53,6 +55,10 @@ abstract class SeleniumBase(
      */
     protected val language: String? = "en-US"
 ) : TestCaseAsAClass() {
+
+    companion object {
+        private val portSequence = AtomicIntegerSequence(8100, 8999, allowOverflow = true)
+    }
 
     /**
      * This variable will be initialized only if [useManuallyStartedServices] is set to false
@@ -240,10 +246,11 @@ abstract class SeleniumBase(
     private fun setupBackend() {
         if (useManuallyStartedServices) httpPort = 2080
         else {
-            httpPort = Random.Default.nextInt(1025, 65535)
+            httpPort = portSequence.next()
             System.setProperty("ktor.deployment.port", httpPort.toString())
 
             esb = EnterpriseServiceBus()
+            val mutex = Semaphore(0)
             backendThread = object : Thread() {
                 override fun run() {
                     loadConfiguration(true)
@@ -256,10 +263,11 @@ abstract class SeleniumBase(
                         autoRegister()
                         startAll()
                     }
+                    mutex.release()
                 }
             }
             backendThread.start()
-            Thread.sleep(10000)
+            mutex.acquire()
         }
     }
 
