@@ -2186,7 +2186,7 @@ components:
             data:
               $ref: '#/components/schemas/KpiComponentData'
     AlignmentKPIReport:
-      required: [ logKPI, traceKPI, eventKPI, alignments ]
+      required: [ logKPI, traceKPI, eventKPI, arcKPI, alignments ]
       properties:
         logKPI:
           type: object
@@ -2197,6 +2197,12 @@ components:
           additionalProperties:
             $ref: '#/components/schemas/Distribution'
         eventKPI:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              $ref: '#/components/schemas/Distribution'
+        arcKPI:
           type: object
           additionalProperties:
             type: object

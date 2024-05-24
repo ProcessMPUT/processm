@@ -24,6 +24,10 @@
 .graph .g6-component-tooltip td {
   padding: 0;
 }
+
+.graph .g6-component-tooltip td:first-child {
+  padding-right: 0.1em;
+}
 </style>
 
 <script lang="ts">
@@ -76,7 +80,6 @@ export default class Graph extends Vue {
         itemTypes: ["node", "edge"],
         getContent: (e) => {
           const outDiv = document.createElement("div");
-          // TODO
           const type = e?.item?.getType();
           const model = e?.item?.getModel();
           if (model === undefined || model.id === undefined) return outDiv;
@@ -103,10 +106,10 @@ export default class Graph extends Vue {
               outDiv.innerHTML +=
                 "<table>" +
                 Object.entries(self.data.alignmentKPIReport.eventKPI)
+                  .sort((kpi1, kpi2) => kpi1[0].localeCompare(kpi2[0]))
                   .map((kpi) => {
                     const label = self.$te(`statistics.${kpi[0]}`) ? self.$t(`statistics.${kpi[0]}`) : kpi[0];
                     const val = kpi[1][model.id!];
-                    console.log(JSON.stringify(val));
                     if (val !== undefined) return `<tr><td>${label}:</td><td>${format(kpi[0], val)}</td></tr>`;
                     else return "";
                   })
@@ -114,7 +117,22 @@ export default class Graph extends Vue {
                 "</table>";
               break;
             case "edge":
-              outDiv.innerHTML = `<h4>${model.label}</h4>`;
+              outDiv.innerHTML = `<h4>${self.data?.nodes?.find((n) => n.id == model.source)?.label} → ${
+                self.data?.nodes?.find((n) => n.id == model.target)?.label
+              }</h4>`;
+              if (self.data.alignmentKPIReport === undefined) break;
+
+              outDiv.innerHTML +=
+                "<table>" +
+                Object.entries(self.data.alignmentKPIReport.arcKPI)
+                  .sort((kpi1, kpi2) => kpi1[0].localeCompare(kpi2[0]))
+                  .map((kpi) => {
+                    const label = self.$te(`statistics.${kpi[0]}`) ? self.$t(`statistics.${kpi[0]}`) : kpi[0];
+                    const val = kpi[1][model.id!];
+                    if (val !== undefined) return `<tr><td>${label}</td><td>${format(kpi[0], val)}</td></tr>`;
+                  })
+                  .join("") +
+                "</table>";
               break;
           }
           return outDiv;
