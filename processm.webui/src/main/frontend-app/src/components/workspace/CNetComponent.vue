@@ -50,7 +50,7 @@ table td:last-child {
 <script lang="ts">
 import Vue from "vue";
 import { Component, Prop, Watch } from "vue-property-decorator";
-import Graph, { CNetGraphData } from "@/components/Graph.vue";
+import Graph, { AlignmentKPIHolder, CNetGraphData } from "@/components/Graph.vue";
 import { EdgeConfig } from "@antv/g6-core/lib/types";
 import { CNetComponentData, WorkspaceComponent as WorkspaceComponentModel } from "@/models/WorkspaceComponent";
 import { ComponentMode } from "@/components/workspace/WorkspaceComponent.vue";
@@ -68,9 +68,10 @@ import AlignmentsDialog from "@/components/AlignmentsDialog.vue";
 export default class CNetComponent extends Vue {
   @Prop({ default: {} })
   readonly data!: WorkspaceComponentModel & { data: CNetComponentData };
-  graphData: CNetGraphData = {
+  graphData: CNetGraphData & AlignmentKPIHolder = {
     nodes: [],
-    edges: []
+    edges: [],
+    alignmentKPIReport: undefined
   };
 
   @Prop({ default: null })
@@ -103,7 +104,8 @@ export default class CNetComponent extends Vue {
           target: edge.targetNodeId as string,
           support: edge.support
         };
-      })
+      }),
+      alignmentKPIReport: this.data.data.alignmentKPIReport
     };
     const supports = this.data.data.edges.map((edge) => edge.support as number).sort((a, b) => a - b);
     this.minSupport = Math.min(...supports);

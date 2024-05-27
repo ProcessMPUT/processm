@@ -6,7 +6,10 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.mapSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonEncoder
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
@@ -37,6 +40,7 @@ class ReportSerializersModuleProvider : SerializersModuleProvider {
             subclass(VirtualProcessTreeCausalArc::class)
             subclass(Arc::class)
         }
+        contextual(Distribution::class, Distribution.serializer())
     }
 }
 
@@ -47,7 +51,7 @@ class DoublingMap2DStringActivityDistributionSerializer : KSerializer<DoublingMa
             ContextualSerializer(String::class).descriptor,
             mapSerialDescriptor(
                 Activity::class.serializer().nullable.descriptor,
-                Distribution::class.serializer().descriptor
+                ContextualSerializer(Distribution::class).descriptor
             )
         )
 
@@ -59,7 +63,11 @@ class DoublingMap2DStringActivityDistributionSerializer : KSerializer<DoublingMa
         for ((row, entry) in root.jsonObject.entries) {
             for ((col, value) in entry.jsonObject.entries) {
                 val activity = if (col == "\u0000") null else DummyActivity(col)
-                map2d[row, activity] = decoder.json.decodeFromJsonElement(Distribution::class.serializer(), value)
+                map2d[row, activity] =
+                    decoder.json.decodeFromJsonElement(
+                        decoder.serializersModule.getContextual(Distribution::class)!!,
+                        value
+                    )
             }
         }
         return map2d
@@ -71,7 +79,13 @@ class DoublingMap2DStringActivityDistributionSerializer : KSerializer<DoublingMa
             for (row in value.rows) {
                 val rowObject = buildJsonObject {
                     for ((col, value) in value.getRow(row)) {
-                        put(col?.toString() ?: "\u0000", encoder.json.encodeToJsonElement(value))
+                        put(
+                            col?.toString() ?: "\u0000",
+                            encoder.json.encodeToJsonElement(
+                                encoder.serializersModule.getContextual(Distribution::class)!!,
+                                value
+                            )
+                        )
                     }
                 }
                 put(row, rowObject)
@@ -88,7 +102,7 @@ class DoublingMap2DStringCausalArcDistributionSerializer : KSerializer<DoublingM
             ContextualSerializer(String::class).descriptor,
             mapSerialDescriptor(
                 CausalArc::class.serializer().nullable.descriptor,
-                Distribution::class.serializer().descriptor
+                ContextualSerializer(Distribution::class).descriptor
             )
         )
 
@@ -101,7 +115,10 @@ class DoublingMap2DStringCausalArcDistributionSerializer : KSerializer<DoublingM
             for ((col, value) in entry.jsonObject.entries) {
                 val (source, target) = col.splitOnArrow()
                 map2d[row, Arc(DummyActivity(source), DummyActivity(target))] =
-                    decoder.json.decodeFromJsonElement(Distribution::class.serializer(), value)
+                    decoder.json.decodeFromJsonElement(
+                        decoder.serializersModule.getContextual(Distribution::class)!!,
+                        value
+                    )
             }
         }
         return map2d
@@ -114,7 +131,13 @@ class DoublingMap2DStringCausalArcDistributionSerializer : KSerializer<DoublingM
                 val rowObject = buildJsonObject {
                     for ((col, value) in value.getRow(row)) {
                         val arc = "${col.source.name.escapeArrow()}->${col.target.name.escapeArrow()}"
-                        put(arc, encoder.json.encodeToJsonElement(value))
+                        put(
+                            arc,
+                            encoder.json.encodeToJsonElement(
+                                encoder.serializersModule.getContextual(Distribution::class)!!,
+                                value
+                            )
+                        )
                     }
                 }
                 put(row, rowObject)

@@ -1,5 +1,6 @@
 package processm.services.api
 
+import com.auth0.jwt.exceptions.SignatureVerificationException
 import io.ktor.http.*
 import io.ktor.http.auth.*
 import io.ktor.server.application.*
@@ -56,7 +57,7 @@ fun Route.UsersApi() {
                     call.respond(HttpStatusCode.Created, AuthenticationResult(token))
                 }
 
-                call.request.authorization() !== null -> {
+                call.request.authorization() !== null -> try {
                     val authorizationHeader =
                         call.request.parseAuthorizationHeader() as? HttpAuthHeader.Single ?: throw ApiException(
                             ExceptionReason.InvalidTokenFormat
@@ -85,6 +86,9 @@ fun Route.UsersApi() {
 
                     logger.debug("A session token ${authorizationHeader.blob} has been successfully prolonged to $prolongedToken")
                     call.respond(HttpStatusCode.Created, AuthenticationResult(prolongedToken))
+                } catch (e: SignatureVerificationException) {
+                    logger.warn(e.message)
+                    call.respond(HttpStatusCode.Unauthorized)
                 }
 
                 else -> throw ApiException(ExceptionReason.CredentialsOrTokenRequired)
