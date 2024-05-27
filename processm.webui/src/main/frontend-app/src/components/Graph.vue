@@ -98,23 +98,24 @@ export default class Graph extends Vue {
             }
           };
 
+          const formatKPItable = (kpis: { [key: string]: { [key: string]: Distribution } }): string =>
+            "<table>" +
+            Object.entries(kpis)
+              .sort((kpi1, kpi2) => kpi1[0].localeCompare(kpi2[0]))
+              .map((kpi) => {
+                const label = self.$te(`statistics.${kpi[0]}`) ? self.$t(`statistics.${kpi[0]}`) : kpi[0];
+                const val = kpi[1][model.id!];
+                if (val !== undefined) return `<tr><td>${label}</td><td>${format(kpi[0], val)}</td></tr>`;
+              })
+              .join("") +
+            "</table>";
+
           switch (type) {
             case "node":
               outDiv.innerHTML = `<h4>${model.label}</h4>`;
               if (self.data.alignmentKPIReport === undefined) break;
 
-              outDiv.innerHTML +=
-                "<table>" +
-                Object.entries(self.data.alignmentKPIReport.eventKPI)
-                  .sort((kpi1, kpi2) => kpi1[0].localeCompare(kpi2[0]))
-                  .map((kpi) => {
-                    const label = self.$te(`statistics.${kpi[0]}`) ? self.$t(`statistics.${kpi[0]}`) : kpi[0];
-                    const val = kpi[1][model.id!];
-                    if (val !== undefined) return `<tr><td>${label}:</td><td>${format(kpi[0], val)}</td></tr>`;
-                    else return "";
-                  })
-                  .join("") +
-                "</table>";
+              outDiv.innerHTML += formatKPItable(self.data.alignmentKPIReport.eventKPI);
               break;
             case "edge":
               outDiv.innerHTML = `<h4>${self.data?.nodes?.find((n) => n.id == model.source)?.label} → ${
@@ -122,17 +123,7 @@ export default class Graph extends Vue {
               }</h4>`;
               if (self.data.alignmentKPIReport === undefined) break;
 
-              outDiv.innerHTML +=
-                "<table>" +
-                Object.entries(self.data.alignmentKPIReport.arcKPI)
-                  .sort((kpi1, kpi2) => kpi1[0].localeCompare(kpi2[0]))
-                  .map((kpi) => {
-                    const label = self.$te(`statistics.${kpi[0]}`) ? self.$t(`statistics.${kpi[0]}`) : kpi[0];
-                    const val = kpi[1][model.id!];
-                    if (val !== undefined) return `<tr><td>${label}</td><td>${format(kpi[0], val)}</td></tr>`;
-                  })
-                  .join("") +
-                "</table>";
+              outDiv.innerHTML += formatKPItable(self.data.alignmentKPIReport.arcKPI);
               break;
           }
           return outDiv;
