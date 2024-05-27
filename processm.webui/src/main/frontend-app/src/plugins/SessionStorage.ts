@@ -58,7 +58,7 @@ class SessionStorage {
   }
 
   static get currentOrganizationIndex(): number {
-    return this.session.get(this.CurrentOrganizationIndexKey);
+    return this.session.get(this.CurrentOrganizationIndexKey) ?? -1;
   }
 
   static set currentOrganizationIndex(organizationIndex: number) {
