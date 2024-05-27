@@ -130,7 +130,7 @@ private object DistributionWebAPISerializer : KSerializer<Distribution> {
         val average = decoder.decodeDoubleElement(descriptor, 5)
         val standardDeviation = decoder.decodeDoubleElement(descriptor, 6)
         decoder.endStructure(descriptor)
-        // FIXME: Distribution actually does not allow for setting individual aggregates and raw data is not available here.
+        // FIXME: #254 Distribution actually does not allow for setting individual aggregates and raw data is not available here.
         return Distribution(doubleArrayOf(min, Q1, median, Q3, max))
     }
 
