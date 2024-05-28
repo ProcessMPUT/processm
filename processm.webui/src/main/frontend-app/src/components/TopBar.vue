@@ -51,7 +51,7 @@
 </template>
 
 <script lang="ts">
-import Vue from "vue";
+import Vue, { watch } from "vue";
 import { Component, Inject } from "vue-property-decorator";
 import AccountService from "@/services/AccountService";
 import { UserRoleInOrganization } from "@/openapi";
@@ -67,6 +67,9 @@ export default class TopBar extends Vue {
 
   async created() {
     this.organizations = await this.accountService.getUserOrganizations();
+    watch(Vue.prototype.$sessionStorage.userOrganizationsRef, (newValue: UserRoleInOrganization[]) => {
+      this.organizations = newValue;
+    });
   }
 
   get username() {

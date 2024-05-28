@@ -211,7 +211,7 @@ class OrganizationsTest : SeleniumBase() {
         click(By.id("tab-organizations"))
         click { getTreeRow(privateOrg2)?.findElements(By.name("btn-remove"))?.firstOrNull() }
         click("btn-removal-dialog-submit")
-        assertNull(getEditableElement(privateOrg2))
+        wait.until { getEditableElement(privateOrg2) === null }
     }
 
 }
