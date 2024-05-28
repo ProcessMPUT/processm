@@ -172,7 +172,7 @@
           {{ $t("common.cancel") }}
         </v-btn>
 
-        <v-btn color="secondary" text @click.stop="testEtlProcess">
+        <v-btn :loading="isTesting" color="secondary" text @click.stop="testEtlProcess">
           {{ $t("common.test") }}
         </v-btn>
 
