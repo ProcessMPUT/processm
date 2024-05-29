@@ -46,7 +46,7 @@ class LogKPIServiceTests {
                 query = _query
                 workspace = Workspace.all().firstOrNull() ?: Workspace.new { name = "test-workspace" }
             }
-        }.triggerEvent(Producer())
+        }.triggerEvent(Producer(), WorkspaceComponentEventType.ComponentCreatedOrUpdated)
     }
 
     @AfterTest
@@ -154,7 +154,7 @@ class LogKPIServiceTests {
                 }.first()
                 component.query = "select count(^t:name) where l:name='JournalReview'"
                 component
-            }.triggerEvent(Producer())
+            }.triggerEvent(Producer(), WorkspaceComponentEventType.ComponentCreatedOrUpdated)
 
 
             Thread.sleep(1000L) // wait for calculation

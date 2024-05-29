@@ -108,7 +108,7 @@ class WorkspaceService(
             }.forEach { component ->
                 component.deleted = true
                 component.afterCommit {
-                    component.triggerEvent(producer, DELETE)
+                    component.triggerEvent(producer, WorkspaceComponentEventType.Delete)
                 }
             }
 
@@ -200,7 +200,7 @@ class WorkspaceService(
     ): Unit = transactionMain {
         WorkspaceComponent.findById(workspaceComponentId)
             .validateNotNull(ExceptionReason.WorkspaceComponentNotFound)
-            .apply { triggerEvent(producer, DELETE) }
+            .apply { triggerEvent(producer, WorkspaceComponentEventType.Delete) }
             .deleted = true
     }
 
@@ -242,7 +242,7 @@ class WorkspaceService(
             this.userLastModified = Instant.now()
 
             afterCommit {
-                triggerEvent(producer)
+                triggerEvent(producer, WorkspaceComponentEventType.ComponentCreatedOrUpdated)
             }
         }
     }
@@ -283,7 +283,7 @@ class WorkspaceService(
 
             if (trigger) {
                 afterCommit {
-                    triggerEvent(producer)
+                    triggerEvent(producer, WorkspaceComponentEventType.ComponentCreatedOrUpdated)
                 }
             }
         }

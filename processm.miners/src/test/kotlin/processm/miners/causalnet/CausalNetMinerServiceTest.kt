@@ -39,7 +39,7 @@ class CausalNetMinerServiceTest {
         private var service: CausalNetMinerService? = null
         private val wctObserver = TopicObserver(
             WORKSPACE_COMPONENTS_TOPIC,
-            "$WORKSPACE_COMPONENT_EVENT = '$DATA_CHANGE'"
+            "$WORKSPACE_COMPONENT_EVENT = '${WorkspaceComponentEventType.DataChange}'"
         )
 
         @BeforeAll
@@ -88,7 +88,7 @@ class CausalNetMinerServiceTest {
             query = "where l:id=${DBTestHelper.JournalReviewExtra}"
 
             afterCommit {
-                triggerEvent(producer)
+                triggerEvent(producer, WorkspaceComponentEventType.ComponentCreatedOrUpdated)
             }
         }
     }
@@ -96,7 +96,7 @@ class CausalNetMinerServiceTest {
     private fun deleteComponent(component: WorkspaceComponent) = transactionMain {
         component.deleted = true
         component.afterCommit {
-            component.triggerEvent(producer, DELETE)
+            component.triggerEvent(producer, WorkspaceComponentEventType.Delete)
         }
 
         component.workspace.deleted = true

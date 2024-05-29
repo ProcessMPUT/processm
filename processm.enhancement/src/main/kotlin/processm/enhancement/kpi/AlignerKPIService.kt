@@ -26,7 +26,7 @@ import processm.core.models.petrinet.DBSerializer as PetriNetDBSerializer
 class AlignerKPIService : AbstractJobService(
     QUARTZ_CONFIG,
     WORKSPACE_COMPONENTS_TOPIC,
-    "($WORKSPACE_COMPONENT_EVENT = '$DATA_CHANGE' AND $WORKSPACE_COMPONENT_EVENT_DATA = '$DATA_CHANGE_MODEL') OR $WORKSPACE_COMPONENT_EVENT = '$DELETE'",
+    "($WORKSPACE_COMPONENT_EVENT = '${WorkspaceComponentEventType.DataChange}' AND $WORKSPACE_COMPONENT_EVENT_DATA = '$DATA_CHANGE_MODEL') OR $WORKSPACE_COMPONENT_EVENT = '${WorkspaceComponentEventType.Delete}'",
 ) {
     companion object {
 
@@ -48,16 +48,16 @@ class AlignerKPIService : AbstractJobService(
         require(message is MapMessage) { "Unrecognized message $message." }
 
         val id = message.getString(WORKSPACE_COMPONENT_ID)
-        val event = message.getStringProperty(WORKSPACE_COMPONENT_EVENT)
+        val event = WorkspaceComponentEventType.valueOf(message.getStringProperty(WORKSPACE_COMPONENT_EVENT))
         val eventData = message.getStringProperty(WORKSPACE_COMPONENT_EVENT_DATA)
 
         when (event) {
-            DATA_CHANGE -> {
+            WorkspaceComponentEventType.DataChange -> {
                 require(eventData == DATA_CHANGE_MODEL)
                 return listOf(createComputeJob(id.toUUID()!!))
             }
 
-            DELETE -> {
+            WorkspaceComponentEventType.Delete -> {
                 return listOf(createDeleteJob(id.toUUID()!!))
             }
 
@@ -127,7 +127,11 @@ class AlignerKPIService : AbstractJobService(
 
                     component.afterCommit {
                         this as WorkspaceComponent
-                        triggerEvent(producer, event = DATA_CHANGE, eventData = DATA_CHANGE_ALIGNMENT_KPI)
+                        triggerEvent(
+                            producer,
+                            event = WorkspaceComponentEventType.DataChange,
+                            eventData = DATA_CHANGE_ALIGNMENT_KPI
+                        )
                     }
                 } catch (exception: Exception) {
                     logger.error("Error calculating alignment-based KPI for component $componentId", exception)
@@ -135,7 +139,11 @@ class AlignerKPIService : AbstractJobService(
 
                     component.afterCommit {
                         this as WorkspaceComponent
-                        triggerEvent(producer, event = DATA_CHANGE, eventData = DATA_CHANGE_LAST_ERROR)
+                        triggerEvent(
+                            producer,
+                            event = WorkspaceComponentEventType.DataChange,
+                            eventData = DATA_CHANGE_LAST_ERROR
+                        )
                     }
                 }
 
@@ -190,7 +198,11 @@ class AlignerKPIService : AbstractJobService(
 
                     component.afterCommit {
                         this as WorkspaceComponent
-                        triggerEvent(producer, event = DATA_CHANGE, eventData = DATA_CHANGE_LAST_ERROR)
+                        triggerEvent(
+                            producer,
+                            event = WorkspaceComponentEventType.DataChange,
+                            eventData = DATA_CHANGE_LAST_ERROR
+                        )
                     }
                 }
 

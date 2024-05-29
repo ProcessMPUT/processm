@@ -115,13 +115,13 @@ abstract class CalcJob<T : ProcessModel> : MinerJob<T> {
                 component.customizationData = updateCustomizationData(model, component.customizationData)
                 component.lastError = null
                 component.afterCommit {
-                    component.triggerEvent(producer, DATA_CHANGE, DATA_CHANGE_MODEL)
+                    component.triggerEvent(producer, WorkspaceComponentEventType.DataChange, DATA_CHANGE_MODEL)
                 }
             } catch (e: Exception) {
                 component.lastError = e.message
                 logger.warn("Cannot calculate model for component with id $id.", e)
                 component.afterCommit {
-                    component.triggerEvent(producer, DATA_CHANGE, DATA_CHANGE_LAST_ERROR)
+                    component.triggerEvent(producer, WorkspaceComponentEventType.DataChange, DATA_CHANGE_LAST_ERROR)
                 }
             }
 
@@ -192,13 +192,12 @@ abstract class AbstractMinerService(
         require(type == componentType) { "Expected $componentType, got $type." }
 
         val id = message.getString(WORKSPACE_COMPONENT_ID)
-        val event = message.getStringProperty(WORKSPACE_COMPONENT_EVENT)
+        val event = WorkspaceComponentEventType.valueOf(message.getStringProperty(WORKSPACE_COMPONENT_EVENT))
 
         return when (event) {
-            CREATE_OR_UPDATE -> listOf(createJob(id.toUUID()!!, calcJob))
-            DELETE -> listOf(createJob(id.toUUID()!!, deleteJob))
-            DATA_CHANGE -> emptyList() // ignore
-            else -> throw IllegalArgumentException("Unknown event type: $event.")
+            WorkspaceComponentEventType.ComponentCreatedOrUpdated -> listOf(createJob(id.toUUID()!!, calcJob))
+            WorkspaceComponentEventType.Delete -> listOf(createJob(id.toUUID()!!, deleteJob))
+            else -> emptyList() // ignore
         }
     }
 

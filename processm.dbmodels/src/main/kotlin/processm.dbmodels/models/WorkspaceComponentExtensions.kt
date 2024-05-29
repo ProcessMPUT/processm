@@ -14,15 +14,15 @@ private val WCEproducer = Producer()
  */
 fun WorkspaceComponent.triggerEvent(
     producer: Producer = WCEproducer,
-    event: String = CREATE_OR_UPDATE,
+    event: WorkspaceComponentEventType,
     eventData: String? = null
 ) {
     producer.produce(WORKSPACE_COMPONENTS_TOPIC) {
         setStringProperty(WORKSPACE_COMPONENT_TYPE, componentType.toString())
-        setStringProperty(WORKSPACE_COMPONENT_EVENT, event)
+        setStringProperty(WORKSPACE_COMPONENT_EVENT, event.toString())
         eventData?.let { setStringProperty(WORKSPACE_COMPONENT_EVENT_DATA, it) }
         setString(WORKSPACE_COMPONENT_ID, id.value.toString())
-        if (event == DATA_CHANGE) {
+        if (event == WorkspaceComponentEventType.DataChange) {
             setString(WORKSPACE_ID, workspace.id.toString())
         }
     }

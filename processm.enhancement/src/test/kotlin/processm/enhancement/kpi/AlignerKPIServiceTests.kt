@@ -37,7 +37,7 @@ class AlignerKPIServiceTests {
         val artemis = Artemis()
         val wctObserver = TopicObserver(
             topic = WORKSPACE_COMPONENTS_TOPIC,
-            filter = "$WORKSPACE_COMPONENT_EVENT = '$DATA_CHANGE' AND $WORKSPACE_COMPONENT_EVENT_DATA <> '$DATA_CHANGE_MODEL'"
+            filter = "$WORKSPACE_COMPONENT_EVENT = '${WorkspaceComponentEventType.DataChange}' AND $WORKSPACE_COMPONENT_EVENT_DATA <> '$DATA_CHANGE_MODEL'"
         )
         var perfectCNetId: Long = -1L
         var mainstreamCNetId: Long = -1L
@@ -243,7 +243,7 @@ class AlignerKPIServiceTests {
             }
         }
 
-        component.triggerEvent(Producer(), event = DATA_CHANGE, eventData = DATA_CHANGE_MODEL)
+        component.triggerEvent(Producer(), event = WorkspaceComponentEventType.DataChange, eventData = DATA_CHANGE_MODEL)
         return component.id.value
     }
 
@@ -444,7 +444,7 @@ class AlignerKPIServiceTests {
                     // simulate that miner actually ran
                     triggerEvent(
                         Producer(),
-                        event = DATA_CHANGE,
+                        event = WorkspaceComponentEventType.DataChange,
                         eventData = DATA_CHANGE_MODEL
                     )
                 }
@@ -493,7 +493,7 @@ class AlignerKPIServiceTests {
             transactionMain {
                 WorkspaceComponent.findById(componentId)!!.apply {
                     deleted = true
-                    triggerEvent(Producer(), DELETE)
+                    triggerEvent(Producer(), WorkspaceComponentEventType.Delete)
                 }
             }
 

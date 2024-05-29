@@ -32,14 +32,21 @@ const val WORKSPACE_COMPONENT_TYPE = "componentType"
 const val WORKSPACE_COMPONENT_EVENT = "event"
 const val WORKSPACE_COMPONENT_EVENT_DATA = "eventData"
 
-const val CREATE_OR_UPDATE = "create_or_update"
+enum class WorkspaceComponentEventType {
+    /**
+     * Event triggered when the system changed the component data.
+     */
+    DataChange,
+    Delete,
 
-const val DELETE = "delete"
+    ComponentCreatedOrUpdated,
+    NewExternalData,
+    NewAlignments,
+    ConceptDriftDetected,
+    ModelAccepted,
+    NewModel
+}
 
-/**
- * Event triggered when the system changed the component data.
- */
-const val DATA_CHANGE = "data_change"
 
 const val DATA_CHANGE_MODEL = "model"
 const val DATA_CHANGE_ALIGNMENT_KPI = "alignmentKPI"
@@ -65,6 +72,7 @@ object WorkspaceComponents : UUIDTable("workspace_components") {
      * Component-specific properties stored as a json map.
      */
     val properties = text("properties").nullable()
+
     /**
      * The id of the data store holding the underlying log data (the configuration parameter).
      */

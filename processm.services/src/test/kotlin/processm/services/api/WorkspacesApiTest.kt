@@ -640,7 +640,7 @@ class WorkspacesApiTest : BaseApiTest() {
                     repeat(5) {
                         delay(200L)
                         println("Producing")
-                        component.triggerEvent(Producer(), DATA_CHANGE)
+                        component.triggerEvent(Producer(), WorkspaceComponentEventType.DataChange)
                     }
                 }
                 runBlocking {
@@ -682,8 +682,8 @@ class WorkspacesApiTest : BaseApiTest() {
             withAuthentication {
                 launch(context = Dispatchers.Request) {
                     sync.receive()
-                    component1.triggerEvent(Producer(), DATA_CHANGE)
-                    component2.triggerEvent(Producer(), DATA_CHANGE)
+                    component1.triggerEvent(Producer(), WorkspaceComponentEventType.DataChange)
+                    component2.triggerEvent(Producer(), WorkspaceComponentEventType.DataChange)
                 }
                 runBlocking {
                     handleSse("/api/workspaces/${workspaceId2}") { channel ->
@@ -722,7 +722,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 }
                 runBlocking {
                     repeat(n) { sync.receive() }
-                    component.triggerEvent(Producer(), DATA_CHANGE)
+                    component.triggerEvent(Producer(), WorkspaceComponentEventType.DataChange)
                     jobs.forEach { it.join() }
                 }
             }
@@ -757,7 +757,7 @@ class WorkspacesApiTest : BaseApiTest() {
             }
             runBlocking {
                 repeat(n) { sync.receive() }
-                component.triggerEvent(Producer(), DATA_CHANGE)
+                component.triggerEvent(Producer(), WorkspaceComponentEventType.DataChange)
                 jobs.forEach { it.join() }
             }
         }
