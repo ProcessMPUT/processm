@@ -4,6 +4,8 @@ import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.MetadataHandler
 import processm.helpers.asList
 import java.util.*
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 /**
  * A read-only causal net model
@@ -109,23 +111,35 @@ abstract class CausalNet(
      */
     override val decisionPoints: Sequence<DecisionPoint>
         get() = splits.entries.asSequence().map { DecisionPoint(it.key, it.value, true) } +
-                joins.entries.asSequence().map { DecisionPoint(it.key, it.value, false, it.value.flatMapTo(mutableSetOf()) { join -> join.sources }) }
+                joins.entries.asSequence().map {
+                    DecisionPoint(
+                        it.key,
+                        it.value,
+                        false,
+                        it.value.flatMapTo(mutableSetOf()) { join -> join.sources })
+                }
 
     override val controlStructures: Sequence<DecisionPoint>
         get() = decisionPoints
 
+    @OptIn(ExperimentalContracts::class)
     private inline fun available(state: CausalNetState, callback: (node: Node, join: Join?, split: Split?) -> Unit) {
+        contract {
+            callsInPlace(callback)
+        }
+
         if (state.isNotEmpty()) {
-            val visitedNodes = HashSet<Node>(this._instances.size)
+            val visitedNodes = IdentityHashMap<Node, Unit?>(this._instances.size)
             for (dep in state.uniqueSet()) {
-                val node = dep.target
-                if (visitedNodes.add(node)) {
-                    for (join in _joins[node].orEmpty())
+                val node = dep.value.target
+                if (visitedNodes.put(node, Unit) === null) {
+                    for (join in _joins[node].orEmpty()) {
                         if (state.containsAll(join.dependencies)) {
                             val splits = if (node != end) _splits[node].orEmpty() else setOfNull
                             for (split in splits)
                                 callback(node, join, split)
                         }
+                    }
                 }
             }
         } else if (state.isFresh /*prevent execution of activities in the final state*/) {
@@ -138,11 +152,11 @@ abstract class CausalNet(
     @Deprecated("Use available() instead")
     fun available4(state: CausalNetState, node: Node): List<DecoupledNodeExecution> {
         if (state.isNotEmpty()) {
-            val relevant = state.uniqueSet().filterTo(HashSet()) { it.target == node }
+            val relevant = state.uniqueSet().mapNotNullTo(HashSet()) { if (it.value.target == node) it.value else null }
             val result = ArrayList<DecoupledNodeExecution>()
             for (join in joins[node].orEmpty())
                 if (relevant.containsAll(join.dependencies)) {
-                    val splits = if (node != end) splits[node].orEmpty() else setOf(null)
+                    val splits = if (node != end) splits[node].orEmpty() else setOfNull
                     for (split in splits)
                         result.add(DecoupledNodeExecution(node, join, split))
                 }
@@ -162,7 +176,7 @@ abstract class CausalNet(
         return if (state.isNotEmpty()) {
             val flatState = HashMap<Node, MutableSet<Dependency>>()
             for (dep in state.uniqueSet())
-                flatState.getOrPut(dep.target) { HashSet() }.add(dep)
+                flatState.getOrPut(dep.value.target) { HashSet() }.add(dep.value)
             val result = HashSet<Node>()
             for ((node, deps) in flatState)
                 if (joins[node]?.any { join -> deps.containsAll(join.dependencies) } == true)
@@ -207,7 +221,7 @@ abstract class CausalNet(
         }
 
         return state.uniqueSet().any { dep ->
-            val node = dep.target
+            val node = dep.value.target
             val join = checkNotNull(execution.join)
             val split = execution.split
             execution.activity == node &&

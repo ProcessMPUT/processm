@@ -45,7 +45,7 @@ class BasicReplayer(override val model: CausalNet) : Replayer {
                                 BindingDecision(ae.split, DecisionPoint(ae.activity, it, true))
                             }
                         )
-                        if (rest.containsAll(newState.uniqueSet().map { it.target }))
+                        if (rest.containsAll(newState.uniqueSet().map { it.value.target }))
                             queue.add(ExecutionState(newState, rest, decisionsSoFar + dec))
                     }
                 }

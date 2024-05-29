@@ -185,6 +185,11 @@
             <artifactId>jgrapht-core</artifactId>
             <version>1.5.1</version>
         </dependency>
+        <dependency>
+            <groupId>com.carrotsearch</groupId>
+            <artifactId>hppc</artifactId>
+            <version>0.9.1</version>
+        </dependency>
 
         <!-- WARNING: GPL 2.0 license; For testing purposes only. -->
         <dependency>

@@ -1,5 +1,6 @@
 package processm.conformance.models.alignments
 
+import com.carrotsearch.hppc.ObjectIntHashMap
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.CausalNetState
 import processm.core.models.commons.ProcessModelState
@@ -30,28 +31,33 @@ interface CountUnmatchedModelMoves {
  * [CountUnmatchedModelMoves] for [CausalNet]s
  */
 class CountUnmatchedCausalNetMoves(val model: CausalNet) : CountUnmatchedModelMoves {
+    private val minFutureExecutions = ThreadLocal.withInitial { ObjectIntHashMap<String>() }
+
     override fun compute(startIndex: Int, nEvents: List<Map<String?, Int>>, prevProcessState: ProcessModelState): Int {
         prevProcessState as CausalNetState
         val nEvents = nEvents[startIndex]
         // The maximum over the number of tokens on all incoming dependencies for an activity.
         // As each token must be consumed and a single execution may consume at most one token from the activity,
         // this is the same as the minimal number of pending executions for the activity.
-        val minFutureExecutions = java.util.HashMap<String, Int>()
-        for (e in prevProcessState.entrySet()) {
-            if (!e.element.target.isSilent)
-                minFutureExecutions.compute(e.element.target.activity) { _, old ->
-                    if (old != null && old > e.count) old else e.count
-                }
+        val minFutureExecutions = this.minFutureExecutions.get() // java.util.HashMap<String, Int>()
+        minFutureExecutions.clear()
+        for (e in prevProcessState) {
+            if (!e.key.target.isSilent) {
+                val old = minFutureExecutions.put(e.key.target.name, e.value)
+                if (old > e.value)
+                    minFutureExecutions.put(e.key.target.name, old)
+            }
         }
 
-        return minFutureExecutions
-            .entries
-            .sumOf { (activity, counter) ->
-                val e = nEvents[activity] ?: 0
-                (counter - e).coerceAtLeast(0)
-            }
+        var sum = 0
+        for (iter in minFutureExecutions.iterator()) {
+            val e = nEvents[iter.key] ?: 0
+            val diff = (iter.value - e)
+            if (diff > 0)
+                sum += diff
+        }
+        return sum
     }
-
 }
 
 /**
