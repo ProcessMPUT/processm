@@ -38,7 +38,7 @@ open class CausalNetStateWithJoins : CausalNetStateImpl {
         if (split != null) {
             val addedDeps = ArrayList<Dependency>()
             for (dep in split.dependencies) {
-                val oldCtr = this.add(dep, 1)
+                val oldCtr = this.addTo(dep, 1)
                 if (oldCtr == 0)
                     addedDeps.add(dep)
             }

@@ -37,15 +37,16 @@ class DefaultComputationStateComparatorPerformanceTest {
         private fun value(o: ComputationState): Array<Int> {
             val targets = Counter<Node>()
             for (n in o.trace.state)
-                targets.inc(n.target)
+                targets.inc(n.key.target)
             val nTargets = targets.keys.size
             for (i in o.nextNode until o.nodeTrace.size)
                 targets.dec(o.nodeTrace[i])
             val nMissing = -targets.values.sum()
-            val targets2 = o.trace.state.mapToSet { it.target }
+            val targets2 = o.trace.state.mapToSet { it.key.target }
             val nMissing2 =
                 (o.nodeTrace.subList(o.nextNode, o.nodeTrace.size).toSet() - targets).size
-            val values = intArrayOf(nMissing, nTargets, o.nextNode, o.trace.state.size, targets.values.sum(), nMissing2)
+            val values =
+                intArrayOf(nMissing, nTargets, o.nextNode, o.trace.state.size(), targets.values.sum(), nMissing2)
             return (order.map { values[it] } zip weights)
                 .map { (v, w) -> v * w }
                 .toTypedArray()

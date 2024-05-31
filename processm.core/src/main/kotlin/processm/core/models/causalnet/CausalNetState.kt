@@ -23,6 +23,8 @@ open class CausalNetStateImpl : ObjectIntHashMap<Dependency>, CausalNetState {
 
     constructor(stateBefore: CausalNetState) : super(stateBefore)
 
+    private var size: Int = 0
+
     override var isFresh: Boolean = true
         protected set
 
@@ -57,6 +59,10 @@ open class CausalNetStateImpl : ObjectIntHashMap<Dependency>, CausalNetState {
     override fun containsAll(other: CausalNetState): Boolean =
         this.size() >= other.size() && other.all { it.value <= getOrDefault(it.key, Int.MIN_VALUE) }
 
+    override fun addTo(key: Dependency?, incrementValue: Int): Int {
+        size += incrementValue
+        return super.addTo(key, incrementValue)
+    }
 
     fun addAll(collection: Collection<Dependency>) {
         for (item in collection) {
@@ -64,13 +70,20 @@ open class CausalNetStateImpl : ObjectIntHashMap<Dependency>, CausalNetState {
         }
     }
 
-    fun remove(item: Dependency, count: Int) {
+    fun remove(item: Dependency, count: Int): Int {
         val resCount = this.addTo(item, -count)
         if (resCount <= 0)
             this.remove(item)
+        return resCount + count
     }
 
     override fun uniqueSet(): ObjectLookupContainer<Dependency> = this.keys()
 
     override fun isNotEmpty(): Boolean = !this.isEmpty
+
+    override fun size(): Int {
+        assert(size >= super.size())
+        assert(size == values().sumOf { it.value })
+        return size
+    }
 }

@@ -3,10 +3,7 @@ package processm.miners.causalnet.onlineminer.replayer
 import com.google.common.collect.MinMaxPriorityQueue
 import org.apache.commons.math3.fraction.BigFraction
 import processm.core.models.causalnet.*
-import processm.helpers.Counter
-import processm.helpers.HashMapWithDefault
-import processm.helpers.HierarchicalIterable
-import processm.helpers.allSubsets
+import processm.helpers.*
 import processm.logging.debug
 import processm.logging.logger
 import processm.logging.trace
@@ -81,14 +78,15 @@ class SingleReplayer(
         val avail = context.remainder[current.node][currentNode] ?: 0
         //mustConsume contains dependencies that must be consumed here otherwise the resulting state will be a dead end
         val mustConsume = HashSet<Dependency>()
-        for (e in current.trace.state.entrySet()) {
-            if (e.element.target == currentNode && e.count > avail) {
-                mustConsume.add(e.element)
+        for (e in current.trace.state) {
+            if (e.key.target == currentNode && e.value > avail) {
+                mustConsume.add(e.key)
             }
         }
         if (mustConsume.isNotEmpty())
             logger.trace { "mustConsume $mustConsume" }
-        val allConsumable = current.trace.state.uniqueSet().intersect(context.model.incoming.getValue(currentNode))
+        val allConsumable = current.trace.state.uniqueSet().mapToSet { it.value }
+            .intersect(context.model.incoming.getValue(currentNode))
         val consumable = allConsumable - mustConsume
         for (mayConsume in consumable.allSubsets(excludeEmpty = mustConsume.isEmpty())) {
             val consume = mayConsume + mustConsume
@@ -138,9 +136,9 @@ class SingleReplayer(
             return emptySet<Dependency>()
         // Identify any relevant dependencies that would become full. They cannnot be produced jointly.
         val willBecomeFull = HashSet<Dependency>()
-        for (e in current.trace.state.entrySet()) {
-            if (context.producible[current.node].contains(e.element) && e.count + 1 >= context.remainder[current.node][e.element.target] ?: 0)
-                willBecomeFull.add(e.element)
+        for (e in current.trace.state) {
+            if (context.producible[current.node].contains(e.key) && e.value + 1 >= context.remainder[current.node][e.key.target] ?: 0)
+                willBecomeFull.add(e.key)
         }
         return willBecomeFull
     }
@@ -155,11 +153,11 @@ class SingleReplayer(
         //DF-completness guarantees presence of this dependency. It also guarantees that we don't need to look any further, as any immediate successor is runnable by its direct predecessor
         val depToNext = Dependency(currentNode, trace[current.node + 1])
         assert(depToNext in context.model.dependencies) { "The dependency graph is not DF-complete, $depToNext is missing" }
-        for (e in current.trace.state.entrySet()) {
-            if (e.element.source == currentNode && e.count >= context.remainder[current.node][e.element.target] ?: 0) {
-                cannotProduce.add(e.element)
+        for (e in current.trace.state) {
+            if (e.key.source == currentNode && e.value >= context.remainder[current.node][e.key.target] ?: 0) {
+                cannotProduce.add(e.key)
             }
-            if (!isNextRunnable && e.element == depToNext)
+            if (!isNextRunnable && e.key == depToNext)
                 isNextRunnable = true
         }
 
@@ -235,8 +233,8 @@ class SingleReplayer(
 
     private fun prepareState(initState: CausalNetState): RelaxedState {
         val state = HashMapWithDefault<Node, Counter<Dependency>>() { Counter<Dependency>() }
-        for (e in initState.entrySet())
-            state[e.element.target][e.element] = e.count
+        for (e in initState)
+            state[e.key.target][e.key] = e.value
         return state
     }
 
@@ -389,9 +387,9 @@ class SingleReplayer(
                 seen.add(key)
                 visitedStates++
                 if (visitedStates % 10000 == 0)
-                    logger.debug { "ctr=${visitedStates} efficiency=$efficiency ${current.debugInfo} ${current.trace.state.entrySet()}" }
+                    logger.debug { "ctr=${visitedStates} efficiency=$efficiency ${current.debugInfo} ${current.trace.state.joinToString()}" }
                 val currentNode = trace[current.node]
-                logger.trace { "$currentNode ${current.node}/${current.produce}: ${current.debugInfo} ${current.trace.state.entrySet()} $trace" }
+                logger.trace { "$currentNode ${current.node}/${current.produce}: ${current.debugInfo} ${current.trace.state.joinToString()} $trace" }
                 logger.trace { "${current.trace.splits.toList()}" }
                 if (current.produce && current.node == trace.size - 1) {
                     if (current.trace.state.isEmpty()) {

@@ -27,7 +27,7 @@ data class ComputationState(val nextNode: Int, val trace: ReplayTrace, val nodeT
      * The corresponding experimental evaluation is in [DefaultComputationStateComparatorPerformanceTest]
      */
     val value: IntArray by lazy {
-        val nTargets = trace.state.uniqueSet().size
+        val nTargets = trace.state.uniqueSet().size()
         return@lazy intArrayOf(-nTargets, nextNode)
     }
 }
@@ -127,7 +127,7 @@ class BestFirstBindingProvider(
 //            logger.debug {"available ${availableAt[currentNodeIdx]} produced ${alreadyProduced} for production ${availableForProduction} must produce $mustProduce"}
             //logger.debug("currentNodeIdx=$currentNodeIdx")
             //logger.debug("Max consume size: $size, avail.size=${avail.size} produce ${produceCandidates[currentNodeIdx].count()}")
-            for (consume in consumeCandidates(model, currentNode, avail)) {
+            for (consume in consumeCandidates(model, currentNode, avail.mapToSet { it.value })) {
                 if (copy.containsAll(consume)) {
                     for (produce in produceCandidates[currentNodeIdx]) {
                         val it = ReplayTrace(

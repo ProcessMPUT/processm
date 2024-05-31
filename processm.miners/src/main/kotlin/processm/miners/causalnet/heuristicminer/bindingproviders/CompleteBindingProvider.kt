@@ -27,7 +27,7 @@ class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelec
             // uzupełnij state o dowolny niepusty podzbiór producible albo producible jest puste
             val nextStates = ArrayList<ReplayTrace>()
             for ((state, joins, splits) in currentStates) {
-                for (consume in consumeCandidates(model, currentNode, state.uniqueSet())) {
+                for (consume in consumeCandidates(model, currentNode, state.uniqueSet().mapToSet { it.value })) {
                     assert(state.containsAll(consume))
                     val intermediate = CausalNetStateImpl(state)
                     for (c in consume)
@@ -36,7 +36,7 @@ class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelec
                         val ns = CausalNetStateImpl(intermediate)
                         ns.addAll(produce)
 
-                        if (!remainder.containsAll(ns.mapToSet { it.target }))
+                        if (!remainder.containsAll(ns.mapToSet { it.key.target }))
                             continue
                         nextStates.add(
                             ReplayTrace(

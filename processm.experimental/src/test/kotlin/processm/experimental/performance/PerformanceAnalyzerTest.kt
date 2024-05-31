@@ -294,7 +294,7 @@ class PerformanceAnalyzerTest {
     @Test
     fun test() {
         for (alignment in PerformanceAnalyzer(emptyLog, model3).allFreePartialAlignments(listOf(model3.start, a, b))) {
-            println(alignment.state.mapToSet { it.target })
+            println(alignment.state.mapToSet { it.key.target })
         }
     }
 
