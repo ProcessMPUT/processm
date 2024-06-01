@@ -66,9 +66,8 @@ open class CausalNetStateImpl : ObjectIntHashMap<Dependency>, CausalNetState {
     }
 
     fun addAll(collection: Collection<Dependency>) {
-        for (item in collection) {
+        for (item in collection)
             addTo(item, 1)
-        }
     }
 
     override fun putAll(container: ObjectIntAssociativeContainer<out Dependency>): Int {
@@ -85,13 +84,19 @@ open class CausalNetStateImpl : ObjectIntHashMap<Dependency>, CausalNetState {
         return resCount + count
     }
 
+    override fun remove(key: Dependency?): Int {
+        val count = super.remove(key)
+        size -= count
+        return count
+    }
+
     override fun uniqueSet(): ObjectLookupContainer<Dependency> = this.keys()
 
     override fun isNotEmpty(): Boolean = !this.isEmpty
 
     override fun size(): Int {
         assert(size >= super.size()) { "size: $size super.size(): ${super.size()}" }
-        assert(size == values().sumOf { it.value }) { "size: $size values().sum(): ${values().sumOf { it.value }}" }
+        assert(size == values().sumOf { it.value }) { "size: $size values().sumOf { it.value }: ${values().sumOf { it.value }}" }
         return size
     }
 }
