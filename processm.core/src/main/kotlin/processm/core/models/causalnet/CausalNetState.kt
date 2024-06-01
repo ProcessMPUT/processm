@@ -1,5 +1,6 @@
 package processm.core.models.causalnet
 
+import com.carrotsearch.hppc.ObjectIntAssociativeContainer
 import com.carrotsearch.hppc.ObjectIntHashMap
 import com.carrotsearch.hppc.ObjectIntMap
 import com.carrotsearch.hppc.ObjectLookupContainer
@@ -70,6 +71,13 @@ open class CausalNetStateImpl : ObjectIntHashMap<Dependency>, CausalNetState {
         }
     }
 
+    override fun putAll(container: ObjectIntAssociativeContainer<out Dependency>): Int {
+        for (c in container)
+            addTo(c.key, c.value)
+
+        return container.size()
+    }
+
     fun remove(item: Dependency, count: Int): Int {
         val resCount = this.addTo(item, -count)
         if (resCount <= 0)
@@ -82,8 +90,8 @@ open class CausalNetStateImpl : ObjectIntHashMap<Dependency>, CausalNetState {
     override fun isNotEmpty(): Boolean = !this.isEmpty
 
     override fun size(): Int {
-        assert(size >= super.size())
-        assert(size == values().sumOf { it.value })
+        assert(size >= super.size()) { "size: $size super.size(): ${super.size()}" }
+        assert(size == values().sumOf { it.value }) { "size: $size values().sum(): ${values().sumOf { it.value }}" }
         return size
     }
 }
