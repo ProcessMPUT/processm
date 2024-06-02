@@ -3,6 +3,7 @@ package processm.core.models.causalnet
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
 import processm.core.models.commons.Replayer
+import processm.helpers.asCollection
 import java.util.*
 
 /**
@@ -45,7 +46,7 @@ class BasicReplayer(override val model: CausalNet) : Replayer {
                                 BindingDecision(ae.split, DecisionPoint(ae.activity, it, true))
                             }
                         )
-                        if (rest.containsAll(newState.uniqueSet().map { it.value.target }))
+                        if (rest.containsAll(newState.uniqueSet().map { it.target }.asCollection()))
                             queue.add(ExecutionState(newState, rest, decisionsSoFar + dec))
                     }
                 }

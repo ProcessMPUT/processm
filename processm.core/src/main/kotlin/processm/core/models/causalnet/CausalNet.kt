@@ -131,7 +131,7 @@ abstract class CausalNet(
         if (state.isNotEmpty()) {
             val visitedNodes = IdentityHashMap<Node, Unit?>(this._instances.size)
             for (dep in state.uniqueSet()) {
-                val node = dep.value.target
+                val node = dep.target
                 if (visitedNodes.put(node, Unit) === null) {
                     for (join in _joins[node].orEmpty()) {
                         if (state.containsAll(join.dependencies)) {
@@ -152,7 +152,7 @@ abstract class CausalNet(
     @Deprecated("Use available() instead")
     fun available4(state: CausalNetState, node: Node): List<DecoupledNodeExecution> {
         if (state.isNotEmpty()) {
-            val relevant = state.uniqueSet().mapNotNullTo(HashSet()) { if (it.value.target == node) it.value else null }
+            val relevant = state.uniqueSet().filterTo(HashSet()) { it.target == node }
             val result = ArrayList<DecoupledNodeExecution>()
             for (join in joins[node].orEmpty())
                 if (relevant.containsAll(join.dependencies)) {
@@ -176,7 +176,7 @@ abstract class CausalNet(
         return if (state.isNotEmpty()) {
             val flatState = HashMap<Node, MutableSet<Dependency>>()
             for (dep in state.uniqueSet())
-                flatState.getOrPut(dep.value.target) { HashSet() }.add(dep.value)
+                flatState.getOrPut(dep.target) { HashSet() }.add(dep)
             val result = HashSet<Node>()
             for ((node, deps) in flatState)
                 if (joins[node]?.any { join -> deps.containsAll(join.dependencies) } == true)
@@ -221,7 +221,7 @@ abstract class CausalNet(
         }
 
         return state.uniqueSet().any { dep ->
-            val node = dep.value.target
+            val node = dep.target
             val join = checkNotNull(execution.join)
             val split = execution.split
             execution.activity == node &&

@@ -67,7 +67,7 @@ class Alignment(
             -tracePosition.toDouble(),
             //-nActivePossibleFutureActivities.toDouble(),
             reachToTheFuture.toDouble(),
-            state.size().toDouble()
+            state.size.toDouble()
             /*,
             lazy {
                 val matching =

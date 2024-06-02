@@ -39,13 +39,13 @@ class CountUnmatchedCausalNetMoves(val model: CausalNet) : CountUnmatchedModelMo
         // The maximum over the number of tokens on all incoming dependencies for an activity.
         // As each token must be consumed and a single execution may consume at most one token from the activity,
         // this is the same as the minimal number of pending executions for the activity.
-        val minFutureExecutions = this.minFutureExecutions.get() // java.util.HashMap<String, Int>()
+        val minFutureExecutions = this.minFutureExecutions.get()
         minFutureExecutions.clear()
-        for (e in prevProcessState) {
-            if (!e.key.target.isSilent) {
-                val old = minFutureExecutions.put(e.key.target.name, e.value)
-                if (old > e.value)
-                    minFutureExecutions.put(e.key.target.name, old)
+        for (e in prevProcessState.entrySet()) {
+            if (!e.element.target.isSilent) {
+                val old = minFutureExecutions.put(e.element.target.name, e.count.toInt())
+                if (old > e.count)
+                    minFutureExecutions.put(e.element.target.name, old)
             }
         }
 

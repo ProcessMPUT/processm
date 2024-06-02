@@ -54,11 +54,6 @@
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.carrotsearch</groupId>
-            <artifactId>hppc</artifactId>
-            <version>0.9.1</version>
-        </dependency>
     </dependencies>
 
     <build>

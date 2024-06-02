@@ -1,17 +1,11 @@
 package processm.core.models.causalnet
 
-import com.carrotsearch.hppc.ObjectIntAssociativeContainer
-import com.carrotsearch.hppc.ObjectIntHashMap
-import com.carrotsearch.hppc.ObjectIntMap
-import com.carrotsearch.hppc.ObjectLookupContainer
 import processm.core.models.commons.ProcessModelState
+import processm.helpers.HashMultiSet
+import processm.helpers.MutableMultiSet
 
-interface CausalNetState : ObjectIntMap<Dependency>, ProcessModelState {
+interface CausalNetState : MutableMultiSet<Dependency>, ProcessModelState {
     val isFresh: Boolean
-    fun uniqueSet(): ObjectLookupContainer<Dependency>
-    fun isNotEmpty(): Boolean
-    fun containsAll(other: Collection<Dependency>): Boolean
-    fun containsAll(other: CausalNetState): Boolean
 }
 
 /**
@@ -19,12 +13,10 @@ interface CausalNetState : ObjectIntMap<Dependency>, ProcessModelState {
  *
  * Sources in rows, targets in columns, and numbers of occurrences in values.
  */
-open class CausalNetStateImpl : ObjectIntHashMap<Dependency>, CausalNetState {
+open class CausalNetStateImpl : HashMultiSet<Dependency>, CausalNetState {
     constructor() : super()
 
     constructor(stateBefore: CausalNetState) : super(stateBefore)
-
-    private var size: Int = 0
 
     override var isFresh: Boolean = true
         protected set
@@ -53,50 +45,4 @@ open class CausalNetStateImpl : ObjectIntHashMap<Dependency>, CausalNetState {
         other is CausalNetStateImpl && isFresh == other.isFresh && super.equals(other)
 
     override fun copy(): ProcessModelState = CausalNetStateImpl(this).also { it.isFresh = this.isFresh }
-
-    override fun containsAll(other: Collection<Dependency>): Boolean =
-        this.size() >= other.size && other.all { containsKey(it) }
-
-    override fun containsAll(other: CausalNetState): Boolean =
-        this.size() >= other.size() && other.all { it.value <= getOrDefault(it.key, Int.MIN_VALUE) }
-
-    override fun addTo(key: Dependency?, incrementValue: Int): Int {
-        size += incrementValue
-        return super.addTo(key, incrementValue)
-    }
-
-    fun addAll(collection: Collection<Dependency>) {
-        for (item in collection)
-            addTo(item, 1)
-    }
-
-    override fun putAll(container: ObjectIntAssociativeContainer<out Dependency>): Int {
-        for (c in container)
-            addTo(c.key, c.value)
-
-        return container.size()
-    }
-
-    fun remove(item: Dependency, count: Int): Int {
-        val resCount = this.addTo(item, -count)
-        if (resCount <= 0)
-            this.remove(item)
-        return resCount + count
-    }
-
-    override fun remove(key: Dependency?): Int {
-        val count = super.remove(key)
-        size -= count
-        return count
-    }
-
-    override fun uniqueSet(): ObjectLookupContainer<Dependency> = this.keys()
-
-    override fun isNotEmpty(): Boolean = !this.isEmpty
-
-    override fun size(): Int {
-        assert(size >= super.size()) { "size: $size super.size(): ${super.size()}" }
-        assert(size == values().sumOf { it.value }) { "size: $size values().sumOf { it.value }: ${values().sumOf { it.value }}" }
-        return size
-    }
 }

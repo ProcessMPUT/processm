@@ -2,6 +2,8 @@ package processm.miners.causalnet.heuristicminer.bindingproviders
 
 import processm.core.models.causalnet.*
 import processm.helpers.HierarchicalIterable
+import processm.helpers.asCollection
+import processm.helpers.asList
 import processm.helpers.mapToSet
 import processm.logging.logger
 import processm.miners.causalnet.heuristicminer.bindingproviders.hypothesisselector.ReplayTraceHypothesisSelector
@@ -27,7 +29,7 @@ class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelec
             // uzupełnij state o dowolny niepusty podzbiór producible albo producible jest puste
             val nextStates = ArrayList<ReplayTrace>()
             for ((state, joins, splits) in currentStates) {
-                for (consume in consumeCandidates(model, currentNode, state.uniqueSet().mapToSet { it.value })) {
+                for (consume in consumeCandidates(model, currentNode, state.uniqueSet().asList())) {
                     assert(state.containsAll(consume))
                     val intermediate = CausalNetStateImpl(state)
                     for (c in consume)
@@ -36,7 +38,7 @@ class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelec
                         val ns = CausalNetStateImpl(intermediate)
                         ns.addAll(produce)
 
-                        if (!remainder.containsAll(ns.mapToSet { it.key.target }))
+                        if (!remainder.containsAll(ns.uniqueSet().map { it.target }.asCollection()))
                             continue
                         nextStates.add(
                             ReplayTrace(

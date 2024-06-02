@@ -74,7 +74,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
     val validLoopFreeSequencesWithArbitrarySerialization: Sequence<CausalNetSequence> by lazy {
         val beenThereDoneThat = HashSet<Pair<Set<Node>, Set<Dependency>>>()
         computeSetOfValidSequences(true) { current, visiting ->
-            val key = current.mapToSet { it.a } to current.last().state.uniqueSet().mapToSet { it.value }
+            val key = current.mapToSet { it.a } to current.last().state.uniqueSet().toSet()
             if (beenThereDoneThat.contains(key))
                 return@computeSetOfValidSequences false
             if (visiting)
@@ -260,7 +260,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
                     fromCache
         }
         val result = ArrayList<ActivityBinding>()
-        val candidates = currentState.map { it.key.target }.intersect(model.joins.keys)
+        val candidates = currentState.uniqueSet().mapTo(HashSet()) { it.target }.apply { retainAll(model.joins.keys) }
         for (ak in candidates) {
             for (join in model.joins.getValue(ak)) {
                 if (currentState.containsAll(join.dependencies)) {

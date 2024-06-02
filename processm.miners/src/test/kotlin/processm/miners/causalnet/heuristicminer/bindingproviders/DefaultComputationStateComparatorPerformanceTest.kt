@@ -11,7 +11,6 @@ import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.helpers.Counter
 import processm.helpers.allPermutations
-import processm.helpers.mapToSet
 import processm.miners.causalnet.heuristicminer.OfflineHeuristicMiner
 import processm.miners.causalnet.heuristicminer.dependencygraphproviders.BasicDependencyGraphProvider
 import processm.miners.causalnet.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
@@ -36,17 +35,17 @@ class DefaultComputationStateComparatorPerformanceTest {
 
         private fun value(o: ComputationState): Array<Int> {
             val targets = Counter<Node>()
-            for (n in o.trace.state)
-                targets.inc(n.key.target)
+            for (n in o.trace.state.uniqueSet())
+                targets.inc(n.target)
             val nTargets = targets.keys.size
             for (i in o.nextNode until o.nodeTrace.size)
                 targets.dec(o.nodeTrace[i])
             val nMissing = -targets.values.sum()
-            val targets2 = o.trace.state.mapToSet { it.key.target }
+            val targets2 = o.trace.state.uniqueSet().map { it.target }
             val nMissing2 =
                 (o.nodeTrace.subList(o.nextNode, o.nodeTrace.size).toSet() - targets).size
             val values =
-                intArrayOf(nMissing, nTargets, o.nextNode, o.trace.state.size(), targets.values.sum(), nMissing2)
+                intArrayOf(nMissing, nTargets, o.nextNode, o.trace.state.size, targets.values.sum(), nMissing2)
             return (order.map { values[it] } zip weights)
                 .map { (v, w) -> v * w }
                 .toTypedArray()

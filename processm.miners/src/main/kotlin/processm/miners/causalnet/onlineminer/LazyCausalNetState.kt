@@ -1,14 +1,10 @@
 package processm.miners.causalnet.onlineminer
 
-import com.carrotsearch.hppc.*
-import com.carrotsearch.hppc.cursors.ObjectIntCursor
-import com.carrotsearch.hppc.predicates.ObjectIntPredicate
-import com.carrotsearch.hppc.predicates.ObjectPredicate
-import com.carrotsearch.hppc.procedures.ObjectIntProcedure
 import processm.core.models.causalnet.CausalNetState
 import processm.core.models.causalnet.CausalNetStateImpl
 import processm.core.models.causalnet.Dependency
 import processm.core.models.commons.ProcessModelState
+import processm.helpers.MutableMultiSet
 import java.lang.ref.SoftReference
 import java.util.*
 
@@ -45,77 +41,54 @@ class LazyCausalNetState(
     }
 
     override fun hashCode(): Int = backend.hashCode()
-    override fun <T : ObjectIntProcedure<in Dependency>?> forEach(procedure: T): T = backend.forEach(procedure)
-
-    override fun <T : ObjectIntPredicate<in Dependency>?> forEach(predicate: T): T = backend.forEach(predicate)
 
     override fun equals(other: Any?): Boolean = Objects.equals(backend, other)
 
-    override fun containsKey(element: Dependency?): Boolean = backend.containsKey(element)
-    override fun containsAll(other: CausalNetState): Boolean = backend.containsAll(other)
+    override fun contains(element: Dependency): Boolean = backend.contains(element)
+
+    override fun addAll(elements: Collection<Dependency>): Boolean = throw NotImplementedError("Not supported")
 
     override fun clear() = throw NotImplementedError("Not supported")
-    override fun release() = throw NotImplementedError("Not supported")
 
-    override fun visualizeKeyDistribution(characters: Int): String = throw NotImplementedError("Not supported")
+    override fun removeAll(elements: Collection<Dependency>): Boolean = throw NotImplementedError("Not supported")
 
     override val isFresh: Boolean
         get() = backend.isFresh
+    override val uniqueSize: Int
+        get() = backend.uniqueSize
+
+    override fun add(element: Dependency, count: Byte): Boolean = throw NotImplementedError("Not supported")
+
+    override fun add(element: Dependency): Boolean = throw NotImplementedError("Not supported")
+
+    override fun addAll(other: MutableMultiSet<Dependency>): Boolean = throw NotImplementedError("Not supported")
 
     /**
      * The returned iterator should be considered immutable.
      */
-    override fun iterator(): MutableIterator<ObjectIntCursor<Dependency>> = backend.iterator()
+    override fun iterator(): MutableIterator<Dependency> =
+        object : MutableIterator<Dependency>, Iterator<Dependency> by backend.uniqueSet().iterator() {
+            override fun remove() = throw UnsupportedOperationException()
+        }
 
-    override fun isNotEmpty(): Boolean = backend.isNotEmpty()
+    override fun entrySet(): Sequence<MutableMultiSet.Bucket<Dependency>> = backend.entrySet()
 
-    override fun uniqueSet(): ObjectLookupContainer<Dependency> = backend.uniqueSet()
+    override fun uniqueSet(): Sequence<Dependency> = backend.uniqueSet()
+
+    override fun countSet(): Sequence<Byte> = backend.countSet()
+
+    override fun remove(element: Dependency, count: Byte): Boolean = throw NotImplementedError("Not supported")
+
+    override fun remove(element: Dependency): Boolean = throw NotImplementedError("Not supported")
 
     override fun isEmpty(): Boolean = backend.isEmpty()
-    override fun removeAll(container: ObjectContainer<in Dependency>?): Int = throw NotImplementedError("Not supported")
-
-    override fun removeAll(predicate: ObjectPredicate<in Dependency>?): Int = throw NotImplementedError("Not supported")
-
-    override fun removeAll(predicate: ObjectIntPredicate<in Dependency>?): Int =
-        throw NotImplementedError("Not supported")
-
-    override fun keys(): ObjectCollection<Dependency> = backend.keys()
-
-    override fun values(): IntContainer = backend.values()
-
-    override fun get(key: Dependency?): Int = backend.get(key)
-
-    override fun getOrDefault(key: Dependency?, defaultValue: Int): Int = backend.getOrDefault(key, defaultValue)
-
-    override fun put(key: Dependency?, value: Int): Int = throw NotImplementedError("Not supported")
-
-    override fun putAll(container: ObjectIntAssociativeContainer<out Dependency>?): Int =
-        throw NotImplementedError("Not supported")
-
-    override fun putAll(iterable: MutableIterable<ObjectIntCursor<out Dependency>>?): Int =
-        throw NotImplementedError("Not supported")
-
-    override fun putOrAdd(key: Dependency?, putValue: Int, incrementValue: Int): Int =
-        throw NotImplementedError("Not supported")
-
-    override fun addTo(key: Dependency?, additionValue: Int): Int = throw NotImplementedError("Not supported")
-
-    override fun remove(element: Dependency?): Int = throw NotImplementedError("Not supported")
-    override fun indexOf(key: Dependency?): Int = backend.indexOf(key)
-
-    override fun indexExists(index: Int): Boolean = backend.indexExists(index)
-
-    override fun indexGet(index: Int): Int = backend.indexGet(index)
-
-    override fun indexReplace(index: Int, newValue: Int): Int = throw NotImplementedError("Not supported")
-
-    override fun indexInsert(index: Int, key: Dependency?, value: Int) = throw NotImplementedError("Not supported")
-
-    override fun indexRemove(index: Int): Int = throw NotImplementedError("Not supported")
 
     override fun containsAll(elements: Collection<Dependency>): Boolean = backend.containsAll(elements)
 
-    override fun size(): Int = backend.size()
+    override fun retainAll(elements: Collection<Dependency>): Boolean = throw NotImplementedError("Not supported")
+
+    override val size: Int
+        get() = backend.size
 
     override fun copy(): ProcessModelState = throw NotImplementedError("Not supported")
 }

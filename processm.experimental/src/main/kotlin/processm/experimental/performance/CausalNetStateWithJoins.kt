@@ -25,8 +25,8 @@ open class CausalNetStateWithJoins : CausalNetStateImpl {
             val removedDeps = ArrayList<Dependency>()
             //    check(this.containsAll(join.dependencies)) { "It is impossible to execute this join in the current state" }
             for (d in join.dependencies) {
-                val oldCtr = this.remove(d, 1)
-                if (oldCtr == 1)
+                val removed = this.remove(d, 1)
+                if (removed)
                     removedDeps.add(d)
             }
             return removedDeps
@@ -38,8 +38,8 @@ open class CausalNetStateWithJoins : CausalNetStateImpl {
         if (split != null) {
             val addedDeps = ArrayList<Dependency>()
             for (dep in split.dependencies) {
-                val oldCtr = this.addTo(dep, 1)
-                if (oldCtr == 0)
+                val added = this.add(dep, 1)
+                if (added)
                     addedDeps.add(dep)
             }
             return addedDeps
