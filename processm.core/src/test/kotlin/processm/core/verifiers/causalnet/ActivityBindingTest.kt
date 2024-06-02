@@ -3,7 +3,6 @@ package processm.core.verifiers.causalnet
 import processm.core.models.causalnet.CausalNetStateImpl
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Node
-import processm.helpers.asCollection
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -31,11 +30,11 @@ class ActivityBindingTest {
         val d = Node("d")
         val e = Node("e")
         val s1 = ActivityBinding(a, setOf(), setOf(b, d), CausalNetStateImpl()).state
-        assertEquals(setOf(Dependency(a, b), Dependency(a, d)), s1.uniqueSet().asCollection())
+        assertEquals(setOf(Dependency(a, b), Dependency(a, d)), s1.uniqueSet().toSet())
         val s2 = ActivityBinding(d, setOf(a), setOf(e), s1).state
-        assertEquals(setOf(Dependency(a, b), Dependency(d, e)), s2.uniqueSet().asCollection())
+        assertEquals(setOf(Dependency(a, b), Dependency(d, e)), s2.uniqueSet().toSet())
         val s3 = ActivityBinding(b, setOf(a), setOf(e), s2).state
-        assertEquals(setOf(Dependency(b, e), Dependency(d, e)), s3.uniqueSet().asCollection())
+        assertEquals(setOf(Dependency(b, e), Dependency(d, e)), s3.uniqueSet().toSet())
         val s4 = ActivityBinding(e, setOf(b, d), setOf(), s3).state
         assertTrue { s4.isEmpty() }
     }
