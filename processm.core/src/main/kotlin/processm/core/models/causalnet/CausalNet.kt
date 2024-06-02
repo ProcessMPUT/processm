@@ -1,5 +1,6 @@
 package processm.core.models.causalnet
 
+import com.carrotsearch.hppc.ObjectHashSet
 import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.MetadataHandler
 import processm.helpers.asList
@@ -111,13 +112,8 @@ abstract class CausalNet(
      */
     override val decisionPoints: Sequence<DecisionPoint>
         get() = splits.entries.asSequence().map { DecisionPoint(it.key, it.value, true) } +
-                joins.entries.asSequence().map {
-                    DecisionPoint(
-                        it.key,
-                        it.value,
-                        false,
-                        it.value.flatMapTo(mutableSetOf()) { join -> join.sources })
-                }
+                joins.entries.asSequence()
+                    .map { DecisionPoint(it.key, it.value, false, it.value.flatMapTo(HashSet()) { it.sources }) }
 
     override val controlStructures: Sequence<DecisionPoint>
         get() = decisionPoints
@@ -129,17 +125,16 @@ abstract class CausalNet(
         }
 
         if (state.isNotEmpty()) {
-            val visitedNodes = IdentityHashMap<Node, Unit?>(this._instances.size)
+            val visitedNodes = ObjectHashSet<Node>(this._instances.size)
             for (dep in state.uniqueSet()) {
                 val node = dep.target
-                if (visitedNodes.put(node, Unit) === null) {
-                    for (join in _joins[node].orEmpty()) {
+                if (visitedNodes.add(node)) {
+                    for (join in _joins[node].orEmpty())
                         if (state.containsAll(join.dependencies)) {
                             val splits = if (node != end) _splits[node].orEmpty() else setOfNull
                             for (split in splits)
                                 callback(node, join, split)
                         }
-                    }
                 }
             }
         } else if (state.isFresh /*prevent execution of activities in the final state*/) {

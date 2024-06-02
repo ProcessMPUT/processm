@@ -93,6 +93,8 @@ open class HashMultiSet<E>() : MutableMultiSet<E> {
 
     override fun add(element: E, count: Byte): Boolean {
         assert(count >= 0)
+        assert(backend[element] + count <= Byte.MAX_VALUE)
+
         cardinality += count
         backend.addTo(element, count)
         return count > 0

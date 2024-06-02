@@ -391,9 +391,17 @@ class SingleReplayer(
                 seen.add(key)
                 visitedStates++
                 if (visitedStates % 10000 == 0)
-                    logger.debug { "ctr=${visitedStates} efficiency=$efficiency ${current.debugInfo} ${current.trace.state.joinToString()}" }
+                    logger.debug {
+                        "ctr=${visitedStates} efficiency=$efficiency ${current.debugInfo} ${
+                            current.trace.state.entrySet().joinToString()
+                        }"
+                    }
                 val currentNode = trace[current.node]
-                logger.trace { "$currentNode ${current.node}/${current.produce}: ${current.debugInfo} ${current.trace.state.joinToString()} $trace" }
+                logger.trace {
+                    "$currentNode ${current.node}/${current.produce}: ${current.debugInfo} ${
+                        current.trace.state.entrySet().joinToString()
+                    } $trace"
+                }
                 logger.trace { "${current.trace.splits.toList()}" }
                 if (current.produce && current.node == trace.size - 1) {
                     if (current.trace.state.isEmpty()) {

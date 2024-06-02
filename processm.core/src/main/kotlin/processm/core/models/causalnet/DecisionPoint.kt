@@ -1,10 +1,12 @@
 package processm.core.models.causalnet
 
+import com.carrotsearch.hppc.ObjectHashSet
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ControlStructure
 import processm.core.models.commons.ControlStructureType
 import processm.core.models.commons.DecisionPoint
 import processm.helpers.allSubsets
+import processm.helpers.asList
 
 /**
  * A CausalNet decision point, i.e., choice of a join or a split for the give [node]
@@ -33,14 +35,16 @@ class DecisionPoint(
             type = if (split) ControlStructureType.XorSplit else ControlStructureType.XorJoin
         } else {
             // OR if bindings include all subsets of dependent nodes
-            val dependencies = HashSet<Node>()
+            val dependencies = ObjectHashSet<Node>()
             for (binding in bindings) {
                 for (dependency in binding.dependencies) {
                     dependencies.add(if (split) dependency.target else dependency.source)
                 }
             }
             type =
-                if (bindings.size == (1 shl (dependencies.size)) - 1 && bindings == dependencies.allSubsets(excludeEmpty = true)) {
+                if (bindings.size == (1 shl (dependencies.size())) - 1 && bindings == dependencies.asList()
+                        .allSubsets(excludeEmpty = true)
+                ) {
                     if (split) ControlStructureType.OrSplit else ControlStructureType.OrJoin
                 } else {
                     if (split) ControlStructureType.OtherSplit else ControlStructureType.OtherJoin
