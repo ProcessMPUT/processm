@@ -180,18 +180,9 @@ class AlignerKPIService : AbstractJobService(
 
                     component.afterCommit {
                         this as WorkspaceComponent
-                        triggerEvent(
-                            producer,
-                            event = WorkspaceComponentEventType.DataChange,
-                            eventData = DATA_CHANGE_ALIGNMENT_KPI
-                        )
+                        triggerEvent(producer, DataChangeType.AlignmentKPI)
                         if (report.hasConceptDrift == true)
-                            this.triggerEvent(
-                                event = WorkspaceComponentEventType.NewModelRequired
-                            ) {
-                                setLong(MODEL_VERSION, acceptedModelVersion)
-                                setLong(DATA_VERSION, dataVersion)
-                            }
+                            this.triggerEvent(event = WorkspaceComponentEventType.NewModelRequired)
                     }
                 } catch (exception: Exception) {
                     logger.error("Error calculating alignment-based KPI for component $componentId", exception)
@@ -199,11 +190,7 @@ class AlignerKPIService : AbstractJobService(
 
                     component.afterCommit {
                         this as WorkspaceComponent
-                        triggerEvent(
-                            producer,
-                            event = WorkspaceComponentEventType.DataChange,
-                            eventData = DATA_CHANGE_LAST_ERROR
-                        )
+                        triggerEvent(producer, DataChangeType.LastError)
                     }
                 }
 
@@ -254,11 +241,7 @@ class AlignerKPIService : AbstractJobService(
 
                     component.afterCommit {
                         this as WorkspaceComponent
-                        triggerEvent(
-                            producer,
-                            event = WorkspaceComponentEventType.DataChange,
-                            eventData = DATA_CHANGE_LAST_ERROR
-                        )
+                        triggerEvent(producer, DataChangeType.LastError)
                     }
                 }
 

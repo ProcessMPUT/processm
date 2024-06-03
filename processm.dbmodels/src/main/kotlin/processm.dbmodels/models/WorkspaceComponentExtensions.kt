@@ -1,6 +1,5 @@
 package processm.dbmodels.models
 
-import jakarta.jms.MapMessage
 import kotlinx.serialization.json.*
 import processm.core.communication.Producer
 import java.net.URI
@@ -16,8 +15,7 @@ private val WCEproducer = Producer()
 fun WorkspaceComponent.triggerEvent(
     producer: Producer = WCEproducer,
     event: WorkspaceComponentEventType,
-    eventData: String? = null,
-    putData: MapMessage.() -> Unit = {}
+    eventData: String? = null
 ) {
     producer.produce(WORKSPACE_COMPONENTS_TOPIC) {
         setStringProperty(WORKSPACE_COMPONENT_TYPE, componentType.toString())
@@ -27,9 +25,11 @@ fun WorkspaceComponent.triggerEvent(
         if (event == WorkspaceComponentEventType.DataChange) {
             setString(WORKSPACE_ID, workspace.id.toString())
         }
-        putData(this)
     }
 }
+
+fun WorkspaceComponent.triggerEvent(producer: Producer = WCEproducer, eventData: DataChangeType) =
+    triggerEvent(producer = producer, event = WorkspaceComponentEventType.DataChange, eventData = eventData.toString())
 
 private val JsonElement?.safeJsonPrimitive
     get() = this as? JsonPrimitive?
@@ -37,17 +37,12 @@ private val JsonElement?.safeJsonPrimitive
 private val JsonElement?.safeJsonObject
     get() = this as? JsonObject?
 
-const val ACCEPTED_MODEL_VERSION: String = "accepted_model_version"
-const val MODELS = "models"
-const val ALIGNMENT_KPI_REPORTS = "alignment_kpi_report"
-
-//TODO these two should live elsewhere
-const val MODEL_VERSION = "model_version"
-const val DATA_VERSION = "data_version"
 
 class ProcessModelComponentData(val component: WorkspaceComponent) {
     companion object {
-        private const val HAS_CONCEPT_DRIFT = "has_concept_drift"
+        private const val ACCEPTED_MODEL_VERSION: String = "accepted_model_version"
+        private const val MODELS = "models"
+        private const val ALIGNMENT_KPI_REPORTS = "alignment_kpi_report"
     }
 
     private val data = component.dataAsJsonObject().orEmpty()
@@ -78,28 +73,17 @@ class ProcessModelComponentData(val component: WorkspaceComponent) {
         set(value) {
             requireNotNull(value)
             require(value.toString() in mutableModels)
-            if (field != value) {
-                field = value
-                hasConceptDrift = false
-            }
+            field = value
         }
-
-    var hasConceptDrift: Boolean = data[HAS_CONCEPT_DRIFT]?.safeJsonPrimitive?.booleanOrNull ?: false
 
     val acceptedModelId: String? =
         data[ACCEPTED_MODEL_VERSION]?.safeJsonPrimitive?.content?.let { acceptedModelVersion ->
             mutableModels[acceptedModelVersion]?.safeJsonPrimitive?.content
         }
 
-    /**
-     * For a fixed value of [modelVersion], it assumes reports are added in the ascending order of [dataVersion].
-     * Breaking this assumption may break [hasConceptDrift]
-     */
     fun addAlignmentKPIReport(modelVersion: Long, dataVersion: Long, reportId: URI) {
         mutableAlignmentKPIReports.computeIfAbsent(modelVersion.toString()) { mutableMapOf() }[dataVersion.toString()] =
             JsonPrimitive(reportId.toString())
-        if (modelVersion == acceptedModelVersion)
-            hasConceptDrift = false
     }
 
     fun getAlignmentKPIReport(modelVersion: Long, dataVersion: Long): URI? {
@@ -119,7 +103,6 @@ class ProcessModelComponentData(val component: WorkspaceComponent) {
             acceptedModelVersion?.let { put(ACCEPTED_MODEL_VERSION, JsonPrimitive(it)) }
             put(ALIGNMENT_KPI_REPORTS, JsonObject(mutableAlignmentKPIReports.mapValues { JsonObject(it.value) }))
             put(MODELS, JsonObject(mutableModels))
-            put(HAS_CONCEPT_DRIFT, JsonPrimitive(hasConceptDrift))
         }).toString()
 
     fun hasModel(version: Long) = mutableModels.containsKey(version.toString())

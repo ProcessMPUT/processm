@@ -106,17 +106,15 @@ abstract class CalcJob<T : ProcessModel> : MinerJob<T> {
                 component.customizationData = updateCustomizationData(model, component.customizationData)
                 component.lastError = null
                 component.afterCommit {
-                    component.triggerEvent(producer, WorkspaceComponentEventType.DataChange, DATA_CHANGE_MODEL)
+                    component.triggerEvent(producer, DataChangeType.Model)
                     if (autoAccepted)
-                        component.triggerEvent(producer, WorkspaceComponentEventType.ModelAccepted) {
-                            setLong(MODEL_VERSION, version)
-                        }
+                        component.triggerEvent(producer, WorkspaceComponentEventType.ModelAccepted)
                 }
             } catch (e: Exception) {
                 component.lastError = e.message
                 logger.warn("Cannot calculate model for component with id $id.", e)
                 component.afterCommit {
-                    component.triggerEvent(producer, WorkspaceComponentEventType.DataChange, DATA_CHANGE_LAST_ERROR)
+                    component.triggerEvent(producer, DataChangeType.LastError)
                 }
             }
 

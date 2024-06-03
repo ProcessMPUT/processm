@@ -56,10 +56,11 @@ enum class WorkspaceComponentEventType {
     ModelAccepted,
 }
 
-
-const val DATA_CHANGE_MODEL = "model"
-const val DATA_CHANGE_ALIGNMENT_KPI = "alignmentKPI"
-const val DATA_CHANGE_LAST_ERROR = "lastError"
+enum class DataChangeType {
+    Model,
+    AlignmentKPI,
+    LastError
+}
 
 object WorkspaceComponents : UUIDTable("workspace_components") {
     /**
