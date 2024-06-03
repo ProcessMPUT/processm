@@ -11,7 +11,6 @@ import io.mockk.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -30,6 +29,8 @@ import processm.services.JsonSerializer
 import processm.services.api.models.*
 import processm.services.api.models.Workspace
 import processm.services.helpers.ExceptionReason
+import processm.services.helpers.asUpdateEvent
+import processm.services.helpers.readSSE
 import processm.services.logic.ValidationException
 import processm.services.logic.WorkspaceService
 import java.time.Instant
@@ -579,46 +580,6 @@ class WorkspacesApiTest : BaseApiTest() {
                 }
             }
         }
-
-    data class SSE(val eventName: String?, val data: String)
-
-    private fun SSE.asUpdateEvent(): UUID {
-        assertEquals("update", eventName)
-        return Json.decodeFromString<ComponentUpdateEventPayload>(data).componentId
-    }
-
-    /**
-     * An unsound and incomplete parser of server-sent events
-     *
-     * @see https://html.spec.whatwg.org/multipage/server-sent-events.html#event-stream-interpretation
-     */
-    private suspend fun ByteReadChannel.readSSE(): SSE {
-        var eventName: String? = null
-        val data = StringBuilder()
-        while (true) {
-            // This is sloppy, as readUTF8Line treats both \n and \r\n as line terminators, thus possibly leading to misinterpreting received data.
-            // It doesn't seem to be a problem in the current use case and, nevertheless, it is recommended to encode the content of the event as JSON
-            val line = readUTF8Line()
-            if (line.isNullOrEmpty())
-                break
-            val i = line.indexOf(':')
-            if (i <= 0)
-                continue    // Ignore, even though the spec says something else
-            val key = line.substring(0, i)
-            var value = line.substring(i + 1)
-            if (value[0] == ' ') value = value.substring(1)
-            when (key) {
-                "event" -> eventName = value
-                "data" -> {
-                    if (data.isNotEmpty()) data.append('\n')
-                    data.append(value)
-                }
-
-                else -> error("Unknown field `$key'")
-            }
-        }
-        return SSE(eventName, data.toString())
-    }
 
     @Test
     @Timeout(10L, unit = TimeUnit.SECONDS)

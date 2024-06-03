@@ -6,6 +6,7 @@ import processm.conformance.conceptdrift.estimators.computeKernelDensityEstimato
 import processm.conformance.conceptdrift.numerical.integration.Integrator
 import processm.conformance.conceptdrift.numerical.integration.MidpointIntegrator
 import processm.conformance.models.alignments.Alignment
+import processm.conformance.rca.AnyEventFeature
 import processm.conformance.rca.Feature
 import processm.conformance.rca.propositionalize
 import processm.logging.debug
@@ -56,8 +57,10 @@ open class BoundStatisticalDistanceDriftDetector(
         val data = shuffled.map { data_[it] }
         require(process.size == data.size)
         return cvFolds(k, process.size).maxOf { testFold ->
-            val processDistributions = process.allExcept(testFold).filterNotNull().transpose().map(List<Double>::computeKernelDensityEstimator)
-            val dataDistributions = data.allExcept(testFold).transpose().map(List<Double>::computeKernelDensityEstimator)
+            val processDistributions =
+                process.allExcept(testFold).filterNotNull().transpose().map(List<Double>::computeKernelDensityEstimator)
+            val dataDistributions =
+                data.allExcept(testFold).transpose().map(List<Double>::computeKernelDensityEstimator)
             val (fitting, notFitting) = testFold.partition { process[it] !== null }
             fitting.forEach {
                 (processDistributions zip process[it]!!).forEach { (d, v) -> d.fit(listOf(v)) }
@@ -101,13 +104,17 @@ open class BoundStatisticalDistanceDriftDetector(
     override fun observe(artifact: Alignment): Boolean {
         artifact
             .propositionalize()
-            .filterKeys { it.datatype == Double::class }
-            .forEach { (f, v) ->
+            .forEach { (f, _v) ->
+                val v = when {
+                    f is AnyEventFeature -> if (_v as Boolean) 1.0 else 0.0
+                    f.datatype == Double::class -> _v as Double
+                    else -> return@forEach
+                }
                 val idx = featureToIndex[f]
                 if (idx != null) {
                     if (artifact.cost == 0)
-                        processModels[idx].fit(listOf(v as Double))
-                    dataModels[idx].fit(listOf(v as Double))
+                        processModels[idx].fit(listOf(v))
+                    dataModels[idx].fit(listOf(v))
                 } else {
                     if (newFeatureIsDrift) {
                         logger.info("An unknown feature $f appeared. This constitutes a drift.")

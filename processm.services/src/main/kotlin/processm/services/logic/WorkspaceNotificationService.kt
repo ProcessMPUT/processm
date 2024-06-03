@@ -68,7 +68,7 @@ class WorkspaceNotificationService {
         ) {
 
         override fun onMessage(msg: Message?) = loggedScope { logger ->
-            logger.error("onMessage $msg")
+            logger.debug("onMessage {}", msg)
             if (msg !is MapMessage) return
             val componentId = checkNotNull(msg.getString(WORKSPACE_COMPONENT_ID).toUUID())
             val workspaceId = checkNotNull(msg.getString(WORKSPACE_ID).toUUID())

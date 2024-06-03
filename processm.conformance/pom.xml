@@ -54,6 +54,12 @@
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>processm</groupId>
+            <artifactId>dbmodels</artifactId>
+            <version>0.6-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <build>

@@ -38,19 +38,41 @@ enum class WorkspaceComponentEventType {
      */
     DataChange,
     Delete,
-
     ComponentCreatedOrUpdated,
+
+    /**
+     * Triggered by an ETL process once new, possibly relevant data becomes available
+     */
     NewExternalData,
-    NewAlignments,
+
+    /**
+     * Triggered by the ConceptDriftDetector once
+     */
     ConceptDriftDetected,
+
+    /**
+     * Triggered by the AlignerService once new alignments are available - the event contains the version of the model,
+     * and the version of the alignments
+     */
+    NewAlignments,
+
+    /**
+     * Triggered once the user accepts a new model or the first model is mined for a component
+     */
     ModelAccepted,
-    NewModel
+    NewModel,
+
+    /**
+     * A component requires a model yet it is not available
+     */
+    MissingModel
 }
 
 
 const val DATA_CHANGE_MODEL = "model"
 const val DATA_CHANGE_ALIGNMENT_KPI = "alignmentKPI"
 const val DATA_CHANGE_LAST_ERROR = "lastError"
+const val DATA_CHANGE_CONCEPT_DRIFT= "conceptDrift"
 
 object WorkspaceComponents : UUIDTable("workspace_components") {
     /**

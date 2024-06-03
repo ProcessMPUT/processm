@@ -12,9 +12,11 @@ import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
 import processm.dbmodels.urn
 import processm.logging.loggedScope
+import processm.logging.logger
 import processm.services.api.getCustomProperties
 import processm.services.api.models.AbstractComponent
 import processm.services.api.models.CustomProperty
+import processm.services.api.retrieveCausalNetComponentData
 import processm.services.api.toComponentType
 import processm.services.api.updateData
 import processm.services.helpers.ExceptionReason
@@ -297,4 +299,26 @@ class WorkspaceService(
             type.toComponentType(),
             customProperties = getCustomProperties(type)
         )
+
+    fun acceptModel(componentId: UUID, modelVersion: Long): Unit = transactionMain {
+        logger().debug("Accepting model {} for {}", modelVersion, componentId)
+        WorkspaceComponent[componentId].apply {
+            data = ProcessModelComponentData(this).apply {
+                acceptedModelVersion = modelVersion
+            }.toJSON()
+            afterCommit {
+                triggerEvent(producer, WorkspaceComponentEventType.ModelAccepted)
+            }
+        }
+    }
+
+    fun getAvailableVersions(componentId: UUID): Set<String> = transactionMain {
+        return@transactionMain ProcessModelComponentData(WorkspaceComponent[componentId]).models.keys
+    }
+
+    fun getDataVariant(componentId: UUID, variantId: String) = transactionMain {
+        return@transactionMain ProcessModelComponentData(WorkspaceComponent[componentId]).retrieveCausalNetComponentData(
+            variantId.toLong()
+        )
+    }
 }

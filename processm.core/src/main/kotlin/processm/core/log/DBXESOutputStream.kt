@@ -22,7 +22,7 @@ open class DBXESOutputStream protected constructor(
     protected val connection: Connection,
     val isAppending: Boolean,
     val batchSize: Int = DBXESOutputStream.batchSize,
-    val version: Long = 1L
+    val version: Long = connection.nextVersion()
 ) :
     XESOutputStream {
     companion object {

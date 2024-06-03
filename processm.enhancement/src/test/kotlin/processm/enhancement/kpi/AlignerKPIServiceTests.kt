@@ -1,6 +1,5 @@
 package processm.enhancement.kpi
 
-import kotlinx.serialization.json.JsonObject
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
@@ -12,7 +11,13 @@ import processm.core.TopicObserver
 import processm.core.communication.Producer
 import processm.core.esb.Artemis
 import processm.core.esb.ServiceStatus
+import processm.core.log.AppendingDBXESOutputStream
+import processm.core.log.DBXESInputStream
+import processm.core.log.DBXESOutputStream
+import processm.core.log.Log
 import processm.core.log.attribute.Attribute.COST_TOTAL
+import processm.core.log.attribute.Attribute.IDENTITY_ID
+import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
@@ -20,6 +25,7 @@ import processm.core.persistence.DurablePersistenceProvider
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.core.persistence.get
+import processm.core.querylanguage.Query
 import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
 import java.net.URI
@@ -220,9 +226,19 @@ class AlignerKPIServiceTests {
         }
     }
 
+    private var queueDelayMsOriginalValue: String? = null
+
     @BeforeTest
     fun before() {
+        queueDelayMsOriginalValue = System.getProperty(AlignerKPIService.QUEUE_DELAY_MS_PROPERTY)
+        System.setProperty(AlignerKPIService.QUEUE_DELAY_MS_PROPERTY, "1")
         wctObserver.reset()
+    }
+
+    @AfterTest
+    fun after() {
+        queueDelayMsOriginalValue?.let { System.setProperty(AlignerKPIService.QUEUE_DELAY_MS_PROPERTY, it) }
+            ?: System.clearProperty(AlignerKPIService.QUEUE_DELAY_MS_PROPERTY)
     }
 
     /**
@@ -238,12 +254,18 @@ class AlignerKPIServiceTests {
                 componentType = ComponentTypeDto.CausalNet
                 dataStoreId = dataStore
                 query = _query
-                data = JsonObject(mapOf("1" to ComponentData(_modelId.toString(), "").toJsonElement())).toString()
+                data = ProcessModelComponentData(this).apply {
+                    addModel(1, _modelId.toString())
+                    acceptedModelVersion = 1
+                }.toJSON()
                 workspace = Workspace.all().firstOrNull() ?: Workspace.new { name = "test-workspace" }
             }
         }
 
-        component.triggerEvent(Producer(), event = WorkspaceComponentEventType.DataChange, eventData = DATA_CHANGE_MODEL)
+        component.triggerEvent(
+            Producer(),
+            event = WorkspaceComponentEventType.ModelAccepted
+        )
         return component.id.value
     }
 
@@ -280,7 +302,7 @@ class AlignerKPIServiceTests {
             }.first()
 
             val report =
-                persistenceProvider.get<Report>(URI(component.mostRecentData()!!.asComponentData().alignmentKPIId))
+                persistenceProvider.get<Report>(ProcessModelComponentData(component).alignmentKPIReports.values.single().values.single())
             assertEquals(1, report.logKPI.size)
             assertEquals(6, report.traceKPI.size)
             assertEquals(20.0, report.traceKPI[COST_TOTAL]!!.median)
@@ -348,7 +370,7 @@ class AlignerKPIServiceTests {
             }.first()
 
             val report =
-                persistenceProvider.get<Report>(URI(component.mostRecentData()!!.asComponentData().alignmentKPIId))
+                persistenceProvider.get<Report>(ProcessModelComponentData(component).alignmentKPIReports.values.single().values.single())
             assertEquals(1, report.logKPI.size)
             assertEquals(6, report.traceKPI.size)
             assertEquals(20.0, report.traceKPI[COST_TOTAL]!!.median)
@@ -415,7 +437,7 @@ class AlignerKPIServiceTests {
                 (WorkspaceComponents.name eq "test-aligner-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
             }.first()
 
-            assertEquals("", component.mostRecentData()!!.asComponentData().alignmentKPIId)
+            assertTrue(ProcessModelComponentData(component).alignmentKPIReports.isEmpty())
             assertNull(component.dataLastModified)
             assertNotNull(component.lastError)
             assertTrue("Line 1 position 0: mismatched input 'just'" in component.lastError!!, component.lastError)
@@ -441,11 +463,10 @@ class AlignerKPIServiceTests {
                 component.query = "select count(^t:name) where l:id=$logUUID"
                 component.afterCommit {
                     this as WorkspaceComponent
-                    // simulate that miner actually ran
+                    // simulate that the user accepted a new model
                     triggerEvent(
                         Producer(),
-                        event = WorkspaceComponentEventType.DataChange,
-                        eventData = DATA_CHANGE_MODEL
+                        event = WorkspaceComponentEventType.ModelAccepted
                     )
                 }
             }
@@ -461,7 +482,7 @@ class AlignerKPIServiceTests {
             }.first()
 
             val report =
-                persistenceProvider.get<Report>(URI(component.mostRecentData()!!.asComponentData().alignmentKPIId))
+                persistenceProvider.get<Report>(ProcessModelComponentData(component).alignmentKPIReports.values.single().values.single())
             assertEquals(2, report.logKPI.size)
             assertEquals(5, report.traceKPI.size)
             assertEquals(1, report.eventKPI.size)
@@ -498,14 +519,14 @@ class AlignerKPIServiceTests {
             }
 
             transactionMain {
-                val data = WorkspaceComponent.findById(componentId)!!.dataAsJsonObject()!!
+                val data = ProcessModelComponentData(WorkspaceComponent.findById(componentId)!!).alignmentKPIReports
                 assertEquals(1, data.size)
-                val componentData = data.values.first().asComponentData()
-                assertNotEquals("", componentData.alignmentKPIId)
+                val componentData = data.values.single().values.single()
+                assertNotEquals(URI(""), componentData)
 
                 for (attempt in 1..10) {
                     val result = runCatching {
-                        persistenceProvider.get<Report>(URI(componentData.alignmentKPIId))
+                        persistenceProvider.get<Report>(componentData)
                     }
                     if (result.isFailure) {
                         assertIs<IllegalArgumentException>(result.exceptionOrNull())
@@ -518,6 +539,157 @@ class AlignerKPIServiceTests {
 
         } finally {
             alignerKpiService.stop()
+        }
+    }
+
+    @Test
+    fun `changes within the queue delay are aggregated`() {
+        System.setProperty(AlignerKPIService.QUEUE_DELAY_MS_PROPERTY, "1000")
+        val alignerKpiService = AlignerKPIService()
+        val componentId: UUID
+        try {
+            alignerKpiService.register()
+            alignerKpiService.start()
+            assertEquals(ServiceStatus.Started, alignerKpiService.status)
+
+            val streamLogId = UUID.randomUUID()
+            DBXESOutputStream(DBCache.get(DBTestHelper.dbName).getConnection()).use { output ->
+                output.write(sequenceOf(Log(mutableAttributeMapOf(IDENTITY_ID to streamLogId))))
+                output.write(
+                    DBXESInputStream(
+                        DBTestHelper.dbName,
+                        Query("where l:id=$logUUID limit t:1")
+                    ).filter { it !is Log })
+            }
+
+            componentId = createComponent(
+                "select l:*, t:*, e:name, max(e:timestamp)-min(e:timestamp) where l:id=$streamLogId group by e:name, e:instance",
+                perfectCNetId
+            )
+
+            wctObserver.waitForMessage()
+
+            transactionMain {
+                val component = WorkspaceComponent.find {
+                    WorkspaceComponents.dataStoreId eq dataStore
+                }.first()
+
+                val reports = ProcessModelComponentData(component).alignmentKPIReports
+                assertEquals(1, reports.size)
+                assertEquals(1, reports.values.first().size)
+            }
+
+            repeat(5) { ctr ->
+                AppendingDBXESOutputStream(DBCache.get(DBTestHelper.dbName).getConnection()).use { output ->
+                    output.write(sequenceOf(Log(mutableAttributeMapOf(IDENTITY_ID to streamLogId))))
+                    output.write(
+                        DBXESInputStream(
+                            DBTestHelper.dbName,
+                            Query("where l:id=$logUUID limit t:1 offset t:${ctr + 1}")
+                        ).filter { it !is Log })
+                }
+                transactionMain {
+                    WorkspaceComponent[componentId].triggerEvent(
+                        Producer(),
+                        event = WorkspaceComponentEventType.NewExternalData
+                    )
+                }
+
+                Thread.sleep(100L)
+            }
+
+            wctObserver.waitForMessage()
+
+        } finally {
+            alignerKpiService.stop()
+        }
+
+        transactionMain {
+            val component = WorkspaceComponent[componentId]
+
+            val reports = ProcessModelComponentData(component).alignmentKPIReports
+            assertEquals(1, reports.size)
+            assertEquals(2, reports.values.first().size)
+            val report = persistenceProvider.get<Report>(reports.values.first().maxBy { it.key }.value)
+            assertEquals(6, report.alignments.size)
+        }
+    }
+
+
+    @Test
+    fun `slower changes are not aggregated`() {
+        System.setProperty(AlignerKPIService.QUEUE_DELAY_MS_PROPERTY, "100")
+        val alignerKpiService = AlignerKPIService()
+        val componentId: UUID
+        try {
+            alignerKpiService.register()
+            alignerKpiService.start()
+            assertEquals(ServiceStatus.Started, alignerKpiService.status)
+
+            val streamLogId = UUID.randomUUID()
+            DBXESOutputStream(DBCache.get(DBTestHelper.dbName).getConnection()).use { output ->
+                output.write(sequenceOf(Log(mutableAttributeMapOf(IDENTITY_ID to streamLogId))))
+                output.write(
+                    DBXESInputStream(
+                        DBTestHelper.dbName,
+                        Query("where l:id=$logUUID limit t:1")
+                    ).filter { it !is Log })
+            }
+
+            componentId = createComponent(
+                "select l:*, t:*, e:name, max(e:timestamp)-min(e:timestamp) where l:id=$streamLogId group by e:name, e:instance",
+                perfectCNetId
+            )
+
+            wctObserver.waitForMessage()
+
+            transactionMain {
+                val component = WorkspaceComponent.find {
+                    WorkspaceComponents.dataStoreId eq dataStore
+                }.first()
+
+                val reports = ProcessModelComponentData(component).alignmentKPIReports
+                assertEquals(1, reports.size)
+                assertEquals(1, reports.values.first().size)
+            }
+
+            repeat(2) { ctr ->
+                AppendingDBXESOutputStream(DBCache.get(DBTestHelper.dbName).getConnection()).use { output ->
+                    output.write(sequenceOf(Log(mutableAttributeMapOf(IDENTITY_ID to streamLogId))))
+                    output.write(
+                        DBXESInputStream(
+                            DBTestHelper.dbName,
+                            Query("where l:id=$logUUID limit t:1 offset t:${ctr + 1}")
+                        ).filter { it !is Log })
+                }
+                transactionMain {
+                    WorkspaceComponent[componentId].triggerEvent(
+                        Producer(),
+                        event = WorkspaceComponentEventType.NewExternalData
+                    )
+                }
+
+                Thread.sleep(200L)
+            }
+
+            repeat(2) {
+                wctObserver.waitForMessage()
+            }
+
+        } finally {
+            alignerKpiService.stop()
+        }
+
+        transactionMain {
+            val component = WorkspaceComponent[componentId]
+
+            val reports = ProcessModelComponentData(component).alignmentKPIReports
+            assertEquals(1, reports.size)
+            assertEquals(3, reports.values.first().size)
+            for ((idx, entry) in reports.values.first().entries.sortedBy { it.key }.withIndex()) {
+                val report = persistenceProvider.get<Report>(entry.value)
+                assertEquals(idx + 1, report.alignments.size)
+            }
         }
     }
 }

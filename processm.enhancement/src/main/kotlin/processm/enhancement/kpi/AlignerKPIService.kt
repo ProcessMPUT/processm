@@ -2,7 +2,6 @@ package processm.enhancement.kpi
 
 import jakarta.jms.MapMessage
 import jakarta.jms.Message
-import kotlinx.serialization.json.JsonObject
 import org.quartz.*
 import processm.core.communication.Producer
 import processm.core.esb.AbstractJobService
@@ -15,6 +14,7 @@ import processm.core.persistence.connection.transactionMain
 import processm.core.querylanguage.Query
 import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
+import processm.helpers.getPropertyIgnoreCase
 import processm.helpers.toUUID
 import processm.logging.loggedScope
 import java.net.URI
@@ -26,7 +26,7 @@ import processm.core.models.petrinet.DBSerializer as PetriNetDBSerializer
 class AlignerKPIService : AbstractJobService(
     QUARTZ_CONFIG,
     WORKSPACE_COMPONENTS_TOPIC,
-    "($WORKSPACE_COMPONENT_EVENT = '${WorkspaceComponentEventType.DataChange}' AND $WORKSPACE_COMPONENT_EVENT_DATA = '$DATA_CHANGE_MODEL') OR $WORKSPACE_COMPONENT_EVENT = '${WorkspaceComponentEventType.Delete}'",
+    "$WORKSPACE_COMPONENT_EVENT = '${WorkspaceComponentEventType.ModelAccepted}' OR $WORKSPACE_COMPONENT_EVENT = '${WorkspaceComponentEventType.Delete}'  OR $WORKSPACE_COMPONENT_EVENT = '${WorkspaceComponentEventType.NewExternalData}'",
 ) {
     companion object {
 
@@ -34,8 +34,14 @@ class AlignerKPIService : AbstractJobService(
 
         private const val COMPONENT_ID = "componentId"
 
+        const val QUEUE_DELAY_MS_PROPERTY = "processm.enhancement.kpi.alignerkpi.queueDelayMs"
+
         private val producer = Producer()
     }
+
+    private val queueDelayMs: Long
+        get() = getPropertyIgnoreCase(QUEUE_DELAY_MS_PROPERTY)?.toLongOrNull()
+            ?: 5_000
 
     override val name: String
         get() = "Aligner KPI"
@@ -49,11 +55,9 @@ class AlignerKPIService : AbstractJobService(
 
         val id = message.getString(WORKSPACE_COMPONENT_ID)
         val event = WorkspaceComponentEventType.valueOf(message.getStringProperty(WORKSPACE_COMPONENT_EVENT))
-        val eventData = message.getStringProperty(WORKSPACE_COMPONENT_EVENT_DATA)
 
         when (event) {
-            WorkspaceComponentEventType.DataChange -> {
-                require(eventData == DATA_CHANGE_MODEL)
+            WorkspaceComponentEventType.ModelAccepted, WorkspaceComponentEventType.NewExternalData -> {
                 return listOf(createComputeJob(id.toUUID()!!))
             }
 
@@ -65,14 +69,16 @@ class AlignerKPIService : AbstractJobService(
         }
     }
 
-    private fun createComputeJob(id: UUID): Pair<JobDetail, Trigger> = loggedScope {
+    private fun createComputeJob(id: UUID): Pair<JobDetail, Trigger> = loggedScope { logger ->
         val job = JobBuilder
             .newJob(AlignerKPIJob::class.java)
             .usingJobData(COMPONENT_ID, id.toString())
+            .withIdentity(id.toString(), "AlignerKPIService/ComputeJob")
             .build()
         val trigger = TriggerBuilder
             .newTrigger()
-            .startNow()
+            .withIdentity(id.toString(), "AlignerKPIService/ComputeJob")
+            .startAt(Date.from(Instant.now().plusMillis(queueDelayMs)))
             .build()
 
         return job to trigger
@@ -104,24 +110,37 @@ class AlignerKPIService : AbstractJobService(
                     return@transactionMain
                 }
 
-                val dataObject = checkNotNull(component.dataAsJsonObject()).toMutableMap()
-                val mostRecentVersion = checkNotNull(dataObject.mostRecentVersion()).toString()
-                val data = checkNotNull(dataObject[mostRecentVersion]?.asComponentData())
-
                 try {
-                    val model = getModel(component.componentType, component.dataStoreId, data.modelId)
+                    val componentData = ProcessModelComponentData(component)
+                    val acceptedModelVersion = componentData.acceptedModelVersion
+                    val acceptedModelId = componentData.acceptedModelId
+                    logger.debug("AlignerKPIJob for $componentId acceptedModelVersion=$acceptedModelVersion")
+                    if (acceptedModelVersion === null || acceptedModelId === null) {
+                        component.afterCommit {
+                            this as WorkspaceComponent
+                            triggerEvent(
+                                producer,
+                                event = WorkspaceComponentEventType.ConceptDriftDetected    //TODO rename to NewModelRequired? Introduce a separate event?
+                            )
+                        }
+                        return@transactionMain
+                    }
+
+                    val model = getModel(component.componentType, component.dataStoreId, acceptedModelId)
                     val calculator = Calculator(model)
                     val log = DBHierarchicalXESInputStream(
                         component.dataStoreId.toString(), Query(component.query), false
                     )
+                    val dataVersion = log.readVersion()
+                    logger.debug("At {}, the log has {} traces", dataVersion, log.first().traces.count())
                     val report = calculator.calculate(log)
                     val reportId = URI("urn:processm:alignmentkpireport:${UUID.randomUUID()}")
                     DurablePersistenceProvider(component.dataStoreId.toString()).use {
                         it.put(reportId, report)
                     }
+                    componentData.addAlignmentKPIReport(acceptedModelVersion, dataVersion, reportId)
 
-                    dataObject[mostRecentVersion] = data.copy(alignmentKPIId = reportId.toString()).toJsonElement()
-                    component.data = JsonObject(dataObject).toString()
+                    component.data = componentData.toJSON()
                     component.dataLastModified = Instant.now()
                     component.lastError = null
 
@@ -132,6 +151,13 @@ class AlignerKPIService : AbstractJobService(
                             event = WorkspaceComponentEventType.DataChange,
                             eventData = DATA_CHANGE_ALIGNMENT_KPI
                         )
+                        triggerEvent(
+                            producer,
+                            event = WorkspaceComponentEventType.NewAlignments
+                        ) {
+                            setLong(MODEL_VERSION, acceptedModelVersion)
+                            setLong(DATA_VERSION, dataVersion)
+                        }
                     }
                 } catch (exception: Exception) {
                     logger.error("Error calculating alignment-based KPI for component $componentId", exception)
@@ -181,16 +207,12 @@ class AlignerKPIService : AbstractJobService(
                     return@transactionMain
                 }
 
-                val dataObject = checkNotNull(component.dataAsJsonObject()).toMutableMap()
-                val reportIds = dataObject.values.map { it.asComponentData().alignmentKPIId }
+                val dataObject = ProcessModelComponentData(component)
+                val reportIds = dataObject.alignmentKPIReports.flatMap { it.value.values }
 
                 try {
                     DurablePersistenceProvider(component.dataStoreId.toString()).use {
-                        for (id in reportIds) {
-                            if (id.isBlank())
-                                continue
-                            it.delete(URI(id))
-                        }
+                        reportIds.forEach(it::delete)
                     }
                 } catch (exception: Exception) {
                     logger.error("Error deleting alignment-based KPI for component $componentId", exception)

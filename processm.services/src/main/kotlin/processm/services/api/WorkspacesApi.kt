@@ -153,7 +153,34 @@ fun Route.WorkspacesApi() {
         get<Paths.WorkspaceComponentData> { component ->
             val principal = call.authentication.principal<ApiUser>()!!
 
-            call.respond(HttpStatusCode.NotImplemented)
+            aclService.checkAccess(principal.userId, Workspaces, component.workspaceId, RoleType.Reader)
+
+            call.respond(HttpStatusCode.OK, workspaceService.getAvailableVersions(component.componentId))
+        }
+
+        get<Paths.WorkspaceComponentDataVariant> { component ->
+            val principal = call.authentication.principal<ApiUser>()!!
+
+            aclService.checkAccess(principal.userId, Workspaces, component.workspaceId, RoleType.Reader)
+
+            val data = workspaceService.getDataVariant(component.componentId, component.variantId)
+
+            if (data !== null) call.respond(HttpStatusCode.OK, data)
+            else call.respond(HttpStatusCode.NotFound)
+        }
+
+        post<Paths.WorkspaceComponentData> { data ->
+            val principal = call.authentication.principal<ApiUser>()!!
+
+            aclService.checkAccess(principal.userId, Workspaces, data.workspaceId, RoleType.Writer)
+            val modelVersion = runCatching { call.receiveNullable<Long>() }.let {
+                it.getOrThrow() ?: throw ApiException(
+                    ExceptionReason.UnparsableData,
+                    message = it.exceptionOrNull()!!.message
+                )
+            }
+            workspaceService.acceptModel(data.componentId, modelVersion)
+            call.respond(HttpStatusCode.NoContent)
         }
 
         get<Paths.WorkspaceComponents> { path ->

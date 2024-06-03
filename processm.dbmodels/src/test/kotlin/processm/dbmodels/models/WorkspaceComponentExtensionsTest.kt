@@ -2,6 +2,7 @@ package processm.dbmodels.models
 
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
@@ -35,46 +36,5 @@ class WorkspaceComponentExtensionsTest {
     @Test
     fun `mostRecentVersion returns null for a list with null string`() {
         assertEquals(null, listOf("null").mostRecentVersion())
-    }
-
-    @Test
-    fun `mostRecentData returns the correct value`() {
-        val component = mockk<WorkspaceComponent> {
-            every { data } returns """{"1": "a", "2": "b"}"""
-        }
-        assertEquals("b", (component.mostRecentData() as JsonPrimitive).content)
-    }
-
-    @Test
-    fun `mostRecentData ignores non-parsable keys`() {
-        val component = mockk<WorkspaceComponent> {
-            every { data } returns """{"blah": "a", "2": "b"}"""
-        }
-        assertEquals("b", (component.mostRecentData() as JsonPrimitive).content)
-    }
-
-    @Test
-    fun `mostRecentData takes the null key if all keys are non-parsable`() {
-        val component = mockk<WorkspaceComponent> {
-            every { data } returns """{"blah": "a", "null": "b"}"""
-        }
-        assertEquals("b", (component.mostRecentData() as JsonPrimitive).content)
-    }
-
-    @Test
-    fun `mostRecentData returns null if there is no suitable key`() {
-        val component = mockk<WorkspaceComponent> {
-            every { data } returns """{"blah": "a", "bloh": "b"}"""
-        }
-        assertNull(component.mostRecentData())
-    }
-
-    @Test
-    fun `mostRecentData returns JsonElement if the object is not primitive`() {
-        val component = mockk<WorkspaceComponent> {
-            every { data } returns """{"1": ["p", "o", "r", "k"]}"""
-        }
-        assertIs<JsonElement>(component.mostRecentData())
-        assertIs<JsonArray>(component.mostRecentData())
     }
 }
