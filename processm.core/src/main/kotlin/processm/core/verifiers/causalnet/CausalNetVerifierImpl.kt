@@ -232,11 +232,11 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
 
         fun add(ab: ActivityBinding) {
             _data.add(ab)
-            states.computeIfAbsent(ab.state.uniqueSet().hashCode(), { ArrayList() }).add(ab.state)
+            states.computeIfAbsent(ab.state.uniqueSet().toSet().hashCode(), { ArrayList() }).add(ab.state)
         }
 
         fun containsBoringSubset(superset: CausalNetState): Boolean {
-            val candidates = states[superset.uniqueSet().hashCode()]
+            val candidates = states[superset.uniqueSet().toSet().hashCode()]
             if (!candidates.isNullOrEmpty()) {
                 return candidates.any { superset.containsAll(it) }
             }

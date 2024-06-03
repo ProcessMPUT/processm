@@ -243,12 +243,14 @@ class CausalNetVerifierImplTest {
         assertTrue { tmp.contains(listOf(a, b, b, c, c, d, d, e)) }
         assertTrue { tmp.contains(listOf(a, b, c, d, e)) }
         assertTrue { tmp.contains(listOf(a, b, c, b, c, d, d, e)) }
+        assertTrue { tmp.contains(listOf(a, b, c, b, b, c, d, d, c, d, e)) }
         assertEquals(
             setOf(
                 listOf(a, b, c, d, e),
-                listOf(a, b, b, c, c, d, d, e)
+                listOf(a, b, b, c, c, d, d, e),
+                listOf(a, b, b, b, c, c, c, d, d, d, e)
             ),
-            v.validLoopFreeSequences.mapToSet { seq -> seq.map { ab -> ab.a }.sortedBy { it.activity } }
+            v.validLoopFreeSequences.mapToSet { seq -> seq.map { ab -> ab.a }.sortedBy { it.name } }
         )
     }
 
