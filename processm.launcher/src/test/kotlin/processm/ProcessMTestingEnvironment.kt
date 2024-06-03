@@ -30,6 +30,7 @@ import processm.enhancement.kpi.AlignerKPIService
 import processm.etl.PostgreSQLEnvironment
 import processm.etl.metamodel.MetaModelDebeziumWatchingService.Companion.DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY
 import processm.helpers.AtomicIntegerSequence
+import processm.logging.logger
 import processm.services.JsonSerializer
 import processm.services.api.Paths
 import processm.services.api.models.*
@@ -295,9 +296,13 @@ class ProcessMTestingEnvironment : CoroutineScope {
                 token?.let { bearerAuth(it) }
                 header(HttpHeaders.Accept, ContentType.Text.EventStream.toString())
             }.execute { response ->
-                val channel = response.bodyAsChannel()
-                while (!channel.isClosedForRead) {
-                    handler(channel.readSSE())
+                try {
+                    val channel = response.bodyAsChannel()
+                    while (!channel.isClosedForRead) {
+                        handler(channel.readSSE())
+                    }
+                } catch (e: Exception) {
+                    logger().error("Exception in the SSE client handler", e)
                 }
             }
         })
@@ -309,17 +314,6 @@ class ProcessMTestingEnvironment : CoroutineScope {
             Thread.sleep(500)
         }
         throw IllegalStateException()
-    }
-
-    fun <T> waitUntilStable(get: () -> T): T {
-        var previous = get()
-        repeat(10) {
-            Thread.sleep(500)
-            val current = get()
-            if (previous == current) return current
-            previous = current
-        }
-        throw IllegalStateException("The value never stabilized, the last observed value was $previous")
     }
 
     fun <T> waitUntilEquals(expected: T, get: () -> T) {

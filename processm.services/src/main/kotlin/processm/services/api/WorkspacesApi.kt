@@ -223,6 +223,8 @@ fun Route.WorkspacesApi() {
                         writeEvent(ComponentUpdateEventPayload(componentId))
                     }
                 }
+            } catch (e: Exception) {
+                logger.error("Exception in the workspace notification handler", e)
             } finally {
                 workspaceNotificationService.unsubscribe(workspace.workspaceId, channel)
                 channel.close()

@@ -955,7 +955,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
 
             // first model + alignments
-            waitUntil { eventsCounter.get() == 2 }
+            waitUntilEquals(2, eventsCounter::get)
 
             get<Paths.WorkspaceComponent, CausalNetComponentData?> {
                 return@get body<AbstractComponent>().data as CausalNetComponentData?
@@ -969,8 +969,8 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 assertTrue { status.isSuccess() }
             }
 
-            // alignments for the old model + concept drift + new model
-            waitUntil { eventsCounter.get() == 5 }
+            // alignments for the old model + new model
+            waitUntilEquals(4, eventsCounter::get)
 
             val availableModelVersions = get<Paths.WorkspaceComponentData, List<Long>> {
                 return@get body<List<Long>>()
@@ -996,14 +996,14 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 assertEquals(4, this?.nodes?.size)
             }
 
-            assertEquals(5, eventsCounter.get())
+            assertEquals(4, eventsCounter.get())
 
             post<Paths.WorkspaceComponentData, Long, Unit>(availableModelVersions.max()) {
                 assertTrue { status.isSuccess() }
             }
 
             // alignments for the new model
-            waitUntil { eventsCounter.get() == 6 }
+            waitUntilEquals(5, eventsCounter::get)
 
             get<Paths.WorkspaceComponent, CausalNetComponentData?> {
                 return@get body<AbstractComponent>().data as CausalNetComponentData?
@@ -1088,7 +1088,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
 
             // error due to no data
-            waitUntil { eventsCounter.get() == 1 }
+            waitUntilEquals(1, eventsCounter::get)
 
             simulator.insert(List(10) { listOf("a1", "a2") })
 
@@ -1103,7 +1103,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
 
             // first model + alignments
-            waitUntil { eventsCounter.get() == 3 }
+            waitUntilEquals(3, eventsCounter::get)
 
             get<Paths.WorkspaceComponent, CausalNetComponentData?> {
                 return@get body<AbstractComponent>().data as CausalNetComponentData?
@@ -1117,8 +1117,8 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 assertTrue { status.isSuccess() }
             }
 
-            // alignments for the old model + concept drift + new model
-            waitUntil { eventsCounter.get() == 6 }
+            // alignments for the old model + new model
+            waitUntilEquals(5, eventsCounter::get)
 
             val availableModelVersions = get<Paths.WorkspaceComponentData, List<Long>> {
                 return@get body<List<Long>>()
@@ -1149,7 +1149,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
 
             // alignments for the new model
-            waitUntil { eventsCounter.get() == 7 }
+            waitUntilEquals(6, eventsCounter::get)
 
             get<Paths.WorkspaceComponent, CausalNetComponentData?> {
                 return@get body<AbstractComponent>().data as CausalNetComponentData?
@@ -1159,7 +1159,6 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
         }
     }
-
 
     @Test
     fun `JDBC ETL - aggregating multiple changes`() {
@@ -1172,7 +1171,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
  WHERE event_id > CAST(? AS bigint)
     """.trimIndent()
 
-        ProcessMTestingEnvironment().withFreshDatabase().withAlignerDelay(100L).run {
+        ProcessMTestingEnvironment().withFreshDatabase().withAlignerDelay(500L).run {
             val simulator = ProcessSimulator(jdbcUrl!!, tableName)
 
             registerUser("test@example.com", "some organization")
@@ -1247,7 +1246,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
 
             // first model + alignments
-            waitUntil { eventsCounter.get() == 2 }
+            waitUntilEquals(2, eventsCounter::get)
 
             get<Paths.WorkspaceComponent, CausalNetComponentData?> {
                 return@get body<AbstractComponent>().data as CausalNetComponentData?
@@ -1258,14 +1257,13 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             repeat(5) {
                 simulator.insert(listOf(listOf("b1", "b2")))
 
-
                 post<Paths.EtlProcess, Unit, Unit>(null) {
                     assertTrue { status.isSuccess() }
                 }
             }
 
-            // alignments for the old model + concept drift + new model
-            assertEquals(5, waitUntilStable(eventsCounter::get))
+            // alignments for the old model + new model
+            waitUntilEquals(4, eventsCounter::get)
 
             val availableModelVersions = get<Paths.WorkspaceComponentData, List<Long>> {
                 return@get body<List<Long>>()
@@ -1291,14 +1289,14 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 assertEquals(4, this?.nodes?.size)
             }
 
-            assertEquals(5, eventsCounter.get())
+            assertEquals(4, eventsCounter.get())
 
             post<Paths.WorkspaceComponentData, Long, Unit>(availableModelVersions.max()) {
                 assertTrue { status.isSuccess() }
             }
 
             // alignments for the new model
-            waitUntil { eventsCounter.get() == 6 }
+            waitUntilEquals(5, eventsCounter::get)
 
             get<Paths.WorkspaceComponent, CausalNetComponentData?> {
                 return@get body<AbstractComponent>().data as CausalNetComponentData?
@@ -1308,5 +1306,4 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
         }
     }
-
 }

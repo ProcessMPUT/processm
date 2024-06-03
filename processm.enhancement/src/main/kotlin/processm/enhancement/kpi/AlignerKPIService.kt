@@ -3,6 +3,10 @@ package processm.enhancement.kpi
 import jakarta.jms.MapMessage
 import jakarta.jms.Message
 import org.quartz.*
+import processm.conformance.conceptdrift.BoundStatisticalDistanceDriftDetector
+import processm.conformance.conceptdrift.DriftDetector
+import processm.conformance.conceptdrift.statisticaldistance.NaiveJensenShannonDivergence
+import processm.conformance.models.alignments.Alignment
 import processm.core.communication.Producer
 import processm.core.esb.AbstractJobService
 import processm.core.esb.ServiceJob
@@ -20,6 +24,7 @@ import processm.logging.loggedScope
 import java.net.URI
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import processm.core.models.causalnet.DBSerializer as CausalNetDBSerializer
 import processm.core.models.petrinet.DBSerializer as PetriNetDBSerializer
 
@@ -37,6 +42,8 @@ class AlignerKPIService : AbstractJobService(
         const val QUEUE_DELAY_MS_PROPERTY = "processm.enhancement.kpi.alignerkpi.queueDelayMs"
 
         private val producer = Producer()
+
+        private val driftDetectors = ConcurrentHashMap<UUID, Pair<Long, DriftDetector<Alignment, List<Alignment>>>>()
     }
 
     private val queueDelayMs: Long
@@ -98,6 +105,25 @@ class AlignerKPIService : AbstractJobService(
     }
 
     class AlignerKPIJob : ServiceJob {
+
+        private fun createDetector(data: ProcessModelComponentData, modelVersion: Long) =
+            retrieveAlignments(data, modelVersion, modelVersion)?.let { alignments ->
+                BoundStatisticalDistanceDriftDetector(::NaiveJensenShannonDivergence).apply {
+                    fit(alignments)
+                }
+            }
+
+        private fun retrieveAlignments(
+            data: ProcessModelComponentData,
+            modelVersion: Long,
+            dataVersion: Long
+        ): List<Alignment>? {
+            val reportId = data.getAlignmentKPIReport(modelVersion, dataVersion) ?: return null
+            return DurablePersistenceProvider(data.component.dataStoreId.toString()).use {
+                return@use it.get<Report>(reportId, Report::class).alignments
+            }
+        }
+
         override fun execute(context: JobExecutionContext?) = loggedScope { logger ->
             val ctx = requireNotNull(context)
             val componentId = requireNotNull((ctx.mergedJobDataMap[COMPONENT_ID] as String).toUUID())
@@ -132,8 +158,19 @@ class AlignerKPIService : AbstractJobService(
                         component.dataStoreId.toString(), Query(component.query), false
                     )
                     val dataVersion = log.readVersion()
-                    logger.debug("At {}, the log has {} traces", dataVersion, log.first().traces.count())
                     val report = calculator.calculate(log)
+                    if (acceptedModelVersion != dataVersion) {
+                        driftDetectors.compute(componentId) { _, oldValue ->
+                            if (oldValue?.first != acceptedModelVersion)
+                                createDetector(componentData, acceptedModelVersion)?.let { acceptedModelVersion to it }
+                            else
+                                oldValue
+                        }?.second?.let { detector ->
+                            report.alignments.forEach(detector::observe)
+                            report.hasConceptDrift = detector.drift
+                        }
+                    }
+                    logger.debug("Concept drift status: {}", report.hasConceptDrift)
                     val reportId = URI("urn:processm:alignmentkpireport:${UUID.randomUUID()}")
                     DurablePersistenceProvider(component.dataStoreId.toString()).use {
                         it.put(reportId, report)
@@ -151,13 +188,13 @@ class AlignerKPIService : AbstractJobService(
                             event = WorkspaceComponentEventType.DataChange,
                             eventData = DATA_CHANGE_ALIGNMENT_KPI
                         )
-                        triggerEvent(
-                            producer,
-                            event = WorkspaceComponentEventType.NewAlignments
-                        ) {
-                            setLong(MODEL_VERSION, acceptedModelVersion)
-                            setLong(DATA_VERSION, dataVersion)
-                        }
+                        if (report.hasConceptDrift == true)
+                            this.triggerEvent(
+                                event = WorkspaceComponentEventType.ConceptDriftDetected
+                            ) {
+                                setLong(MODEL_VERSION, acceptedModelVersion)
+                                setLong(DATA_VERSION, dataVersion)
+                            }
                     }
                 } catch (exception: Exception) {
                     logger.error("Error calculating alignment-based KPI for component $componentId", exception)
