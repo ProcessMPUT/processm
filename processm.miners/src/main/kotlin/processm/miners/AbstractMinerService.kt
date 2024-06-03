@@ -107,12 +107,10 @@ abstract class CalcJob<T : ProcessModel> : MinerJob<T> {
                 component.lastError = null
                 component.afterCommit {
                     component.triggerEvent(producer, WorkspaceComponentEventType.DataChange, DATA_CHANGE_MODEL)
-                    val event =
-                        if (autoAccepted) WorkspaceComponentEventType.ModelAccepted
-                        else WorkspaceComponentEventType.NewModel
-                    component.triggerEvent(producer, event) {
-                        setLong(MODEL_VERSION, version)
-                    }
+                    if (autoAccepted)
+                        component.triggerEvent(producer, WorkspaceComponentEventType.ModelAccepted) {
+                            setLong(MODEL_VERSION, version)
+                        }
                 }
             } catch (e: Exception) {
                 component.lastError = e.message
@@ -192,7 +190,7 @@ abstract class AbstractMinerService(
         val event = WorkspaceComponentEventType.valueOf(message.getStringProperty(WORKSPACE_COMPONENT_EVENT))
 
         return when (event) {
-            WorkspaceComponentEventType.ComponentCreatedOrUpdated, WorkspaceComponentEventType.ConceptDriftDetected ->
+            WorkspaceComponentEventType.ComponentCreatedOrUpdated, WorkspaceComponentEventType.NewModelRequired ->
                 listOf(createJob(id.toUUID()!!, calcJob))
 
             WorkspaceComponentEventType.Delete -> listOf(createJob(id.toUUID()!!, deleteJob))

@@ -144,10 +144,7 @@ class AlignerKPIService : AbstractJobService(
                     if (acceptedModelVersion === null || acceptedModelId === null) {
                         component.afterCommit {
                             this as WorkspaceComponent
-                            triggerEvent(
-                                producer,
-                                event = WorkspaceComponentEventType.ConceptDriftDetected    //TODO rename to NewModelRequired? Introduce a separate event?
-                            )
+                            triggerEvent(producer, event = WorkspaceComponentEventType.NewModelRequired)
                         }
                         return@transactionMain
                     }
@@ -190,7 +187,7 @@ class AlignerKPIService : AbstractJobService(
                         )
                         if (report.hasConceptDrift == true)
                             this.triggerEvent(
-                                event = WorkspaceComponentEventType.ConceptDriftDetected
+                                event = WorkspaceComponentEventType.NewModelRequired
                             ) {
                                 setLong(MODEL_VERSION, acceptedModelVersion)
                                 setLong(DATA_VERSION, dataVersion)
