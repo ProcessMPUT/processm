@@ -254,7 +254,7 @@ class AlignerKPIServiceTests {
                 componentType = ComponentTypeDto.CausalNet
                 dataStoreId = dataStore
                 query = _query
-                data = ProcessModelComponentData(this).apply {
+                data = ProcessModelComponentData.create(this).apply {
                     addModel(1, _modelId.toString())
                     acceptedModelVersion = 1
                 }.toJSON()
@@ -302,7 +302,7 @@ class AlignerKPIServiceTests {
             }.first()
 
             val report =
-                persistenceProvider.get<Report>(ProcessModelComponentData(component).alignmentKPIReports.values.single().values.single())
+                persistenceProvider.get<Report>(ProcessModelComponentData.create(component).alignmentKPIReports.values.single().values.single())
             assertEquals(1, report.logKPI.size)
             assertEquals(6, report.traceKPI.size)
             assertEquals(20.0, report.traceKPI[COST_TOTAL]!!.median)
@@ -370,7 +370,7 @@ class AlignerKPIServiceTests {
             }.first()
 
             val report =
-                persistenceProvider.get<Report>(ProcessModelComponentData(component).alignmentKPIReports.values.single().values.single())
+                persistenceProvider.get<Report>(ProcessModelComponentData.create(component).alignmentKPIReports.values.single().values.single())
             assertEquals(1, report.logKPI.size)
             assertEquals(6, report.traceKPI.size)
             assertEquals(20.0, report.traceKPI[COST_TOTAL]!!.median)
@@ -437,7 +437,7 @@ class AlignerKPIServiceTests {
                 (WorkspaceComponents.name eq "test-aligner-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
             }.first()
 
-            assertTrue(ProcessModelComponentData(component).alignmentKPIReports.isEmpty())
+            assertTrue(ProcessModelComponentData.create(component).alignmentKPIReports.isEmpty())
             assertNull(component.dataLastModified)
             assertNotNull(component.lastError)
             assertTrue("Line 1 position 0: mismatched input 'just'" in component.lastError!!, component.lastError)
@@ -482,7 +482,7 @@ class AlignerKPIServiceTests {
             }.first()
 
             val report =
-                persistenceProvider.get<Report>(ProcessModelComponentData(component).alignmentKPIReports.values.single().values.single())
+                persistenceProvider.get<Report>(ProcessModelComponentData.create(component).alignmentKPIReports.values.single().values.single())
             assertEquals(2, report.logKPI.size)
             assertEquals(5, report.traceKPI.size)
             assertEquals(1, report.eventKPI.size)
@@ -519,7 +519,7 @@ class AlignerKPIServiceTests {
             }
 
             transactionMain {
-                val data = ProcessModelComponentData(WorkspaceComponent.findById(componentId)!!).alignmentKPIReports
+                val data = ProcessModelComponentData.create(WorkspaceComponent.findById(componentId)!!).alignmentKPIReports
                 assertEquals(1, data.size)
                 val componentData = data.values.single().values.single()
                 assertNotEquals(URI(""), componentData)
@@ -574,7 +574,7 @@ class AlignerKPIServiceTests {
                     WorkspaceComponents.dataStoreId eq dataStore
                 }.first()
 
-                val reports = ProcessModelComponentData(component).alignmentKPIReports
+                val reports = ProcessModelComponentData.create(component).alignmentKPIReports
                 assertEquals(1, reports.size)
                 assertEquals(1, reports.values.first().size)
             }
@@ -607,7 +607,7 @@ class AlignerKPIServiceTests {
         transactionMain {
             val component = WorkspaceComponent[componentId]
 
-            val reports = ProcessModelComponentData(component).alignmentKPIReports
+            val reports = ProcessModelComponentData.create(component).alignmentKPIReports
             assertEquals(1, reports.size)
             assertEquals(2, reports.values.first().size)
             val report = persistenceProvider.get<Report>(reports.values.first().maxBy { it.key }.value)
@@ -648,7 +648,7 @@ class AlignerKPIServiceTests {
                     WorkspaceComponents.dataStoreId eq dataStore
                 }.first()
 
-                val reports = ProcessModelComponentData(component).alignmentKPIReports
+                val reports = ProcessModelComponentData.create(component).alignmentKPIReports
                 assertEquals(1, reports.size)
                 assertEquals(1, reports.values.first().size)
             }
@@ -683,7 +683,7 @@ class AlignerKPIServiceTests {
         transactionMain {
             val component = WorkspaceComponent[componentId]
 
-            val reports = ProcessModelComponentData(component).alignmentKPIReports
+            val reports = ProcessModelComponentData.create(component).alignmentKPIReports
             assertEquals(1, reports.size)
             assertEquals(3, reports.values.first().size)
             for ((idx, entry) in reports.values.first().entries.sortedBy { it.key }.withIndex()) {

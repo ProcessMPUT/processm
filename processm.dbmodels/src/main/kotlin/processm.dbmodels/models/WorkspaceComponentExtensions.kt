@@ -1,6 +1,12 @@
 package processm.dbmodels.models
 
-import kotlinx.serialization.json.*
+import kotlinx.serialization.*
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.Json
 import processm.core.communication.Producer
 import java.net.URI
 
@@ -31,87 +37,78 @@ fun WorkspaceComponent.triggerEvent(
 fun WorkspaceComponent.triggerEvent(producer: Producer = WCEproducer, eventData: DataChangeType) =
     triggerEvent(producer = producer, event = WorkspaceComponentEventType.DataChange, eventData = eventData.toString())
 
-private val JsonElement?.safeJsonPrimitive
-    get() = this as? JsonPrimitive?
 
-private val JsonElement?.safeJsonObject
-    get() = this as? JsonObject?
-
-
-class ProcessModelComponentData(val component: WorkspaceComponent) {
+@Serializable
+class ProcessModelComponentData private constructor() {
     companion object {
-        private const val ACCEPTED_MODEL_VERSION: String = "accepted_model_version"
-        private const val MODELS = "models"
-        private const val ALIGNMENT_KPI_REPORTS = "alignment_kpi_report"
+        fun create(component: WorkspaceComponent) =
+            (component.data?.let { Json.decodeFromString<ProcessModelComponentData>(it) }
+                ?: ProcessModelComponentData()).apply {
+                this.component = component
+            }
+
+        private object URISerializer : KSerializer<URI> {
+            override val descriptor: SerialDescriptor
+                get() = PrimitiveSerialDescriptor("URI", PrimitiveKind.STRING)
+
+            override fun deserialize(decoder: Decoder): URI = URI(decoder.decodeString())
+
+            override fun serialize(encoder: Encoder, value: URI) = encoder.encodeString(value.toString())
+        }
     }
 
-    private val data = component.dataAsJsonObject().orEmpty()
+    @Transient
+    lateinit var component: WorkspaceComponent
 
-    //TODO this doesnt seem efficient
+    @SerialName("alignment_kpi_report")
     private val mutableAlignmentKPIReports =
-        data[ALIGNMENT_KPI_REPORTS]?.safeJsonObject?.mapValuesTo(HashMap()) {
-            it.value.safeJsonObject?.toMutableMap() ?: mutableMapOf()
-        } ?: mutableMapOf()
-    private val mutableModels = data[MODELS]?.safeJsonObject?.toMutableMap() ?: mutableMapOf()
+        HashMap<Long, HashMap<Long, @Serializable(with = URISerializer::class) URI>>()
 
+    @SerialName("models")
+    private val mutableModels = HashMap<Long, String>()
+
+    @Transient
     val alignmentKPIReports: Map<Long, Map<Long, URI>>
-        get() {
-            val result = HashMap<Long, HashMap<Long, URI>>()
-            for ((modelVersion, entries) in mutableAlignmentKPIReports) {
-                val partial = HashMap<Long, URI>()
-                for ((dataVersion, uri) in entries)
-                    partial[dataVersion.toLong()] = URI(uri.jsonPrimitive.content)
-                result[modelVersion.toLong()] = partial
-            }
-            return result
-        }
+        get() = mutableAlignmentKPIReports
 
-    val models: Map<String, String>
-        get() = mutableModels.mapValues { it.value.jsonPrimitive.content }
+    @Transient
+    val models: Map<Long, String>
+        get() = mutableModels
 
-    var acceptedModelVersion: Long? = data[ACCEPTED_MODEL_VERSION]?.safeJsonPrimitive?.longOrNull
+    @SerialName("accepted_model_version")
+    var acceptedModelVersion: Long? = null
         set(value) {
             requireNotNull(value)
-            require(value.toString() in mutableModels)
+            require(value in models)
             field = value
         }
 
-    val acceptedModelId: String? =
-        data[ACCEPTED_MODEL_VERSION]?.safeJsonPrimitive?.content?.let { acceptedModelVersion ->
-            mutableModels[acceptedModelVersion]?.safeJsonPrimitive?.content
-        }
+    @Transient
+    val acceptedModelId: String?
+        get() = models[acceptedModelVersion]
 
     fun addAlignmentKPIReport(modelVersion: Long, dataVersion: Long, reportId: URI) {
-        mutableAlignmentKPIReports.computeIfAbsent(modelVersion.toString()) { mutableMapOf() }[dataVersion.toString()] =
-            JsonPrimitive(reportId.toString())
+        mutableAlignmentKPIReports.computeIfAbsent(modelVersion) { HashMap() }[dataVersion] = reportId
     }
 
     fun getAlignmentKPIReport(modelVersion: Long, dataVersion: Long): URI? {
-        return mutableAlignmentKPIReports[modelVersion.toString()]?.get(dataVersion.toString())?.safeJsonPrimitive?.content
-            ?.let { URI(it) }
+        return mutableAlignmentKPIReports[modelVersion]?.get(dataVersion)
     }
 
     fun getMostRecentAlignmentKPIReport(modelVersion: Long? = null): URI? =
         (modelVersion ?: acceptedModelVersion)?.let { modelVersion ->
-            mutableAlignmentKPIReports[modelVersion.toString()]?.mostRecentEntry()?.safeJsonPrimitive?.let {
-                URI(it.content)
-            }
+            mutableAlignmentKPIReports[modelVersion]?.maxByOrNull { it.key }?.value
         }
 
-    fun toJSON(): String =
-        JsonObject(data.toMutableMap().apply {
-            acceptedModelVersion?.let { put(ACCEPTED_MODEL_VERSION, JsonPrimitive(it)) }
-            put(ALIGNMENT_KPI_REPORTS, JsonObject(mutableAlignmentKPIReports.mapValues { JsonObject(it.value) }))
-            put(MODELS, JsonObject(mutableModels))
-        }).toString()
+    fun toJSON(): String = Json.encodeToString(this)
 
-    fun hasModel(version: Long) = mutableModels.containsKey(version.toString())
+    fun hasModel(version: Long) = models.containsKey(version)
 
     /**
      * @return `true` if the model became the accepted model, `false` otherwise
      */
     fun addModel(version: Long, modelId: String): Boolean {
-        mutableModels[version.toString()] = JsonPrimitive(modelId)
+        (models as MutableMap)[version] = modelId
         if (acceptedModelVersion == null) {
             acceptedModelVersion = version
             return true
@@ -119,25 +116,3 @@ class ProcessModelComponentData(val component: WorkspaceComponent) {
         return false
     }
 }
-
-/**
- * Tries to parse [WorkspaceComponent.data] as a [JsonObject]. Returns the parsed object if successful, and `null` otherwise.
- */
-fun WorkspaceComponent.dataAsJsonObject() =
-    data?.let { runCatching { Json.parseToJsonElement(it) } }?.getOrNull() as? JsonObject
-
-internal fun Iterable<String>.mostRecentVersion(): Long? = this.fold<String, Long?>(null) { prev, item ->
-    val current = item.toLongOrNull() ?: return@fold prev
-    return@fold if (prev !== null && prev > current) prev else current
-}
-
-/**
- * Assumes keys represent version numbers, thus tries to parse every key as [Long]. Returns the highest value of all the
- * keys that were successfully parsed, or  `null` otherwise (i.e., if the object is empty or none of the keys were
- * successfully parsed).
- */
-fun <T> Map<String, T>.mostRecentVersion(): Long? = this.keys.mostRecentVersion()
-
-fun <T> Map<String, T>.mostRecentEntry(): T? = mostRecentVersion()?.let { get(it.toString()) }
-
-

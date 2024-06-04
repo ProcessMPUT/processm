@@ -303,7 +303,7 @@ class WorkspaceService(
     fun acceptModel(componentId: UUID, modelVersion: Long): Unit = transactionMain {
         logger().debug("Accepting model {} for {}", modelVersion, componentId)
         WorkspaceComponent[componentId].apply {
-            data = ProcessModelComponentData(this).apply {
+            data = ProcessModelComponentData.create(this).apply {
                 acceptedModelVersion = modelVersion
             }.toJSON()
             afterCommit {
@@ -312,12 +312,12 @@ class WorkspaceService(
         }
     }
 
-    fun getAvailableVersions(componentId: UUID): Set<String> = transactionMain {
-        return@transactionMain ProcessModelComponentData(WorkspaceComponent[componentId]).models.keys
+    fun getAvailableVersions(componentId: UUID): Set<Long> = transactionMain {
+        return@transactionMain ProcessModelComponentData.create(WorkspaceComponent[componentId]).models.keys
     }
 
     fun getDataVariant(componentId: UUID, variantId: String) = transactionMain {
-        return@transactionMain ProcessModelComponentData(WorkspaceComponent[componentId]).retrieveCausalNetComponentData(
+        return@transactionMain ProcessModelComponentData.create(WorkspaceComponent[componentId]).retrieveCausalNetComponentData(
             variantId.toLong()
         )
     }

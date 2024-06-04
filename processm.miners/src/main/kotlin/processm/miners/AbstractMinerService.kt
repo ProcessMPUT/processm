@@ -55,7 +55,7 @@ interface MinerJob<T : ProcessModel> : ServiceJob {
     fun delete(database: Database, id: String)
 
     fun batchDelete(database: Database, component: WorkspaceComponent) {
-        ProcessModelComponentData(component).models.values.forEach { delete(database, it) }
+        ProcessModelComponentData.create(component).models.values.forEach { delete(database, it) }
     }
 }
 
@@ -89,7 +89,7 @@ abstract class CalcJob<T : ProcessModel> : MinerJob<T> {
                 )
                 val version = stream.readVersion()
                 logger.debug("Mining for component $id at version $version")
-                val data = ProcessModelComponentData(component)
+                val data = ProcessModelComponentData.create(component)
 
                 if (data.hasModel(version)) {
                     logger.debug(

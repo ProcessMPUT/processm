@@ -137,7 +137,7 @@ class AlignerKPIService : AbstractJobService(
                 }
 
                 try {
-                    val componentData = ProcessModelComponentData(component)
+                    val componentData = ProcessModelComponentData.create(component)
                     val acceptedModelVersion = componentData.acceptedModelVersion
                     val acceptedModelId = componentData.acceptedModelId
                     logger.debug("AlignerKPIJob for $componentId acceptedModelVersion=$acceptedModelVersion")
@@ -228,7 +228,7 @@ class AlignerKPIService : AbstractJobService(
                     return@transactionMain
                 }
 
-                val dataObject = ProcessModelComponentData(component)
+                val dataObject = ProcessModelComponentData.create(component)
                 val reportIds = dataObject.alignmentKPIReports.flatMap { it.value.values }
 
                 try {

@@ -89,7 +89,7 @@ fun ProcessModelComponentData.retrieveCausalNetComponentData(modelVersion: Long?
         val actualModelVersion = (modelVersion ?: acceptedModelVersion) ?: return null.apply {
             logger.warn("No model available")
         }
-        val cnet = models[actualModelVersion.toString()]?.let {
+        val cnet = models[actualModelVersion]?.let {
             DBSerializer.fetch(
                 DBCache.get(component.dataStoreId.toString()).database,
                 it.toInt()
@@ -137,7 +137,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
     try {
         when (componentType) {
             ComponentTypeDto.CausalNet -> {
-                ProcessModelComponentData(this).retrieveCausalNetComponentData(null)
+                ProcessModelComponentData.create(this).retrieveCausalNetComponentData(null)
             }
 
             ComponentTypeDto.Kpi -> {
@@ -148,7 +148,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
             }
 
             ComponentTypeDto.BPMN -> {
-                val recentData = ProcessModelComponentData(this).acceptedModelId
+                val recentData = ProcessModelComponentData.create(this).acceptedModelId
                     ?: return null.apply { logger.warn("Missing BMPN id for component $id.") }
 
                 BPMNComponentData(
@@ -161,7 +161,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
             }
 
             ComponentTypeDto.PetriNet -> {
-                val recentData = ProcessModelComponentData(this)
+                val recentData = ProcessModelComponentData.create(this)
                 val petriNet = recentData.acceptedModelId?.let {
                     processm.core.models.petrinet.DBSerializer.fetch(
                         DBCache.get(dataStoreId.toString()).database,
@@ -205,7 +205,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
             }
 
             ComponentTypeDto.DirectlyFollowsGraph -> {
-                val recentData = ProcessModelComponentData(this)
+                val recentData = ProcessModelComponentData.create(this)
                 val dfg = recentData.acceptedModelId?.let {
                     DirectlyFollowsGraph.load(
                         DBCache.get(dataStoreId.toString()).database,
