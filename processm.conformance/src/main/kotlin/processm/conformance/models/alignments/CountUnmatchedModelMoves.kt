@@ -35,17 +35,20 @@ class CountUnmatchedCausalNetMoves(val model: CausalNet) : CountUnmatchedModelMo
 
     override fun compute(startIndex: Int, nEvents: List<Map<String?, Int>>, prevProcessState: ProcessModelState): Int {
         prevProcessState as CausalNetState
-        val nEvents = nEvents[startIndex]
+        val nEvents = if (startIndex < nEvents.size) nEvents[startIndex] else emptyMap<String?, Int>()
         // The maximum over the number of tokens on all incoming dependencies for an activity.
         // As each token must be consumed and a single execution may consume at most one token from the activity,
         // this is the same as the minimal number of pending executions for the activity.
         val minFutureExecutions = this.minFutureExecutions.get()
-        minFutureExecutions.clear()
-        for (e in prevProcessState.entrySet()) {
-            if (!e.element.target.isSilent) {
-                val old = minFutureExecutions.put(e.element.target.name, e.count.toInt())
-                if (old > e.count)
-                    minFutureExecutions.put(e.element.target.name, old)
+        if (prevProcessState.isFresh) {
+            minFutureExecutions.put(model.start.name, 1)
+        } else {
+            for (e in prevProcessState.entrySet()) {
+                if (!e.element.target.isSilent) {
+                    val old = minFutureExecutions.put(e.element.target.name, e.count.toInt())
+                    if (old > e.count)
+                        minFutureExecutions.put(e.element.target.name, old)
+                }
             }
         }
 
@@ -56,6 +59,8 @@ class CountUnmatchedCausalNetMoves(val model: CausalNet) : CountUnmatchedModelMo
             if (diff > 0)
                 sum += diff
         }
+        minFutureExecutions.clear()
+
         return sum
     }
 }

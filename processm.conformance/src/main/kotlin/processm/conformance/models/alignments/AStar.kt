@@ -33,6 +33,11 @@ class AStar(
             is PetriNet -> CountUnmatchedPetriNetMoves(model)
             is CausalNet -> CountUnmatchedCausalNetMoves(model)
             else -> null
+        },
+    private val countUnmatchedLogMoves: CountUnmatchedLogMoves? =
+        when (model) {
+            is CausalNet -> CountUnmatchedLogMovesInCausalNet(model)
+            else -> null
         }
 ) : Aligner {
     companion object {
@@ -73,6 +78,7 @@ class AStar(
     }
 
     private fun alignInternal(events: List<Event>, costLimit: Int): Alignment? {
+        countUnmatchedLogMoves?.reset()
         val nEvents = countRemainingEventsWithTheSameConceptName(events)
         val thread = Thread.currentThread()
         val queue = PriorityQueue<SearchState>(QUEUE_INITIAL_CAP)
@@ -90,8 +96,9 @@ class AStar(
                     instance.availableActivities.any(Activity::isSilent) -> Ternary.Unknown
                     else -> Ternary.False
                 },
-                null,
+                initialProcessState,
                 nEvents,
+                null
             ),
             activity = null, // before first activity
             cause = emptyList(),
@@ -155,11 +162,8 @@ class AStar(
                 throw InterruptedException("A* was requested to cancel.")
             }
 
-            val nextEventIndex = when {
-                previousEventIndex < events.size - 1 -> previousEventIndex + 1
-                else -> SKIP_EVENT
-            }
-            val nextEvent = if (nextEventIndex != SKIP_EVENT) events[nextEventIndex] else null
+            val nextEventIndex = previousEventIndex + 1
+            val nextEvent = if (nextEventIndex < events.size) events[nextEventIndex] else null
 
             // add possible moves to the queue
             assert(instance.currentState === prevProcessState)
@@ -177,8 +181,10 @@ class AStar(
                     } else {
                         val currentCost = searchState.currentCost + penalty.silentMove
                         // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
-                        val predictedCost = predict(events, nextEventIndex, Ternary.Unknown, prevProcessState, nEvents)
-                            .coerceAtLeast(searchState.predictedCost - penalty.silentMove)
+                        val predictedCost =
+                            predict(events, nextEventIndex, Ternary.Unknown, prevProcessState, nEvents, activity)
+                        //.coerceAtLeast(lastCost - currentCost)
+                        assert(predictedCost >= lastCost - currentCost)
                         if (currentCost + predictedCost <= upperBoundCost) {
                             queue.add(
                                 SearchState(
@@ -201,8 +207,16 @@ class AStar(
                     val currentCost = searchState.currentCost + penalty.synchronousMove
                     // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
                     val predictedCost =
-                        predict(events, nextEventIndex + 1, Ternary.Unknown, searchState.processState, nEvents)
-                            .coerceAtLeast(searchState.predictedCost - penalty.synchronousMove)
+                        predict(
+                            events,
+                            nextEventIndex + 1,
+                            Ternary.Unknown,
+                            searchState.processState!!,
+                            nEvents,
+                            activity
+                        )
+                    //.coerceAtLeast(lastCost - currentCost)
+                    assert(predictedCost >= lastCost - currentCost)
                     if (currentCost + predictedCost <= upperBoundCost) {
                         queue.add(
                             SearchState(
@@ -221,8 +235,9 @@ class AStar(
                     val currentCost = searchState.currentCost + penalty.modelMove
                     // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
                     val predictedCost =
-                        predict(events, nextEventIndex, Ternary.Unknown, searchState.processState, nEvents)
-                            .coerceAtLeast(searchState.predictedCost - penalty.modelMove)
+                        predict(events, nextEventIndex, Ternary.Unknown, searchState.processState!!, nEvents, activity)
+                    //.coerceAtLeast(lastCost - currentCost)
+                    assert(predictedCost >= lastCost - currentCost)
                     if (currentCost + predictedCost <= upperBoundCost) {
                         queue.add(
                             SearchState(
@@ -247,8 +262,10 @@ class AStar(
                         else -> Ternary.False
                     },
                     prevProcessState,
-                    nEvents
-                ).coerceAtLeast(searchState.predictedCost - penalty.logMove)
+                    nEvents,
+                    searchState.getPreviousActivity()
+                )//.coerceAtLeast(lastCost - currentCost)
+                assert(predictedCost >= lastCost - currentCost)
                 if (currentCost + predictedCost <= upperBoundCost) {
                     val state = SearchState(
                         currentCost = currentCost,
@@ -325,31 +342,33 @@ class AStar(
         events: List<Event>,
         startIndex: Int,
         isFinalState: Ternary,
-        prevProcessState: ProcessModelState?,
-        nEvents: List<Map<String?, Int>>
+        prevProcessState: ProcessModelState,
+        nEvents: List<Map<String?, Int>>,
+        prevActivity: Activity?
     ): Int {
-        if (startIndex == SKIP_EVENT || startIndex >= events.size)
-            return if (isFinalState != Ternary.False) 0 else penalty.modelMove // we reached the end of trace, should we move in the model?
+//        if (startIndex == SKIP_EVENT || startIndex >= events.size)
+//            return if (isFinalState != Ternary.False) 0 else penalty.modelMove // we reached the end of trace, should we move in the model?
 
-        assert(startIndex in events.indices)
+        assert(startIndex in 0..events.size) { "startIndex: $startIndex" }
 
         var sum = 0
-        if (isFinalState == Ternary.False && endActivities.isNotEmpty()) {
-            var hasEndActivity = false
-            for (index in startIndex until events.size) {
-                if (endActivities.contains(events[index].conceptName)) {
-                    hasEndActivity = true
-                    break
-                }
-            }
-            if (!hasEndActivity)
-                sum += penalty.modelMove
-        }
+//        if (isFinalState == Ternary.False && endActivities.isNotEmpty()) {
+//            var hasEndActivity = false
+//            for (index in startIndex until events.size) {
+//                if (endActivities.contains(events[index].conceptName)) {
+//                    hasEndActivity = true
+//                    break
+//                }
+//            }
+//            if (!hasEndActivity)
+//                sum += penalty.modelMove
+//        }
 
-        val unmatchedModelMovesCount = if (prevProcessState == null)
-            0
-        else
-            countUnmatchedModelMoves?.compute(startIndex, nEvents, prevProcessState) ?: 0
+        val unmatchedLogMovesCount =
+            countUnmatchedLogMoves?.compute(startIndex, events, prevProcessState, prevActivity) ?: 0
+        sum += unmatchedLogMovesCount * penalty.logMove
+
+        val unmatchedModelMovesCount = countUnmatchedModelMoves?.compute(startIndex, nEvents, prevProcessState) ?: 0
 
         // Subtract one modelMove, because we are considering previous state and it may have been already included in the cost
         sum += (unmatchedModelMovesCount - 1).coerceAtLeast(0) * penalty.modelMove
@@ -407,6 +426,14 @@ class AStar(
             if (previousSearchState === null)
                 return -1
             return previousSearchState.getPreviousEventIndex()
+        }
+
+        fun getPreviousActivity(): Activity? {
+            if (activity !== null)
+                return activity
+            if (previousSearchState === null)
+                return null
+            return previousSearchState.getPreviousActivity()
         }
 
         override fun compareTo(other: SearchState): Int {

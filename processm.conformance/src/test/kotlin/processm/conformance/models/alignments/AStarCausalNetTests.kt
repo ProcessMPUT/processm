@@ -13,7 +13,6 @@ import processm.helpers.allSubsets
 import processm.helpers.mapToSet
 import processm.helpers.zipOrThrow
 import processm.logging.loggedScope
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -212,7 +211,7 @@ class AStarCausalNetTests {
             2
         )
 
-        val expectedVisitedStatesCount = arrayOf(10, 33, 23, 132)
+        val expectedVisitedStatesCount = arrayOf(10, 27, 23, 77)
 
         val astar = AStar(fig316)
         for ((i, trace) in log.traces.withIndex()) {
@@ -301,7 +300,7 @@ class AStarCausalNetTests {
         }
     }
 
-    @Ignore("Intended for manual execution due to high resource requirements")
+    //@Ignore("Intended for manual execution due to high resource requirements")
     @Test
     fun `Parallel decisions in loop with many splits C-net non-conforming log`() {
         val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
