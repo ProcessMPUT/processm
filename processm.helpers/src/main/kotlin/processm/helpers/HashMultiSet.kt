@@ -127,6 +127,7 @@ open class HashMultiSet<E>() : MutableMultiSet<E> {
     }
 
     override fun entrySet(): Sequence<MutableMultiSet.Bucket<E>> = sequence<MutableMultiSet.Bucket<E>> {
+        // TODO: let Bucket be just a wrapper on MutableIterator<ObjectByteCursor>
         val bucket = MutableMultiSet.Bucket<E>()
         for (entry in backend) {
             bucket.element = entry.key

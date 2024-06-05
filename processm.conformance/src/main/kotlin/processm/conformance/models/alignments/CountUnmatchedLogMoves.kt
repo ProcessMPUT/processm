@@ -71,13 +71,13 @@ class CountUnmatchedLogMovesInCausalNet(
 
         val out = HashMap<String?, Set<String>>()
         for (activity in model.activities) {
-            out[activity.toString()] = getReachableActivities(activity).mapToSet { it.toString() }
+            out[activity.name] = getReachableActivities(activity).mapToSet { it.name }
         }
 
         val allReachable = HashSet<String>()
         for (node in model.startActivities) {
-            allReachable.add(node.toString())
-            allReachable.addAll(out[node.toString()].orEmpty())
+            allReachable.add(node.name)
+            allReachable.addAll(out[node.name].orEmpty())
         }
         out.put(null, allReachable)
 
@@ -186,6 +186,7 @@ class CountUnmatchedLogMovesInCausalNet(
         return stronglyConnectedComponents
     }
 
+    private val pendingActivities = ThreadLocal.withInitial { ArrayList<String>() }
 
     override fun compute(
         startIndex: Int,
@@ -196,23 +197,45 @@ class CountUnmatchedLogMovesInCausalNet(
         prevProcessState as CausalNetState?
 
         // event is matched if any pending obligation may fire the corresponding activity
-        val pendingActivities = prevProcessState.uniqueSet().mapToSet { it.target }
+//        val pendingActivities = prevProcessState.uniqueSet().mapToSet { it.target }
+        //val pendingDeps = prevProcessState.uniqueSet().map { it.target.name }
+        val pendingActivities = prevProcessState.uniqueSet().mapTo(this.pendingActivities.get()) { it.target.name }
+        val pendingEmpty = pendingActivities.isEmpty()
 
-        val reachableActivities =
-            pendingActivities.mapNotNullTo(HashSet()) { if (it != prevActivity) it.toString() else null }
-        if (pendingActivities.size == 0) {
-            reachableActivities.addAll(eventuallyFollowed[null].orEmpty())
-        } else {
-            for (activity in pendingActivities)
-                reachableActivities.addAll(eventuallyFollowed[activity.toString()].orEmpty())
-        }
+//        val reachableActivities =
+//            pendingActivities.mapNotNullTo(HashSet()) { if (it != prevActivity) it.name else null }
+//        if (pendingActivities.size == 0) {
+//            reachableActivities.addAll(eventuallyFollowed[null].orEmpty())
+//        } else {
+//            for (activity in pendingActivities)
+//                reachableActivities.addAll(eventuallyFollowed[activity.name].orEmpty())
+//        }
         var index = startIndex
         var unmatched = 0
-        while (index < trace.size) {
-            if (trace[index].conceptName !in reachableActivities)
-                unmatched++
-            index++
+        mainLoop@ while (index < trace.size) {
+            val conceptName = trace[index++].conceptName
+//            if (conceptName !in reachableActivities)
+//                unmatched++
+
+            if (conceptName != prevActivity?.name && conceptName in pendingActivities)
+                continue
+
+            if (pendingEmpty) {
+                if (conceptName in eventuallyFollowed[null].orEmpty())
+                    continue
+            } else {
+                var i = 0
+                while (i < pendingActivities.size) {
+                    if (conceptName in eventuallyFollowed[pendingActivities[i]].orEmpty())
+                        continue@mainLoop
+                    ++i
+                }
+            }
+
+            unmatched++
         }
+
+        pendingActivities.clear()
 
         assert(unmatched in 0..(trace.size - startIndex))
         return unmatched
