@@ -100,7 +100,7 @@ class CountUnmatchedPetriNetMoves(val model: PetriNet) : CountUnmatchedModelMove
         // Still not entirely clear how to deal with it, e.g., ([c, e]: 2, [d, e]: 1, [d, c]: 3) -> dcc - 3 model-skips seems to be an optimal solution
         // Underestimating further: computing unions of sets having at least one common element and assigning them the maximal value over all the original counters -> ([c, d, e]: 3).
         // At this point it is sufficient to sum the counters
-        val nEvents = nEvents[startIndex]
+        val nEvents = if (startIndex < nEvents.size) nEvents[startIndex] else emptyMap()
         val nonConsumable = ArrayList<Pair<Set<Set<String>>, Int>>()
         for ((place, counter) in prevProcessState) {
             val following = this.following(place)
