@@ -38,6 +38,8 @@ export class CNetComponentData extends ComponentData {
   nodes!: Array<CNetNodeConfig | CausalNetComponentDataAllOfNodes>;
   edges!: Array<EdgeConfig>;
   alignmentKPIReport?: AlignmentKPIReport;
+  'modelVersion'?: number;
+  'newestVersion'?: number;
 
   get isDisplayable() {
     return this.nodes != null && this.edges != null && this.nodes.length > 0;
@@ -65,6 +67,8 @@ export class PetriNetComponentData extends ComponentData {
   initialMarking?: { [key: string]: number };
   finalMarking?: { [key: string]: number };
   alignmentKPIReport?: AlignmentKPIReport;
+  'modelVersion'?: number;
+  'newestVersion'?: number;
 
   get isDisplayable() {
     return this.initialMarking !== undefined && this.finalMarking !== undefined && this?.places?.length != 0 && this.transitions?.length != 0;

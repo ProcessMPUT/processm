@@ -35,12 +35,14 @@
       "tree-log-view": "Tree log view",
       "petri-net": "Petri net",
       "select": "Select type",
+      "new-model-available": "New model is available",
       "no-data": "No data to be displayed",
       "dfg": {
         "alignments-table": "Show the alignments table",
         "support": "Support"
       },
       "edit": {
+        "load-new-model": "Click to preview new model. If you want to accept it, click the save button.",
         "name": "Name",
         "name-hint": "The label shown on top of this component",
         "type": "Type",

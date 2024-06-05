@@ -35,12 +35,14 @@
       "tree-log-view": "Hierarchiczny widok logu",
       "petri-net": "Sieć Petriego",
       "select": "Wybierz komponent",
+      "new-model-available": "Nowy model jest dostępny",
       "no-data": "Brak danych do wyświetlenia",
       "dfg": {
         "alignments-table": "Pokaż tabelę wyrównań",
         "support": "Wsparcie"
       },
       "edit": {
+        "load-new-model": "Kliknij aby podejrzeć nowy model. Jeżeli chcesz go zaakceptować, kliknij przycisk zapisz.",
         "name": "Nazwa",
         "name-hint": "Etykieta wyświetlana na komponencie",
         "type": "Typ",

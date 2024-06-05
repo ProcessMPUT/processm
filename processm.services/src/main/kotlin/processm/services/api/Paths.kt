@@ -291,7 +291,7 @@ object Paths {
      * @param variantId Data variant ID
      */
     @Location("/workspaces/{workspaceId}/components/{componentId}/data/{variantId}")
-    class WorkspaceComponentDataVariant(val workspaceId: UUID, val componentId: UUID, val variantId: String)
+    class WorkspaceComponentDataVariant(val workspaceId: UUID, val componentId: UUID, val variantId: Long)
 
     /**
      * Get all components available to the calling user in the specified workspace

@@ -135,6 +135,10 @@ class AlignerKPIService : AbstractJobService(
                     logger.error("Component with id $id is not found.")
                     return@transactionMain
                 }
+                if (component.deleted) {
+                    logger.debug("Component with id $id is deleted, ignoring")
+                    return@transactionMain
+                }
 
                 try {
                     val componentData = ProcessModelComponentData.create(component)

@@ -18,6 +18,7 @@ import processm.services.helpers.LocalizedException
 import processm.services.helpers.locale
 import java.time.Duration
 import java.util.*
+import kotlin.NoSuchElementException
 import io.ktor.util.converters.DataConversion.Configuration as DataConversionConfig
 
 internal fun ApplicationHstsConfiguration(): HSTSConfig.() -> Unit = {
@@ -54,6 +55,10 @@ internal fun ApplicationStatusPageConfiguration(): StatusPagesConfig.() -> Unit 
         exception<BadRequestException> { call, cause ->
             logger.error(cause)
             call.respond(HttpStatusCode.BadRequest)
+        }
+        exception<NoSuchElementException> { call, cause ->
+            logger.error(cause)
+            call.respond(HttpStatusCode.NotFound)
         }
         exception<Exception> { call, cause ->
             logger.error(cause)

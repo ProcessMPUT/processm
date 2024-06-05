@@ -13,7 +13,8 @@
       <v-card-text>
         <workspace-component
           v-if="isMounted"
-          :component-details="componentDetails"
+          :workspace-id="workspaceId"
+          :component-details="component"
           :component-mode="ComponentMode.Edit"
           :update-data="updateData"
           @view="$emit('view', componentDetails.id)"

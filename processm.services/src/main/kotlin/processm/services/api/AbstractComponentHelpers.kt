@@ -12,10 +12,8 @@ import processm.core.models.petrinet.Transition
 import processm.core.persistence.DurablePersistenceProvider
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.get
-import processm.dbmodels.models.ComponentTypeDto
-import processm.dbmodels.models.ProcessModelComponentData
-import processm.dbmodels.models.WorkspaceComponent
-import processm.dbmodels.models.load
+import processm.dbmodels.afterCommit
+import processm.dbmodels.models.*
 import processm.enhancement.kpi.Report
 import processm.helpers.mapToArray
 import processm.helpers.time.toLocalDateTime
@@ -84,6 +82,51 @@ private fun WorkspaceComponent.getCustomizationData(): CustomizationData? {
     }
 }
 
+fun ProcessModelComponentData.retrievePetriNetComponentData(modelVersion: Long?): PetriNetComponentData? =
+    loggedScope { logger ->
+        val actualModelVersion = (modelVersion ?: acceptedModelVersion) ?: return null.apply {
+            logger.warn("Missing Petri-net id for component ${component.id}.")
+        }
+        val petriNet = models[actualModelVersion]?.let {
+            processm.core.models.petrinet.DBSerializer.fetch(
+                DBCache.get(component.dataStoreId.toString()).database,
+                UUID.fromString(it)
+            )
+        } ?: return null.apply {
+            logger.warn("Missing Petri-net id for component ${component.id}.")
+        }
+
+        val componentDataTransitions = petriNet.transitions.mapToArray {
+            PetriNetComponentDataAllOfTransitions(
+                it.id.toString(),
+                it.name,
+                it.isSilent,
+                it.inPlaces.mapToArray { it.id.toString() },
+                it.outPlaces.mapToArray { it.id.toString() }
+            )
+        }
+
+        val alignmentKPIReport = getMostRecentAlignmentKPIReport()?.let { reportURI ->
+            DurablePersistenceProvider(component.dataStoreId.toString()).use { it.get<Report>(reportURI) }
+        }
+        PetriNetComponentData(
+            type = ComponentType.petriNet,
+            initialMarking = HashMap<String, Int>().apply {
+                for ((p, t) in petriNet.initialMarking)
+                    put(p.id.toString(), t.size)
+            },
+            finalMarking = HashMap<String, Int>().apply {
+                for ((p, t) in petriNet.finalMarking)
+                    put(p.id.toString(), t.size)
+            },
+            places = petriNet.places.mapToArray { PetriNetComponentDataAllOfPlaces(it.id.toString()) },
+            transitions = componentDataTransitions,
+            alignmentKPIReport = alignmentKPIReport,
+            modelVersion = actualModelVersion,
+            newestVersion = this.models.keys.maxOrNull()
+        )
+    }
+
 fun ProcessModelComponentData.retrieveCausalNetComponentData(modelVersion: Long?): CausalNetComponentData? =
     loggedScope { logger ->
         val actualModelVersion = (modelVersion ?: acceptedModelVersion) ?: return null.apply {
@@ -126,7 +169,9 @@ fun ProcessModelComponentData.retrieveCausalNetComponentData(modelVersion: Long?
             type = ComponentType.causalNet,
             nodes = nodes,
             edges = edges,
-            alignmentKPIReport = alignmentKPIReport
+            alignmentKPIReport = alignmentKPIReport,
+            modelVersion = actualModelVersion,
+            newestVersion = this.models.keys.maxOrNull()
         )
     }
 
@@ -161,47 +206,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
             }
 
             ComponentTypeDto.PetriNet -> {
-                val recentData = ProcessModelComponentData.create(this)
-                val petriNet = recentData.acceptedModelId?.let {
-                    processm.core.models.petrinet.DBSerializer.fetch(
-                        DBCache.get(dataStoreId.toString()).database,
-                        UUID.fromString(it)
-                    )
-                } ?: return null.apply {
-                    logger.warn("Missing Petri-net id for component $id.")
-                }
-
-                val componentDataTransitions = petriNet.transitions.mapToArray {
-                    PetriNetComponentDataAllOfTransitions(
-                        it.id.toString(),
-                        it.name,
-                        it.isSilent,
-                        it.inPlaces.mapToArray { it.id.toString() },
-                        it.outPlaces.mapToArray { it.id.toString() }
-                    )
-                }
-
-                val alignmentKPIReport = recentData.getMostRecentAlignmentKPIReport()?.let { reportURI ->
-                    DurablePersistenceProvider(dataStoreId.toString()).use { it.get<Report>(reportURI) }
-                }
-                PetriNetComponentData(
-                    type = ComponentType.petriNet,
-                    initialMarking = HashMap<String, Int>().apply {
-                        for ((p, t) in petriNet.initialMarking) put(
-                            p.toString(),
-                            t.size
-                        )
-                    },
-                    finalMarking = HashMap<String, Int>().apply {
-                        for ((p, t) in petriNet.finalMarking) put(
-                            p.toString(),
-                            t.size
-                        )
-                    },
-                    places = petriNet.places.mapToArray { PetriNetComponentDataAllOfPlaces(it.id.toString()) },
-                    transitions = componentDataTransitions,
-                    alignmentKPIReport = alignmentKPIReport
-                )
+                ProcessModelComponentData.create(this).retrievePetriNetComponentData(null)
             }
 
             ComponentTypeDto.DirectlyFollowsGraph -> {
@@ -279,13 +284,38 @@ private fun PetriNetComponentData.toPetriNet(): PetriNet {
  */
 fun WorkspaceComponent.updateData(data: String) = loggedScope { logger ->
     when (componentType) {
+        ComponentTypeDto.CausalNet -> {
+            JsonSerializer.decodeFromString<CausalNetComponentData>(data).modelVersion?.let { modelVersion ->
+                this.data =
+                    ProcessModelComponentData.create(this)
+                        .apply { acceptedModelVersion = modelVersion }
+                        .toJSON()
+                afterCommit {
+                    this as WorkspaceComponent
+                    triggerEvent(event = WorkspaceComponentEventType.ModelAccepted)
+                }
+            }
+        }
+
         ComponentTypeDto.PetriNet -> {
-            val petriNet = JsonSerializer.decodeFromString<PetriNetComponentData>(data).toPetriNet()
-            processm.core.models.petrinet.DBSerializer.update(
-                DBCache.get(dataStoreId.toString()).database,
-                UUID.fromString(this.data),
-                petriNet
-            )
+            JsonSerializer.decodeFromString<PetriNetComponentData>(data).modelVersion?.let { modelVersion ->
+                val petriNet = JsonSerializer.decodeFromString<PetriNetComponentData>(data).toPetriNet()
+                val componentData = ProcessModelComponentData.create(this)
+                if (componentData.acceptedModelVersion != modelVersion) {
+                    this.data = componentData
+                        .apply { acceptedModelVersion = modelVersion }
+                        .toJSON()
+                    afterCommit {
+                        this as WorkspaceComponent
+                        triggerEvent(event = WorkspaceComponentEventType.ModelAccepted)
+                    }
+                }
+                processm.core.models.petrinet.DBSerializer.update(
+                    DBCache.get(dataStoreId.toString()).database,
+                    UUID.fromString(componentData.acceptedModelId ?: error("Model ID is not set for component $id")),
+                    petriNet
+                )
+            }
         }
 
         ComponentTypeDto.BPMN -> {

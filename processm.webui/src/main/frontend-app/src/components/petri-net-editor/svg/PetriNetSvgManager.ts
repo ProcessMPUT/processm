@@ -1,8 +1,5 @@
 import { Place, PlaceOptions } from "@/components/petri-net-editor/model/Place";
-import {
-  Transition,
-  TransitionOptions
-} from "@/components/petri-net-editor/model/Transition";
+import { Transition, TransitionOptions } from "@/components/petri-net-editor/model/Transition";
 import type { EventBus, SVGLineSelection, SVGSelection } from "@/utils/Types";
 import type { PetriNetElement } from "@/components/petri-net-editor/model/PetriNetElement";
 import { EventNames } from "@/components/petri-net-editor/PetriNetEditorConstants";
@@ -20,10 +17,7 @@ export class PetriNetSvgManager {
   private readonly _eventBus: EventBus | null;
 
   private _svgPlaces: Map<string, SvgPlace> = new Map<string, SvgPlace>();
-  private _svgTransitions: Map<string, SvgTransition> = new Map<
-    string,
-    SvgTransition
-  >();
+  private _svgTransitions: Map<string, SvgTransition> = new Map<string, SvgTransition>();
   private _svgArcs: Map<string, SvgArc> = new Map<string, SvgArc>();
   private readonly _svg: SVGSelection;
   private _connectSvgLine: SVGLineSelection | null = null;
@@ -50,18 +44,12 @@ export class PetriNetSvgManager {
   set state(newState: PetriNetState) {
     this._state.arcs.forEach((arc) => this.removeArc(arc.id));
 
-    [...this._state.places, ...this._state.transitions].forEach((element) =>
-      this.removeElement(element.id)
-    );
+    [...this._state.places, ...this._state.transitions].forEach((element) => this.removeElement(element.id));
 
     this._state = new PetriNetState();
     newState.places.forEach((place) => this.createPlace(place.getOptions()));
-    newState.transitions.forEach((transition) =>
-      this.createTransition(transition.getOptions())
-    );
-    newState.arcs.forEach((arc) =>
-      this.connect(arc.outElementId, arc.inElementId)
-    );
+    newState.transitions.forEach((transition) => this.createTransition(transition.getOptions()));
+    newState.arcs.forEach((arc) => this.connect(arc.outElementId, arc.inElementId));
     this._state.layoutMap = newState.layoutMap;
   }
 
@@ -75,18 +63,14 @@ export class PetriNetSvgManager {
 
   get width(): number {
     return Math.max(
-      ...this._state.transitions.map(
-        (transition) => transition.x + Transition.WIDTH
-      ),
+      ...this._state.transitions.map((transition) => transition.x + Transition.WIDTH),
       ...this._state.places.map((place) => place.cx + Place.RADIUS)
     );
   }
 
   get height(): number {
     return Math.max(
-      ...this._state.transitions.map(
-        (transition) => transition.y + Transition.HEIGHT
-      ),
+      ...this._state.transitions.map((transition) => transition.y + Transition.HEIGHT),
       ...this._state.places.map((place) => place.cy + Place.RADIUS)
     );
   }
@@ -99,10 +83,7 @@ export class PetriNetSvgManager {
     return actualWidth / this.width;
   }
 
-  private static calculateTransitionInPosition(
-    arc: SvgArc,
-    inElement: Transition
-  ): [number, number] {
+  private static calculateTransitionInPosition(arc: SvgArc, inElement: Transition): [number, number] {
     const [arcX1, arcY1] = arc.getOutPosition();
 
     let newX2 = arcX1;
@@ -123,13 +104,7 @@ export class PetriNetSvgManager {
     }
 
     if (cornerX != null && cornerY != null) {
-      [newX2, newY2] = PetriNetSvgManager.calculateOffsetPosition(
-        arcX1,
-        arcY1,
-        cornerX,
-        cornerY,
-        30
-      );
+      [newX2, newY2] = PetriNetSvgManager.calculateOffsetPosition(arcX1, arcY1, cornerX, cornerY, 30);
     } else if (cornerX != null) {
       newX2 = arcX1 <= cornerX ? cornerX - 30 : cornerX + 30;
     } else if (cornerY != null) {
@@ -139,13 +114,7 @@ export class PetriNetSvgManager {
     return [newX2, newY2];
   }
 
-  private static calculateOffsetPosition(
-    x1: number,
-    y1: number,
-    x2: number,
-    y2: number,
-    offset: number
-  ): [number, number] {
+  private static calculateOffsetPosition(x1: number, y1: number, x2: number, y2: number, offset: number): [number, number] {
     const a = x1 - x2;
     const b = y1 - y2;
     const c = Math.hypot(a, b);
@@ -158,20 +127,14 @@ export class PetriNetSvgManager {
 
   createPlace(options: PlaceOptions): string {
     const place = this._state.createPlace(options);
-    this._svgPlaces.set(
-      place.id,
-      new SvgPlace(this._svg, this._eventBus, place)
-    );
+    this._svgPlaces.set(place.id, new SvgPlace(this._svg, this._eventBus, place));
 
     return place.id;
   }
 
   createTransition(options: TransitionOptions): string {
     const transition = this._state.createTransition(options);
-    this._svgTransitions.set(
-      transition.id,
-      new SvgTransition(this._svg, this._eventBus, transition)
-    );
+    this._svgTransitions.set(transition.id, new SvgTransition(this._svg, this._eventBus, transition));
 
     return transition.id;
   }
@@ -204,12 +167,7 @@ export class PetriNetSvgManager {
     // @ts-ignore
     this._svg.on("mousemove", (event: MouseEvent) => {
       if (this._connectSvgLine == null) {
-        this._connectSvgLine = SvgArc.createLine(
-          this._svg.select(".arcs"),
-          SvgArc.WIDTH
-        )
-          .attr("x1", x1)
-          .attr("y1", y1);
+        this._connectSvgLine = SvgArc.createLine(this._svg.select(".arcs"), SvgArc.WIDTH).attr("x1", x1).attr("y1", y1);
       }
 
       this._connectSvgLine.attr("x2", event.offsetX / this.scale);
@@ -221,8 +179,7 @@ export class PetriNetSvgManager {
     // @ts-ignore
     this._svg.on("click", (event: MouseEvent) => {
       const target = event.target as Element;
-      const isPlaceOrTransition =
-        target instanceof SVGCircleElement || target instanceof SVGRectElement;
+      const isPlaceOrTransition = target instanceof SVGCircleElement || target instanceof SVGRectElement;
 
       this._connectSvgLine?.remove();
       this._connectSvgLine = null;
@@ -243,15 +200,13 @@ export class PetriNetSvgManager {
   }
 
   hasElement(elementId: string): boolean {
-    const element: PetriNetSvgElement | undefined =
-      this._svgPlaces.get(elementId) ?? this._svgTransitions.get(elementId);
+    const element: PetriNetSvgElement | undefined = this._svgPlaces.get(elementId) ?? this._svgTransitions.get(elementId);
 
     return element != undefined;
   }
 
   getElement(elementId: string): PetriNetSvgElement {
-    const element: PetriNetSvgElement | undefined =
-      this._svgPlaces.get(elementId) ?? this._svgTransitions.get(elementId);
+    const element: PetriNetSvgElement | undefined = this._svgPlaces.get(elementId) ?? this._svgTransitions.get(elementId);
 
     if (element == undefined) {
       throw new Error(`Element (id="${elementId}") not found`);
@@ -263,9 +218,7 @@ export class PetriNetSvgManager {
   removeElement(id: string): void {
     const svgElement: PetriNetSvgElement = this.getElement(id);
     svgElement.delete();
-    this._state
-      .getElementArcs(svgElement.model.id)
-      .forEach((arc) => this.removeArc(arc.id));
+    this._state.getElementArcs(svgElement.model.id).forEach((arc) => this.removeArc(arc.id));
     this._state.removeElement(svgElement.model.id);
   }
 
@@ -277,12 +230,13 @@ export class PetriNetSvgManager {
   }
 
   updateDimensions(): void {
-    const width = this.width;
-    const height = this.height;
+    const width = this.width + 50;
+    const height = this.height + 50;
 
-    this._svg
-      .style("min-width", `${width + 50}px`)
-      .style("min-height", `${height + 50}px`);
+    this._svg.node()?.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    this._svg.node()?.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    this._svg.node()?.style.removeProperty("min-width");
+    this._svg.node()?.style.removeProperty("min-height");
   }
 
   getNumberOfIntersectingArcs(): number {
@@ -305,32 +259,17 @@ export class PetriNetSvgManager {
   }
 
   getNumberOfLayers(): number {
-    return Math.max(
-      0,
-      ...this._state.getBlocks().map((block) => block.numberOfLayers)
-    );
+    return Math.max(0, ...this._state.getBlocks().map((block) => block.numberOfLayers));
   }
 
   getHierarchyDepth(): number {
-    return Math.max(
-      0,
-      ...this._state
-        .getBlocks()
-        .map((block) => this.getHierarchyDepthRec(block))
-    );
+    return Math.max(0, ...this._state.getBlocks().map((block) => this.getHierarchyDepthRec(block)));
   }
 
   getBranchingFactor(): number {
-    const blocks = this.getBlocks().filter(
-      (block) => !(block instanceof NodeBlock)
-    );
+    const blocks = this.getBlocks().filter((block) => !(block instanceof NodeBlock));
 
-    return (
-      blocks
-        .map((block) => block.blocks.length)
-        .reduce((sum, numberOfBlocks) => sum + numberOfBlocks, 0) /
-      blocks.length
-    );
+    return blocks.map((block) => block.blocks.length).reduce((sum, numberOfBlocks) => sum + numberOfBlocks, 0) / blocks.length;
   }
 
   private enableDragging(): void {
@@ -343,13 +282,7 @@ export class PetriNetSvgManager {
   }
 
   private getHierarchyDepthRec(block: Block): number {
-    return (
-      1 +
-      Math.max(
-        0,
-        ...block.blocks.map((block1) => this.getHierarchyDepthRec(block1))
-      )
-    );
+    return 1 + Math.max(0, ...block.blocks.map((block1) => this.getHierarchyDepthRec(block1)));
   }
 
   // Source: https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
@@ -376,21 +309,14 @@ export class PetriNetSvgManager {
   }
 
   private getBlocksRec(block: Block): Block[] {
-    return [
-      ...block.blocks,
-      ...block.blocks.flatMap((block1) => this.getBlocksRec(block1))
-    ];
+    return [...block.blocks, ...block.blocks.flatMap((block1) => this.getBlocksRec(block1))];
   }
 
   private updateArcPosition(arc: SvgArc) {
-    const outElement: PetriNetSvgElement = this.getElement(
-      arc.model.outElementId
-    );
+    const outElement: PetriNetSvgElement = this.getElement(arc.model.outElementId);
     this.updateOutPosition(arc, outElement.model);
 
-    const inElement: PetriNetSvgElement = this.getElement(
-      arc.model.inElementId
-    );
+    const inElement: PetriNetSvgElement = this.getElement(arc.model.inElementId);
     this.updateInPosition(arc, inElement.model);
   }
 
@@ -400,10 +326,7 @@ export class PetriNetSvgManager {
     let newX2 = arcX1;
     let newY2 = arcY1;
     if (inElement instanceof Transition) {
-      [newX2, newY2] = PetriNetSvgManager.calculateTransitionInPosition(
-        arc,
-        inElement
-      );
+      [newX2, newY2] = PetriNetSvgManager.calculateTransitionInPosition(arc, inElement);
     } else if (inElement instanceof Place) {
       const a = arcX1 - inElement.cx;
       const b = arcY1 - inElement.cy;
@@ -432,5 +355,15 @@ export class PetriNetSvgManager {
     }
 
     arc.setOutPosition(newX1, newY1);
+  }
+
+  reset() {
+    this._state = new PetriNetState();
+    for (const item of this._svgTransitions.values()) item.delete();
+    this._svgTransitions.clear();
+    for (const item of this._svgPlaces.values()) item.delete();
+    this._svgPlaces.clear();
+    for (const item of this._svgArcs.values()) item.delete();
+    this._svgArcs.clear();
   }
 }

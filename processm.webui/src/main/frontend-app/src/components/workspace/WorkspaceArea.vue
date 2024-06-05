@@ -249,7 +249,9 @@ export default class WorkspaceArea extends Vue {
       updatedLayoutElements[layoutElement.i] = layout;
       component.layout = layout;
     });
-    await this.workspaceService.updateLayout(this.workspaceId, updatedLayoutElements);
+    if (Object.keys(updatedLayoutElements).length > 0) {
+      await this.workspaceService.updateLayout(this.workspaceId, updatedLayoutElements);
+    }
     this.dirtyLayout = false;
   }
 

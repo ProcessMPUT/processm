@@ -73,6 +73,18 @@ export default class WorkspaceService extends BaseService {
     return response.data;
   }
 
+  public async getComponentDataVariant(workspaceId: string, componentId: string, variantId: number): Promise<unknown> {
+    const response = await this.workspacesApi.getWorkspaceComponentDataVariant(workspaceId, componentId, variantId);
+
+    return response.data;
+  }
+
+  public async setComponentDataVariant(workspaceId: string, componentId: string, variantId: number): Promise<unknown> {
+    const response = await this.workspacesApi.postWorkspaceComponentData(workspaceId, componentId, variantId);
+
+    return response.data;
+  }
+
   public async getWorkspaceComponents(workspaceId: string) {
     const response = await this.workspacesApi.getWorkspaceComponents(workspaceId);
 
@@ -98,6 +110,14 @@ export default class WorkspaceService extends BaseService {
   public async updateComponent(workspaceId: string, componentId: string, component: WorkspaceComponent) {
     const payload = Object.assign({}, component) as { data?: any };
     switch (component.type) {
+      case "causalNet":
+        payload.data = {
+          nodes: [],
+          edges: [],
+          modelVersion: payload.data.modelVersion,
+          type: payload.data.type
+        };
+        break;
       case "directlyFollowsGraph":
         delete payload.data;
         break;

@@ -13,12 +13,9 @@ import processm.dbmodels.models.*
 import processm.dbmodels.urn
 import processm.logging.loggedScope
 import processm.logging.logger
-import processm.services.api.getCustomProperties
+import processm.services.api.*
 import processm.services.api.models.AbstractComponent
 import processm.services.api.models.CustomProperty
-import processm.services.api.retrieveCausalNetComponentData
-import processm.services.api.toComponentType
-import processm.services.api.updateData
 import processm.services.helpers.ExceptionReason
 import java.time.Instant
 import java.util.*
@@ -316,9 +313,13 @@ class WorkspaceService(
         return@transactionMain ProcessModelComponentData.create(WorkspaceComponent[componentId]).models.keys
     }
 
-    fun getDataVariant(componentId: UUID, variantId: String) = transactionMain {
-        return@transactionMain ProcessModelComponentData.create(WorkspaceComponent[componentId]).retrieveCausalNetComponentData(
-            variantId.toLong()
-        )
+    fun getDataVariant(componentId: UUID, variantId: Long) = transactionMain {
+        with(ProcessModelComponentData.create(WorkspaceComponent[componentId])) {
+            when (component.componentType) {
+                ComponentTypeDto.CausalNet -> retrieveCausalNetComponentData(variantId)
+                ComponentTypeDto.PetriNet -> retrievePetriNetComponentData(variantId)
+                else -> throw UnsupportedOperationException("Component type ${component.componentType} does not support data versioning")
+            }
+        }
     }
 }

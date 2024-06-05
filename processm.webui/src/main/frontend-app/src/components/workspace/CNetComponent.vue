@@ -2,6 +2,16 @@
   <div class="graph">
     <v-toolbar class="toolbar" dense elevation="0" floating>
       <alignments-dialog :alignments="data.data.alignmentKPIReport?.alignments" :name="data.name"></alignments-dialog>
+      <v-tooltip bottom v-if="hasNewerVersion()">
+        <template v-slot:activator="{ on, attrs }">
+          <v-btn v-bind="attrs" v-on="on" icon v-if="componentMode == ComponentMode.Edit" @click="loadNewestModel">
+            <v-icon color="warning">priority_high</v-icon>
+          </v-btn>
+          <v-icon v-bind="attrs" v-on="on" color="warning" v-else>priority_high</v-icon>
+        </template>
+        <span v-if="componentMode == ComponentMode.Edit">{{ $t("workspace.component.edit.load-new-model") }}</span>
+        <span v-else>{{ $t("workspace.component.new-model-available") }}</span>
+      </v-tooltip>
     </v-toolbar>
     <table>
       <tr>
@@ -49,13 +59,15 @@ table td:last-child {
 
 <script lang="ts">
 import Vue from "vue";
-import { Component, Prop, Watch } from "vue-property-decorator";
+import { Component, Inject, Prop, Watch } from "vue-property-decorator";
 import Graph, { AlignmentKPIHolder, CNetGraphData } from "@/components/Graph.vue";
 import { EdgeConfig } from "@antv/g6-core/lib/types";
 import { CNetComponentData, WorkspaceComponent as WorkspaceComponentModel } from "@/models/WorkspaceComponent";
 import { ComponentMode } from "@/components/workspace/WorkspaceComponent.vue";
 import LogTable from "@/components/LogTable.vue";
 import AlignmentsDialog from "@/components/AlignmentsDialog.vue";
+import WorkspaceService from "@/services/WorkspaceService";
+import { ComponentData } from "@/openapi";
 
 @Component({
   computed: {
@@ -66,6 +78,11 @@ import AlignmentsDialog from "@/components/AlignmentsDialog.vue";
   components: { AlignmentsDialog, LogTable, Graph }
 })
 export default class CNetComponent extends Vue {
+  @Inject() workspaceService!: WorkspaceService;
+
+  @Prop()
+  readonly workspaceId!: string;
+
   @Prop({ default: {} })
   readonly data!: WorkspaceComponentModel & { data: CNetComponentData };
   graphData: CNetGraphData & AlignmentKPIHolder = {
@@ -76,6 +93,9 @@ export default class CNetComponent extends Vue {
 
   @Prop({ default: null })
   readonly componentMode?: ComponentMode;
+
+  @Prop({ default: false })
+  readonly updateData = false;
 
   minSupport: number = 0;
   maxSupport: number = 1;
@@ -122,6 +142,21 @@ export default class CNetComponent extends Vue {
   @Watch("data")
   update() {
     if (this.data === undefined) return;
+    this.renderCNet();
+  }
+
+  hasNewerVersion() {
+    const newest = this.data.data.newestVersion;
+    const current = this.data.data.modelVersion;
+    return newest !== undefined && current !== undefined && newest > current;
+  }
+
+  async loadNewestModel() {
+    const variantId = this.data.data.newestVersion;
+    if (variantId === undefined) return;
+    this.data.data = new CNetComponentData(
+      (await this.workspaceService.getComponentDataVariant(this.workspaceId, this.data.id, variantId)) as Partial<ComponentData>
+    );
     this.renderCNet();
   }
 }
