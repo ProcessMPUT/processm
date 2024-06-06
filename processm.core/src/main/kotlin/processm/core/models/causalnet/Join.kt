@@ -7,7 +7,8 @@ import processm.helpers.mapToSet
  *
  * Claims ownership of [dependencies], which should not be modified after construction of the binding.
  */
-data class Join(override val dependencies: Set<Dependency>) : Binding {
+data class Join(override val dependencies: Set<Dependency> /*FIXME: replace with List<Dependency> and uniqueness check in assertion*/) :
+    Binding {
     init {
         if (dependencies.isEmpty()) {
             throw IllegalArgumentException("Binding specification cannot be empty")

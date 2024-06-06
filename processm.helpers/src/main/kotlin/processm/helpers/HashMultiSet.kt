@@ -21,20 +21,20 @@ interface MutableMultiSet<E> : MutableSet<E> {
 
     /**
      * The sequence over elements with associated counts in this multiset.
-     * Note that the resulting [Bucket]s are reused in successive iterations.
+     * Note that the resulting [Bucket] is reused in successive iterations.
      */
 
-    fun entrySet(): Sequence<Bucket<E>>
+    fun entrySet(): Set<Bucket<E>>
 
     /**
      * The sequence over unique elements in this multiset.
      */
-    fun uniqueSet(): Sequence<E>
+    fun uniqueSet(): Set<E>
 
     /**
      * The sequence of counts in this multiset.
      */
-    fun countSet(): Sequence<Byte>
+    fun countSet(): Set<Byte>
 
     /**
      * Removes at most [count] copies of [element].
@@ -58,6 +58,8 @@ open class HashMultiSet<E>() : MutableMultiSet<E> {
     }
 
     private val backend = ObjectByteHashMap<E>()
+    private val keysContainer = backend.keys()
+    private val valuesContainer = backend.values()
 
     /**
      * The total number of items in this multiset.
@@ -126,24 +128,53 @@ open class HashMultiSet<E>() : MutableMultiSet<E> {
         override fun remove() = throw UnsupportedOperationException()
     }
 
-    override fun entrySet(): Sequence<MutableMultiSet.Bucket<E>> = sequence<MutableMultiSet.Bucket<E>> {
-        // TODO: let Bucket be just a wrapper on MutableIterator<ObjectByteCursor>
-        val bucket = MutableMultiSet.Bucket<E>()
-        for (entry in backend) {
-            bucket.element = entry.key
-            bucket.count = entry.value
-            yield(bucket)
+    override fun entrySet(): Set<MutableMultiSet.Bucket<E>> =
+        object : Set<MutableMultiSet.Bucket<E>>, Iterator<MutableMultiSet.Bucket<E>> {
+            private val base = keysContainer.iterator()
+            private val bucket = MutableMultiSet.Bucket<E>()
+            override fun hasNext(): Boolean = base.hasNext()
+            override fun next(): MutableMultiSet.Bucket<E> {
+                val cursor = base.next()
+                bucket.element = cursor.value
+                bucket.count = backend.values[cursor.index]
+                return bucket
+            }
+
+            override val size: Int
+                get() = uniqueSize
+
+            override fun isEmpty(): Boolean = uniqueSize == 0
+            override fun iterator(): Iterator<MutableMultiSet.Bucket<E>> = this
+            override fun containsAll(elements: Collection<MutableMultiSet.Bucket<E>>): Boolean =
+                throw UnsupportedOperationException()
+
+            override fun contains(element: MutableMultiSet.Bucket<E>): Boolean = throw UnsupportedOperationException()
         }
+
+    override fun uniqueSet(): Set<E> = object : Set<E>, Iterator<E> {
+        private val base = keysContainer.iterator()
+        override fun hasNext(): Boolean = base.hasNext()
+        override fun next(): E = base.next().value
+        override val size: Int
+            get() = uniqueSize
+
+        override fun isEmpty(): Boolean = uniqueSize == 0
+        override fun iterator(): Iterator<E> = this
+        override fun containsAll(elements: Collection<E>): Boolean = elements.all { keysContainer.contains(it) }
+        override fun contains(element: E): Boolean = keysContainer.contains(element)
     }
 
-    override fun uniqueSet(): Sequence<E> = sequence<E> {
-        for (key in backend.keys())
-            yield(key.value)
-    }
+    override fun countSet(): Set<Byte> = object : Set<Byte>, ByteIterator() {
+        private val base = valuesContainer.iterator()
+        override fun hasNext(): Boolean = base.hasNext()
+        override fun nextByte(): Byte = base.next().value
+        override val size: Int
+            get() = valuesContainer.size()
 
-    override fun countSet(): Sequence<Byte> = sequence {
-        for (count in backend.values())
-            yield(count.value)
+        override fun isEmpty(): Boolean = valuesContainer.isEmpty
+        override fun iterator(): ByteIterator = this
+        override fun containsAll(elements: Collection<Byte>): Boolean = elements.all { valuesContainer.contains(it) }
+        override fun contains(element: Byte): Boolean = valuesContainer.contains(element)
     }
 
     override fun retainAll(elements: Collection<E>): Boolean =

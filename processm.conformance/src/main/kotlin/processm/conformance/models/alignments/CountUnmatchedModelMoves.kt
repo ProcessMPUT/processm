@@ -42,7 +42,7 @@ class CountUnmatchedCausalNetMoves(val model: CausalNet) : CountUnmatchedModelMo
         val minFutureExecutions = this.minFutureExecutions.get()
         if (prevProcessState.isFresh) {
             minFutureExecutions.put(model.start.name, 1)
-        } else {
+        } else if (prevProcessState.isNotEmpty()) {
             for (e in prevProcessState.entrySet()) {
                 if (!e.element.target.isSilent) {
                     val old = minFutureExecutions.put(e.element.target.name, e.count.toInt())

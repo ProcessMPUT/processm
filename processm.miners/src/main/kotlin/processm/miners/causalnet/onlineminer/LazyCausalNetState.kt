@@ -71,11 +71,11 @@ class LazyCausalNetState(
             override fun remove() = throw UnsupportedOperationException()
         }
 
-    override fun entrySet(): Sequence<MutableMultiSet.Bucket<Dependency>> = backend.entrySet()
+    override fun uniqueSet(): Set<Dependency> = backend.uniqueSet()
 
-    override fun uniqueSet(): Sequence<Dependency> = backend.uniqueSet()
+    override fun entrySet(): Set<MutableMultiSet.Bucket<Dependency>> = backend.entrySet()
 
-    override fun countSet(): Sequence<Byte> = backend.countSet()
+    override fun countSet(): Set<Byte> = backend.countSet()
 
     override fun remove(element: Dependency, count: Byte): Boolean = throw NotImplementedError("Not supported")
 

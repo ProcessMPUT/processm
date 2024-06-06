@@ -2,7 +2,6 @@ package processm.miners.causalnet.heuristicminer.bindingproviders
 
 import processm.core.models.causalnet.*
 import processm.helpers.HierarchicalIterable
-import processm.helpers.asCollection
 import processm.helpers.asList
 import processm.helpers.mapToSet
 import processm.logging.logger
@@ -38,7 +37,7 @@ class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelec
                         val ns = CausalNetStateImpl(intermediate)
                         ns.addAll(produce)
 
-                        if (!remainder.containsAll(ns.uniqueSet().map { it.target }.asCollection()))
+                        if (!remainder.containsAll(ns.uniqueSet().map { it.target }))
                             continue
                         nextStates.add(
                             ReplayTrace(

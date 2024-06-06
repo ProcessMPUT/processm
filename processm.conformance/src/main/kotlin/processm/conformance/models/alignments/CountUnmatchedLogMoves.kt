@@ -1,11 +1,14 @@
 package processm.conformance.models.alignments
 
+import com.carrotsearch.hppc.IntArrayDeque
+import com.carrotsearch.hppc.IntHashSet
+import com.carrotsearch.hppc.ObjectIntHashMap
+import com.carrotsearch.hppc.ObjectIntMap
 import processm.core.log.Event
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.CausalNetState
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModelState
-import processm.helpers.mapToSet
 import java.lang.Integer.min
 import java.util.*
 
@@ -30,60 +33,11 @@ interface CountUnmatchedLogMoves {
 class CountUnmatchedLogMovesInCausalNet(
     private val model: CausalNet
 ) : CountUnmatchedLogMoves {
-
-    /**
-     * A map from activity name to a set of eventually following activities.
-     */
-    private val eventuallyFollowed: Map<String?, Set<String>> = calculateEventuallyFollowed()
-
-    private fun calculateEventuallyFollowed(): Map<String?, Set<String>> {
-        val stronglyConnectedComponents = stronglyConnectedComponents()
-        val activityToGroupIndex = HashMap<Activity, Int>()
-        for ((index, activities) in stronglyConnectedComponents.withIndex()) {
-            for (activity in activities)
-                activityToGroupIndex[activity] = index
-        }
-        val connectionsMatrix = HashMap<Int, HashSet<Int>>()
-        for (dep in model.dependencies) {
-            val sourceId = activityToGroupIndex[dep.source]!!
-            val targetId = activityToGroupIndex[dep.target]!!
-            if (sourceId != targetId) {
-                connectionsMatrix.compute(sourceId) { _, list ->
-                    (list ?: HashSet()).apply { add(targetId) }
-                }
-            }
-        }
-
-        fun getReachableActivities(activity: Activity): Set<Activity> {
-            val out = HashSet<Activity>()
-            val queue = ArrayDeque<Int>()
-            queue.add(activityToGroupIndex[activity]!!)
-
-            while (queue.isNotEmpty()) {
-                val id = queue.removeFirst()
-
-                out.addAll(stronglyConnectedComponents[id])
-                queue.addAll(connectionsMatrix[id].orEmpty())
-            }
-
-            return out
-        }
-
-        val out = HashMap<String?, Set<String>>()
-        for (activity in model.activities) {
-            out[activity.name] = getReachableActivities(activity).mapToSet { it.name }
-        }
-
-        val allReachable = HashSet<String>()
-        for (node in model.startActivities) {
-            allReachable.add(node.name)
-            allReachable.addAll(out[node.name].orEmpty())
-        }
-        out.put(null, allReachable)
-
-        return out
-    }
-
+    private val stronglyConnectedComponents = stronglyConnectedComponents()
+    private val activityToSCC = activityToSCC()
+    private val directlyFollowsSCC = dfSCC()
+    private val eventuallyFollowsSCC = efSCC()
+    private val allReachable = allReachable()
 
     /**
      * Generates a list of strongly connected components in [model].
@@ -186,7 +140,60 @@ class CountUnmatchedLogMovesInCausalNet(
         return stronglyConnectedComponents
     }
 
-    private val pendingActivities = ThreadLocal.withInitial { ArrayList<String>() }
+    private fun activityToSCC(): ObjectIntMap<String> {
+        val out = ObjectIntHashMap<String>()
+        for ((index, activities) in stronglyConnectedComponents.withIndex()) {
+            for (activity in activities)
+                out.put(activity.name, index)
+        }
+        return out
+    }
+
+    private fun dfSCC(): Array<IntArray> {
+        val dfg = Array(stronglyConnectedComponents.size) { IntHashSet() }
+
+        for (dep in model.dependencies) {
+            val sourceId = activityToSCC.get(dep.source.name)
+            val targetId = activityToSCC.get(dep.target.name)
+            if (sourceId != targetId) {
+                val row = dfg[sourceId]
+                row.add(targetId)
+            }
+        }
+
+        return Array(dfg.size) { dfg[it].toArray() }
+    }
+
+    private fun efSCC(): Array<IntArray> {
+        fun getReachable(scc: Int): IntArray {
+            val out = IntHashSet()
+            val queue = IntArrayDeque()
+            queue.addLast(scc)
+
+            while (!queue.isEmpty) {
+                val id = queue.removeFirst()
+
+                out.add(id)
+                queue.addLast(*directlyFollowsSCC[id])
+            }
+
+            return out.toArray()
+        }
+
+        return Array(stronglyConnectedComponents.size) { index -> getReachable(index) }
+    }
+
+    private fun allReachable(): IntArray {
+        val out = IntHashSet()
+
+        for (start in model.startActivities) {
+            out.addAll(*eventuallyFollowsSCC[activityToSCC[start.name]])
+        }
+
+        return out.toArray()
+    }
+
+    private val pendingSCC = ThreadLocal.withInitial { IntHashSet() }
 
     override fun compute(
         startIndex: Int,
@@ -199,8 +206,20 @@ class CountUnmatchedLogMovesInCausalNet(
         // event is matched if any pending obligation may fire the corresponding activity
 //        val pendingActivities = prevProcessState.uniqueSet().mapToSet { it.target }
         //val pendingDeps = prevProcessState.uniqueSet().map { it.target.name }
-        val pendingActivities = prevProcessState.uniqueSet().mapTo(this.pendingActivities.get()) { it.target.name }
-        val pendingEmpty = pendingActivities.isEmpty()
+        val pendingSCC = this.pendingSCC.get()
+        var index = 0
+        for (dep in prevProcessState.uniqueSet()) {
+            val target = dep.target.name
+            if (prevActivity != dep.target) {
+                pendingSCC.add(activityToSCC[target])
+            }
+            val candidates = eventuallyFollowsSCC[activityToSCC[target]]
+            index = 0
+            while (index < candidates.size) {
+                pendingSCC.add(candidates[index++])
+            }
+        }
+        val pendingEmpty = pendingSCC.isEmpty
 
 //        val reachableActivities =
 //            pendingActivities.mapNotNullTo(HashSet()) { if (it != prevActivity) it.name else null }
@@ -210,32 +229,36 @@ class CountUnmatchedLogMovesInCausalNet(
 //            for (activity in pendingActivities)
 //                reachableActivities.addAll(eventuallyFollowed[activity.name].orEmpty())
 //        }
-        var index = startIndex
+        index = startIndex
         var unmatched = 0
         mainLoop@ while (index < trace.size) {
             val conceptName = trace[index++].conceptName
+            val eventSCC = activityToSCC.getOrDefault(conceptName, -1)
+            if (eventSCC < 0) {
+                unmatched++
+                continue
+            }
+
+//            if (conceptName != prevActivity?.name && prevProcessState.uniqueSet().any { conceptName == it.target.name })
+//                continue
+
+
 //            if (conceptName !in reachableActivities)
 //                unmatched++
 
-            if (conceptName != prevActivity?.name && conceptName in pendingActivities)
-                continue
 
             if (pendingEmpty) {
-                if (conceptName in eventuallyFollowed[null].orEmpty())
+                if (allReachable.contains(eventSCC))
                     continue
             } else {
-                var i = 0
-                while (i < pendingActivities.size) {
-                    if (conceptName in eventuallyFollowed[pendingActivities[i]].orEmpty())
-                        continue@mainLoop
-                    ++i
-                }
+                if (pendingSCC.contains(eventSCC))
+                    continue
             }
 
             unmatched++
         }
 
-        pendingActivities.clear()
+        pendingSCC.clear()
 
         assert(unmatched in 0..(trace.size - startIndex))
         return unmatched

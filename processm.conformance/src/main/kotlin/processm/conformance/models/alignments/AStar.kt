@@ -41,7 +41,7 @@ class AStar(
         }
 ) : Aligner {
     companion object {
-        private const val SKIP_EVENT = Int.MIN_VALUE
+        private const val SKIP_EVENT = Short.MIN_VALUE
         private const val QUEUE_INITIAL_CAP = 1 shl 7 // the default is 11
     }
 
@@ -99,7 +99,7 @@ class AStar(
                 initialProcessState,
                 nEvents,
                 null
-            ),
+            ).toShort(),
             activity = null, // before first activity
             cause = emptyList(),
             event = -1, // before first event
@@ -128,7 +128,7 @@ class AStar(
             if (isFinalState) {
                 if (previousEventIndex == events.size - 1) {
                     // we found the path
-                    assert(searchState.predictedCost == 0) { "Predicted cost: ${searchState.predictedCost}." }
+                    assert(searchState.predictedCost == 0.toShort()) { "Predicted cost: ${searchState.predictedCost}." }
                     return formatAlignment(searchState, events)
                 }
 
@@ -188,8 +188,8 @@ class AStar(
                         if (currentCost + predictedCost <= upperBoundCost) {
                             queue.add(
                                 SearchState(
-                                    currentCost = currentCost,
-                                    predictedCost = predictedCost,
+                                    currentCost = currentCost.toShort(),
+                                    predictedCost = predictedCost.toShort(),
                                     activity = activity,
                                     event = SKIP_EVENT,
                                     previousSearchState = searchState
@@ -220,10 +220,10 @@ class AStar(
                     if (currentCost + predictedCost <= upperBoundCost) {
                         queue.add(
                             SearchState(
-                                currentCost = currentCost,
-                                predictedCost = predictedCost,
+                                currentCost = currentCost.toShort(),
+                                predictedCost = predictedCost.toShort(),
                                 activity = activity,
-                                event = nextEventIndex,
+                                event = nextEventIndex.toShort(),
                                 previousSearchState = searchState
                             )
                         )
@@ -241,8 +241,8 @@ class AStar(
                     if (currentCost + predictedCost <= upperBoundCost) {
                         queue.add(
                             SearchState(
-                                currentCost = currentCost,
-                                predictedCost = predictedCost,
+                                currentCost = currentCost.toShort(),
+                                predictedCost = predictedCost.toShort(),
                                 activity = activity,
                                 event = SKIP_EVENT,
                                 previousSearchState = searchState
@@ -268,10 +268,10 @@ class AStar(
                 assert(predictedCost >= lastCost - currentCost)
                 if (currentCost + predictedCost <= upperBoundCost) {
                     val state = SearchState(
-                        currentCost = currentCost,
-                        predictedCost = predictedCost,
+                        currentCost = currentCost.toShort(),
+                        predictedCost = predictedCost.toShort(),
                         activity = null,
-                        event = nextEventIndex,
+                        event = nextEventIndex.toShort(),
                         previousSearchState = searchState,
                         processState = prevProcessState
                     )
@@ -310,14 +310,14 @@ class AStar(
     ): Alignment {
         val steps = ArrayList<Step>()
         var state: SearchState = searchState
-        while (state.event != -1) {
+        while (state.event != (-1).toShort()) {
             with(state) {
                 steps.add(
                     Step(
                         modelMove = activity,
                         modelState = processState,
                         modelCause = cause.orEmpty(),
-                        logMove = if (event != SKIP_EVENT) events[event] else null,
+                        logMove = if (event != SKIP_EVENT) events[event.toInt()] else null,
                         logState = events.subList(0, getPreviousEventIndex() + 1).asSequence(),
                         type = when {
                             activity === null -> DeviationType.LogDeviation
@@ -332,7 +332,7 @@ class AStar(
         }
         steps.reverse()
 
-        return Alignment(steps, searchState.currentCost)
+        return Alignment(steps, searchState.currentCost.toInt())
     }
 
     private fun isSynchronousMove(event: Event?, activity: Activity): Boolean =
@@ -377,12 +377,12 @@ class AStar(
     }
 
     private data class SearchState(
-        val currentCost: Int,
+        val currentCost: Short,
         /**
          * The predicted cost of reaching the end state.
          * This value must be less than or equal the actual value.
          */
-        val predictedCost: Int,
+        val predictedCost: Short,
         /**
          * The last executed activity or null if no move in the model has been done.
          */
@@ -394,7 +394,7 @@ class AStar(
         /**
          * The last executed event.
          */
-        val event: Int,
+        val event: Short,
         val previousSearchState: SearchState?,
         var processState: ProcessModelState? = null
     ) : Comparable<SearchState> {
@@ -422,7 +422,7 @@ class AStar(
 
         fun getPreviousEventIndex(): Int {
             if (event != SKIP_EVENT)
-                return event
+                return event.toInt()
             if (previousSearchState === null)
                 return -1
             return previousSearchState.getPreviousEventIndex()
@@ -463,7 +463,7 @@ class AStar(
         }
 
         override fun hashCode(): Int {
-            var result = currentCost
+            var result = currentCost.toInt()
             result = 31 * result + getPreviousEventIndex()
             result = 31 * result + processState.hashCode()
             return result

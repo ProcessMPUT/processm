@@ -211,7 +211,7 @@ class AStarCausalNetTests {
             2
         )
 
-        val expectedVisitedStatesCount = arrayOf(10, 27, 23, 77)
+        val expectedVisitedStatesCount = arrayOf(10, 20, 23, 77)
 
         val astar = AStar(fig316)
         for ((i, trace) in log.traces.withIndex()) {
