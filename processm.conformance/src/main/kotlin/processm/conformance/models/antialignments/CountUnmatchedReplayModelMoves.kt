@@ -1,10 +1,16 @@
 package processm.conformance.models.antialignments
 
 import processm.conformance.models.alignments.CountUnmatchedModelMoves
+import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModelState
 
 internal class CountUnmatchedReplayModelMoves(val model: ReplayModel) : CountUnmatchedModelMoves {
-    override fun compute(startIndex: Int, nEvents: List<Map<String?, Int>>, prevProcessState: ProcessModelState): Int {
+    override fun compute(
+        startIndex: Int,
+        nEvents: List<Map<String?, Int>>,
+        prevProcessState: ProcessModelState,
+        prevActivity: Activity?
+    ): Int {
         prevProcessState as ReplayModelState
         val nEvents = nEvents[startIndex]
 

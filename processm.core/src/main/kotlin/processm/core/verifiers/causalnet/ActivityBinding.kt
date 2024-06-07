@@ -19,8 +19,8 @@ internal infix fun <A, B> Collection<A>.times(right: Collection<B>): List<Pair<A
  */
 class ActivityBinding(
     val a: Node,
-    val i: Collection<Node>,
-    val o: Collection<Node>,
+    val i: Array<Node>,
+    val o: Array<Node>,
     val stateBefore: CausalNetState
 ) {
 

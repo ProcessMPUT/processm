@@ -200,7 +200,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
                 if (model.joins.containsKey(a))
                     a to model.joins.getValue(a).map { join -> join.sources }
                 else
-                    a to listOf(setOf())
+                    a to listOf(arrayOf())
             }.all { (a, joins) ->
                 joins.all { join ->
                     seqs.any { seq -> seq.any { ab -> ab.a == a && ab.i == join } }
@@ -211,7 +211,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
                         if (model.splits.containsKey(a))
                             a to model.splits.getValue(a).map { split -> split.targets }
                         else
-                            a to listOf(setOf())
+                            a to listOf(arrayOf())
                     }.all { (a, splits) ->
                         splits.all { split ->
                             seqs.any { seq -> seq.any { ab -> ab.a == a && ab.o == split } }
@@ -271,7 +271,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
                             result.add(ab)
                         }
                     } else {
-                        val ab = ActivityBinding(ak, join.sources, setOf(), currentState)
+                        val ab = ActivityBinding(ak, join.sources, arrayOf(), currentState)
                         result.add(ab)
                     }
                 }
@@ -301,7 +301,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
             .splits.getOrDefault(model.start, setOf())
             .map { split ->
                 val tmp = CausalNetSequenceWithHash()
-                tmp.add(ActivityBinding(model.start, setOf(), split.targets, CausalNetStateImpl()))
+                tmp.add(ActivityBinding(model.start, arrayOf(), split.targets, CausalNetStateImpl()))
                 tmp
             })
         return sequence {

@@ -8,10 +8,7 @@ import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.*
 import processm.core.models.commons.Activity
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
-import processm.helpers.Counter
-import processm.helpers.HashMapWithDefault
-import processm.helpers.HierarchicalIterable
-import processm.helpers.mapToSet
+import processm.helpers.*
 import processm.logging.debug
 import processm.logging.logger
 import processm.logging.trace
@@ -47,9 +44,10 @@ class PerformanceAnalyzer(
         }
     }
 
+    @OptIn(ExperimentalUnsignedTypes::class)
     private val sourcesCache = object : HashMap<Node, List<UInt128>>() {
         override operator fun get(key: processm.core.models.causalnet.Node) = computeIfAbsent(key) {
-            return@computeIfAbsent model.joins[key]?.map { encoder[it.sources] }.orEmpty()
+            return@computeIfAbsent model.joins[key]?.map { encoder[it.sources.toSet()] }.orEmpty()
         }
     }
 
@@ -204,7 +202,7 @@ class PerformanceAnalyzer(
                 */
             val universe = relevantStateSubset.mapToSet { it.source }
             val joins = model.joins[target]?.map { it.sources }.orEmpty()
-            val covering = notReallySetCovering(universe, joins).map { joins[it] }
+            val covering = notReallySetCovering(universe, joins.map { it.toSet() }).map { joins[it] }
             assert(covering.size <= universe.size) { "Covering $covering is larger than its universe $universe" }
 //            if(covering.size>1)
 //                println("covering=$covering for $universe at $target with $joins")
@@ -284,7 +282,7 @@ class PerformanceAnalyzer(
     private val intersectionOfTargets = HashMapWithDefault<Node, Set<Node>> { key ->
         var intersection: Set<Node>? = null
         for (split in model.splits[key].orEmpty()) {
-            intersection = intersection?.intersect(split.targets) ?: split.targets
+            intersection = intersection?.intersect(split.targets.toSet()) ?: split.targets.toSet()
             if (intersection.isEmpty())
                 break
         }

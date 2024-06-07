@@ -3,6 +3,7 @@ package processm.core.models.processtree.execution
 import processm.core.models.commons.ProcessModelState
 import processm.core.models.processtree.Parallel
 import processm.core.models.processtree.ProcessTreeActivity
+import processm.helpers.flatMapToArray
 import processm.helpers.ifNullOrEmpty
 import processm.helpers.mapToArray
 
@@ -13,7 +14,7 @@ class ParallelExecution(
     override val base: Parallel,
     parent: ExecutionNode?,
     children: Array<ExecutionNode>? = null,
-    cause: Collection<ProcessTreeActivity> = parent?.lastExecuted.ifNullOrEmpty { parent?.cause.orEmpty() }
+    cause: Array<out ProcessTreeActivity> = parent?.lastExecuted.ifNullOrEmpty { parent?.cause.orEmpty() }
 ) : ExecutionNode(base, parent, cause) {
 
     private val children = children ?: base.children.mapToArray { it.executionNode(this) }
@@ -29,8 +30,8 @@ class ParallelExecution(
 
     // // The initialization of the children property calls executionNode() that may read lastExecuted property when the children property has been not initialized yet
     @Suppress("UselessCallOnNotNull")
-    override val lastExecuted: Collection<ProcessTreeActivity>
-        get() = children.orEmpty().flatMap { it.lastExecuted }
+    override val lastExecuted: Array<ProcessTreeActivity>
+        get() = children.orEmpty().flatMapToArray { it.lastExecuted }
 
     override fun postExecution(child: ExecutionNode) {
         require(child.parent === this)

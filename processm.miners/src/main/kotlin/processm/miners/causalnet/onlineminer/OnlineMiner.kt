@@ -7,6 +7,7 @@ import processm.core.models.metadata.BasicMetadata
 import processm.core.models.metadata.DefaultMetadataProvider
 import processm.core.models.metadata.MetadataSubject
 import processm.core.models.metadata.SingleDoubleMetadata
+import processm.helpers.containsAll
 import processm.logging.debug
 import processm.logging.logger
 import processm.miners.causalnet.CausalNetMiner

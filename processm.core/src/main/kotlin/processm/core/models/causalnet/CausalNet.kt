@@ -113,7 +113,13 @@ abstract class CausalNet(
     override val decisionPoints: Sequence<DecisionPoint>
         get() = splits.entries.asSequence().map { DecisionPoint(it.key, it.value, true) } +
                 joins.entries.asSequence()
-                    .map { DecisionPoint(it.key, it.value, false, it.value.flatMapTo(HashSet()) { it.sources }) }
+                    .map {
+                        DecisionPoint(
+                            it.key,
+                            it.value,
+                            false,
+                            it.value.flatMapTo(HashSet()) { it.sources.asList() })
+                    }
 
     override val controlStructures: Sequence<DecisionPoint>
         get() = decisionPoints

@@ -12,7 +12,7 @@ class SequenceExecution(
     override val base: Sequence,
     parent: ExecutionNode?,
     current: ExecutionNode? = null,
-    cause: Collection<ProcessTreeActivity> = parent?.lastExecuted.ifNullOrEmpty { parent?.cause.orEmpty() }
+    cause: Array<out ProcessTreeActivity> = parent?.lastExecuted.ifNullOrEmpty { parent?.cause.orEmpty() }
 ) : ExecutionNode(base, parent, cause) {
 
     private var index = 0
@@ -24,7 +24,7 @@ class SequenceExecution(
     override var isComplete: Boolean = false
         private set
 
-    override var lastExecuted: Collection<ProcessTreeActivity> = emptyList()
+    override var lastExecuted: Array<ProcessTreeActivity> = emptyArray()
         private set
 
     override fun postExecution(child: ExecutionNode) {

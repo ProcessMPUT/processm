@@ -101,7 +101,7 @@ class AStar(
                 null
             ).toShort(),
             activity = null, // before first activity
-            cause = emptyList(),
+            cause = emptyArray(),
             event = -1, // before first event
             previousSearchState = null,
             processState = initialProcessState
@@ -209,7 +209,7 @@ class AStar(
                     val predictedCost =
                         predict(
                             events,
-                            nextEventIndex + 1,
+                            nextEventIndex /*+ 1*/,
                             Ternary.Unknown,
                             searchState.processState!!,
                             nEvents,
@@ -256,7 +256,7 @@ class AStar(
             if (nextEvent !== null) {
                 val currentCost = searchState.currentCost + penalty.logMove
                 val predictedCost = predict(
-                    events, nextEventIndex + 1, when {
+                    events, nextEventIndex /*+ 1*/, when {
                         isFinalState -> Ternary.True
                         instance.availableActivities.any(Activity::isSilent) -> Ternary.Unknown
                         else -> Ternary.False
@@ -316,7 +316,7 @@ class AStar(
                     Step(
                         modelMove = activity,
                         modelState = processState,
-                        modelCause = cause.orEmpty(),
+                        modelCause = cause?.asList().orEmpty(),
                         logMove = if (event != SKIP_EVENT) events[event.toInt()] else null,
                         logState = events.subList(0, getPreviousEventIndex() + 1).asSequence(),
                         type = when {
@@ -368,9 +368,8 @@ class AStar(
             countUnmatchedLogMoves?.compute(startIndex, events, prevProcessState, prevActivity) ?: 0
         sum += unmatchedLogMovesCount * penalty.logMove
 
-        val unmatchedModelMovesCount = countUnmatchedModelMoves?.compute(startIndex, nEvents, prevProcessState) ?: 0
-
-        // Subtract one modelMove, because we are considering previous state and it may have been already included in the cost
+        val unmatchedModelMovesCount =
+            countUnmatchedModelMoves?.compute(startIndex, nEvents, prevProcessState, prevActivity) ?: 0
         sum += (unmatchedModelMovesCount - 1).coerceAtLeast(0) * penalty.modelMove
 
         return sum
@@ -390,7 +389,7 @@ class AStar(
         /**
          * The collection of activities that were the direct cause for [activity].
          */
-        var cause: Collection<Activity>? = null,
+        var cause: Array<out Activity>? = null,
         /**
          * The last executed event.
          */
@@ -414,7 +413,7 @@ class AStar(
             return processState ?: previousSearchState!!.getProcessState(instance)
         }
 
-        fun getCause(instance: ProcessModelInstance): Collection<Activity> {
+        fun getCause(instance: ProcessModelInstance): Array<out Activity> {
             if (cause === null && activity !== null)
                 calcProcessStateAndCause(instance)
             return cause!!
@@ -444,9 +443,12 @@ class AStar(
                 myTotalCost != otherTotalCost -> myTotalCost.compareTo(otherTotalCost)
                 predictedCost != other.predictedCost -> predictedCost.compareTo(other.predictedCost) // DFS-based second-order queuing criterion
                 event >= 0 && other.event >= 0 && event != other.event -> other.event.compareTo(event) // prefer more complete traces
+                (activity === null) != (other.activity === null) -> (activity === null).compareTo(other.activity === null) // prefer moves with activities
+                activity !== null && activity.isSilent != other.activity!!.isSilent ->
+                    other.activity.isSilent.compareTo(activity.isSilent) // prefer silent activities
                 event < 0 && other.event >= 0 -> 1 // prefer moves with events
                 event >= 0 && other.event < 0 -> -1
-                else -> (activity === null).compareTo(other.activity === null) // prefer moves with activities
+                else -> 0
             }
         }
 

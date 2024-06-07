@@ -3,6 +3,7 @@ package processm.helpers
 import org.jetbrains.exposed.sql.SizedIterable
 import java.util.*
 import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
 /**
@@ -168,6 +169,8 @@ inline fun <T, R> Iterable<T>.mapToSet(transform: (T) -> R): Set<R> = mapTo(Hash
  */
 inline fun <T, R> Sequence<T>.mapToSet(transform: (T) -> R): Set<R> = mapTo(HashSet<R>(), transform)
 
+inline fun <T, R> Array<T>.mapToSet(transform: (T) -> R): Set<R> = mapTo(HashSet<R>(), transform)
+
 /**
  * Returns an [Array] containing the results of applying the given [transform] function
  * to each element in the original [Collection].
@@ -210,6 +213,21 @@ inline fun <T, reified R> SizedIterable<T>.mapToArray(transform: (T) -> R): Arra
     Array<R>(this.count().toInt()) { _ -> transform(it.next()) }
 }
 
+inline fun <T, reified R> Array<T>.flatMapToArray(transform: (T) -> Array<R>): Array<R> {
+    val collections = this.mapToArray { transform(it) }
+    val size = collections.sumOf { it.size }
+    val mainIterator = collections.iterator()
+    var subIterator: Iterator<R>? = null
+
+    return Array<R>(size) {
+        if (subIterator === null || !subIterator!!.hasNext()) {
+            subIterator = mainIterator.next().iterator()
+        }
+
+        subIterator!!.next()
+    }
+}
+
 /**
  * Retuns a map whose keys refer to the values of the given map and values refer to the keys of the given map.
  * @throws IllegalArgumentException If the mapping of the given map is non-injective.
@@ -219,11 +237,23 @@ inline fun <K, V> Map<K, V>.inverse(): Map<V, K> = HashMap<V, K>().also {
         require(it.put(value, key) == null) { "The given mapping is non-injective." }
 }
 
-inline fun <E, T : Collection<E>> T?.ifNullOrEmpty(default: () -> T): T =
-    if (this.isNullOrEmpty())
-        default()
-    else
-        this
+@OptIn(ExperimentalContracts::class)
+inline fun <E, T : Collection<E>> T?.ifNullOrEmpty(default: () -> T): T {
+    contract {
+        callsInPlace(default, kind = InvocationKind.AT_MOST_ONCE)
+    }
+    return if (this.isNullOrEmpty()) default()
+    else this
+}
+
+@OptIn(ExperimentalContracts::class)
+inline fun <E> Array<out E>?.ifNullOrEmpty(default: () -> Array<out E>): Array<out E> {
+    contract {
+        callsInPlace(default, kind = InvocationKind.AT_MOST_ONCE)
+    }
+    return if (this.isNullOrEmpty()) default()
+    else this
+}
 
 /**
  * Returns the smallest value among all values produced by [selector] function
@@ -409,4 +439,13 @@ inline fun <T, R : Comparable<R>> Iterable<T>.maxOfNotNullOrNull(selector: (T) -
         }
     }
     return maxValue
+}
+
+fun <T> Set<T>.containsAll(elements: Array<out T>): Boolean {
+    var index = 0
+    while (index < elements.size) {
+        if (!contains(elements[index++]))
+            return false
+    }
+    return true
 }

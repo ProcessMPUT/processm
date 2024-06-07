@@ -3,10 +3,12 @@ package processm.conformance.models.alignments
 import com.carrotsearch.hppc.ObjectIntHashMap
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.CausalNetState
+import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModelState
 import processm.core.models.petrinet.Marking
 import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.Place
+import processm.core.models.petrinet.Transition
 import processm.helpers.mapToSet
 import java.util.*
 import kotlin.math.max
@@ -24,7 +26,12 @@ interface CountUnmatchedModelMoves {
     /**
      * Number of skip moves in the log from [startIndex] onwards, given the current state of the model [prevProcessState] and aggregated [nEvents]
      */
-    fun compute(startIndex: Int, nEvents: List<Map<String?, Int>>, prevProcessState: ProcessModelState): Int
+    fun compute(
+        startIndex: Int,
+        nEvents: List<Map<String?, Int>>,
+        prevProcessState: ProcessModelState,
+        prevActivity: Activity?
+    ): Int
 }
 
 /**
@@ -33,7 +40,12 @@ interface CountUnmatchedModelMoves {
 class CountUnmatchedCausalNetMoves(val model: CausalNet) : CountUnmatchedModelMoves {
     private val minFutureExecutions = ThreadLocal.withInitial { ObjectIntHashMap<String>() }
 
-    override fun compute(startIndex: Int, nEvents: List<Map<String?, Int>>, prevProcessState: ProcessModelState): Int {
+    override fun compute(
+        startIndex: Int,
+        nEvents: List<Map<String?, Int>>,
+        prevProcessState: ProcessModelState,
+        prevActivity: Activity?
+    ): Int {
         prevProcessState as CausalNetState
         val nEvents = if (startIndex < nEvents.size) nEvents[startIndex] else emptyMap<String?, Int>()
         // The maximum over the number of tokens on all incoming dependencies for an activity.
@@ -89,8 +101,14 @@ class CountUnmatchedPetriNetMoves(val model: PetriNet) : CountUnmatchedModelMove
         consumentsCache.clear()
     }
 
-    override fun compute(startIndex: Int, nEvents: List<Map<String?, Int>>, prevProcessState: ProcessModelState): Int {
+    override fun compute(
+        startIndex: Int,
+        nEvents: List<Map<String?, Int>>,
+        prevProcessState: ProcessModelState,
+        prevActivity: Activity?
+    ): Int {
         prevProcessState as Marking
+        prevActivity as Transition?
         // Complete dealing with nonConsumable would require some complex algorithm.
         // Consider: ([[c],[e]]: 1, [[d],[e]]: 1). It is sufficient to model-skip over e to consume these two tokens.
         // Consider further: ([[c, e]]: 1, [[d, e]]: 1). Now one needs at least three model-skips: c, d, e (used twice)
@@ -103,6 +121,13 @@ class CountUnmatchedPetriNetMoves(val model: PetriNet) : CountUnmatchedModelMove
         val nEvents = if (startIndex < nEvents.size) nEvents[startIndex] else emptyMap()
         val nonConsumable = ArrayList<Pair<Set<Set<String>>, Int>>()
         for ((place, counter) in prevProcessState) {
+            assert(!counter.isEmpty())
+            var tokenCount = counter.size
+            if (prevActivity?.inPlaces?.contains(place) == true) {
+                if (--tokenCount == 0)
+                    continue
+            }
+
             if (model.placeToFollowingTransition[place]?.any { it.isSilent } == true)
                 continue
 
@@ -110,8 +135,8 @@ class CountUnmatchedPetriNetMoves(val model: PetriNet) : CountUnmatchedModelMove
             val consuments = consumentsCache.computeIfAbsent(place to startIndex) {
                 following.sumOf { set -> set.minOf { nEvents[it] ?: 0 } }
             }
-            if (counter.size > consuments)
-                nonConsumable.add(following to counter.size - consuments)
+            if (tokenCount > consuments && following.isNotEmpty())
+                nonConsumable.add(following to tokenCount - consuments)
         }
         if (nonConsumable.isEmpty())
             return 0

@@ -385,10 +385,10 @@ class PetriNet(
      * @return The collection of transitions immediately preceding the input places of the given [transition]. The empty
      * collection for the start transition.
      */
-    fun getCause(transition: Transition, marking: Marking): Collection<Transition> {
+    fun getCause(transition: Transition, marking: Marking): Array<Transition> {
         check(isAvailable(transition, marking)) { "Transition $transition is not available in marking $marking." }
 
-        return transition.inPlaces.mapNotNullTo(HashSet()) { marking[it]!!.first().producer }
+        return transition.inPlaces.mapNotNullTo(HashSet()) { marking[it]!!.first().producer }.toTypedArray()
     }
 
     /**
@@ -401,11 +401,11 @@ class PetriNet(
      * @return The collection of transitions immediately following the output places of the given [transition]. The empty
      * collection for the end transition.
      */
-    fun getConsequence(transition: Transition, marking: Marking): Collection<Transition> {
+    fun getConsequence(transition: Transition, marking: Marking): Array<Transition> {
         check(isBackwardAvailable(transition, marking)) {
             "Transition $transition is not backward available in marking $marking."
         }
 
-        return transition.outPlaces.mapNotNullTo(HashSet()) { marking[it]!!.last().producer }
+        return transition.outPlaces.mapNotNullTo(HashSet()) { marking[it]!!.last().producer }.toTypedArray()
     }
 }

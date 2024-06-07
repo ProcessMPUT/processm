@@ -5,6 +5,7 @@ import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Node
 import processm.helpers.allSubsets
 import processm.helpers.allSubsetsUpToSize
+import processm.helpers.containsAll
 
 abstract class AbstractBindingProvider : BindingProvider {
 

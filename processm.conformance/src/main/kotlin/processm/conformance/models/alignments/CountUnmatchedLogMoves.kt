@@ -52,11 +52,11 @@ class CountUnmatchedLogMovesInCausalNet(
     private fun stronglyConnectedComponents(): List<Set<Activity>> {
         val stronglyConnectedComponents = LinkedList<HashSet<Activity>>()
         // Assigned to each node - the lowest node ID reachable from that node when doing a DFS (including itself)
-        val lowLink = java.util.HashMap<Activity, Int>()
+        val lowLink = HashMap<Activity, Int>()
         // Order in normal move across graph - first element found will receive smallest number
-        val preOrder = java.util.HashMap<Activity, Int>()
+        val preOrder = HashMap<Activity, Int>()
         // Already assigned activities
-        val alreadyAssigned = java.util.HashSet<Activity>()
+        val alreadyAssigned = HashSet<Activity>()
         // Stack - activities to analyze
         val stack = ArrayDeque<Activity>()
         // Activities waiting to assignment
