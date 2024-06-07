@@ -103,6 +103,9 @@ class CountUnmatchedPetriNetMoves(val model: PetriNet) : CountUnmatchedModelMove
         val nEvents = if (startIndex < nEvents.size) nEvents[startIndex] else emptyMap()
         val nonConsumable = ArrayList<Pair<Set<Set<String>>, Int>>()
         for ((place, counter) in prevProcessState) {
+            if (model.placeToFollowingTransition[place]?.any { it.isSilent } == true)
+                continue
+
             val following = this.following(place)
             val consuments = consumentsCache.computeIfAbsent(place to startIndex) {
                 following.sumOf { set -> set.minOf { nEvents[it] ?: 0 } }
