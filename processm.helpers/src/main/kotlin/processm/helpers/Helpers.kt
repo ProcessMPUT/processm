@@ -220,11 +220,16 @@ inline fun <T, reified R> Array<T>.flatMapToArray(transform: (T) -> Array<R>): A
     var subIterator: Iterator<R>? = null
 
     return Array<R>(size) {
-        if (subIterator === null || !subIterator!!.hasNext()) {
-            subIterator = mainIterator.next().iterator()
-        }
+        var item: R? = null
+        while (item === null) {
+            if (subIterator === null || !subIterator!!.hasNext()) {
+                subIterator = mainIterator.next().iterator()
+            }
 
-        subIterator!!.next()
+            if (subIterator!!.hasNext())
+                item = subIterator!!.next()
+        }
+        item
     }
 }
 
