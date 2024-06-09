@@ -194,7 +194,7 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `request password reset for non-existing user`() = withCleanTables(Users, PasswordResetRequests) {
+    fun `request password reset for non-existing user`(): Unit = withCleanTables(Users, PasswordResetRequests) {
         assertFailsWith<NoSuchElementException> { accountService.sendPasswordResetEmail("nonexisting@example.com") }
     }
 
@@ -211,7 +211,7 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `reset password with valid token`() = withCleanTables(Users, PasswordResetRequests, Emails) {
+    fun `reset password with valid token`(): Unit = withCleanTables(Users, PasswordResetRequests, Emails) {
         val user = createUser()
         val email = user.email
         accountService.sendPasswordResetEmail(email)
@@ -233,7 +233,8 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `fail to reset password with already used token`() = withCleanTables(Users, PasswordResetRequests, Emails) {
+    fun `fail to reset password with already used token`(): Unit =
+        withCleanTables(Users, PasswordResetRequests, Emails) {
         val user = createUser()
         val email = user.email
         accountService.sendPasswordResetEmail(email)
