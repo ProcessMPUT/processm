@@ -1,6 +1,7 @@
 package processm.core.verifiers.causalnet
 
 import processm.core.models.causalnet.*
+import processm.helpers.Sets
 import processm.helpers.mapToSet
 import processm.helpers.withMemory
 import processm.logging.debug
@@ -204,7 +205,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
                     a to listOf(arrayOf())
             }.all { (a, joins) ->
                 joins.all { join ->
-                    seqs.any { seq -> seq.any { ab -> ab.a == a && ab.i.contentEquals(join) } }
+                    seqs.any { seq -> seq.any { ab -> ab.a == a && Sets.equal(ab.i, join) } }
                 }
             } &&
                 model.instances.asSequence()
@@ -215,7 +216,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
                             a to listOf(arrayOf())
                     }.all { (a, splits) ->
                         splits.all { split ->
-                            seqs.any { seq -> seq.any { ab -> ab.a == a && ab.o.contentEquals(split) } }
+                            seqs.any { seq -> seq.any { ab -> ab.a == a && Sets.equal(ab.o, split) } }
                         }
                     }
     }
@@ -338,7 +339,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
             } else {
                 if (ab.i.isEmpty())
                     return false
-                if (!joins.any { join -> join.sources.contentEquals(ab.i) })
+                if (!joins.any { join -> Sets.equal(join.sources, ab.i) })
                     return false
             }
             val splits = model.splits[ab.a]
@@ -348,7 +349,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
             } else {
                 if (ab.o.isEmpty())
                     return false
-                if (!splits.any { split -> split.targets.contentEquals(ab.o) })
+                if (!splits.any { split -> Sets.equal(split.targets, ab.o) })
                     return false
             }
         }
