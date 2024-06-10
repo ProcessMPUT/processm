@@ -1,7 +1,7 @@
 package processm.core.verifiers.causalnet
 
 import processm.core.models.causalnet.*
-import processm.helpers.Sets
+import processm.helpers.ArrayComparison
 import processm.helpers.mapToSet
 import processm.helpers.withMemory
 import processm.logging.debug
@@ -205,7 +205,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
                     a to listOf(arrayOf())
             }.all { (a, joins) ->
                 joins.all { join ->
-                    seqs.any { seq -> seq.any { ab -> ab.a == a && Sets.equal(ab.i, join) } }
+                    seqs.any { seq -> seq.any { ab -> ab.a == a && ArrayComparison.sortedSetEqual(join, ab.i) } }
                 }
             } &&
                 model.instances.asSequence()
@@ -216,7 +216,14 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
                             a to listOf(arrayOf())
                     }.all { (a, splits) ->
                         splits.all { split ->
-                            seqs.any { seq -> seq.any { ab -> ab.a == a && Sets.equal(ab.o, split) } }
+                            seqs.any { seq ->
+                                seq.any { ab ->
+                                    ab.a == a && ArrayComparison.sortedSetEqual(
+                                        split,
+                                        ab.o
+                                    )
+                                }
+                            }
                         }
                     }
     }
@@ -339,7 +346,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
             } else {
                 if (ab.i.isEmpty())
                     return false
-                if (!joins.any { join -> Sets.equal(join.sources, ab.i) })
+                if (!joins.any { join -> ArrayComparison.sortedSetEqual(join.sources, ab.i) })
                     return false
             }
             val splits = model.splits[ab.a]
@@ -349,7 +356,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
             } else {
                 if (ab.o.isEmpty())
                     return false
-                if (!splits.any { split -> Sets.equal(split.targets, ab.o) })
+                if (!splits.any { split -> ArrayComparison.sortedSetEqual(split.targets, ab.o) })
                     return false
             }
         }

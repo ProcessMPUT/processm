@@ -13,7 +13,7 @@ import processm.helpers.mapToArray
 class ParallelExecution(
     override val base: Parallel,
     parent: ExecutionNode?,
-    children: Array<ExecutionNode>? = null,
+    children: Array<out ExecutionNode>? = null,
     cause: Array<out ProcessTreeActivity> = parent?.lastExecuted.ifNullOrEmpty { parent?.cause.orEmpty() }
 ) : ExecutionNode(base, parent, cause) {
 
@@ -29,8 +29,7 @@ class ParallelExecution(
         private set
 
     // // The initialization of the children property calls executionNode() that may read lastExecuted property when the children property has been not initialized yet
-    @Suppress("UselessCallOnNotNull")
-    override val lastExecuted: Array<ProcessTreeActivity>
+    override val lastExecuted: Array<out ProcessTreeActivity>
         get() = children.orEmpty().flatMapToArray { it.lastExecuted }
 
     override fun postExecution(child: ExecutionNode) {

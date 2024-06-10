@@ -42,5 +42,5 @@ abstract class ExecutionNode(
      * [processm.core.models.processtree.Parallel] node. This property is mutable and represents the current state of
      * execution.
      */
-    abstract val lastExecuted: Array<ProcessTreeActivity>
+    abstract val lastExecuted: Array<out ProcessTreeActivity>
 }

@@ -36,7 +36,7 @@ class RedoLoopExecution(
     override var isComplete: Boolean = false
         private set
 
-    override var lastExecuted: Array<ProcessTreeActivity> = emptyArray()
+    override var lastExecuted: Array<out ProcessTreeActivity> = emptyArray()
         private set
 
     override fun postExecution(child: ExecutionNode) {

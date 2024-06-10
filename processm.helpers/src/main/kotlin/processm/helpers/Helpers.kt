@@ -158,6 +158,11 @@ inline fun <T> List<T>.lastOrNull(endIndex: Int, predicate: (item: T) -> Boolean
 }
 
 /**
+ * Creates immutable set backed by an array. Implementation note: the given array is copied.
+ */
+fun <T> Array<out T>.toSet(): Set<T> = ImmutableSet.of(*this)
+
+/**
  * Returns a set containing the results of applying the given [transform] function
  * to each element in the original collection.
  */
@@ -169,7 +174,7 @@ inline fun <T, R> Iterable<T>.mapToSet(transform: (T) -> R): Set<R> = mapTo(Hash
  */
 inline fun <T, R> Sequence<T>.mapToSet(transform: (T) -> R): Set<R> = mapTo(HashSet<R>(), transform)
 
-inline fun <T, R> Array<T>.mapToSet(transform: (T) -> R): Set<R> = mapTo(HashSet<R>(), transform)
+inline fun <T, R> Array<out T>.mapToSet(transform: (T) -> R): Set<R> = mapTo(HashSet<R>(), transform)
 
 /**
  * Returns an [Array] containing the results of applying the given [transform] function
@@ -192,18 +197,19 @@ inline fun <T, reified R> Collection<T>.mapToArray(transform: (T) -> R): Array<R
  * Returns an [Array] containing the results of applying the given [transform] function to each element in the original
  * [Sequence].
  */
-inline fun <T, reified R> Sequence<T>.mapToArray(transform: (T) -> R): Array<R> = ArrayList<R>().apply {
+inline fun <T, reified R> Sequence<T>.mapToArray(transform: (T) -> R): Array<R> = ArrayList<R>().let {
     for (item in this@mapToArray)
-        add(transform(item))
-}.toTypedArray()
+        it.add(transform(item))
+    @Suppress("UNCHECKED_CAST")
+    it.toArray(arrayOfNulls<R>(it.size)) as Array<R>
+}
 
 /**
  * Returns an [Array] containing the results of applying the given [transform] function
  * to each element in the original [Array].
  */
-inline fun <T, reified R> Array<T>.mapToArray(transform: (T) -> R): Array<R> = this.iterator().let {
-    Array<R>(this.size) { _ -> transform(it.next()) }
-}
+inline fun <T, reified R> Array<out T>.mapToArray(transform: (T) -> R): Array<R> =
+    Array(size) { i -> transform(this[i]) }
 
 /**
  * Returns an [Array] containing the results of applying the given [transform] function
@@ -213,8 +219,8 @@ inline fun <T, reified R> SizedIterable<T>.mapToArray(transform: (T) -> R): Arra
     Array<R>(this.count().toInt()) { _ -> transform(it.next()) }
 }
 
-inline fun <T, reified R> Array<T>.flatMapToArray(transform: (T) -> Array<R>): Array<R> {
-    val collections = this.mapToArray { transform(it) }
+inline fun <T, reified R> Array<out T>.flatMapToArray(transform: (T) -> Array<out R>): Array<R> {
+    val collections = this.mapToArray(transform)
     val size = collections.sumOf { it.size }
     val mainIterator = collections.iterator()
     var subIterator: Iterator<R>? = null
@@ -231,6 +237,20 @@ inline fun <T, reified R> Array<T>.flatMapToArray(transform: (T) -> Array<R>): A
         }
         item
     }
+}
+
+/**
+ * Returns an [Array] containing the results of applying the given [transform] function
+ * to each element in the original [Collection] ordered ascending.
+ */
+@OptIn(ExperimentalContracts::class)
+inline fun <T, reified R : Comparable<R>> Collection<T>.mapToSortedArray(transform: (T) -> R): Array<out R> {
+    contract {
+        callsInPlace(transform)
+    }
+    val array = mapToArray(transform)
+    Arrays.sort(array)
+    return array
 }
 
 /**
@@ -363,7 +383,7 @@ inline fun <T> Iterable<T>.forEachCatching(action: (T) -> Unit) {
  * Like [forEach] but catches exceptions thrown by successive invocations of [action] and rethrows the first encountered
  * exception with the successive exceptions suppressed (if any).
  */
-inline fun <T> Array<T>.forEachCatching(action: (T) -> Unit) =
+inline fun <T> Array<out T>.forEachCatching(action: (T) -> Unit) =
     Arrays.asList(*this).forEachCatching(action)
 
 

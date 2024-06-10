@@ -124,8 +124,6 @@ abstract class CausalNet(
     override val controlStructures: Sequence<DecisionPoint>
         get() = decisionPoints
 
-    private val visitedNodes = ThreadLocal.withInitial { ObjectHashSet<Node>(this._instances.size) }
-
     @OptIn(ExperimentalContracts::class)
     private inline fun available(state: CausalNetState, callback: (node: Node, join: Join?, split: Split?) -> Unit) {
         contract {
@@ -133,19 +131,22 @@ abstract class CausalNet(
         }
 
         if (state.isNotEmpty()) {
-            val visitedNodes = this.visitedNodes.get()
+            val visitedNodes = ObjectHashSet<Node>(state.uniqueSize)
             for (dep in state.uniqueSet()) {
                 val node = dep.target
                 if (visitedNodes.add(node)) {
-                    for (join in _joins[node].orEmpty())
-                        if (state.containsAll(join.dependencies)) {
-                            val splits = if (node != end) _splits[node].orEmpty() else setOfNull
-                            for (split in splits)
-                                callback(node, join, split)
+                    joinLoop@ for (join in _joins[node].orEmpty()) {
+                        var index = 0
+                        while (index < join.dependenciesAsArray.size) {
+                            if (join.dependenciesAsArray[index++] !in state)
+                                continue@joinLoop
                         }
+                        val splits = if (node != end) _splits[node].orEmpty() else setOfNull
+                        for (split in splits)
+                            callback(node, join, split)
+                    }
                 }
             }
-            visitedNodes.clear()
         } else if (state.isFresh /*prevent execution of activities in the final state*/) {
             for (split in _splits.getValue(start))
                 callback(start, null, split)

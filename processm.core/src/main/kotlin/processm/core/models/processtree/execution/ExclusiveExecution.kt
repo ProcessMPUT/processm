@@ -27,7 +27,7 @@ class ExclusiveExecution(
     override var isComplete: Boolean = false
         private set
 
-    override val lastExecuted: Array<ProcessTreeActivity>
+    override val lastExecuted: Array<out ProcessTreeActivity>
         get() = if (selected !== null) selected!!.lastExecuted else emptyArray()
 
     override fun postExecution(child: ExecutionNode) {
