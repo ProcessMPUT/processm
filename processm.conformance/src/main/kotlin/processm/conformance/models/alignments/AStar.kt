@@ -175,8 +175,7 @@ class AStar(
                     } else {
                         val currentCost = searchState.currentCost + penalty.silentMove
                         // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
-                        val predictedCost =
-                            predict(events, nextEventIndex, prevProcessState, nEvents, activity)
+                        val predictedCost = predict(events, nextEventIndex, prevProcessState, nEvents, activity)
                         assert(predictedCost >= lastCost - currentCost)
                         if (currentCost + predictedCost <= upperBoundCost) {
                             queue.add(
@@ -224,14 +223,7 @@ class AStar(
                 run {
                     val currentCost = searchState.currentCost + penalty.modelMove
                     // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
-                    val predictedCost =
-                        predict(
-                            events,
-                            nextEventIndex,
-                            searchState.processState!!,
-                            nEvents,
-                            activity
-                        )
+                    val predictedCost = predict(events, nextEventIndex, searchState.processState!!, nEvents, activity)
                     assert(predictedCost >= lastCost - currentCost)
                     if (currentCost + predictedCost <= upperBoundCost) {
                         queue.add(
@@ -250,13 +242,7 @@ class AStar(
             // add log-only move
             if (nextEvent !== null) {
                 val currentCost = searchState.currentCost + penalty.logMove
-                val predictedCost = predict(
-                    events,
-                    nextEventIndex + 1,
-                    prevProcessState,
-                    nEvents,
-                    null
-                )
+                val predictedCost = predict(events, nextEventIndex + 1, prevProcessState, nEvents, null)
                 assert(predictedCost >= lastCost - currentCost)
                 if (currentCost + predictedCost <= upperBoundCost) {
                     val state = SearchState(
@@ -335,18 +321,18 @@ class AStar(
         startIndex: Int,
         prevProcessState: ProcessModelState,
         nEvents: List<Map<String?, Int>>,
-        prevActivity: Activity?
+        curActivity: Activity?
     ): Int {
         assert(startIndex in 0..events.size) { "startIndex: $startIndex" }
 
         var sum = 0
 
         val unmatchedLogMovesCount =
-            countUnmatchedLogMoves?.compute(startIndex, events, prevProcessState, prevActivity) ?: 0
+            countUnmatchedLogMoves?.compute(startIndex, events, prevProcessState, curActivity) ?: 0
         sum += unmatchedLogMovesCount * penalty.logMove
 
         val unmatchedModelMovesCount =
-            countUnmatchedModelMoves?.compute(startIndex, nEvents, prevProcessState, prevActivity) ?: 0
+            countUnmatchedModelMoves?.compute(startIndex, nEvents, prevProcessState, curActivity) ?: 0
         sum += unmatchedModelMovesCount * penalty.modelMove
 
         assert(sum >= 0)
@@ -403,14 +389,6 @@ class AStar(
             if (previousSearchState === null)
                 return -1
             return previousSearchState.getPreviousEventIndex()
-        }
-
-        fun getPreviousActivity(): Activity? {
-            if (activity !== null)
-                return activity
-            if (previousSearchState === null)
-                return null
-            return previousSearchState.getPreviousActivity()
         }
 
         override fun compareTo(other: SearchState): Int {

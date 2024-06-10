@@ -210,7 +210,9 @@ class CountUnmatchedLogMovesInCausalNet(
         for (dep in prevProcessState.uniqueSet()) {
             val target = dep.target.name
             if (curActivity?.activity != dep.target) {
-                pendingSCC.add(activityToSCC[target])
+                if (!pendingSCC.add(activityToSCC[target])) {
+                    continue // SCC already processed
+                }
             }
             val candidates = eventuallyFollowsSCC[activityToSCC[target]]
             index = 0
