@@ -25,8 +25,8 @@ data class Split(override val dependencies: Set<Dependency>) : Binding {
     /**
      * Targets of all the dependencies of this split. This array is guaranteed to be sorted by target activity name.
      */
-    val targets by lazy(LazyThreadSafetyMode.PUBLICATION) {
-        dependencies.mapToSortedArray { d -> d.target }
+    val targets: Array<Node> by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        dependencies.mapToSortedArray { d -> d.target } as Array<Node>
     }
 
     override val dependenciesAsArray: Array<out Dependency> by lazy(LazyThreadSafetyMode.PUBLICATION) {

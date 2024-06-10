@@ -8,7 +8,7 @@ public class ImmutableSet {
      */
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <E> Set<E> of(E... elements) {
+    public static <E> Set<E> of(E... elements) {
         return Set.of(elements);
     }
 }

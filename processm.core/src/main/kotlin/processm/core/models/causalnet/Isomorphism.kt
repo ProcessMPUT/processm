@@ -1,5 +1,6 @@
 package processm.core.models.causalnet
 
+import processm.helpers.ImmutableSet
 import processm.helpers.mapToSet
 import java.util.*
 import kotlin.collections.component1
@@ -84,11 +85,11 @@ internal class Isomorphism(private val left: CausalNet, private val right: Causa
         val rin = right.incoming[r].orEmpty().map { it.source }.filterTo(HashSet()) { it in s.l2r.values }
         val rout = right.outgoing[r].orEmpty().map { it.target }.filterTo(HashSet()) { it in s.l2r.values }
         val rsplits = right.splits[r].orEmpty()
-            .map { split -> split.targets }
-            .filterTo(HashSet()) { split -> split.all { it in s.l2r.values } }
+            .map { split -> ImmutableSet.of(*split.targets) }
+            .filterTo(HashSet()) { split -> s.l2r.values.containsAll(split) }
         val rjoins = right.joins[r].orEmpty()
-            .map { join -> join.sources }
-            .filterTo(HashSet()) { join -> join.all { it in s.l2r.values } }
+            .map { join -> ImmutableSet.of(*join.sources) }
+            .filterTo(HashSet()) { join -> s.l2r.values.containsAll(join) }
         return listOf(rin, rout, rsplits, rjoins)
     }
 

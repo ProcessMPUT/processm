@@ -24,8 +24,8 @@ data class Join(override val dependencies: Set<Dependency>) : Binding {
     /**
      * Sources of all the dependencies of this join. This array is guaranteed to be sorted by source activity name.
      */
-    val sources by lazy(LazyThreadSafetyMode.PUBLICATION) {
-        dependencies.mapToSortedArray { d -> d.source }
+    val sources: Array<Node> by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        dependencies.mapToSortedArray { d -> d.source } as Array<Node>
     }
 
     override val dependenciesAsArray: Array<out Dependency> by lazy(LazyThreadSafetyMode.PUBLICATION) {
