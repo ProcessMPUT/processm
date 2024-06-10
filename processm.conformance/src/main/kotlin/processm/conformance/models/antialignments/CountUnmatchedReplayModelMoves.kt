@@ -9,7 +9,7 @@ internal class CountUnmatchedReplayModelMoves(val model: ReplayModel) : CountUnm
         startIndex: Int,
         nEvents: List<Map<String?, Int>>,
         prevProcessState: ProcessModelState,
-        prevActivity: Activity?
+        curActivity: Activity?
     ): Int {
         prevProcessState as ReplayModelState
         val nEvents = nEvents[startIndex]

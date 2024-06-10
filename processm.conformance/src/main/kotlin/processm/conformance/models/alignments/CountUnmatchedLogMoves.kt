@@ -7,6 +7,7 @@ import com.carrotsearch.hppc.ObjectIntMap
 import processm.core.log.Event
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.CausalNetState
+import processm.core.models.causalnet.DecoupledNodeExecution
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModelState
 import java.lang.Integer.min
@@ -27,7 +28,7 @@ interface CountUnmatchedLogMoves {
      * @param prevProcessState The state of the process model.
      * @return The total number of future events for which the corresponding model moves do not exist.
      */
-    fun compute(startIndex: Int, trace: List<Event>, prevProcessState: ProcessModelState, prevActivity: Activity?): Int
+    fun compute(startIndex: Int, trace: List<Event>, prevProcessState: ProcessModelState, curActivity: Activity?): Int
 }
 
 class CountUnmatchedLogMovesInCausalNet(
@@ -199,18 +200,16 @@ class CountUnmatchedLogMovesInCausalNet(
         startIndex: Int,
         trace: List<Event>,
         prevProcessState: ProcessModelState,
-        prevActivity: Activity?
+        curActivity: Activity?
     ): Int {
         prevProcessState as CausalNetState?
+        curActivity as DecoupledNodeExecution?
 
-        // event is matched if any pending obligation may fire the corresponding activity
-//        val pendingActivities = prevProcessState.uniqueSet().mapToSet { it.target }
-        //val pendingDeps = prevProcessState.uniqueSet().map { it.target.name }
         val pendingSCC = this.pendingSCC.get()
         var index = 0
         for (dep in prevProcessState.uniqueSet()) {
             val target = dep.target.name
-            if (prevActivity != dep.target) {
+            if (curActivity?.activity != dep.target) {
                 pendingSCC.add(activityToSCC[target])
             }
             val candidates = eventuallyFollowsSCC[activityToSCC[target]]
@@ -218,17 +217,11 @@ class CountUnmatchedLogMovesInCausalNet(
             while (index < candidates.size) {
                 pendingSCC.add(candidates[index++])
             }
+            if (pendingSCC.size() >= allReachable.size)
+                break // we have all SCCs anyway
         }
         val pendingEmpty = pendingSCC.isEmpty
 
-//        val reachableActivities =
-//            pendingActivities.mapNotNullTo(HashSet()) { if (it != prevActivity) it.name else null }
-//        if (pendingActivities.size == 0) {
-//            reachableActivities.addAll(eventuallyFollowed[null].orEmpty())
-//        } else {
-//            for (activity in pendingActivities)
-//                reachableActivities.addAll(eventuallyFollowed[activity.name].orEmpty())
-//        }
         index = startIndex
         var unmatched = 0
         mainLoop@ while (index < trace.size) {
@@ -238,14 +231,6 @@ class CountUnmatchedLogMovesInCausalNet(
                 unmatched++
                 continue
             }
-
-//            if (conceptName != prevActivity?.name && prevProcessState.uniqueSet().any { conceptName == it.target.name })
-//                continue
-
-
-//            if (conceptName !in reachableActivities)
-//                unmatched++
-
 
             if (pendingEmpty) {
                 if (allReachable.contains(eventSCC))

@@ -36,4 +36,10 @@ data class Node(
     }
 
     override fun hashCode(): Int = hash
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Node) return false
+        return name == other.name && instanceId == other.instanceId && isSilent == other.isSilent
+    }
 }

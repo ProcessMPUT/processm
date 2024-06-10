@@ -198,11 +198,10 @@ class AStar(
                 // add synchronous move if applies
                 if (isSynchronousMove(nextEvent, activity)) {
                     val currentCost = searchState.currentCost + penalty.synchronousMove
-                    // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
                     val predictedCost =
                         predict(
                             events,
-                            nextEventIndex,
+                            nextEventIndex + 1,
                             searchState.processState!!,
                             nEvents,
                             activity
@@ -226,7 +225,13 @@ class AStar(
                     val currentCost = searchState.currentCost + penalty.modelMove
                     // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
                     val predictedCost =
-                        predict(events, nextEventIndex, searchState.processState!!, nEvents, activity)
+                        predict(
+                            events,
+                            nextEventIndex,
+                            searchState.processState!!,
+                            nEvents,
+                            activity
+                        )
                     assert(predictedCost >= lastCost - currentCost)
                     if (currentCost + predictedCost <= upperBoundCost) {
                         queue.add(
@@ -247,10 +252,10 @@ class AStar(
                 val currentCost = searchState.currentCost + penalty.logMove
                 val predictedCost = predict(
                     events,
-                    nextEventIndex,
+                    nextEventIndex + 1,
                     prevProcessState,
                     nEvents,
-                    searchState.getPreviousActivity()
+                    null
                 )
                 assert(predictedCost >= lastCost - currentCost)
                 if (currentCost + predictedCost <= upperBoundCost) {
@@ -421,7 +426,7 @@ class AStar(
                     other.activity.isSilent.compareTo(activity.isSilent) // prefer silent activities
                 event < 0 && other.event >= 0 -> 1 // prefer moves with events
                 event >= 0 && other.event < 0 -> -1
-                else -> 0
+                else -> other.cause?.size?.compareTo(cause?.size ?: 0) ?: 0 // prefer moves that consumed more tokens
             }
         }
 

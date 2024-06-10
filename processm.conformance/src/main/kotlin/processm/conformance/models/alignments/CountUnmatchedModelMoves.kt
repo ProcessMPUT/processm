@@ -31,7 +31,7 @@ interface CountUnmatchedModelMoves {
         startIndex: Int,
         nEvents: List<Map<String?, Int>>,
         prevProcessState: ProcessModelState,
-        prevActivity: Activity?
+        curActivity: Activity?
     ): Int
 }
 
@@ -45,39 +45,57 @@ class CountUnmatchedCausalNetMoves(val model: CausalNet) : CountUnmatchedModelMo
         startIndex: Int,
         nEvents: List<Map<String?, Int>>,
         prevProcessState: ProcessModelState,
-        prevActivity: Activity?
+        curActivity: Activity?
     ): Int {
         prevProcessState as CausalNetState
-        prevActivity as DecoupledNodeExecution?
+        curActivity as DecoupledNodeExecution?
         val nEvents = if (startIndex < nEvents.size) nEvents[startIndex] else emptyMap<String?, Int>()
         // The maximum over the number of tokens on all incoming dependencies for an activity.
         // As each token must be consumed and a single execution may consume at most one token from the activity,
         // this is the same as the minimal number of pending executions for the activity.
         val minFutureExecutions = this.minFutureExecutions.get()
         if (prevProcessState.isFresh) {
-            if (!model.start.isSilent)
-                minFutureExecutions.put(model.start.name, 1)
-        } else if (prevProcessState.isNotEmpty()) {
-            for (e in prevProcessState.entrySet()) {
-                if (prevActivity?.join?.dependencies?.contains(e.element) == true) {
-                    val split = prevActivity!!.split ?: continue
+            if (curActivity !== null && curActivity.join === null) {
+                val split = curActivity.split
+                if (split !== null) {
                     var index = 0
                     while (index < split.targets.size) {
                         val target = split.targets[index++]
                         if (target.isSilent)
                             continue
-                        val old = minFutureExecutions.put(target.name, e.count)
-                        if (old > e.count)
+                        val old = minFutureExecutions.put(target.name, 1)
+                        if (old > 1)
                             minFutureExecutions.put(target.name, old)
                     }
-                    continue
+                }
+            } else if (!model.start.isSilent) {
+                minFutureExecutions.put(model.start.name, 1)
+            }
+        } else if (prevProcessState.isNotEmpty()) {
+            for (e in prevProcessState.entrySet()) {
+                var count = e.count
+                if (curActivity?.join?.dependencies?.contains(e.element) == true) {
+                    --count
+                    // ignore tokens firing prevActivity and produce tokens created by prevActivity
+                    val split = curActivity!!.split
+                    if (split !== null) {
+                        var index = 0
+                        while (index < split.targets.size) {
+                            val target = split.targets[index++]
+                            if (target.isSilent)
+                                continue
+                            val old = minFutureExecutions.put(target.name, 1)
+                            if (old > 1)
+                                minFutureExecutions.put(target.name, old)
+                        }
+                    }
                 }
 
                 if (e.element.target.isSilent)
                     continue
 
-                val old = minFutureExecutions.put(e.element.target.name, e.count)
-                if (old > e.count)
+                val old = minFutureExecutions.put(e.element.target.name, count)
+                if (old > count)
                     minFutureExecutions.put(e.element.target.name, old)
             }
         }
@@ -123,10 +141,10 @@ class CountUnmatchedPetriNetMoves(val model: PetriNet) : CountUnmatchedModelMove
         startIndex: Int,
         nEvents: List<Map<String?, Int>>,
         prevProcessState: ProcessModelState,
-        prevActivity: Activity?
+        curActivity: Activity?
     ): Int {
         prevProcessState as Marking
-        prevActivity as Transition?
+        curActivity as Transition?
         // Complete dealing with nonConsumable would require some complex algorithm.
         // Consider: ([[c],[e]]: 1, [[d],[e]]: 1). It is sufficient to model-skip over e to consume these two tokens.
         // Consider further: ([[c, e]]: 1, [[d, e]]: 1). Now one needs at least three model-skips: c, d, e (used twice)
@@ -141,7 +159,7 @@ class CountUnmatchedPetriNetMoves(val model: PetriNet) : CountUnmatchedModelMove
         for ((place, counter) in prevProcessState) {
             assert(!counter.isEmpty())
             var tokenCount = counter.size
-            if (prevActivity?.inPlaces?.contains(place) == true) {
+            if (curActivity?.inPlaces?.contains(place) == true) {
                 if (--tokenCount == 0)
                     continue
             }
