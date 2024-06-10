@@ -253,9 +253,7 @@ class AStar(
                         previousSearchState = searchState,
                         processState = prevProcessState
                     )
-                    if (!visited.contains(state)) {
-                        queue.add(state)
-                    }
+                    queue.add(state)
                 }
             }
         }

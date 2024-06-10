@@ -56,11 +56,11 @@ class AStarCausalNetPerformanceTests {
     fun `artificial_digital_photo_copier_event_log`() = loggedScope { logger ->
         val astar = AStar(cnet)
         var count = 0
-        for (trace in log.traces) {
+        for (trace in log.traces.sortedBy { it.events.count() }) {
             val start = System.currentTimeMillis()
             val alignment = astar.align(trace)
             val total = System.currentTimeMillis() - start
-            logger.info("Calculated alignment $alignment in ${total}ms")
+            logger.info("Calculated alignment with cost ${alignment.cost} and ${alignment.steps.size} steps for trace with ${trace.events.count()} events in ${total}ms")
             count += 1
         }
         assertEquals(log.traces.count(), count)
