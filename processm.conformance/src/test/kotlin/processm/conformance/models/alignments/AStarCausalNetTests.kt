@@ -211,7 +211,7 @@ class AStarCausalNetTests {
             2
         )
 
-        val expectedVisitedStatesCount = arrayOf(6, 19, 16, 132)
+        val expectedVisitedStatesCount = arrayOf(6, 19, 16, 136)
 
         val astar = AStar(fig316)
         for ((i, trace) in log.traces.withIndex()) {
@@ -222,7 +222,10 @@ class AStarCausalNetTests {
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost} #visited states ${astar.visitedStatesCount}")
 
             assertEquals(expectedCost[i], alignment.cost)
-            assertTrue { astar.visitedStatesCount <= expectedVisitedStatesCount[i] }
+            assertTrue(
+                astar.visitedStatesCount <= expectedVisitedStatesCount[i],
+                "visitedStates: ${astar.visitedStatesCount} <= ${expectedVisitedStatesCount[i]}"
+            )
         }
     }
 

@@ -97,7 +97,6 @@ class AStar(
                 null
             ).toShort(),
             activity = null, // before first activity
-            cause = emptyArray(),
             event = -1, // before first event
             previousSearchState = null,
             processState = initialProcessState
@@ -292,13 +291,14 @@ class AStar(
     ): Alignment {
         val steps = ArrayList<Step>()
         var state: SearchState = searchState
+        val instance = model.createInstance()
         while (state.event != (-1).toShort()) {
             with(state) {
                 steps.add(
                     Step(
                         modelMove = activity,
                         modelState = processState,
-                        modelCause = cause?.asList().orEmpty(),
+                        modelCause = getCause(instance).asList(),
                         logMove = if (event != SKIP_EVENT) events[event.toInt()] else null,
                         logState = events.subList(0, getPreviousEventIndex() + 1).asSequence(),
                         type = when {
@@ -355,36 +355,32 @@ class AStar(
          */
         val activity: Activity?,
         /**
-         * The collection of activities that were the direct cause for [activity].
-         */
-        var cause: Array<out Activity>? = null,
-        /**
          * The last executed event.
          */
         val event: Short,
         val previousSearchState: SearchState?,
         var processState: ProcessModelState? = null
     ) : Comparable<SearchState> {
-        private fun calcProcessStateAndCause(instance: ProcessModelInstance) {
+        private fun calcProcessState(instance: ProcessModelInstance) {
             checkNotNull(activity)
             instance.setState(previousSearchState!!.getProcessState(instance).copy())
             val execution = instance.getExecutionFor(activity)
-            cause = execution.cause
             execution.execute()
             processState = instance.currentState
         }
 
         fun getProcessState(instance: ProcessModelInstance): ProcessModelState {
             if (processState === null && activity !== null) {
-                calcProcessStateAndCause(instance)
+                calcProcessState(instance)
             }
             return processState ?: previousSearchState!!.getProcessState(instance)
         }
 
         fun getCause(instance: ProcessModelInstance): Array<out Activity> {
-            if (cause === null && activity !== null)
-                calcProcessStateAndCause(instance)
-            return cause!!
+            activity ?: return emptyArray()
+            instance.setState(previousSearchState!!.getProcessState(instance))
+            val execution = instance.getExecutionFor(activity)
+            return execution.cause
         }
 
         fun getPreviousEventIndex(): Int {
@@ -408,7 +404,7 @@ class AStar(
                     other.activity.isSilent.compareTo(activity.isSilent) // prefer silent activities
                 event < 0 && other.event >= 0 -> 1 // prefer moves with events
                 event >= 0 && other.event < 0 -> -1
-                else -> other.cause?.size?.compareTo(cause?.size ?: 0) ?: 0 // prefer moves that consumed more tokens
+                else -> 0
             }
         }
 

@@ -60,7 +60,7 @@ class AStarCausalNetPerformanceTests {
             val start = System.currentTimeMillis()
             val alignment = astar.align(trace)
             val total = System.currentTimeMillis() - start
-            logger.info("Calculated alignment with cost ${alignment.cost} and ${alignment.steps.size} steps for trace with ${trace.events.count()} events in ${total}ms")
+            logger.info("Calculated alignment with cost ${alignment.cost} and ${alignment.steps.size} steps for trace with ${trace.events.count()} events in ${total}ms using ${astar.visitedStatesCount} states")
             count += 1
         }
         assertEquals(log.traces.count(), count)
