@@ -25,9 +25,10 @@ class TwoPhaseDFS(
     override val penalty: PenaltyFunction = PenaltyFunction(),
     val alignerFactory: AlignerFactory = AlignerFactory { mod, pen, _ ->
         AStar(
-            mod,
-            pen,
-            CountUnmatchedReplayModelMoves(mod as ReplayModel)
+            model = mod,
+            penalty = pen,
+            countUnmatchedModelMoves = CountUnmatchedReplayModelMoves(mod as ReplayModel),
+            countUnmatchedLogMoves = null
         )
     }
 ) : AntiAligner {

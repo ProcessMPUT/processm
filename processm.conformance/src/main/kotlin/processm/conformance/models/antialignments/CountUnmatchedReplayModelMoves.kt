@@ -12,11 +12,13 @@ internal class CountUnmatchedReplayModelMoves(val model: ReplayModel) : CountUnm
         curActivity: Activity?
     ): Int {
         prevProcessState as ReplayModelState
-        val nEvents = nEvents[startIndex]
+        val nEvents = if (startIndex < nEvents.size) nEvents[startIndex] else emptyMap<String?, Int>()
 
         var counter = 0 // lower bound
         for (i in prevProcessState.index until model.trace.size) {
             val act = model.trace[i]
+            if (i == prevProcessState.index && act == curActivity /*just executed activity*/)
+                continue
             if (!act.isSilent && act.name !in nEvents)
                 counter += 1
         }

@@ -100,7 +100,8 @@ class AStar(
             previousSearchState = null,
             processState = initialProcessState
         )
-        queue.add(initialSearchState)
+        if (initialSearchState.predictedCost <= costLimit)
+            queue.add(initialSearchState)
 
         var upperBoundCost = costLimit
         var lastCost = 0
