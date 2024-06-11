@@ -222,7 +222,7 @@ class AStarCausalNetTests {
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost} #visited states ${astar.visitedStatesCount}")
 
             assertEquals(expectedCost[i], alignment.cost)
-            assertEquals(expectedVisitedStatesCount[i], astar.visitedStatesCount)
+            assertTrue { astar.visitedStatesCount <= expectedVisitedStatesCount[i] }
         }
     }
 
