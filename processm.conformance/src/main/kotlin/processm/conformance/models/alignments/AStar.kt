@@ -178,7 +178,6 @@ class AStar(
                             }
                         } else {
                             val currentCost = searchState.currentCost + penalty.silentMove
-                            // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
                             val predictedCost = predict(events, nextEventIndex, prevProcessState, nEvents, activity)
                             assert(predictedCost >= lastCost - currentCost)
                             if (currentCost + predictedCost <= upperBoundCost) {
@@ -226,7 +225,6 @@ class AStar(
                     // add model-only move
                     run {
                         val currentCost = searchState.currentCost + penalty.modelMove
-                        // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
                         val predictedCost =
                             predict(events, nextEventIndex, searchState.processState!!, nEvents, activity)
                         assert(predictedCost >= lastCost - currentCost)
