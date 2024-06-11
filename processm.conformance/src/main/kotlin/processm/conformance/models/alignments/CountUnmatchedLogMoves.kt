@@ -174,8 +174,8 @@ class CountUnmatchedLogMovesInCausalNet(
             while (!queue.isEmpty) {
                 val id = queue.removeFirst()
 
-                out.add(id)
-                queue.addLast(*directlyFollowsSCC[id])
+                if (out.add(id))
+                    queue.addLast(*directlyFollowsSCC[id])
             }
 
             return out.toArray()
