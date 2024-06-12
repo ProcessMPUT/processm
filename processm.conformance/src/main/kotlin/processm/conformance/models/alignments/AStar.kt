@@ -209,6 +209,7 @@ class AStar(
 
                 // add possible moves to the queue
                 assert(instance.currentState === prevProcessState)
+                var isSynchronousAvailable = false
                 for (activity in instance.availableActivities) {
                     // silent activities are special
                     if (activity.isSilent) {
@@ -242,7 +243,9 @@ class AStar(
                     assert(!activity.isSilent)
 
                     // add synchronous move if applies
-                    if (isSynchronousMove(nextEvent, activity)) {
+                    val isSynchronous = isSynchronousMove(nextEvent, activity)
+                    isSynchronousAvailable = isSynchronousAvailable || isSynchronous
+                    if (isSynchronous) {
                         val currentCost = searchState.currentCost + penalty.synchronousMove
                         val predictedCost =
                             predict(
@@ -267,7 +270,7 @@ class AStar(
                     }
 
                     // add model-only move
-                    if (canMoveInModelOnly) {
+                    if (!isSynchronous && canMoveInModelOnly) {
                         val currentCost = searchState.currentCost + penalty.modelMove
                         val predictedCost =
                             predict(events, nextEventIndex, searchState.processState!!, nEvents, activity)
@@ -287,7 +290,7 @@ class AStar(
                 }
 
                 // add log-only move
-                if (nextEvent !== null) {
+                if (nextEvent !== null && !isSynchronousAvailable) {
                     val currentCost = searchState.currentCost + penalty.logMove
                     val predictedCost = predict(events, nextEventIndex + 1, prevProcessState, nEvents, null)
                     assert(predictedCost >= lastCost - currentCost)

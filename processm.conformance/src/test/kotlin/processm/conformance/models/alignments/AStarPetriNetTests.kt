@@ -401,7 +401,7 @@ class AStarPetriNetTests {
         )
 
 
-        val expectedVisitedStatesCount = listOf(25, 10, 9, 11, 22, 8, 87)
+        val expectedVisitedStatesCount = listOf(25, 10, 9, 12, 22, 8, 87)
 
         val astar = AStar(fig32)
         for ((i, trace) in log.traces.withIndex()) {
