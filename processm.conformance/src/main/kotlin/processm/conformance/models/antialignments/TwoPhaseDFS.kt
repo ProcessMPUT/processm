@@ -33,6 +33,7 @@ class TwoPhaseDFS(
     }
 ) : AntiAligner {
 
+    @OptIn(ResettableAligner::class)
     override fun align(
         log: Sequence<Trace>,
         size: Int,
@@ -57,6 +58,7 @@ class TwoPhaseDFS(
                 if (0 >= globalCost) {
                     globalCost = 0
                     replayModel.trace = modelTrace
+                    aligner.reset()
                     val alignment = aligner.align(matchingLogTrace.first, 0)!!
                     assert(alignment.cost == 0)
                     antiAlignments.add(mapStates(alignment, modelStates))
@@ -78,6 +80,7 @@ class TwoPhaseDFS(
             // globalCost >= costEstimateUB
 
             replayModel.trace = modelTrace
+            aligner.reset()
             var perTraceCost = costEstimateUB // minimize
             perTraceAntiAlignments.clear()
             for (logTrace in logUnique.values) {

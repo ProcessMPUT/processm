@@ -38,6 +38,7 @@ class AStarPetriNetTests {
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
 
+            @Suppress("DEPRECATION")
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost} #visited states: ${astar.visitedStatesCount}")
 
             assertEquals(0, alignment.cost)
@@ -400,7 +401,7 @@ class AStarPetriNetTests {
         )
 
 
-        val expectedVisitedStatesCount = listOf(26, 10, 9, 11, 31, 20, 112)
+        val expectedVisitedStatesCount = listOf(25, 10, 9, 11, 22, 8, 87)
 
         val astar = AStar(fig32)
         for ((i, trace) in log.traces.withIndex()) {
@@ -408,8 +409,10 @@ class AStarPetriNetTests {
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
 
+            @Suppress("DEPRECATION")
             logger.info("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost} #visited states: ${astar.visitedStatesCount}")
 
+            @Suppress("DEPRECATION")
             assertTrue { astar.visitedStatesCount <= expectedVisitedStatesCount[i] }
 
             val results = expected[i].map { expected ->

@@ -12,6 +12,9 @@ import processm.core.models.commons.ProcessModelState
 import processm.core.models.petrinet.PetriNet
 import processm.helpers.asCollection
 import java.util.*
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.concurrent.read
+import kotlin.concurrent.write
 
 
 /**
@@ -23,6 +26,7 @@ import java.util.*
  *
  * This class is thread-safe.
  */
+@OptIn(ResettableAligner::class)
 class AStar(
     override val model: ProcessModel,
     override val penalty: PenaltyFunction = PenaltyFunction(),
@@ -42,6 +46,7 @@ class AStar(
     companion object {
         private const val SKIP_EVENT = Short.MIN_VALUE
         private const val QUEUE_INITIAL_CAP = 1 shl 7 // the default is 11
+        private const val INITIAL_SHORTEST_PATH = 1 shl 24
     }
 
     private val activities: Set<String?> =
@@ -53,11 +58,29 @@ class AStar(
     private val visited = ThreadLocal.withInitial { Cache<SearchState>() }
 
     /**
+     * The minimal known count of non-silent moves in the [model]. This property is updated when a new alignment is found.
+     */
+    private var shortestPathInModel = INITIAL_SHORTEST_PATH
+    private var shortestPathInModelSilentMoves = INITIAL_SHORTEST_PATH
+    private val shortestPathLock = ReentrantReadWriteLock()
+
+    /**
      * Statistics for tests only.
      */
     @Deprecated("This property is not thread safe and concurrent runs of align() may yield unpredictable results. Do not use, except in the single-threaded tests.")
     internal var visitedStatesCount: Int = 0
         private set
+
+    override fun reset() {
+        shortestPathLock.write {
+            shortestPathInModel = INITIAL_SHORTEST_PATH
+            shortestPathInModelSilentMoves = INITIAL_SHORTEST_PATH
+        }
+    }
+
+    init {
+        reset()
+    }
 
     /**
      * Calculates [Alignment] for the given [trace]. Use [Thread.interrupt] to cancel calculation without yielding result.
@@ -73,6 +96,16 @@ class AStar(
         val eventsWithExistingActivities = events.filter { e -> activities.contains(e.conceptName) }
         visitedStatesCount = 0
         val alignment = alignInternal(eventsWithExistingActivities, costUpperBound)
+        val labeledModelMoves = alignment?.steps?.count { it.modelMove?.isSilent == false } ?: Int.MAX_VALUE
+        val silentModelMoves = alignment?.steps?.count { it.modelMove?.isSilent == true } ?: Int.MAX_VALUE
+        shortestPathLock.write {
+            if (labeledModelMoves < shortestPathInModel) {
+                shortestPathInModel = labeledModelMoves
+                shortestPathInModelSilentMoves = silentModelMoves
+            } else if (labeledModelMoves == shortestPathInModel && silentModelMoves < shortestPathInModelSilentMoves) {
+                shortestPathInModelSilentMoves = silentModelMoves
+            }
+        }
         if (events.size == eventsWithExistingActivities.size)
             return alignment
         return alignment?.fillMissingEvents(events, penalty)?.also { if (it.cost > costUpperBound) return@align null }
@@ -101,11 +134,15 @@ class AStar(
             previousSearchState = null,
             processState = initialProcessState
         )
-        if (initialSearchState.predictedCost <= costLimit)
+        var upperBoundCost = minOf(
+            shortestPathLock.read { shortestPathInModel * penalty.modelMove + shortestPathInModelSilentMoves * penalty.silentMove }
+                    + events.size * penalty.logMove,
+            costLimit
+        )
+        if (initialSearchState.predictedCost <= upperBoundCost)
             queue.add(initialSearchState)
 
         try {
-            var upperBoundCost = costLimit
             var lastCost = 0
             while (queue.isNotEmpty()) {
                 val searchState = queue.poll()!!
@@ -161,6 +198,9 @@ class AStar(
 
                 val nextEventIndex = previousEventIndex + 1
                 val nextEvent = if (nextEventIndex < events.size) events[nextEventIndex] else null
+                // This condition imposes order of model-only moves before log-only moves, as they are independent
+                // and otherwise can be run in any order increasing so the total number of states.
+                val canMoveInModelOnly = searchState.activity !== null || searchState.event == (-1).toShort()
 
                 // add possible moves to the queue
                 assert(instance.currentState === prevProcessState)
@@ -175,7 +215,7 @@ class AStar(
                             if (!visited.contains(state)) {
                                 queue.add(state)
                             }
-                        } else {
+                        } else if (canMoveInModelOnly) {
                             val currentCost = searchState.currentCost + penalty.silentMove
                             val predictedCost = predict(events, nextEventIndex, prevProcessState, nEvents, activity)
                             assert(predictedCost >= lastCost - currentCost)
@@ -222,7 +262,7 @@ class AStar(
                     }
 
                     // add model-only move
-                    run {
+                    if (canMoveInModelOnly) {
                         val currentCost = searchState.currentCost + penalty.modelMove
                         val predictedCost =
                             predict(events, nextEventIndex, searchState.processState!!, nEvents, activity)

@@ -96,4 +96,19 @@ interface Aligner {
         summarizer: EventsSummarizer<*>? = DefaultEventsSummarizer
     ): Sequence<Alignment?> =
         align(log.traces, costUpperBound, summarizer)
+
+    /**
+     * Resets the internal state of the aligner that may consist of computed information about the model. Call this
+     * method whenever the [model] is mutated.
+     *
+     * Implementation of this function is optional.
+     */
+    @ResettableAligner
+    fun reset() {
+    }
 }
+
+@RequiresOptIn(message = "Implementation of this function is optional and so its use requires a special care as the aligner may simply ignore the reset request.")
+@Retention(AnnotationRetention.BINARY)
+@Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION)
+annotation class ResettableAligner

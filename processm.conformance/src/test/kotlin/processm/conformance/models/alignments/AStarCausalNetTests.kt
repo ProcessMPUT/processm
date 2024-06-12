@@ -211,7 +211,7 @@ class AStarCausalNetTests {
             2
         )
 
-        val expectedVisitedStatesCount = arrayOf(6, 19, 16, 136)
+        val expectedVisitedStatesCount = arrayOf(6, 19, 16, 147)
 
         val astar = AStar(fig316)
         for ((i, trace) in log.traces.withIndex()) {
@@ -219,9 +219,12 @@ class AStarCausalNetTests {
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
 
+            @Suppress("DEPRECATION")
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost} #visited states ${astar.visitedStatesCount}")
 
             assertEquals(expectedCost[i], alignment.cost)
+
+            @Suppress("DEPRECATION")
             assertTrue(
                 astar.visitedStatesCount <= expectedVisitedStatesCount[i],
                 "visitedStates: ${astar.visitedStatesCount} <= ${expectedVisitedStatesCount[i]}"
@@ -247,6 +250,7 @@ class AStarCausalNetTests {
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
 
+            @Suppress("DEPRECATION")
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost} #visited states ${astar.visitedStatesCount}")
 
             assertEquals(0, alignment.cost)
@@ -297,6 +301,7 @@ class AStarCausalNetTests {
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
 
+            @Suppress("DEPRECATION")
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}\tvisited states: ${astar.visitedStatesCount}")
 
             assertEquals(expectedCost[i], alignment.cost)
@@ -385,6 +390,7 @@ class AStarCausalNetTests {
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
 
+            @Suppress("DEPRECATION")
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}\tvisited states: ${astar.visitedStatesCount}")
 
             assertEquals(expectedCost[i], alignment.cost)
