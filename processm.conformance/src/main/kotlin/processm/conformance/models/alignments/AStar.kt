@@ -134,11 +134,16 @@ class AStar(
             previousSearchState = null,
             processState = initialProcessState
         )
-        var upperBoundCost = minOf(
-            shortestPathLock.read { shortestPathInModel * penalty.modelMove + shortestPathInModelSilentMoves * penalty.silentMove }
-                    + events.size * penalty.logMove,
-            costLimit
-        )
+        val firstEvent = events.firstOrNull()
+        val lastEvent = events.lastOrNull()
+        val matchingStartEnd = (if (model.startActivities.any { isSynchronousMove(firstEvent, it) }) 1 else 0) +
+                (if (model.endActivities.any { isSynchronousMove(lastEvent, it) }) 1 else 0)
+        val upperBoundCostModelPart = shortestPathLock.read {
+            (shortestPathInModel - matchingStartEnd).coerceAtLeast(0) * penalty.modelMove +
+                    shortestPathInModelSilentMoves * penalty.silentMove
+        }
+        val upperBoundCostLogPart = (events.size - matchingStartEnd).coerceAtLeast(0) * penalty.logMove
+        var upperBoundCost = minOf(upperBoundCostModelPart + upperBoundCostLogPart, costLimit)
         if (initialSearchState.predictedCost <= upperBoundCost)
             queue.add(initialSearchState)
 
