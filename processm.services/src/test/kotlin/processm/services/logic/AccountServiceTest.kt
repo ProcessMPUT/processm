@@ -10,6 +10,7 @@ import processm.core.communication.email.Email
 import processm.core.communication.email.Emails
 import processm.dbmodels.models.*
 import processm.services.helpers.ExceptionReason
+import java.time.Instant
 import java.util.*
 import kotlin.test.*
 
@@ -19,7 +20,7 @@ class AccountServiceTest : ServiceTestBase() {
     private val correctPasswordHash = "\$argon2d\$v=19\$m=65536,t=3,p=1\$P0P1NSt1aP8ONWirWMbAWQ\$bDvD/v5/M7T3gRq8BXqbQA"
 
     @Test
-    fun `password verification returns user object if password is correct`() = withCleanTables(Users) {
+    fun `password verification returns user object if password is correct`(): Unit = withCleanTables(Users) {
         createUser("user@example.com", password = null, passwordHash = correctPasswordHash)
 
         val user = assertNotNull(accountService.verifyUsersCredentials("user@example.com", correctPassword))
@@ -27,14 +28,14 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `password verification returns null reference if password is incorrect`() = withCleanTables(Users) {
+    fun `password verification returns null reference if password is incorrect`(): Unit = withCleanTables(Users) {
         createUser("user@example.com", password = null, passwordHash = correctPasswordHash)
 
         assertNull(accountService.verifyUsersCredentials("user@example.com", "incorrect_pass"))
     }
 
     @Test
-    fun `password verification throws if nonexistent user`() = withCleanTables(Users) {
+    fun `password verification throws if nonexistent user`(): Unit = withCleanTables(Users) {
         createUser("user@example.com", password = null, passwordHash = correctPasswordHash)
 
         val exception = assertFailsWith<ValidationException>("Specified user account does not exist") {
@@ -44,7 +45,7 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `password verification is insensitive to username case`() = withCleanTables(Users) {
+    fun `password verification is insensitive to username case`(): Unit = withCleanTables(Users) {
         createUser("user@example.com", password = null, passwordHash = correctPasswordHash)
 
         val user = assertNotNull(accountService.verifyUsersCredentials("UsEr@eXaMple.com", correctPassword))
@@ -52,7 +53,7 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `successful account registration returns`() = withCleanTables(
+    fun `successful account registration returns`(): Unit = withCleanTables(
         AccessControlList, Users, Groups, Organizations, UsersRolesInOrganizations
     ) {
         accountService.create("user@example.com", null, "passW0RD")
@@ -63,7 +64,7 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `account registration throws if user already registered`() = withCleanTables(Users) {
+    fun `account registration throws if user already registered`(): Unit = withCleanTables(Users) {
         createUser("user@example.com", correctPasswordHash)
 
         val exception =
@@ -74,7 +75,7 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `account registration is insensitive to user email case`() = withCleanTables(
+    fun `account registration is insensitive to user email case`(): Unit = withCleanTables(
         AccessControlList, Users, Groups, Organizations
     ) {
         createUser("user@example.com", correctPasswordHash)
@@ -87,14 +88,14 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `returns account details of existing user`() = withCleanTables(Users) {
+    fun `returns account details of existing user`(): Unit = withCleanTables(Users) {
         val userId = createUser("user@example.com", correctPasswordHash).id.value
         val user = assertNotNull(accountService.getUser(userId))
         assertEquals("user@example.com", user.email)
     }
 
     @Test
-    fun `account details throws if nonexistent user`() = withCleanTables(Users) {
+    fun `account details throws if nonexistent user`(): Unit = withCleanTables(Users) {
         val exception = assertFailsWith<ValidationException>("Specified user account does not exist") {
             accountService.getUser(userId = UUID.randomUUID())
         }
@@ -102,7 +103,7 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `changing password throws if nonexistent user`() = withCleanTables(Users) {
+    fun `changing password throws if nonexistent user`(): Unit = withCleanTables(Users) {
         val exception = assertFailsWith<ValidationException>("Specified user account does not exist") {
             accountService.changePassword(
                 userId = UUID.randomUUID(), currentPassword = correctPassword, newPassword = "new_pass"
@@ -112,14 +113,14 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `changing password returns false if current password is incorrect`() = withCleanTables(Users) {
+    fun `changing password returns false if current password is incorrect`(): Unit = withCleanTables(Users) {
         val userId = createUser("user@example.com", correctPasswordHash).id.value
 
         assertFalse(accountService.changePassword(userId, "incorrect_pass", "new_pass"))
     }
 
     @Test
-    fun `successful password change returns true`() = withCleanTables(Users) {
+    fun `successful password change returns true`(): Unit = withCleanTables(Users) {
         val userId = createUser("user@example.com", password = null, passwordHash = correctPasswordHash).id.value
 
         assertTrue(accountService.changePassword(userId, correctPassword, "new_pass"))
@@ -128,7 +129,7 @@ class AccountServiceTest : ServiceTestBase() {
 
     @ParameterizedTest
     @ValueSource(strings = ["pl-PL", "en"])
-    fun `successful locale change runs successfully`(supportedLocale: String) = withCleanTables(Users) {
+    fun `successful locale change runs successfully`(supportedLocale: String): Unit = withCleanTables(Users) {
         val userId = createUser("user@example.com", correctPasswordHash).id.value
 
         assertDoesNotThrow { accountService.changeLocale(userId, supportedLocale) }
@@ -136,7 +137,8 @@ class AccountServiceTest : ServiceTestBase() {
 
     @ParameterizedTest
     @ValueSource(strings = ["goofy", "US", "ab_YZ", "yz_AB", "eng-ENG", "de-DE", "es-ES-tradnl", "eng", "eng-US"])
-    fun `changing locale throws if locale is invalid or not supported`(unsupportedLocale: String) = withCleanTables(Users) {
+    fun `changing locale throws if locale is invalid or not supported`(unsupportedLocale: String): Unit =
+        withCleanTables(Users) {
         val userId = createUser("user@example.com", correctPasswordHash).id.value
 
         val exception = assertFailsWith<ValidationException> {
@@ -147,7 +149,7 @@ class AccountServiceTest : ServiceTestBase() {
 
     @ParameterizedTest
     @ValueSource(strings = ["de_DE_DE_de", "de-DE-DE-de"])
-    fun `changing locale throws if locale is not properly_formatted`(unsupportedLocale: String) =
+    fun `changing locale throws if locale is not properly_formatted`(unsupportedLocale: String): Unit =
         withCleanTables(Users) {
             val userId =
                 createUser("user@example.com", password = null, passwordHash = correctPasswordHash, "en_US").id.value
@@ -159,7 +161,7 @@ class AccountServiceTest : ServiceTestBase() {
         }
 
     @Test
-    fun `changing locale throws if nonexistent user`() = withCleanTables(Users) {
+    fun `changing locale throws if nonexistent user`(): Unit = withCleanTables(Users) {
         val exception = assertFailsWith<ValidationException>("Specified user account does not exist") {
             accountService.changeLocale(userId = UUID.randomUUID(), locale = "en_US")
         }
@@ -167,7 +169,7 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `returns current user roles in assigned organizations`() = withCleanTables(
+    fun `returns current user roles in assigned organizations`(): Unit = withCleanTables(
         AccessControlList, Users, Groups, Organizations, UsersRolesInOrganizations
     ) {
         val userId = createUser().id.value
@@ -184,7 +186,7 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `user roles in assigned organizations throws if nonexistent user`() = withCleanTables(
+    fun `user roles in assigned organizations throws if nonexistent user`(): Unit = withCleanTables(
         AccessControlList, Users, Groups, Organizations, UsersRolesInOrganizations
     ) {
         val exception = assertFailsWith<ValidationException> {
@@ -199,7 +201,7 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `request password reset for an existing user`() = withCleanTables(Users, PasswordResetRequests, Emails) {
+    fun `request password reset for an existing user`(): Unit = withCleanTables(Users, PasswordResetRequests, Emails) {
         val user = createUser()
         val email = user.email
         accountService.sendPasswordResetEmail(email)
@@ -215,15 +217,18 @@ class AccountServiceTest : ServiceTestBase() {
         val user = createUser()
         val email = user.email
         accountService.sendPasswordResetEmail(email)
-        val token =
-            PasswordResetRequest.wrapRow(PasswordResetRequests.select { PasswordResetRequests.userId eq user.id }
-                .single()).id.value
+
+        val request = PasswordResetRequest.find { PasswordResetRequests.userId eq user.id }.single()
+        request.email!!.sent = Instant.now()
+        val token = request.id.value
+
         assertTrue(accountService.resetPasswordWithToken(token, "new_password"))
         assertNotNull(accountService.verifyUsersCredentials(user.email, "new_password"))
     }
 
     @Test
-    fun `fail to reset password with non-existing token`() = withCleanTables(Users, PasswordResetRequests, Emails) {
+    fun `fail to reset password with non-existing token`(): Unit =
+        withCleanTables(Users, PasswordResetRequests, Emails) {
         val user = createUser()
         val email = user.email
         accountService.sendPasswordResetEmail(email)
@@ -235,15 +240,17 @@ class AccountServiceTest : ServiceTestBase() {
     @Test
     fun `fail to reset password with already used token`(): Unit =
         withCleanTables(Users, PasswordResetRequests, Emails) {
-        val user = createUser()
-        val email = user.email
-        accountService.sendPasswordResetEmail(email)
-        val token =
-            PasswordResetRequest.wrapRow(PasswordResetRequests.select { PasswordResetRequests.userId eq user.id }
-                .single()).id.value
-        assertTrue(accountService.resetPasswordWithToken(token, "new_password"))
-        assertFalse(accountService.resetPasswordWithToken(token, "another_password"))
-        assertNull(accountService.verifyUsersCredentials(user.email, "another_password"))
-        assertNotNull(accountService.verifyUsersCredentials(user.email, "new_password"))
-    }
+            val user = createUser()
+            val email = user.email
+            accountService.sendPasswordResetEmail(email)
+
+            val request = PasswordResetRequest.find { PasswordResetRequests.userId eq user.id }.single()
+            request.email!!.sent = Instant.now()
+            val token = request.id.value
+
+            assertTrue(accountService.resetPasswordWithToken(token, "new_password"))
+            assertFalse(accountService.resetPasswordWithToken(token, "another_password"))
+            assertNull(accountService.verifyUsersCredentials(user.email, "another_password"))
+            assertNotNull(accountService.verifyUsersCredentials(user.email, "new_password"))
+        }
 }
