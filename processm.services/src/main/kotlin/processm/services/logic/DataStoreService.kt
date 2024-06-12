@@ -307,6 +307,8 @@ class DataStoreService(
                     this[AutomaticEtlProcessRelations.automaticEtlProcessId] = etlProcessMetadata.id.value
                     this[AutomaticEtlProcessRelations.relationship] = relation
                 }
+
+                commit()
                 notifyActivated(dataStoreId, dataConnectorId)
 
                 return@transaction etlProcessMetadata.id.value
