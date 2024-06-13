@@ -114,8 +114,11 @@ open class HashMultiSet<E>() : MutableMultiSet<E> {
         return other.isNotEmpty()
     }
 
-    override fun containsAll(elements: Collection<E>): Boolean =
-        this.uniqueSize >= elements.size && elements.all { contains(it) }
+    override fun containsAll(elements: Collection<E>): Boolean = when (elements) {
+        is MutableMultiSet<E> -> this.uniqueSize >= elements.uniqueSize && elements.uniqueSet().all { contains(it) }
+        is Set<E> -> this.uniqueSize >= elements.size && elements.all { contains(it) }
+        else -> elements.all { contains(it) }
+    }
 
     override fun contains(element: E): Boolean = backend.containsKey(element)
 
