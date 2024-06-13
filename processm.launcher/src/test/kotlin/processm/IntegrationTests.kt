@@ -928,7 +928,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
 
             val eventsCounter = AtomicInteger()
 
-            sse(format<Paths.Workspace>()) {
+            sse(format<Paths.Notifications>()) {
                 eventsCounter.incrementAndGet()
             }
 
@@ -1069,7 +1069,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
 
             val eventsCounter = AtomicInteger()
 
-            sse(format<Paths.Workspace>()) {
+            sse(format<Paths.Notifications>()) {
                 eventsCounter.incrementAndGet()
             }
 
@@ -1219,7 +1219,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
 
             val eventsCounter = AtomicInteger()
 
-            sse(format<Paths.Workspace>()) {
+            sse(format<Paths.Notifications>()) {
                 eventsCounter.incrementAndGet()
             }
 
