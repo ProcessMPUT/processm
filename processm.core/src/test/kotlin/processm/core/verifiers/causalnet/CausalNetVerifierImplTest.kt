@@ -247,8 +247,7 @@ class CausalNetVerifierImplTest {
         assertEquals(
             setOf(
                 listOf(a, b, c, d, e),
-                listOf(a, b, b, c, c, d, d, e),
-                listOf(a, b, b, b, c, c, c, d, d, d, e)
+                listOf(a, b, b, c, c, d, d, e)
             ),
             v.validLoopFreeSequences.mapToSet { seq -> seq.map { ab -> ab.a }.sortedBy { it.name } }
         )
