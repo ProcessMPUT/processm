@@ -135,7 +135,7 @@ import { isNonNegativeIntegerRule } from "@/utils/FormValidationRules";
 @Component({
   components: { WorkspaceComponent }
 })
-export default class EditComponentView extends Vue {
+export default class EditComponentDialog extends Vue {
   @Inject() app!: App;
   readonly availableComponents = Object.values(ComponentType);
   kebabize = kebabize;

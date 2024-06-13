@@ -3,7 +3,7 @@ import Workspace from "@/models/Workspace";
 import BaseService from "./BaseService";
 import { LayoutElement, WorkspaceComponent } from "@/models/WorkspaceComponent";
 import { AbstractComponent, ComponentType, Workspace as ApiWorkspace } from "@/openapi";
-import { WorkspaceObserver } from "@/utils/WorkspaceObserver";
+import { NotificationsObserver } from "@/utils/NotificationsObserver";
 
 export default class WorkspaceService extends BaseService {
   public async getAll(): Promise<Array<Workspace>> {
@@ -125,15 +125,6 @@ export default class WorkspaceService extends BaseService {
     const response = await this.workspacesApi.addOrUpdateWorkspaceComponent(workspaceId, componentId, payload as AbstractComponent);
 
     return response.status == 204;
-  }
-
-  public observeWorkspace(workspaceId: string, callback: (componentId: string) => void) {
-    const observer = new WorkspaceObserver(this.defaultApiPath, workspaceId, callback);
-    observer.reauthenticate = async () => {
-      await this.prolongExistingSession(undefined);
-      return true;
-    };
-    return observer;
   }
 
   public async getEmptyComponent(componentType: ComponentType) {

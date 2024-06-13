@@ -11,6 +11,12 @@ const routes = [
     component: () => import("@/views/Workspaces.vue")
   },
   {
+    path: "/workspaces/:workspaceId/components/:componentId",
+    name: "edit-component",
+    component: () => import("@/views/EditComponentView.vue"),
+    props: true
+  },
+  {
     path: "/users",
     name: "users",
     component: () => import("@/views/Users.vue")

@@ -20,11 +20,13 @@
 </template>
 
 <script lang="ts">
-import Vue from "vue";
+import Vue, { reactive } from "vue";
 import Component from "vue-class-component";
 import AppNavigation from "@/components/AppNavigation.vue";
 import TopBar from "@/components/TopBar.vue";
-import { Provide } from "vue-property-decorator";
+import { Inject, Provide } from "vue-property-decorator";
+import NotificationService, { ComponentUpdatedEvent } from "@/services/NotificationService";
+import { NotificationsObserver } from "@/utils/NotificationsObserver";
 
 @Component({
   components: { AppNavigation, TopBar }
@@ -37,6 +39,11 @@ export default class App extends Vue {
     visible: false,
     timeout: 10000
   };
+
+  @Inject() notificationService!: NotificationService;
+  notifications: NotificationsObserver | undefined = undefined;
+
+  lastEvent = reactive({ lastEvent: null } as { lastEvent: ComponentUpdatedEvent | null });
 
   /**
    * @param locale Expected to follow RFC5646, because that's what web browsers seems to do
@@ -115,6 +122,32 @@ export default class App extends Vue {
 
   error(text: string, timeout = 10000) {
     this.message("error", text, timeout);
+  }
+
+  async created() {
+    if (this.notifications === undefined)
+      this.notifications = this.notificationService.subscribe(async (event) => {
+        this.lastEvent.lastEvent = event;
+        if (event.changeType != "Model") return;
+        const goToModel = await this.$confirm(this.$t("notifications.new-model-available.text", {
+          workspaceName: event.workspaceName,
+          componentName: event.componentName
+        }).toString(), {
+          title: this.$t("notifications.new-model-available.title").toString(),
+          buttonTrueText: this.$t("common.yes").toString(),
+          buttonFalseText: this.$t("common.no").toString()
+        });
+        if (!goToModel) return;
+        await this.$router.push({
+          name: "edit-component",
+          params: { workspaceId: event.workspaceId, componentId: event.componentId }
+        });
+      });
+    await this.notifications?.start();
+  }
+
+  beforeDestroy() {
+    this.notifications?.close();
   }
 }
 </script>

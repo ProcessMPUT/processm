@@ -22,7 +22,7 @@
           </v-list-item-icon>
           <v-list-item-content>{{ $t("topbar.sign-out") }}</v-list-item-content>
         </v-list-item>
-        <v-list-group v-model="organizationsExpanded" prepend-icon="groups3"  @click.stop.prevent="">
+        <v-list-group v-model="organizationsExpanded" prepend-icon="groups3" @click.stop.prevent="">
           <template v-slot:activator>
             <v-list-item-content>
               {{ $t("users.organizations") }}

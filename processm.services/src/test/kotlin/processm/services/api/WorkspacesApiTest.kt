@@ -1,43 +1,37 @@
 package processm.services.api
 
-import io.ktor.client.utils.*
 import io.ktor.http.*
-import io.ktor.server.engine.*
-import io.ktor.server.request.*
-import io.ktor.server.testing.*
-import io.ktor.utils.io.*
-import io.ktor.websocket.*
 import io.mockk.*
-import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.CloseableCoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.serialization.encodeToString
 import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.api.Timeout
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
 import org.koin.test.mock.declareMock
-import processm.core.communication.Producer
 import processm.core.esb.Artemis
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.MutableCausalNet
 import processm.core.persistence.connection.DBCache
-import processm.dbmodels.models.*
+import processm.dbmodels.models.ComponentTypeDto
+import processm.dbmodels.models.RoleType
+import processm.dbmodels.models.WorkspaceComponents
+import processm.dbmodels.models.Workspaces
 import processm.services.JsonSerializer
 import processm.services.api.models.*
-import processm.services.api.models.Workspace
 import processm.services.helpers.ExceptionReason
-import processm.services.helpers.asUpdateEvent
-import processm.services.helpers.readSSE
 import processm.services.logic.ValidationException
 import processm.services.logic.WorkspaceService
 import java.time.Instant
 import java.util.*
-import java.util.concurrent.*
+import java.util.concurrent.Executors
 import java.util.stream.Stream
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class WorkspacesApiTest : BaseApiTest() {
@@ -77,7 +71,7 @@ class WorkspacesApiTest : BaseApiTest() {
     )
 
     override fun endpointsWithNoImplementation() = Stream.of(
-        HttpMethod.Get to "/api/workspaces/${UUID.randomUUID()}/components/${UUID.randomUUID()}/data"
+        HttpMethod.Delete to "/api/workspaces/${UUID.randomUUID()}/components/${UUID.randomUUID()}/data"
     )
 
     @Test
@@ -580,149 +574,4 @@ class WorkspacesApiTest : BaseApiTest() {
                 }
             }
         }
-
-    @Test
-    @Timeout(10L, unit = TimeUnit.SECONDS)
-    fun `make 5 changes but receive only 2 of them and let the server handle broken connection`() {
-        val result = ArrayList<UUID>()
-        val componentId = UUID.randomUUID()
-        withConfiguredTestApplication {
-            val workspaceId = UUID.randomUUID()
-            val component = mockk<WorkspaceComponent> {
-                every { componentType } returns ComponentTypeDto.Kpi
-                every { workspace } returns
-                        mockk { every { id } returns EntityID(workspaceId, Workspaces) }
-                every { id } returns EntityID(componentId, WorkspaceComponents)
-            }
-            val sync = Channel<Int>(Channel.UNLIMITED)
-            withAuthentication {
-                launch(context = Dispatchers.Request) {
-                    sync.receive()
-                    repeat(5) {
-                        delay(200L)
-                        println("Producing")
-                        component.triggerEvent(Producer(), WorkspaceComponentEventType.DataChange)
-                    }
-                }
-                runBlocking {
-                    handleSse("/api/workspaces/${workspaceId}") { channel ->
-                        sync.send(1)
-                        repeat(2) {
-                            result.add(channel.readSSE().asUpdateEvent())
-                        }
-                    }
-                }
-            }
-        }
-        assertEquals(2, result.size)
-        assertEquals(componentId, result[0])
-        assertEquals(componentId, result[1])
-
-    }
-
-    @Test
-    @Timeout(10L, unit = TimeUnit.SECONDS)
-    fun `make changes to components in different workspaces one without subscription`() {
-        val result = ArrayList<UUID>()
-        val workspaceId1 = UUID.randomUUID()
-        val workspaceId2 = UUID.randomUUID()
-        val component1 = mockk<WorkspaceComponent> {
-            every { componentType } returns ComponentTypeDto.Kpi
-            every { workspace } returns
-                    mockk { every { id } returns EntityID(workspaceId1, Workspaces) }
-            every { id } returns EntityID(UUID.randomUUID(), WorkspaceComponents)
-        }
-        val component2 = mockk<WorkspaceComponent> {
-            every { componentType } returns ComponentTypeDto.Kpi
-            every { workspace } returns
-                    mockk { every { id } returns EntityID(workspaceId2, Workspaces) }
-            every { id } returns EntityID(UUID.randomUUID(), WorkspaceComponents)
-        }
-        withConfiguredTestApplication {
-            val sync = Channel<Int>(Channel.UNLIMITED)
-            withAuthentication {
-                launch(context = Dispatchers.Request) {
-                    sync.receive()
-                    component1.triggerEvent(Producer(), WorkspaceComponentEventType.DataChange)
-                    component2.triggerEvent(Producer(), WorkspaceComponentEventType.DataChange)
-                }
-                runBlocking {
-                    handleSse("/api/workspaces/${workspaceId2}") { channel ->
-                        sync.send(1)
-                        result.add(channel.readSSE().asUpdateEvent())
-                    }
-                }
-            }
-        }
-        assertEquals(1, result.size)
-        assertEquals(component2.id.value, result[0])
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = intArrayOf(5, 50, 64, 128, 1024))
-    @Timeout(10L, unit = TimeUnit.SECONDS)
-    fun `n subscriptions from a single client`(n: Int) {
-        val result = ConcurrentLinkedDeque<UUID>()
-        val workspaceId = UUID.randomUUID()
-        val component = mockk<WorkspaceComponent> {
-            every { componentType } returns ComponentTypeDto.Kpi
-            every { workspace } returns
-                    mockk { every { id } returns EntityID(workspaceId, Workspaces) }
-            every { id } returns EntityID(UUID.randomUUID(), WorkspaceComponents)
-        }
-        withConfiguredTestApplication {
-            val sync = Channel<Int>()
-            withAuthentication {
-                val jobs = (0 until n).map {
-                    launch(context = Dispatchers.Request) {
-                        handleSse("/api/workspaces/${workspaceId}") { channel ->
-                            sync.send(1)
-                            result.add(channel.readSSE().asUpdateEvent())
-                        }
-                    }
-                }
-                runBlocking {
-                    repeat(n) { sync.receive() }
-                    component.triggerEvent(Producer(), WorkspaceComponentEventType.DataChange)
-                    jobs.forEach { it.join() }
-                }
-            }
-        }
-        assertEquals(n, result.size)
-        assertTrue { result.all { it.equals(component.id.value) } }
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = intArrayOf(5, 50, 64, 128, 1024))
-    @Timeout(10L, unit = TimeUnit.SECONDS)
-    fun `n subscriptions from different clients`(n: Int) {
-        val result = ConcurrentLinkedDeque<UUID>()
-        val workspaceId = UUID.randomUUID()
-        val component = mockk<WorkspaceComponent> {
-            every { componentType } returns ComponentTypeDto.Kpi
-            every { workspace } returns
-                    mockk { every { id } returns EntityID(workspaceId, Workspaces) }
-            every { id } returns EntityID(UUID.randomUUID(), WorkspaceComponents)
-        }
-        withConfiguredTestApplication {
-            val sync = Channel<Int>(Channel.UNLIMITED)
-            val jobs = (0 until n).map { ctr ->
-                launch(context = Dispatchers.Request) {
-                    withAuthentication(login = "user${ctr}@example.com") {
-                        handleSse("/api/workspaces/${workspaceId}") { channel ->
-                            sync.send(ctr)
-                            result.add(channel.readSSE().asUpdateEvent())
-                        }
-                    }
-                }
-            }
-            runBlocking {
-                repeat(n) { sync.receive() }
-                component.triggerEvent(Producer(), WorkspaceComponentEventType.DataChange)
-                jobs.forEach { it.join() }
-            }
-        }
-        assertEquals(n, result.size)
-        assertTrue { result.all { it.equals(component.id.value) } }
-    }
 }

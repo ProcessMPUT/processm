@@ -409,5 +409,11 @@
     "urn:processm:statistics/suspension_time": "Suspension time",
     "urn:processm:statistics/waiting_time": "Waiting time",
     "days": "days"
+  },
+  "notifications": {
+    "new-model-available": {
+      "text": "A new model is available in component {componentName} in workspace {workspaceName}. Do you want to display the component editor now?",
+      "title": "New model available"
+    }
   }
 }

@@ -11,32 +11,22 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.Channel
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import org.koin.ktor.ext.inject
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.RoleType
 import processm.dbmodels.models.WorkspaceComponent
 import processm.dbmodels.models.Workspaces
-import processm.helpers.SerializableUUID
 import processm.helpers.mapToArray
 import processm.logging.loggedScope
 import processm.logging.logger
 import processm.services.JsonSerializer
 import processm.services.api.models.*
 import processm.services.helpers.ExceptionReason
-import processm.services.helpers.ServerSentEvent
-import processm.services.helpers.eventStream
 import processm.services.logic.ACLService
-import processm.services.logic.WorkspaceNotificationService
 import processm.services.logic.WorkspaceService
 import java.util.*
 
-
-@ServerSentEvent("update")
-@Serializable
-data class ComponentUpdateEventPayload(val componentId: SerializableUUID)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Suppress("FunctionName")
@@ -44,8 +34,6 @@ data class ComponentUpdateEventPayload(val componentId: SerializableUUID)
 fun Route.WorkspacesApi() {
     val workspaceService by inject<WorkspaceService>()
     val aclService by inject<ACLService>()
-    val workspaceNotificationService by inject<WorkspaceNotificationService>()
-    val logger = logger()
 
     authenticate {
         post<Paths.Workspaces> { path ->
@@ -211,24 +199,6 @@ fun Route.WorkspacesApi() {
             workspaceService.updateLayout(layoutData)
 
             call.respond(HttpStatusCode.NoContent)
-        }
-
-        get<Paths.Workspace> { workspace ->
-            val channel = Channel<UUID>(Channel.CONFLATED)
-            try {
-                workspaceNotificationService.subscribe(workspace.workspaceId, channel)
-                call.eventStream(this) {
-                    while (!channel.isClosedForReceive) {
-                        val componentId = channel.receive()
-                        writeEvent(ComponentUpdateEventPayload(componentId))
-                    }
-                }
-            } catch (e: Exception) {
-                logger.error("Exception in the workspace notification handler", e)
-            } finally {
-                workspaceNotificationService.unsubscribe(workspace.workspaceId, channel)
-                channel.close()
-            }
         }
     }
 }

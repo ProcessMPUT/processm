@@ -56,10 +56,10 @@ enum class WorkspaceComponentEventType {
     ModelAccepted,
 }
 
-enum class DataChangeType {
-    Model,
-    AlignmentKPI,
-    LastError
+enum class DataChangeType(val value: String) {
+    Model("model"),
+    AlignmentKPI("alignment_kpi"),
+    LastError("last_error")
 }
 
 object WorkspaceComponents : UUIDTable("workspace_components") {

@@ -2,7 +2,7 @@ package processm.services.helpers
 
 import io.ktor.utils.io.*
 import kotlinx.serialization.json.Json
-import processm.services.api.ComponentUpdateEventPayload
+import processm.services.logic.ComponentUpdateEventPayload
 import java.util.*
 import kotlin.test.assertEquals
 

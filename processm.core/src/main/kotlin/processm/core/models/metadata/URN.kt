@@ -7,7 +7,7 @@ package processm.core.models.metadata
 value class URN(val urn: String) {
     init {
         if (!reURN.matches(urn))
-            throw IllegalArgumentException()
+            throw IllegalArgumentException("Not a valid URN: `$urn'")
     }
 
     constructor(components: Iterable<String>) :

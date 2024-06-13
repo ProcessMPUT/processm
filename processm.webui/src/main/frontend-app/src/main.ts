@@ -18,6 +18,7 @@ import ConfigService from "@/services/ConfigService";
 import VuetifyConfirm from "vuetify-confirm";
 import ACLService from "@/services/ACLService";
 import GroupService from "@/services/GroupService";
+import NotificationService from "@/services/NotificationService";
 
 Vue.config.productionTip = false;
 Vue.use(SessionStorage, { persist: true });
@@ -36,7 +37,8 @@ new Vue({
     groupService: new GroupService(),
     organizationService: new OrganizationService(),
     logsService: new LogsService(),
-    aclService: new ACLService()
+    aclService: new ACLService(),
+    notificationService: new NotificationService()
   }),
   render: (h) => h(App)
 }).$mount("#app");

@@ -341,4 +341,7 @@ object Paths {
      */
     @Location("/acl/can-modify/{urn...}")
     class CanModifyACL(val urn: List<String>)
+
+    @Location("/notifications")
+    class Notifications()
 }

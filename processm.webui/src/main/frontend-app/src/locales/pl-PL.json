@@ -408,5 +408,11 @@
     "urn:processm:statistics/suspension_time": "Czas wstrzymania",
     "urn:processm:statistics/waiting_time": "Czas oczekiwania",
     "days": "dni"
+  },
+  "notifications": {
+    "new-model-available": {
+      "text": "Nowy model jest dostępny w komponencie {componentName} w przestrzeni roboczej {workspaceName}. Czy chcesz teraz wyświetlić edytor komponentu?",
+      "title": "Nowy model jest dostępny"
+    }
   }
 }

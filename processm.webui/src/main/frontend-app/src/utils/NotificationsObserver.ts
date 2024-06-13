@@ -1,6 +1,6 @@
 import { Event, EventSourcePolyfill } from "event-source-polyfill";
-import { WorkspacesApiAxiosParamCreator } from "@/openapi";
 import Vue from "vue";
+import { ComponentUpdatedEvent } from "@/services/NotificationService";
 
 interface ConnectionEvent extends Event {
   status: number;
@@ -13,21 +13,15 @@ function isConnectionEvent(event: Event): event is ConnectionEvent {
   return "status" in event && "statusText" in event;
 }
 
-export class WorkspaceObserver {
-  url: Promise<string>;
-  callback: (componentId: string) => void;
+export class NotificationsObserver {
+  url: string;
+  callback: (event: ComponentUpdatedEvent) => void;
   reauthenticate: (() => Promise<boolean>) | undefined;
 
   private eventSource: EventSourcePolyfill | undefined;
 
-
-  /**
-   * Call it using async new WorkspaceObserver
-   */
-  constructor(apiPath: string, workspaceId: string, callback: (componentId: string) => void) {
-    this.url = WorkspacesApiAxiosParamCreator()
-      .getWorkspace(workspaceId)
-      .then((r) => apiPath + r.url);
+  constructor(apiPath: string, callback: (event: ComponentUpdatedEvent) => void) {
+    this.url = apiPath + "/notifications";
     this.callback = callback;
   }
 
@@ -38,7 +32,7 @@ export class WorkspaceObserver {
 
   async start() {
     this.eventSource?.close();
-    this.eventSource = new EventSourcePolyfill(await this.url, {
+    this.eventSource = new EventSourcePolyfill(this.url, {
       headers: {
         Authorization: `Bearer ${Vue.prototype.$sessionStorage.sessionToken}`
       }
@@ -51,9 +45,7 @@ export class WorkspaceObserver {
       }
     };
     this.eventSource.addEventListener("update", (event) => {
-      const data = JSON.parse((event as MessageEvent).data);
-      const componentId = data.componentId;
-      this.callback(componentId);
+      this.callback(JSON.parse((event as MessageEvent).data) as ComponentUpdatedEvent);
     });
   }
 }

@@ -47,7 +47,7 @@ fun Application.apiModule() {
                 single { DataStoreService(get(), get(), get()) }
                 single { LogsService(get()) }
                 single { Producer() }
-                single { WorkspaceNotificationService() }
+                single { NotificationService(get()) }
             })
         }
 
@@ -60,6 +60,7 @@ fun Application.apiModule() {
                 WorkspacesApi()
                 DataStoresApi()
                 ACLApi()
+                NotificationsApi()
                 get { call.respondRedirect("/api-docs/", permanent = true) }
             }
         }

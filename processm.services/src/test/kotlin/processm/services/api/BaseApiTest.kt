@@ -22,11 +22,9 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.koin.test.KoinTest
 import org.koin.test.mock.MockProvider
 import org.koin.test.mock.declareMock
+import processm.core.models.metadata.URN
 import processm.core.persistence.connection.transactionMain
-import processm.dbmodels.models.Organizations
-import processm.dbmodels.models.RoleType
-import processm.dbmodels.models.UserRoleInOrganization
-import processm.dbmodels.models.Users
+import processm.dbmodels.models.*
 import processm.services.JsonSerializer
 import processm.services.api.models.AuthenticationResult
 import processm.services.api.models.OrganizationRole
@@ -177,6 +175,12 @@ abstract class BaseApiTest : KoinTest {
                 }
             }
             throw ValidationException(ExceptionReason.InsufficientPermissionToURN, arrayOf("", ""))
+        }
+        every {
+            aclService.getURN(Workspaces, capture(uuidSlot))
+        } answers {
+            //FIXME I tried to use callOriginal here, but couldn't make it work
+            URN("urn:processm:db/${Workspaces.tableName}/${uuidSlot.captured}")
         }
 
         callback(JwtAuthenticationTrackingEngine(this, login, password))
