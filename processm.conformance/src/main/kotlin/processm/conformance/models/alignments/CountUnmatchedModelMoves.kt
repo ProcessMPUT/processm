@@ -1,6 +1,7 @@
 package processm.conformance.models.alignments
 
 import com.carrotsearch.hppc.ObjectByteHashMap
+import com.carrotsearch.hppc.ObjectByteMap
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.CausalNetState
 import processm.core.models.causalnet.DecoupledNodeExecution
@@ -63,9 +64,7 @@ class CountUnmatchedCausalNetMoves(val model: CausalNet) : CountUnmatchedModelMo
                         val target = split.targets[index++]
                         if (target.isSilent)
                             continue
-                        val old = minFutureExecutions.put(target.name, 1)
-                        if (old > 1)
-                            minFutureExecutions.put(target.name, old)
+                        minFutureExecutions.putOrAdd(target.name, 1, 0)
                     }
                 }
             } else if (!model.start.isSilent) {
@@ -84,9 +83,7 @@ class CountUnmatchedCausalNetMoves(val model: CausalNet) : CountUnmatchedModelMo
                             val target = split.targets[index++]
                             if (target.isSilent)
                                 continue
-                            val old = minFutureExecutions.put(target.name, 1)
-                            if (old > 1)
-                                minFutureExecutions.put(target.name, old)
+                            minFutureExecutions.putOrAdd(target.name, 1, 0)
                         }
                     }
                 }
@@ -94,9 +91,7 @@ class CountUnmatchedCausalNetMoves(val model: CausalNet) : CountUnmatchedModelMo
                 if (e.element.target.isSilent)
                     continue
 
-                val old = minFutureExecutions.put(e.element.target.name, count)
-                if (old > count)
-                    minFutureExecutions.put(e.element.target.name, old)
+                minFutureExecutions.putOrMax(e.element.target.name, count)
             }
         }
 
@@ -110,6 +105,17 @@ class CountUnmatchedCausalNetMoves(val model: CausalNet) : CountUnmatchedModelMo
         minFutureExecutions.clear()
 
         return sum
+    }
+
+    private fun <K> ObjectByteMap<K>.putOrMax(key: K, putValue: Byte) {
+        val index = indexOf(key)
+        if (index >= 0) {
+            val old = indexGet(index)
+            if (old < putValue)
+                indexReplace(index, putValue)
+        } else {
+            indexInsert(index, key, putValue)
+        }
     }
 }
 
