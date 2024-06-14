@@ -15,7 +15,7 @@ class CausalNetDSLTest {
         val model = causalnet {
             a joins c
         }
-        assertEquals(setOf(Join(setOf(Dependency(a, c)))), model.joins[c])
+        assertEquals(listOf(Join(setOf(Dependency(a, c)))), model.joins[c])
     }
 
     @Test
@@ -23,7 +23,7 @@ class CausalNetDSLTest {
         val model = causalnet {
             a + b join c
         }
-        assertEquals(setOf(Join(setOf(Dependency(a, c), Dependency(b, c)))), model.joins[c])
+        assertEquals(listOf(Join(setOf(Dependency(a, c), Dependency(b, c)))), model.joins[c])
     }
 
 
@@ -32,7 +32,7 @@ class CausalNetDSLTest {
         val model = causalnet {
             a or b join c
         }
-        assertEquals(setOf(Join(setOf(Dependency(a, c))), Join(setOf(Dependency(b, c)))), model.joins[c])
+        assertEquals(listOf(Join(setOf(Dependency(a, c))), Join(setOf(Dependency(b, c)))), model.joins[c])
     }
 
     @Test
@@ -41,7 +41,7 @@ class CausalNetDSLTest {
             a + c or b + c join c
         }
         assertEquals(
-            setOf(Join(setOf(Dependency(a, c), Dependency(c, c))), Join(setOf(Dependency(b, c), Dependency(c, c)))),
+            listOf(Join(setOf(Dependency(a, c), Dependency(c, c))), Join(setOf(Dependency(b, c), Dependency(c, c)))),
             model.joins[c]
         )
     }
@@ -52,7 +52,7 @@ class CausalNetDSLTest {
             a + b + c or b + c + d join c
         }
         assertEquals(
-            setOf(
+            listOf(
                 Join(setOf(Dependency(a, c), Dependency(b, c), Dependency(c, c))),
                 Join(setOf(Dependency(b, c), Dependency(c, c), Dependency(d, c)))
             ),
@@ -66,7 +66,7 @@ class CausalNetDSLTest {
             a or b + c join c
         }
         assertEquals(
-            setOf(Join(setOf(Dependency(a, c))), Join(setOf(Dependency(b, c), Dependency(c, c)))),
+            listOf(Join(setOf(Dependency(a, c))), Join(setOf(Dependency(b, c), Dependency(c, c)))),
             model.joins[c]
         )
     }
@@ -77,7 +77,7 @@ class CausalNetDSLTest {
             (a or (b + c or a + b + c)) join c
         }
         assertEquals(
-            setOf(
+            listOf(
                 Join(setOf(Dependency(a, c))), Join(setOf(Dependency(b, c), Dependency(c, c))),
                 Join(setOf(Dependency(a, c), Dependency(b, c), Dependency(c, c)))
             ),
@@ -91,7 +91,7 @@ class CausalNetDSLTest {
         val model = causalnet {
             a splits c
         }
-        assertEquals(setOf(Split(setOf(Dependency(a, c)))), model.splits[a])
+        assertEquals(listOf(Split(setOf(Dependency(a, c)))), model.splits[a])
     }
 
     @Test
@@ -99,7 +99,7 @@ class CausalNetDSLTest {
         val model = causalnet {
             a splits b + c
         }
-        assertEquals(setOf(Split(setOf(Dependency(a, b), Dependency(a, c)))), model.splits[a])
+        assertEquals(listOf(Split(setOf(Dependency(a, b), Dependency(a, c)))), model.splits[a])
     }
 
 
@@ -108,7 +108,7 @@ class CausalNetDSLTest {
         val model = causalnet {
             a splits b or c
         }
-        assertEquals(setOf(Split(setOf(Dependency(a, b))), Split(setOf(Dependency(a, c)))), model.splits[a])
+        assertEquals(listOf(Split(setOf(Dependency(a, b))), Split(setOf(Dependency(a, c)))), model.splits[a])
     }
 
     @Test
@@ -117,7 +117,7 @@ class CausalNetDSLTest {
             a splits a + c or b + c
         }
         assertEquals(
-            setOf(Split(setOf(Dependency(a, a), Dependency(a, c))), Split(setOf(Dependency(a, b), Dependency(a, c)))),
+            listOf(Split(setOf(Dependency(a, a), Dependency(a, c))), Split(setOf(Dependency(a, b), Dependency(a, c)))),
             model.splits[a]
         )
     }

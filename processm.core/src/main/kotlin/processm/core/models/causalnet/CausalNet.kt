@@ -51,8 +51,8 @@ abstract class CausalNet(
      * Map from target to dependency
      */
     protected val _incoming = HashMap<Node, HashSet<Dependency>>()
-    protected val _splits = HashMap<Node, HashSet<Split>>()
-    protected val _joins = HashMap<Node, HashSet<Join>>()
+    protected val _splits = HashMap<Node, ArrayList<Split>>()
+    protected val _joins = HashMap<Node, ArrayList<Join>>()
 
 
     /**
@@ -81,14 +81,14 @@ abstract class CausalNet(
     /**
      * Splits AKA what other arcs must (not) be followed at the same time when going out of a node
      */
-    val splits: Map<Node, Set<Split>>
-        get() = Collections.unmodifiableMap(_splits)
+    val splits: Map<Node, List<Split>>
+        get() = _splits
 
     /**
      * Joins AKA what other arcs must (not) be followed at the same time when going out of a node
      */
-    val joins: Map<Node, Set<Join>>
-        get() = Collections.unmodifiableMap(_joins)
+    val joins: Map<Node, List<Join>>
+        get() = _joins
 
     /**
      * Same as [instances]
@@ -135,15 +135,29 @@ abstract class CausalNet(
             for (dep in state.uniqueSet()) {
                 val node = dep.target
                 if (visitedNodes.add(node)) {
-                    joinLoop@ for (join in _joins[node].orEmpty()) {
+                    var joinIndex = 0
+                    val joins = _joins[node].orEmpty()
+                    //joinLoop@ for (join in _joins[node].orEmpty()) {
+                    joinLoop@ while (joinIndex < joins.size) {
+                        val join = joins[joinIndex++]
                         var index = 0
                         while (index < join.dependenciesAsArray.size) {
                             if (join.dependenciesAsArray[index++] !in state)
                                 continue@joinLoop
                         }
-                        val splits = if (node != end) _splits[node].orEmpty() else setOfNull
-                        for (split in splits)
-                            callback(node, join, split)
+
+//                        val splits = if (node != end) _splits[node].orEmpty() else setOfNull
+//                        for (split in splits)
+//                            callback(node, join, split)
+                        if (node != end) {
+                            val splits = _splits[node].orEmpty()
+                            index = 0
+                            while (index < splits.size) {
+                                callback(node, join, splits[index++])
+                            }
+                        } else {
+                            callback(node, join, null)
+                        }
                     }
                 }
             }

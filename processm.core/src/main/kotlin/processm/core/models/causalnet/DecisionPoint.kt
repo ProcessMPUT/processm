@@ -13,7 +13,7 @@ import processm.helpers.asList
  */
 class DecisionPoint(
     val node: Node,
-    private val bindings: Set<Binding>,
+    private val bindings: Collection<Binding>,
     split: Boolean,
     override val previousActivities: Collection<Activity> = emptySet()
 ) : DecisionPoint, ControlStructure {

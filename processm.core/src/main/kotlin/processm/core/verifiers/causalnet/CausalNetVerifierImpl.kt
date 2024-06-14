@@ -151,7 +151,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
         return splitDependencies == allDependencies && joinDependencies == allDependencies
     }
 
-    private fun getDependencies(bindingCollection: Collection<Set<Binding>>): Set<Dependency> {
+    private fun getDependencies(bindingCollection: Collection<Iterable<Binding>>): Set<Dependency> {
         if (bindingCollection.isEmpty())
             return emptySet()
 
