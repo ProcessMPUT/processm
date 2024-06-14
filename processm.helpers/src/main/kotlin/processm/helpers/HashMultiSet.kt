@@ -1,6 +1,7 @@
 package processm.helpers
 
 import com.carrotsearch.hppc.ObjectByteHashMap
+import processm.helpers.MutableMultiSet.Bucket
 
 interface MutableMultiSet<E> : MutableSet<E> {
     /**
@@ -20,21 +21,21 @@ interface MutableMultiSet<E> : MutableSet<E> {
     fun addAll(other: MutableMultiSet<E>): Boolean
 
     /**
-     * The sequence over elements with associated counts in this multiset.
-     * Note that the resulting [Bucket] is reused in successive iterations.
+     * The set of buckets wrapping unique elements and the associated counts in this multiset.
+     * Note that [Bucket] returned in the successive iterations of the iterator returned by [Set.iterator] may be reused
+     * in the successive iterations.
      */
-
     fun entrySet(): Set<Bucket<E>>
 
     /**
-     * The sequence over unique elements in this multiset.
+     * The set of unique elements in this multiset.
      */
     fun uniqueSet(): Set<E>
 
     /**
-     * The sequence of counts in this multiset.
+     * The collection of counts corresponding to unique elements in this multiset.
      */
-    fun countSet(): Set<Byte>
+    fun countSet(): Collection<Byte>
 
     /**
      * Removes at most [count] copies of [element].
@@ -131,12 +132,20 @@ open class HashMultiSet<E>() : MutableMultiSet<E> {
         override fun remove() = throw UnsupportedOperationException()
     }
 
-    override fun entrySet(): Set<MutableMultiSet.Bucket<E>> =
-        object : Set<MutableMultiSet.Bucket<E>>, Iterator<MutableMultiSet.Bucket<E>> {
+    /**
+     * The set of buckets wrapping unique elements and the associated counts in this multiset.
+     * Note that the resulting set is a lightweight view on the underlying collection.
+     * Note that the iterator returned by [Set.iterator] is shared by all copies of the set returned by this method.
+     * To create independent iterators, create independent views by calling this method twice.
+     * Note that [Bucket] returned in the successive iterations of the iterator returned by [Set.iterator] is reused
+     * in the successive iterations.
+     */
+    override fun entrySet(): Set<Bucket<E>> =
+        object : Set<Bucket<E>>, Iterator<Bucket<E>> {
             private val base = keysContainer.iterator()
-            private val bucket = MutableMultiSet.Bucket<E>()
+            private val bucket = Bucket<E>()
             override fun hasNext(): Boolean = base.hasNext()
-            override fun next(): MutableMultiSet.Bucket<E> {
+            override fun next(): Bucket<E> {
                 val cursor = base.next()
                 bucket.element = cursor.value
                 bucket.count = backend.values[cursor.index]
@@ -147,13 +156,19 @@ open class HashMultiSet<E>() : MutableMultiSet<E> {
                 get() = uniqueSize
 
             override fun isEmpty(): Boolean = uniqueSize == 0
-            override fun iterator(): Iterator<MutableMultiSet.Bucket<E>> = this
-            override fun containsAll(elements: Collection<MutableMultiSet.Bucket<E>>): Boolean =
+            override fun iterator(): Iterator<Bucket<E>> = this
+            override fun containsAll(elements: Collection<Bucket<E>>): Boolean =
                 throw UnsupportedOperationException()
 
-            override fun contains(element: MutableMultiSet.Bucket<E>): Boolean = throw UnsupportedOperationException()
+            override fun contains(element: Bucket<E>): Boolean = throw UnsupportedOperationException()
         }
 
+    /**
+     * The set of unique elements in this multiset.
+     * Note that the resulting set is a lightweight view on the underlying collection.
+     * Note that the iterator returned by [Set.iterator] is shared by all copies of the set returned by this method.
+     * To create independent iterators, create independent views by calling this method twice.
+     */
     override fun uniqueSet(): Set<E> = object : Set<E>, Iterator<E> {
         private val base = keysContainer.iterator()
         override fun hasNext(): Boolean = base.hasNext()
@@ -167,7 +182,13 @@ open class HashMultiSet<E>() : MutableMultiSet<E> {
         override fun contains(element: E): Boolean = keysContainer.contains(element)
     }
 
-    override fun countSet(): Set<Byte> = object : Set<Byte>, ByteIterator() {
+    /**
+     * The collection of counts corresponding to unique elements in this multiset.
+     * Note that the resulting collection is a lightweight view on the underlying collection.
+     * Note that the iterator returned by [Collection.iterator] is shared by all copies of the collection returned by this method.
+     * To create independent iterators, create independent views by calling this method twice.
+     */
+    override fun countSet(): Collection<Byte> = object : Collection<Byte>, ByteIterator() {
         private val base = valuesContainer.iterator()
         override fun hasNext(): Boolean = base.hasNext()
         override fun nextByte(): Byte = base.next().value
