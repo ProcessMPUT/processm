@@ -53,20 +53,20 @@ class LongTermDependencies {
     fun `short term splits`() {
         with(hm.result.splits) {
             assertEquals(
-                setOf(
+                listOf(
                     Split(setOf(Dependency(a, b1))),
                     Split(setOf(Dependency(a, b2)))
                 ), getValue(a)
             )
             //b1 and  b2 should contain a long-term split
             assertEquals(
-                setOf(
+                listOf(
                     Split(setOf(Dependency(c, d1))),
                     Split(setOf(Dependency(c, d2)))
                 ), getValue(c)
             )
-            assertEquals(setOf(Split(setOf(Dependency(d1, e)))), getValue(d1))
-            assertEquals(setOf(Split(setOf(Dependency(d2, e)))), getValue(d2))
+            assertEquals(listOf(Split(setOf(Dependency(d1, e)))), getValue(d1))
+            assertEquals(listOf(Split(setOf(Dependency(d2, e)))), getValue(d2))
         }
     }
 
@@ -79,16 +79,16 @@ class LongTermDependencies {
     @Test
     fun `long term splits`() {
         with(hm.result.splits) {
-            assertEquals(setOf(Split(setOf(Dependency(b1, c), Dependency(b1, d1)))), getValue(b1))
-            assertEquals(setOf(Split(setOf(Dependency(b2, c), Dependency(b2, d2)))), getValue(b2))
+            assertEquals(listOf(Split(setOf(Dependency(b1, c), Dependency(b1, d1)))), getValue(b1))
+            assertEquals(listOf(Split(setOf(Dependency(b2, c), Dependency(b2, d2)))), getValue(b2))
         }
     }
 
     @Test
     fun `long term joins`() {
         with(hm.result.joins) {
-            assertEquals(setOf(Join(setOf(Dependency(c, d1), Dependency(b1, d1)))), getValue(d1))
-            assertEquals(setOf(Join(setOf(Dependency(c, d2), Dependency(b2, d2)))), getValue(d2))
+            assertEquals(listOf(Join(setOf(Dependency(c, d1), Dependency(b1, d1)))), getValue(d1))
+            assertEquals(listOf(Join(setOf(Dependency(c, d2), Dependency(b2, d2)))), getValue(d2))
         }
     }
 
@@ -108,20 +108,20 @@ class LongTermDependencies {
     fun `short term joins`() {
         with(hm.result.joins) {
             assertEquals(
-                setOf(
+                listOf(
                     Join(setOf(Dependency(b1, c))),
                     Join(setOf(Dependency(b2, c)))
                 ), getValue(c)
             )
             //d1 and  d2 should contain a long-term join
             assertEquals(
-                setOf(
+                listOf(
                     Join(setOf(Dependency(d1, e))),
                     Join(setOf(Dependency(d2, e)))
                 ), getValue(e)
             )
-            assertEquals(setOf(Join(setOf(Dependency(a, b1)))), getValue(b1))
-            assertEquals(setOf(Join(setOf(Dependency(a, b2)))), getValue(b2))
+            assertEquals(listOf(Join(setOf(Dependency(a, b1)))), getValue(b1))
+            assertEquals(listOf(Join(setOf(Dependency(a, b2)))), getValue(b2))
         }
     }
 }

@@ -8,10 +8,10 @@ import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
+import processm.experimental.miners.causalnet.heuristicminer.traceregisters.CompleteTraceRegister
 import processm.miners.causalnet.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.causalnet.heuristicminer.bindingproviders.hypothesisselector.MostParsimoniousHypothesisSelector
 import processm.miners.causalnet.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
-import processm.experimental.miners.causalnet.heuristicminer.traceregisters.CompleteTraceRegister
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -34,9 +34,9 @@ class OnlineHeuristicMinerTest {
         val hm = OnlineHeuristicMiner(bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector()))
         hm.processLog(log)
         with(hm.result) {
-            assertEquals(splits[a], setOf(Split(setOf(Dependency(a, b))), Split(setOf(Dependency(a, end)))))
-            assertEquals(splits[b], setOf(Split(setOf(Dependency(b, c))), Split(setOf(Dependency(b, end)))))
-            assertEquals(splits[c], setOf(Split(setOf(Dependency(c, end)))))
+            assertEquals(splits[a], listOf(Split(setOf(Dependency(a, b))), Split(setOf(Dependency(a, end)))))
+            assertEquals(splits[b], listOf(Split(setOf(Dependency(b, c))), Split(setOf(Dependency(b, end)))))
+            assertEquals(splits[c], listOf(Split(setOf(Dependency(c, end)))))
         }
     }
 
@@ -51,9 +51,9 @@ class OnlineHeuristicMinerTest {
         val hm = OnlineHeuristicMiner(bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector()))
         hm.processLog(log)
         with(hm.result) {
-            assertEquals(joins[a], setOf(Join(setOf(Dependency(start, a)))))
-            assertEquals(joins[b], setOf(Join(setOf(Dependency(start, b))), Join(setOf(Dependency(a, b)))))
-            assertEquals(joins[c], setOf(Join(setOf(Dependency(start, c))), Join(setOf(Dependency(b, c)))))
+            assertEquals(joins[a], listOf(Join(setOf(Dependency(start, a)))))
+            assertEquals(joins[b], listOf(Join(setOf(Dependency(start, b))), Join(setOf(Dependency(a, b)))))
+            assertEquals(joins[c], listOf(Join(setOf(Dependency(start, c))), Join(setOf(Dependency(b, c)))))
         }
     }
 

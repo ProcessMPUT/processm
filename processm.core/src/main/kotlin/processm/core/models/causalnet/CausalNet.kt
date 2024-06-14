@@ -137,7 +137,6 @@ abstract class CausalNet(
                 if (visitedNodes.add(node)) {
                     var joinIndex = 0
                     val joins = _joins[node].orEmpty()
-                    //joinLoop@ for (join in _joins[node].orEmpty()) {
                     joinLoop@ while (joinIndex < joins.size) {
                         val join = joins[joinIndex++]
                         var index = 0
@@ -146,9 +145,6 @@ abstract class CausalNet(
                                 continue@joinLoop
                         }
 
-//                        val splits = if (node != end) _splits[node].orEmpty() else setOfNull
-//                        for (split in splits)
-//                            callback(node, join, split)
                         if (node != end) {
                             val splits = _splits[node].orEmpty()
                             index = 0
