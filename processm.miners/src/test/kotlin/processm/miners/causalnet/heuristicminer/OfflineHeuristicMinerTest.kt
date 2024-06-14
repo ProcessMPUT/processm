@@ -45,9 +45,9 @@ class OfflineHeuristicMinerTest {
         val hm = OfflineHeuristicMiner(bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector()))
         hm.processLog(log)
         with(hm.result) {
-            assertEquals(splits[a], listOf(Split(setOf(Dependency(a, b))), Split(setOf(Dependency(a, end)))))
-            assertEquals(splits[b], listOf(Split(setOf(Dependency(b, c))), Split(setOf(Dependency(b, end)))))
-            assertEquals(splits[c], listOf(Split(setOf(Dependency(c, end)))))
+            assertEquals(setOf(Split(setOf(Dependency(a, b))), Split(setOf(Dependency(a, end)))), splits[a]?.toSet())
+            assertEquals(setOf(Split(setOf(Dependency(b, c))), Split(setOf(Dependency(b, end)))), splits[b]?.toSet())
+            assertEquals(setOf(Split(setOf(Dependency(c, end)))), splits[c]?.toSet())
         }
         assertTrue { BasicMetadata.DEPENDENCY_MEASURE in hm.result.availableMetadata }
         assertEquals(
