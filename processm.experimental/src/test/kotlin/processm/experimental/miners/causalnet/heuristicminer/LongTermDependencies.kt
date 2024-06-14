@@ -112,17 +112,17 @@ class LongTermDependencies {
     fun `short term joins`() {
         with(hm.result.joins) {
             assertEquals(
-                listOf(
+                setOf(
                     Join(setOf(Dependency(b1, c))),
                     Join(setOf(Dependency(b2, c)))
-                ), getValue(c)
+                ), getValue(c).toSet()
             )
             //d1 and  d2 should contain a long-term join
             assertEquals(
-                listOf(
+                setOf(
                     Join(setOf(Dependency(d1, e))),
                     Join(setOf(Dependency(d2, e)))
-                ), getValue(e)
+                ), getValue(e).toSet()
             )
             assertEquals(listOf(Join(setOf(Dependency(a, b1)))), getValue(b1))
             assertEquals(listOf(Join(setOf(Dependency(a, b2)))), getValue(b2))

@@ -66,8 +66,8 @@ class CausalNetDSLTest {
             a or b + c join c
         }
         assertEquals(
-            listOf(Join(setOf(Dependency(a, c))), Join(setOf(Dependency(b, c), Dependency(c, c)))),
-            model.joins[c]
+            setOf(Join(setOf(Dependency(a, c))), Join(setOf(Dependency(b, c), Dependency(c, c)))),
+            model.joins[c]?.toSet()
         )
     }
 
@@ -77,11 +77,11 @@ class CausalNetDSLTest {
             (a or (b + c or a + b + c)) join c
         }
         assertEquals(
-            listOf(
+            setOf(
                 Join(setOf(Dependency(a, c))), Join(setOf(Dependency(b, c), Dependency(c, c))),
                 Join(setOf(Dependency(a, c), Dependency(b, c), Dependency(c, c)))
             ),
-            model.joins[c]
+            model.joins[c]?.toSet()
         )
     }
 

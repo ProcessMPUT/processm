@@ -286,8 +286,16 @@ abstract class CausalNet(
         return instances == other.instances &&
                 incoming == other.incoming &&
                 outgoing == other.outgoing &&
-                splits == other.splits &&
-                joins == other.joins
+                splits.size == other.splits.size &&
+                splits.all { (n, d) ->
+                    val d2 = other.splits[n].orEmpty()
+                    d.size == d2.size && d.containsAll(d2)
+                } &&
+                joins.size == other.joins.size &&
+                joins.all { (n, d) ->
+                    val d2 = other.joins[n].orEmpty()
+                    d.size == d2.size && d.containsAll(d2)
+                }
     }
 
 
