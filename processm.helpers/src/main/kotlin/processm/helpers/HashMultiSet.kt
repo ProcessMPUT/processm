@@ -239,4 +239,11 @@ open class HashMultiSet<E>() : MutableMultiSet<E> {
             removed = remove(item) || removed
         return removed
     }
+
+    override fun hashCode(): Int = backend.hashCode()
+
+    override fun equals(other: Any?): Boolean {
+        if (other !is HashMultiSet<*>) return false
+        return backend == other.backend
+    }
 }
