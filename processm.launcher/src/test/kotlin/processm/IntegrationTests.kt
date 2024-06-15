@@ -295,18 +295,20 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 //wait for the email
                 val re = Regex("[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}", RegexOption.IGNORE_CASE)
                 val startTime = System.currentTimeMillis()
-                val token = runBlocking {
-                    for (i in 1..100) {
+                // do not remove the "kotlin." prefix, as otherwise ProcessMTestingEnvironment.run is invoked
+                val token = kotlin.run {
+                    for (i in 1..50) {
                         try {
                             re.find(sendmail.lastEmailBody)?.value?.let {
-                                logger.info("Email sent in ${System.currentTimeMillis() - startTime}ms")
-                                return@runBlocking it
+                                logger.info("E-mail sent in ${System.currentTimeMillis() - startTime}ms")
+                                return@run it
                             }
                         } catch (e: IOException) {
-                            delay(125L)
+                            logger.debug("E-mail has not been sent yet", e)
                         }
+                        Thread.sleep(50L)
                     }
-                    error("Mail was not sent in time limit.")
+                    error("E-mail was not sent in time limit.")
                 }
 
                 assertNotNull(token)
