@@ -302,7 +302,7 @@ object PetriNets {
         }
 
         PetriNet(
-            places = parts.flatMap { it.pl() },
+            places = parts.flatMap { it.pl() } + listOf(start, end),
             transitions = parts.flatMap { it.tr() },
             initialMarking = Marking(start),
             finalMarking = Marking(end),

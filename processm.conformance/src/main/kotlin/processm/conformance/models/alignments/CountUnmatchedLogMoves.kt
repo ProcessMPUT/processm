@@ -7,7 +7,6 @@ import com.carrotsearch.hppc.ObjectIntMap
 import processm.core.log.Event
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.CausalNetState
-import processm.core.models.causalnet.DecoupledNodeExecution
 import processm.core.models.commons.*
 import processm.core.models.petrinet.Marking
 import processm.core.models.petrinet.PetriNet
@@ -70,6 +69,26 @@ abstract class AbstractCountUnmatchedLogMoves(
      * All reachable SCCs from the initial state.
      */
     protected val allReachable: IntArray = allReachable()
+
+    protected val pendingSCC = ThreadLocal.withInitial { IntHashSet() }
+
+    companion object {
+        protected const val MAX_CACHE_SIZE = 100000
+    }
+
+    protected val pendingSCCcache = LinkedHashMap<ProcessModelState, IntArray>()
+
+    protected abstract val createPendingSCC: java.util.function.Function<ProcessModelState, IntArray>
+
+    protected fun getPendingSCC(prevProcessState: ProcessModelState): IntArray {
+        // createPendingSCC moved to a separate method to prevent allocation of lambda
+        val out = pendingSCCcache.computeIfAbsent(prevProcessState, createPendingSCC)
+
+        if (pendingSCCcache.size > MAX_CACHE_SIZE)
+            pendingSCCcache.iterator().remove()
+
+        return out
+    }
 
     /**
      * Generates a list of strongly connected components in [model].
@@ -245,7 +264,34 @@ private class DFGCausalNetWrapper(model: CausalNet) : DFGWrapper(model) {
 }
 
 class CountUnmatchedLogMovesInCausalNet(model: CausalNet) : AbstractCountUnmatchedLogMoves(DFGCausalNetWrapper(model)) {
-    private val pendingSCC = ThreadLocal.withInitial { IntHashSet() }
+
+    override val createPendingSCC = java.util.function.Function<ProcessModelState, IntArray> { prevProcessState ->
+        prevProcessState as CausalNetState
+
+        if (prevProcessState.isEmpty())
+            return@Function IntArray(0)
+
+        val pendingSCC = this.pendingSCC.get()
+        marking@ for (dep in prevProcessState.uniqueSet()) {
+            val target = dep.target
+            val targetSCC = activityToSCC[target]
+            if (!pendingSCC.add(targetSCC)) {
+                continue // SCC already processed
+            }
+
+            val candidates = eventuallyFollowsSCC[targetSCC]
+            var index = 0
+            while (index < candidates.size) {
+                pendingSCC.add(candidates[index++])
+            }
+            if (pendingSCC.size() >= allReachable.size)
+                break@marking // we have all SCCs anyway
+        }
+
+        val out = pendingSCC.toArray()
+        pendingSCC.clear()
+        out
+    }
 
     override fun compute(
         startIndex: Int,
@@ -254,31 +300,11 @@ class CountUnmatchedLogMovesInCausalNet(model: CausalNet) : AbstractCountUnmatch
         curActivity: Activity?
     ): Int {
         prevProcessState as CausalNetState?
-        curActivity as DecoupledNodeExecution?
 
-        val pendingSCC = this.pendingSCC.get()
-        var index = 0
-        marking@ for (dep in prevProcessState.uniqueSet()) {
-            val target = dep.target
-            val targetSCC = activityToSCC[target]
-            if (curActivity?.activity != target) {
-                if (!pendingSCC.add(targetSCC)) {
-                    continue // SCC already processed
-                }
-            }
+        val pendingSCC = getPendingSCC(prevProcessState)
+        val pendingEmpty = pendingSCC.isEmpty()
 
-            val candidates = eventuallyFollowsSCC[targetSCC]
-            index = 0
-            while (index < candidates.size) {
-                pendingSCC.add(candidates[index++])
-            }
-            if (pendingSCC.size() >= allReachable.size)
-                break@marking // we have all SCCs anyway
-
-        }
-        val pendingEmpty = pendingSCC.isEmpty
-
-        index = startIndex
+        var index = startIndex
         var unmatched = 0
         mainLoop@ while (index < trace.size) {
             val conceptName = trace[index++].conceptName
@@ -303,8 +329,6 @@ class CountUnmatchedLogMovesInCausalNet(model: CausalNet) : AbstractCountUnmatch
 
             unmatched++
         }
-
-        pendingSCC.clear()
 
         assert(unmatched in 0..(trace.size - startIndex))
         return unmatched
@@ -332,10 +356,39 @@ class CountUnmatchedLogMovesInPetriNet(model: PetriNet) : AbstractCountUnmatched
                 SCCs.addAll(*eventuallyFollowsSCC[activityToSCC[transition]])
             }
         }
-        SCCs.toArray()
+        SCCs
     }
 
-    private val pendingSCC = ThreadLocal.withInitial { IntHashSet() }
+    override val createPendingSCC = java.util.function.Function<ProcessModelState, IntArray> { prevProcessState ->
+        prevProcessState as Marking
+        if (prevProcessState.size == 0)
+            return@Function IntArray(0)
+
+        val pendingSCC = this.pendingSCC.get()
+        places@ for (place in prevProcessState.keys) {
+            val transitions = model.placeToFollowingTransition[place] ?: continue
+            var tidx = 0
+            while (tidx < transitions.size) {
+                val transition = transitions[tidx++]
+                val transitionSCC = activityToSCC[transition]
+                if (!pendingSCC.add(transitionSCC)) {
+                    continue // SCC already processed
+                }
+
+                val candidates = eventuallyFollowsSCC[transitionSCC]
+                var index = 0
+                while (index < candidates.size) {
+                    pendingSCC.add(candidates[index++])
+                }
+                if (pendingSCC.size() >= stronglyConnectedComponents.size)
+                    break@places // we have all SCCs anyway
+            }
+        }
+
+        val out = pendingSCC.toArray()
+        pendingSCC.clear()
+        out
+    }
 
     override fun compute(
         startIndex: Int,
@@ -343,37 +396,9 @@ class CountUnmatchedLogMovesInPetriNet(model: PetriNet) : AbstractCountUnmatched
         prevProcessState: ProcessModelState,
         curActivity: Activity?
     ): Int {
-        val model = model.model as PetriNet
-        prevProcessState as Marking?
-        curActivity as Transition?
+        val pendingSCC = getPendingSCC(prevProcessState)
 
-        val pendingSCC = this.pendingSCC.get()
-        var index = 0
-        if (prevProcessState.size > 0) {
-            places@ for (place in prevProcessState.keys) {
-                val transitions = model.placeToFollowingTransition[place] ?: continue
-                var tidx = 0
-                while (tidx < transitions.size) {
-                    val transition = transitions[tidx++]
-                    val transitionSCC = activityToSCC[transition]
-                    if (curActivity != transition) {
-                        if (!pendingSCC.add(transitionSCC)) {
-                            continue // SCC already processed
-                        }
-                    }
-
-                    val candidates = eventuallyFollowsSCC[transitionSCC]
-                    index = 0
-                    while (index < candidates.size) {
-                        pendingSCC.add(candidates[index++])
-                    }
-                    if (pendingSCC.size() >= stronglyConnectedComponents.size)
-                        break@places // we have all SCCs anyway
-                }
-            }
-        }
-
-        index = startIndex
+        var index = startIndex
         var unmatched = 0
         mainLoop@ while (index < trace.size) {
             val conceptName = trace[index++].conceptName
@@ -395,8 +420,6 @@ class CountUnmatchedLogMovesInPetriNet(model: PetriNet) : AbstractCountUnmatched
 
             unmatched++
         }
-
-        pendingSCC.clear()
 
         assert(unmatched in 0..(trace.size - startIndex))
         return unmatched
