@@ -40,6 +40,7 @@ class AStar(
     private val countUnmatchedLogMoves: CountUnmatchedLogMoves? =
         when (model) {
             is CausalNet -> CountUnmatchedLogMovesInCausalNet(model)
+            is PetriNet -> CountUnmatchedLogMovesInPetriNet(model)
             else -> null
         }
 ) : Aligner {

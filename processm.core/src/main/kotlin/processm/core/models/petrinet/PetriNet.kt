@@ -1,5 +1,6 @@
 package processm.core.models.petrinet
 
+import com.carrotsearch.hppc.ObjectIdentityHashSet
 import processm.core.models.commons.*
 import processm.core.models.commons.DecisionPoint
 import processm.core.models.metadata.DefaultMutableMetadataHandler
@@ -135,10 +136,13 @@ class PetriNet(
      */
     fun available(marking: Marking): Sequence<Transition> = sequence {
         if (marking.isNotEmpty()) {
-            val visited = IdentityHashMap<Transition, Unit>(transitions.size * 4 / 3)
+            val visited = ObjectIdentityHashSet<Transition>()
             for (place in marking.keys) {
-                for (transition in placeToFollowingTransition[place].orEmpty()) {
-                    if (visited.put(transition, Unit) !== null)
+                val transitions = placeToFollowingTransition[place] ?: continue
+                var index = 0
+                while (index < transitions.size) {
+                    val transition = transitions[index++]
+                    if (!visited.add(transition))
                         continue
 
                     if (transition.inPlaces.size <= 1 || isAvailable(transition, marking))

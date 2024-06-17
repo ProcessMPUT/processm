@@ -8,8 +8,12 @@ import processm.core.log.Event
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.CausalNetState
 import processm.core.models.causalnet.DecoupledNodeExecution
-import processm.core.models.commons.Activity
-import processm.core.models.commons.ProcessModelState
+import processm.core.models.commons.*
+import processm.core.models.petrinet.Marking
+import processm.core.models.petrinet.PetriNet
+import processm.core.models.petrinet.Transition
+import processm.helpers.cartesianProduct
+import processm.helpers.mapToSet
 import java.lang.Integer.min
 import java.util.*
 
@@ -31,14 +35,39 @@ interface CountUnmatchedLogMoves {
     fun compute(startIndex: Int, trace: List<Event>, prevProcessState: ProcessModelState, curActivity: Activity?): Int
 }
 
-class CountUnmatchedLogMovesInCausalNet(
-    private val model: CausalNet
+abstract class DFGWrapper(val model: ProcessModel) : ProcessModel by model {
+    abstract val directlyFollowsRelation: Collection<CausalArc>
+    abstract val outgoing: Map<Activity, Collection<Activity>>
+}
+
+abstract class AbstractCountUnmatchedLogMoves(
+    protected val model: DFGWrapper
 ) : CountUnmatchedLogMoves {
-    private val stronglyConnectedComponents = stronglyConnectedComponents()
-    private val activityToSCC = activityToSCC()
-    private val directlyFollowsSCC = dfSCC()
-    private val eventuallyFollowsSCC = efSCC()
-    private val allReachable = allReachable()
+    /**
+     * The list of sets of activities corresponding to strongly connected components in the directly follows graph.
+     * https://en.wikipedia.org/wiki/Strongly_connected_component
+     */
+    protected val stronglyConnectedComponents: List<Set<Activity>> = stronglyConnectedComponents()
+
+    /**
+     * The mapping from activity name to SCC index in [stronglyConnectedComponents] list.
+     */
+    protected val activityToSCC: ObjectIntMap<String> = activityToSCC()
+
+    /**
+     * The directly-follows relation between SCCs.
+     */
+    protected val directlyFollowsSCC: Array<IntArray> = dfSCC()
+
+    /**
+     * The eventually-follows relation between SCCs.
+     */
+    protected val eventuallyFollowsSCC: Array<IntArray> = efSCC()
+
+    /**
+     * All reachable SCCs from the initial state.
+     */
+    protected val allReachable: IntArray = allReachable()
 
     /**
      * Generates a list of strongly connected components in [model].
@@ -87,7 +116,7 @@ class CountUnmatchedLogMovesInCausalNet(
                         preOrder[v] = counter
                     }
 
-                    val w = model.outgoing[v]?.firstOrNull { !preOrder.containsKey(it.target) }?.target
+                    val w = model.outgoing[v]?.firstOrNull { !preOrder.containsKey(it) }
                     if (w !== null) {
                         stack.add(w)
                     } else {
@@ -95,8 +124,7 @@ class CountUnmatchedLogMovesInCausalNet(
                         lowLink[v] = preOrder[v]!!
 
                         // Try to decrement value and set as minimal as possible
-                        model.outgoing[v]?.forEach { dep ->
-                            val w = dep.target
+                        model.outgoing[v]?.forEach { w ->
                             if (w in model.activities) {
                                 if (!alreadyAssigned.contains(w)) {
                                     val lowLinkV = lowLink[v]!!
@@ -153,7 +181,7 @@ class CountUnmatchedLogMovesInCausalNet(
     private fun dfSCC(): Array<IntArray> {
         val dfg = Array(stronglyConnectedComponents.size) { IntHashSet() }
 
-        for (dep in model.dependencies) {
+        for (dep in model.directlyFollowsRelation) {
             val sourceId = activityToSCC.get(dep.source.name)
             val targetId = activityToSCC.get(dep.target.name)
             if (sourceId != targetId) {
@@ -194,6 +222,16 @@ class CountUnmatchedLogMovesInCausalNet(
         return out.toArray()
     }
 
+}
+
+private class DFGCausalNetWrapper(model: CausalNet) : DFGWrapper(model) {
+    override val directlyFollowsRelation: Collection<CausalArc>
+        get() = (model as CausalNet).dependencies
+    override val outgoing: Map<Activity, Collection<Activity>> =
+        model.outgoing.mapValues { (_, v) -> v.mapToSet { it.target } }
+}
+
+class CountUnmatchedLogMovesInCausalNet(model: CausalNet) : AbstractCountUnmatchedLogMoves(DFGCausalNetWrapper(model)) {
     private val pendingSCC = ThreadLocal.withInitial { IntHashSet() }
 
     override fun compute(
@@ -209,12 +247,13 @@ class CountUnmatchedLogMovesInCausalNet(
         var index = 0
         for (dep in prevProcessState.uniqueSet()) {
             val target = dep.target.name
+            val targetSCC = activityToSCC[target]
             if (curActivity?.activity != dep.target) {
-                if (!pendingSCC.add(activityToSCC[target])) {
+                if (!pendingSCC.add(targetSCC)) {
                     continue // SCC already processed
                 }
             }
-            val candidates = eventuallyFollowsSCC[activityToSCC[target]]
+            val candidates = eventuallyFollowsSCC[targetSCC]
             index = 0
             while (index < candidates.size) {
                 pendingSCC.add(candidates[index++])
@@ -241,6 +280,95 @@ class CountUnmatchedLogMovesInCausalNet(
                 if (pendingSCC.contains(eventSCC))
                     continue
             }
+
+            unmatched++
+        }
+
+        pendingSCC.clear()
+
+        assert(unmatched in 0..(trace.size - startIndex))
+        return unmatched
+    }
+}
+
+class DFGPetriNetWrapper(model: PetriNet) : DFGWrapper(model) {
+    override val directlyFollowsRelation: Collection<CausalArc> = model.places.flatMap { p ->
+        val pairs = listOf(model.placeToPrecedingTransition[p].orEmpty(), model.placeToFollowingTransition[p].orEmpty())
+        pairs as List<ArrayList<Transition>>
+        pairs.cartesianProduct().map { Arc(it[0], it[1]) }
+
+    }
+    override val outgoing: Map<Activity, Collection<Activity>> = model.transitions.associateBy(
+        { it },
+        { it.outPlaces.flatMapTo(HashSet()) { model.placeToFollowingTransition[it].orEmpty() } }
+    )
+}
+
+class CountUnmatchedLogMovesInPetriNet(model: PetriNet) : AbstractCountUnmatchedLogMoves(DFGPetriNetWrapper(model)) {
+    private val alwaysReachable = run {
+        val SCCs = IntHashSet()
+        for (transition in model.transitions) {
+            if (transition.inPlaces.isEmpty()) {
+                val scc = activityToSCC[transition.name]
+                SCCs.addAll(*eventuallyFollowsSCC[scc])
+            }
+        }
+        SCCs.toArray()
+    }
+
+    private val pendingSCC = ThreadLocal.withInitial { IntHashSet() }
+
+    override fun compute(
+        startIndex: Int,
+        trace: List<Event>,
+        prevProcessState: ProcessModelState,
+        curActivity: Activity?
+    ): Int {
+        val model = model.model as PetriNet
+        prevProcessState as Marking?
+        curActivity as Transition?
+
+        val pendingSCC = this.pendingSCC.get()
+        var index = 0
+        if (prevProcessState.size > 0) {
+            places@ for (place in prevProcessState.keys) {
+                val transitions = model.placeToFollowingTransition[place] ?: continue
+                var tidx = 0
+                while (tidx < transitions.size) {
+                    val transition = transitions[tidx++]
+                    val target = transition.name
+                    val targetSCC = activityToSCC[target]
+                    if (curActivity != transition) {
+                        if (!pendingSCC.add(targetSCC)) {
+                            continue // SCC already processed
+                        }
+                    }
+                    val candidates = eventuallyFollowsSCC[targetSCC]
+                    index = 0
+                    while (index < candidates.size) {
+                        pendingSCC.add(candidates[index++])
+                    }
+                    if (pendingSCC.size() >= stronglyConnectedComponents.size)
+                        break@places // we have all SCCs anyway
+                }
+            }
+        }
+
+        index = startIndex
+        var unmatched = 0
+        mainLoop@ while (index < trace.size) {
+            val conceptName = trace[index++].conceptName
+            val eventSCC = activityToSCC.getOrDefault(conceptName, -1)
+            if (eventSCC < 0) {
+                unmatched++
+                continue
+            }
+
+            if (alwaysReachable.contains(eventSCC))
+                continue
+
+            if (pendingSCC.contains(eventSCC))
+                continue
 
             unmatched++
         }

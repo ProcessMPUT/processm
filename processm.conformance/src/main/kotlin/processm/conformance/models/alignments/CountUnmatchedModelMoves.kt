@@ -151,6 +151,10 @@ class CountUnmatchedPetriNetMoves(val model: PetriNet) : CountUnmatchedModelMove
     ): Int {
         prevProcessState as Marking
         curActivity as Transition?
+
+        if (prevProcessState.isEmpty())
+            return 0
+
         // Complete dealing with nonConsumable would require some complex algorithm.
         // Consider: ([[c],[e]]: 1, [[d],[e]]: 1). It is sufficient to model-skip over e to consume these two tokens.
         // Consider further: ([[c, e]]: 1, [[d, e]]: 1). Now one needs at least three model-skips: c, d, e (used twice)
