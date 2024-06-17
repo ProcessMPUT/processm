@@ -19,6 +19,7 @@ import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
 import processm.helpers.toUUID
 import processm.logging.loggedScope
+import processm.miners.causalnet.heuristicminer.OriginalHeuristicMiner
 import processm.miners.causalnet.onlineminer.OnlineMiner
 import processm.miners.causalnet.onlineminer.replayer.SingleReplayer
 import processm.miners.processtree.inductiveminer.OnlineInductiveMiner
@@ -27,9 +28,23 @@ import java.util.*
 
 const val ALGORITHM_HEURISTIC_MINER = "urn:processm:miners/OnlineHeuristicMiner"
 const val ALGORITHM_INDUCTIVE_MINER = "urn:processm:miners/OnlineInductiveMiner"
+const val ALGORITHM_ORIGINAL_HEURISTIC_MINER = "urn:processm:miners/OriginalHeuristicMiner"
 
 interface MinerJob<T : ProcessModel> : ServiceJob {
     fun minerFromProperties(properties: Map<String, String>): Miner = when (properties["algorithm"]) {
+        ALGORITHM_ORIGINAL_HEURISTIC_MINER -> {
+            val dependencyThreshold =
+                properties["dependencyThreshold"]?.toIntOrNull()?.takeIf { it in 0..100 } ?: 50
+            OriginalHeuristicMiner(
+                dependencyThreshold = dependencyThreshold / 100.0,
+                l1Threshold = (properties["l1Threshold"]?.toIntOrNull()?.takeIf { it in 0..100 }
+                    ?: dependencyThreshold) / 100.0,
+                l2Threshold = (properties["l2Threshold"]?.toIntOrNull()?.takeIf { it in 0..100 }
+                    ?: dependencyThreshold) / 100.0,
+                andThreshold = (properties["andThreshold"]?.toIntOrNull()?.takeIf { it in 0..100 } ?: 65) / 100.0
+            )
+        }
+
         ALGORITHM_INDUCTIVE_MINER -> OnlineInductiveMiner()
         ALGORITHM_HEURISTIC_MINER, null -> OnlineMiner(
             SingleReplayer(

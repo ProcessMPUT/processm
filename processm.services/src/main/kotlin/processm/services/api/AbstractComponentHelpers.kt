@@ -19,6 +19,7 @@ import processm.helpers.time.toLocalDateTime
 import processm.logging.loggedScope
 import processm.miners.ALGORITHM_HEURISTIC_MINER
 import processm.miners.ALGORITHM_INDUCTIVE_MINER
+import processm.miners.ALGORITHM_ORIGINAL_HEURISTIC_MINER
 import processm.services.JsonSerializer
 import processm.services.api.models.*
 import java.net.URI
@@ -321,6 +322,10 @@ fun getCustomProperties(
                         EnumItem(
                             id = ALGORITHM_INDUCTIVE_MINER,
                             name = "Online Inductive Miner"
+                        ),
+                        EnumItem(
+                            id = ALGORITHM_ORIGINAL_HEURISTIC_MINER,
+                            name = "Original Heuristic Miner"
                         )
                     ),
                     value = properties?.get("algorithm") ?: ALGORITHM_HEURISTIC_MINER
@@ -330,6 +335,30 @@ fun getCustomProperties(
                     name = "horizon",
                     type = "non-negative-integer",
                     value = properties?.get("horizon") ?: "3"
+                ),
+                CustomProperty(
+                    id = 2,
+                    name = "dependencyThreshold",
+                    type = "percent",
+                    value = properties?.get("dependencyThreshold") ?: "50"
+                ),
+                CustomProperty(
+                    id = 3,
+                    name = "l1Threshold",
+                    type = "percent",
+                    value = properties?.get("l1Threshold") ?: "50"
+                ),
+                CustomProperty(
+                    id = 4,
+                    name = "l2Threshold",
+                    type = "percent",
+                    value = properties?.get("l2Threshold") ?: "50"
+                ),
+                CustomProperty(
+                    id = 5,
+                    name = "andThreshold",
+                    type = "percent",
+                    value = properties?.get("andThreshold") ?: "65"
                 )
             )
 
