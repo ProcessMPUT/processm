@@ -19,7 +19,7 @@ import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-@Ignore("These tests are intented for manual execution")
+@Ignore("These tests are intended for manual execution")
 class AStarCausalNetPerformanceTests {
     companion object {
         val REPETITIONS = 5
@@ -50,9 +50,7 @@ class AStarCausalNetPerformanceTests {
     }
 
 
-    @OptIn(InMemoryXESProcessing::class)
     @Test
-    @Ignore
     fun `artificial_digital_photo_copier_event_log`() = loggedScope { logger ->
         val astar = AStar(cnet)
         var count = 0
