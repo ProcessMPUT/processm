@@ -106,8 +106,10 @@ class PetriNet(
                 if (transition.inPlaces.isEmpty()) {
                     (computeIfAbsent(null) { ArrayList() } as ArrayList<Transition>).add(transition)
                 } else {
-                    for (place in transition.inPlaces)
+                    for (place in transition.inPlaces) {
+                        assert(place in places) { "Place ${place.id} is missing in this.places" }
                         (computeIfAbsent(place) { ArrayList() } as ArrayList<Transition>).add(transition)
+                    }
                 }
             }
             for (entry in this)
@@ -123,8 +125,10 @@ class PetriNet(
                 if (transition.outPlaces.isEmpty()) {
                     (computeIfAbsent(null) { ArrayList() } as ArrayList<Transition>).add(transition)
                 } else {
-                    for (place in transition.outPlaces)
+                    for (place in transition.outPlaces) {
+                        assert(place in places) { "Place ${place.id} is missing in this.places" }
                         (computeIfAbsent(place) { ArrayList() } as ArrayList<Transition>).add(transition)
+                    }
                 }
             }
             for (entry in this)
@@ -208,10 +212,17 @@ class PetriNet(
             p in initialMarking || p in finalMarking || usedTransitions.any { t -> p in t.inPlaces }
         }
 
+        // drop unused out places from transitions
+        val outTransitions = usedTransitions.map { t ->
+            t.copy(outPlaces = t.outPlaces.filter { p -> p in usedPlaces })
+        }
+
         assert(initialMarking.keys.all { p -> p in usedPlaces })
         assert(finalMarking.keys.all { p -> p in usedPlaces })
+        assert(outTransitions.all { t -> usedPlaces.containsAll(t.inPlaces) })
+        assert(outTransitions.all { t -> usedPlaces.containsAll(t.outPlaces) })
 
-        return PetriNet(usedPlaces, usedTransitions, initialMarking, finalMarking)
+        return PetriNet(usedPlaces, outTransitions, initialMarking, finalMarking)
     }
 
     private val hashCode: Int by lazy {

@@ -50,9 +50,11 @@ abstract class AbstractCountUnmatchedLogMoves(
     protected val stronglyConnectedComponents: List<Set<Activity>> = stronglyConnectedComponents()
 
     /**
-     * The mapping from activity name to SCC index in [stronglyConnectedComponents] list.
+     * The mapping from activity to SCC index in [stronglyConnectedComponents] list.
      */
-    protected val activityToSCC: ObjectIntMap<String> = activityToSCC()
+    protected val activityToSCC: ObjectIntMap<Activity> = activityToSCC()
+
+    protected val conceptNameToSCC = conceptNameToSCC()
 
     /**
      * The directly-follows relation between SCCs.
@@ -169,21 +171,32 @@ abstract class AbstractCountUnmatchedLogMoves(
         return stronglyConnectedComponents
     }
 
-    private fun activityToSCC(): ObjectIntMap<String> {
-        val out = ObjectIntHashMap<String>()
+    private fun activityToSCC(): ObjectIntMap<Activity> {
+        val out = ObjectIntHashMap<Activity>()
         for ((index, activities) in stronglyConnectedComponents.withIndex()) {
-            for (activity in activities)
-                out.put(activity.name, index)
+            for (activity in activities) {
+                check(out.put(activity, index) == 0) { "Duplicate activity ${activity.name}" }
+            }
         }
+
         return out
+    }
+
+    private fun conceptNameToSCC(): Map<String, IntArray> {
+        val out = HashMap<String, IntHashSet>()
+        for (cursor in activityToSCC) {
+            if (!cursor.key.isSilent)
+                out.computeIfAbsent(cursor.key.name) { IntHashSet() }.add(cursor.value)
+        }
+        return out.mapValues { (_, v) -> v.toArray() }
     }
 
     private fun dfSCC(): Array<IntArray> {
         val dfg = Array(stronglyConnectedComponents.size) { IntHashSet() }
 
         for (dep in model.directlyFollowsRelation) {
-            val sourceId = activityToSCC.get(dep.source.name)
-            val targetId = activityToSCC.get(dep.target.name)
+            val sourceId = activityToSCC[dep.source]
+            val targetId = activityToSCC[dep.target]
             if (sourceId != targetId) {
                 val row = dfg[sourceId]
                 row.add(targetId)
@@ -216,7 +229,7 @@ abstract class AbstractCountUnmatchedLogMoves(
         val out = IntHashSet()
 
         for (start in model.startActivities) {
-            out.addAll(*eventuallyFollowsSCC[activityToSCC[start.name]])
+            out.addAll(*eventuallyFollowsSCC[activityToSCC[start]])
         }
 
         return out.toArray()
@@ -245,21 +258,23 @@ class CountUnmatchedLogMovesInCausalNet(model: CausalNet) : AbstractCountUnmatch
 
         val pendingSCC = this.pendingSCC.get()
         var index = 0
-        for (dep in prevProcessState.uniqueSet()) {
-            val target = dep.target.name
+        marking@ for (dep in prevProcessState.uniqueSet()) {
+            val target = dep.target
             val targetSCC = activityToSCC[target]
-            if (curActivity?.activity != dep.target) {
+            if (curActivity?.activity != target) {
                 if (!pendingSCC.add(targetSCC)) {
                     continue // SCC already processed
                 }
             }
+
             val candidates = eventuallyFollowsSCC[targetSCC]
             index = 0
             while (index < candidates.size) {
                 pendingSCC.add(candidates[index++])
             }
             if (pendingSCC.size() >= allReachable.size)
-                break // we have all SCCs anyway
+                break@marking // we have all SCCs anyway
+
         }
         val pendingEmpty = pendingSCC.isEmpty
 
@@ -267,18 +282,23 @@ class CountUnmatchedLogMovesInCausalNet(model: CausalNet) : AbstractCountUnmatch
         var unmatched = 0
         mainLoop@ while (index < trace.size) {
             val conceptName = trace[index++].conceptName
-            val eventSCC = activityToSCC.getOrDefault(conceptName, -1)
-            if (eventSCC < 0) {
+            val eventSCC = conceptNameToSCC[conceptName]
+            if (eventSCC === null) {
                 unmatched++
                 continue
             }
 
+            var sIdx = 0
             if (pendingEmpty) {
-                if (allReachable.contains(eventSCC))
-                    continue
+                while (sIdx < eventSCC.size) {
+                    if (allReachable.contains(eventSCC[sIdx++]))
+                        continue@mainLoop
+                }
             } else {
-                if (pendingSCC.contains(eventSCC))
-                    continue
+                while (sIdx < eventSCC.size) {
+                    if (pendingSCC.contains(eventSCC[sIdx++]))
+                        continue@mainLoop
+                }
             }
 
             unmatched++
@@ -296,8 +316,8 @@ class DFGPetriNetWrapper(model: PetriNet) : DFGWrapper(model) {
         val pairs = listOf(model.placeToPrecedingTransition[p].orEmpty(), model.placeToFollowingTransition[p].orEmpty())
         pairs as List<ArrayList<Transition>>
         pairs.cartesianProduct().map { Arc(it[0], it[1]) }
-
     }
+
     override val outgoing: Map<Activity, Collection<Activity>> = model.transitions.associateBy(
         { it },
         { it.outPlaces.flatMapTo(HashSet()) { model.placeToFollowingTransition[it].orEmpty() } }
@@ -309,8 +329,7 @@ class CountUnmatchedLogMovesInPetriNet(model: PetriNet) : AbstractCountUnmatched
         val SCCs = IntHashSet()
         for (transition in model.transitions) {
             if (transition.inPlaces.isEmpty()) {
-                val scc = activityToSCC[transition.name]
-                SCCs.addAll(*eventuallyFollowsSCC[scc])
+                SCCs.addAll(*eventuallyFollowsSCC[activityToSCC[transition]])
             }
         }
         SCCs.toArray()
@@ -336,14 +355,14 @@ class CountUnmatchedLogMovesInPetriNet(model: PetriNet) : AbstractCountUnmatched
                 var tidx = 0
                 while (tidx < transitions.size) {
                     val transition = transitions[tidx++]
-                    val target = transition.name
-                    val targetSCC = activityToSCC[target]
+                    val transitionSCC = activityToSCC[transition]
                     if (curActivity != transition) {
-                        if (!pendingSCC.add(targetSCC)) {
+                        if (!pendingSCC.add(transitionSCC)) {
                             continue // SCC already processed
                         }
                     }
-                    val candidates = eventuallyFollowsSCC[targetSCC]
+
+                    val candidates = eventuallyFollowsSCC[transitionSCC]
                     index = 0
                     while (index < candidates.size) {
                         pendingSCC.add(candidates[index++])
@@ -358,17 +377,21 @@ class CountUnmatchedLogMovesInPetriNet(model: PetriNet) : AbstractCountUnmatched
         var unmatched = 0
         mainLoop@ while (index < trace.size) {
             val conceptName = trace[index++].conceptName
-            val eventSCC = activityToSCC.getOrDefault(conceptName, -1)
-            if (eventSCC < 0) {
+            val eventSCC = conceptNameToSCC[conceptName]
+            if (eventSCC === null) {
                 unmatched++
                 continue
             }
 
-            if (alwaysReachable.contains(eventSCC))
-                continue
+            var sIdx = 0
+            while (sIdx < eventSCC.size) {
+                val scc = eventSCC[sIdx++]
+                if (alwaysReachable.contains(scc))
+                    continue@mainLoop
 
-            if (pendingSCC.contains(eventSCC))
-                continue
+                if (pendingSCC.contains(scc))
+                    continue@mainLoop
+            }
 
             unmatched++
         }
