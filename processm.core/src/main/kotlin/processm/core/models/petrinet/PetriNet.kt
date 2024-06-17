@@ -107,7 +107,6 @@ class PetriNet(
                     (computeIfAbsent(null) { ArrayList() } as ArrayList<Transition>).add(transition)
                 } else {
                     for (place in transition.inPlaces) {
-                        assert(place in places) { "Place ${place.id} is missing in this.places" }
                         (computeIfAbsent(place) { ArrayList() } as ArrayList<Transition>).add(transition)
                     }
                 }
@@ -126,7 +125,6 @@ class PetriNet(
                     (computeIfAbsent(null) { ArrayList() } as ArrayList<Transition>).add(transition)
                 } else {
                     for (place in transition.outPlaces) {
-                        assert(place in places) { "Place ${place.id} is missing in this.places" }
                         (computeIfAbsent(place) { ArrayList() } as ArrayList<Transition>).add(transition)
                     }
                 }

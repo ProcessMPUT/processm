@@ -115,8 +115,10 @@ abstract class AbstractCountUnmatchedLogMoves(
         // Last label assigned
         var counter = 0
 
+        val allActivities = model.activities.toSet()
+
         // Analyze each activity in graph
-        model.activities.forEach { source ->
+        for (source in model.activities) {
             // Ignore already analyzed activities
             if (!alreadyAssigned.contains(source)) {
                 // Clean stack and add current activity
@@ -146,16 +148,15 @@ abstract class AbstractCountUnmatchedLogMoves(
 
                         // Try to decrement value and set as minimal as possible
                         model.outgoing[v]?.forEach { w ->
-                            if (w in model.activities) {
-                                if (!alreadyAssigned.contains(w)) {
-                                    val lowLinkV = lowLink[v]!!
-                                    val preOrderedW = preOrder[w]!!
+                            assert(w in allActivities)
+                            if (!alreadyAssigned.contains(w)) {
+                                val lowLinkV = lowLink[v]!!
+                                val preOrderedW = preOrder[w]!!
 
-                                    if (preOrderedW > preOrder[v]!!) {
-                                        lowLink[v] = min(lowLinkV, lowLink[w]!!)
-                                    } else {
-                                        lowLink[v] = min(lowLinkV, preOrderedW)
-                                    }
+                                if (preOrderedW > preOrder[v]!!) {
+                                    lowLink[v] = min(lowLinkV, lowLink[w]!!)
+                                } else {
+                                    lowLink[v] = min(lowLinkV, preOrderedW)
                                 }
                             }
                         }
@@ -207,7 +208,7 @@ abstract class AbstractCountUnmatchedLogMoves(
             if (!cursor.key.isSilent)
                 out.computeIfAbsent(cursor.key.name) { IntHashSet() }.add(cursor.value)
         }
-        return out.mapValues { (_, v) -> v.toArray() }
+        return out.mapValuesTo(HashMap()) { (_, v) -> v.toArray() }
     }
 
     private fun dfSCC(): Array<IntArray> {

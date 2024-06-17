@@ -124,12 +124,12 @@ class CountUnmatchedCausalNetMoves(val model: CausalNet) : CountUnmatchedModelMo
  */
 class CountUnmatchedPetriNetMoves(val model: PetriNet) : CountUnmatchedModelMoves {
 
-    private val consumentsCache = HashMap<Pair<Place, Int>, Int>()
+    private val consumentsCache = ThreadLocal.withInitial { HashMap<Pair<Place, Int>, Int>() }
 
-    private val followingCache: HashMap<Place, Set<Set<String>>> = HashMap()
+    private val followingCache = ThreadLocal.withInitial { HashMap<Place, Set<Set<String>>>() }
 
     private fun following(place: Place): Set<Set<String>> {
-        return followingCache.computeIfAbsent(place) { place ->
+        return followingCache.get().computeIfAbsent(place) { place ->
             val following = HashSet<Set<String>>()
             for (set in model.forwardSearch(place).mapToSet { set -> set.mapToSet { it.name } }.sortedBy { it.size }) {
                 if (following.none { subset -> set.containsAll(subset) })
@@ -140,7 +140,7 @@ class CountUnmatchedPetriNetMoves(val model: PetriNet) : CountUnmatchedModelMove
     }
 
     override fun reset() {
-        consumentsCache.clear()
+        consumentsCache.get().clear()
     }
 
     override fun compute(
@@ -166,6 +166,7 @@ class CountUnmatchedPetriNetMoves(val model: PetriNet) : CountUnmatchedModelMove
         // At this point it is sufficient to sum the counters
         val nEvents = if (startIndex < nEvents.size) nEvents[startIndex] else emptyMap()
         val nonConsumable = ArrayList<Pair<Set<Set<String>>, Int>>()
+        val consumentsCache = this.consumentsCache.get()
         for ((place, counter) in prevProcessState) {
             assert(!counter.isEmpty())
             var tokenCount = counter.size
