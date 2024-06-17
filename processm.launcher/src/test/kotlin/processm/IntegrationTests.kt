@@ -25,6 +25,7 @@ import processm.etl.MSSQLEnvironment
 import processm.etl.MySQLEnvironment
 import processm.etl.PostgreSQLEnvironment
 import processm.helpers.mapToSet
+import processm.logging.loggedScope
 import processm.logging.logger
 import processm.services.api.Paths
 import processm.services.api.defaultSampleSize
@@ -282,7 +283,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
     }
 
     @Test
-    fun `complete workflow for resetting password`() {
+    fun `complete workflow for resetting password`() = loggedScope { logger ->
         val sendmail = FauxSendmail()
         ProcessMTestingEnvironment()
             .withProperty("processm.email.sendmailExecutable", sendmail.executable)
@@ -293,15 +294,21 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 }
                 //wait for the email
                 val re = Regex("[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}", RegexOption.IGNORE_CASE)
-                val token = runBlocking {
-                    for (i in 1..30) {
+                val startTime = System.currentTimeMillis()
+                // do not remove the "kotlin." prefix, as otherwise ProcessMTestingEnvironment.run is invoked
+                val token = kotlin.run {
+                    for (i in 1..50) {
                         try {
-                            re.find(sendmail.lastEmailBody)?.value?.let { return@runBlocking it }
+                            re.find(sendmail.lastEmailBody)?.value?.let {
+                                logger.info("E-mail sent in ${System.currentTimeMillis() - startTime}ms")
+                                return@run it
+                            }
                         } catch (e: IOException) {
-                            delay(100L)
+                            logger.debug("E-mail has not been sent yet", e)
                         }
+                        Thread.sleep(50L)
                     }
-                    error("Mail was not sent in time limit.")
+                    error("E-mail was not sent in time limit.")
                 }
 
                 assertNotNull(token)

@@ -8,10 +8,7 @@ import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.*
 import processm.core.models.commons.Activity
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
-import processm.helpers.Counter
-import processm.helpers.HashMapWithDefault
-import processm.helpers.HierarchicalIterable
-import processm.helpers.mapToSet
+import processm.helpers.*
 import processm.logging.debug
 import processm.logging.logger
 import processm.logging.trace
@@ -47,9 +44,10 @@ class PerformanceAnalyzer(
         }
     }
 
+    @OptIn(ExperimentalUnsignedTypes::class)
     private val sourcesCache = object : HashMap<Node, List<UInt128>>() {
         override operator fun get(key: processm.core.models.causalnet.Node) = computeIfAbsent(key) {
-            return@computeIfAbsent model.joins[key]?.map { encoder[it.sources] }.orEmpty()
+            return@computeIfAbsent model.joins[key]?.map { encoder[it.sources.toSet()] }.orEmpty()
         }
     }
 
@@ -111,21 +109,21 @@ class PerformanceAnalyzer(
                         break
                     freshReachable = newReachable
                     reachableEnc.or(newReachableEnc)
-/*
-                freshReachable = freshReachable
-                    .flatMapTo(HashSet()) { node ->
-                        model
-                            .outgoing[node]
-                            ?.mapToSet { dep -> dep.target }
-                            ?.filter {
-                                reachableEnc and encoder[it] == UInt128.ZERO && sourcesCache[it].any { j-> j and reachableEnc == j }
-                            }.orEmpty()
-                    }
-                if(freshReachable.isEmpty())
-                    break
-                reachable.addAll(freshReachable)
-                reachableEnc = reachableEnc or encoder[freshReachable]
-*/
+                    /*
+                                    freshReachable = freshReachable
+                                        .flatMapTo(HashSet()) { node ->
+                                            model
+                                                .outgoing[node]
+                                                ?.mapToSet { dep -> dep.target }
+                                                ?.filter {
+                                                    reachableEnc and encoder[it] == UInt128.ZERO && sourcesCache[it].any { j-> j and reachableEnc == j }
+                                                }.orEmpty()
+                                        }
+                                    if(freshReachable.isEmpty())
+                                        break
+                                    reachable.addAll(freshReachable)
+                                    reachableEnc = reachableEnc or encoder[freshReachable]
+                    */
                     //assert(encoder[reachable] == reachableEnc)
                 }
                 return@computeIfAbsent reachable
@@ -135,10 +133,10 @@ class PerformanceAnalyzer(
 
     private fun computeMinOccurrences3(state: CausalNetStateWithJoins): Map<Node, Int> {
         val result = HashMap<Node, Int>()
-        for ((target, relevantEntries) in state.entrySet().groupBy { it.element.target }) {
+        for ((target, relevantEntries) in state.entrySet().groupBy({ it.element.target }, { it.copy() })) {
             val relevant = HashMultiSet<Node>()
             for (e in relevantEntries)
-                relevant.add(e.element.source, e.count)
+                relevant.add(e.element.source, e.count.toInt())
             val joins = model.joins[target]?.map { it.sources }.orEmpty()
             var ctr = 0
             while (relevant.isNotEmpty()) {
@@ -159,7 +157,7 @@ class PerformanceAnalyzer(
     private fun computeMinOccurrences(state: CausalNetStateWithJoins): Counter<Node> {
         val minOccurrences = Counter<Node>()
         for (e in state.entrySet())
-            minOccurrences.compute(e.element.target) { _, v -> max(v ?: 0, e.count) }
+            minOccurrences.compute(e.element.target) { _, v -> max(v ?: 0, e.count.toInt()) }
         return minOccurrences
     }
 
@@ -179,7 +177,7 @@ class PerformanceAnalyzer(
 
     private fun computeMinOccurrences2(state: CausalNetStateWithJoins): Map<Node, Int> {
         val depCounter = state.entrySet().associate { it.element to it.count }
-        val byTarget = state.entrySet().groupBy { it.element.target }
+        val byTarget = state.entrySet().groupBy({ it.element.target }, { it.copy() })
         val minOccurrences = HashMap<Node, Int>()
         for ((target, deps) in byTarget) {
             val relevantStateSubset = deps.mapToSet { it.element }
@@ -204,7 +202,7 @@ class PerformanceAnalyzer(
                 */
             val universe = relevantStateSubset.mapToSet { it.source }
             val joins = model.joins[target]?.map { it.sources }.orEmpty()
-            val covering = notReallySetCovering(universe, joins).map { joins[it] }
+            val covering = notReallySetCovering(universe, joins.map { it.toSet() }).map { joins[it] }
             assert(covering.size <= universe.size) { "Covering $covering is larger than its universe $universe" }
 //            if(covering.size>1)
 //                println("covering=$covering for $universe at $target with $joins")
@@ -228,7 +226,7 @@ class PerformanceAnalyzer(
         partialAlignment: Alignment
     ): Double {
         val reachable = when {
-            nextState.isNotEmpty() -> reachableCache[nextState.uniqueSet()]
+            nextState.isNotEmpty() -> reachableCache[nextState.uniqueSet().toSet()]
             //nextPosition == 0 -> model.instances
             //else -> emptySet()
             partialAlignment.alignment.all { it.activity == null } -> model.instances
@@ -259,7 +257,12 @@ class PerformanceAnalyzer(
             val join = model.joins[e.element.target]?.singleOrNull { e.element in it }
             //joins of size 1 are not interesting here - but must filter it afterwards, because it still must be the only possible join
             if (join != null && join.size >= 2)
-                joinsThatMustBeUsed.compute(join) { _, v -> if (v != null) max(e.count, v) else e.count }
+                joinsThatMustBeUsed.compute(join) { _, v ->
+                    if (v != null) max(
+                        e.count.toInt(),
+                        v
+                    ) else e.count.toInt()
+                }
         }
         val requiredTokens = HashMap<Dependency, Int>()
         for ((join, ctr) in joinsThatMustBeUsed)
@@ -279,7 +282,7 @@ class PerformanceAnalyzer(
     private val intersectionOfTargets = HashMapWithDefault<Node, Set<Node>> { key ->
         var intersection: Set<Node>? = null
         for (split in model.splits[key].orEmpty()) {
-            intersection = intersection?.intersect(split.targets) ?: split.targets
+            intersection = intersection?.intersect(split.targets.toSet()) ?: split.targets.toSet()
             if (intersection.isEmpty())
                 break
         }
@@ -590,7 +593,7 @@ class PerformanceAnalyzer(
                     nextState.addAll(dec.split?.dependencies.orEmpty())
                     val ctr = Counter<Activity>()
                     for (e in nextState.entrySet())
-                        ctr.compute(e.element.target) { _, v -> max(v ?: 0, e.count) }
+                        ctr.compute(e.element.target) { _, v -> max(v ?: 0, e.count.toInt()) }
                     val ignore = ctr.entries.any { e -> e.value > 1 + (remainder[e.key] ?: 0) }
                     if (ignore) {
 //                        logger.trace{"Ignoring $nextState due to $remainder"}
@@ -916,10 +919,9 @@ class PerformanceAnalyzer(
             val stateSize: Int
 
             init {
-                val targets = state
-                    .entrySet()
-                    .groupBy { it.element.target }
-                    .mapValues { it.value.map { e -> e.count }.maxOrNull()!! }
+                val targets = state.entrySet()
+                    .groupBy({ it.element.target }, { it.copy() })
+                    .mapValues { it.value.map { e -> e.count }.maxOrNull()!!.toInt() }
                 val m = minDistanceToEnd(targets)
                 var ctr = 0
                 if (length < prefix.size) {
@@ -1002,7 +1004,7 @@ class PerformanceAnalyzer(
                     for (split in model.splits[current.node].orEmpty()) {
                         val newState = LazyCausalNetState(current.state, emptyList(), split.dependencies)
                         // ignore states with multiple tokens on a single dependency
-                        if (newState.entrySet().any { it.count >= 2 })
+                        if (newState.countSet().any { it >= 2 })
                             continue
                         if (nextNode == null || model.joins[nextNode].orEmpty()
                                 .any { join -> newState.containsAll(join.dependencies) }
@@ -1259,7 +1261,7 @@ class PerformanceAnalyzer(
                             // dla kazdego node w przyszłości musi być chociaż jeden join, dla którego wszystkie zależności albo już są albo da się je wyprodukować
                             // wystarczy, że znajdziemy chociaż jeden taki prefix w relevantPrefixes&missing
                             if (current.position < prefix.size && prefix in missing) {
-                                val available = HashSet(current.state.uniqueSet())
+                                val available = current.state.uniqueSet().toHashSet()
                                 available.addAll(model.outgoing[prefix[current.position]].orEmpty())
                                 var unsatPrefix = false
                                 for (pos in current.position + 1 until prefix.size) {

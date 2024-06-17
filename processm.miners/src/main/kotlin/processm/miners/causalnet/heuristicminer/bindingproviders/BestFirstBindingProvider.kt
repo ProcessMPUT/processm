@@ -3,6 +3,7 @@ package processm.miners.causalnet.heuristicminer.bindingproviders
 import com.google.common.collect.MinMaxPriorityQueue
 import processm.core.models.causalnet.*
 import processm.helpers.HierarchicalIterable
+import processm.helpers.asList
 import processm.helpers.mapToSet
 import processm.logging.logger
 import processm.miners.causalnet.onlineminer.LazyCausalNetState
@@ -27,7 +28,7 @@ data class ComputationState(val nextNode: Int, val trace: ReplayTrace, val nodeT
      * The corresponding experimental evaluation is in [DefaultComputationStateComparatorPerformanceTest]
      */
     val value: IntArray by lazy {
-        val nTargets = trace.state.uniqueSet().size
+        val nTargets = trace.state.uniqueSize
         return@lazy intArrayOf(-nTargets, nextNode)
     }
 }
@@ -118,7 +119,7 @@ class BestFirstBindingProvider(
 //                continue
 //            }
 //            visited.add(key)
-            val avail = copy.uniqueSet()
+            val avail = copy.uniqueSet().asList()
 //            val alreadyProduced = avail.mapToSet { it.target }
 //            val mustProduceNodes = availableAt[currentNodeIdx].intersect(alreadyProduced)
             val currentNode = trace[currentNodeIdx]

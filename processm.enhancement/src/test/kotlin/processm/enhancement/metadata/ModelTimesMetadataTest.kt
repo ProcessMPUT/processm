@@ -170,12 +170,10 @@ class ModelTimesMetadataTest {
         val journalPetriNet = journalCNet.toPetriNet()
     }
 
-    private val journal by lazy {
-        InferConceptInstanceFromStandardLifecycle(
-            DBHierarchicalXESInputStream(DBTestHelper.dbName, Query("where l:id=${DBTestHelper.JournalReviewExtra}"))
-                .toFlatSequence()
-        )
-    }
+    private val journal = InferConceptInstanceFromStandardLifecycle(
+        DBHierarchicalXESInputStream(DBTestHelper.dbName, Query("where l:id=${DBTestHelper.JournalReviewExtra}"))
+            .toFlatSequence()
+    )
 
     @Test
     fun causalnet() {

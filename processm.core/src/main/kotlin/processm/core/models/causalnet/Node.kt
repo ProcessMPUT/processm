@@ -2,7 +2,6 @@ package processm.core.models.causalnet
 
 import kotlinx.serialization.Serializable
 import processm.core.models.commons.Activity
-import processm.core.models.metadata.MetadataSubject
 import java.util.*
 
 /**
@@ -18,8 +17,7 @@ data class Node(
     override val isSilent: Boolean = false,
     @Deprecated("Use isSilent instead", replaceWith = ReplaceWith("isSilent"))
     override val isArtificial: Boolean = false,
-) : MetadataSubject,
-    Activity {
+) : Activity {
 
     init {
         assert(!isArtificial) { "Node.isArtificial is deprecated and should be set to the default of false." }
@@ -38,4 +36,10 @@ data class Node(
     }
 
     override fun hashCode(): Int = hash
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Node) return false
+        return name == other.name && instanceId == other.instanceId && isSilent == other.isSilent
+    }
 }

@@ -42,8 +42,8 @@ internal class ReplayModelInstance(override val model: ReplayModel) : ProcessMod
     override val activity: Activity
         get() = model.trace[state.index]
 
-    override val cause: Collection<Activity>
-        get() = if (state.index > 0) listOf(model.trace[state.index - 1]) else emptyList()
+    override val cause: Array<out Activity>
+        get() = if (state.index > 0) arrayOf(model.trace[state.index - 1]) else emptyArray()
 
     override fun execute() {
         state.index = state.index + 1

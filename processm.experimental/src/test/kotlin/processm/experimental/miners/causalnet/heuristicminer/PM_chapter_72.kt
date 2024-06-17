@@ -133,20 +133,20 @@ class PM_chapter_72 {
                 assertEquals(setOf(b, c, d, a), getValue(e).mapToSet { d -> d.source })
             }
             with(joins) {
-                assertEquals(setOf(Join(setOf(Dependency(a, b)))), getValue(b))
-                assertEquals(setOf(Join(setOf(Dependency(a, c)))), getValue(c))
+                assertEquals(listOf(Join(setOf(Dependency(a, b)))), getValue(b))
+                assertEquals(listOf(Join(setOf(Dependency(a, c)))), getValue(c))
                 assertEquals(
                     setOf(
                         Join(setOf(Dependency(a, d))),
                         Join(setOf(Dependency(d, d)))
-                    ), getValue(d)
+                    ), getValue(d).toSet()
                 )
                 assertEquals(
                     setOf(
                         Join(setOf(Dependency(a, e))),
                         Join(setOf(Dependency(b, e), Dependency(c, e))),
                         Join(setOf(Dependency(d, e)))
-                    ), getValue(e)
+                    ), getValue(e).toSet()
                 )
             }
             with(splits) {
@@ -155,15 +155,15 @@ class PM_chapter_72 {
                         Split(setOf(Dependency(a, e))),
                         Split(setOf(Dependency(a, b), Dependency(a, c))),
                         Split(setOf(Dependency(a, d)))
-                    ), getValue(a)
+                    ), getValue(a).toSet()
                 )
-                assertEquals(setOf(Split(setOf(Dependency(b, e)))), getValue(b))
-                assertEquals(setOf(Split(setOf(Dependency(c, e)))), getValue(c))
+                assertEquals(listOf(Split(setOf(Dependency(b, e)))), getValue(b))
+                assertEquals(listOf(Split(setOf(Dependency(c, e)))), getValue(c))
                 assertEquals(
                     setOf(
                         Split(setOf(Dependency(d, e))),
                         Split(setOf(Dependency(d, d)))
-                    ), getValue(d)
+                    ), getValue(d).toSet()
                 )
             }
         }

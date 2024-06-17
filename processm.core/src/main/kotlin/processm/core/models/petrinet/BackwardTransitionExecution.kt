@@ -1,6 +1,5 @@
 package processm.core.models.petrinet
 
-import processm.core.models.commons.Activity
 import processm.core.models.commons.ActivityExecution
 import java.util.*
 
@@ -15,7 +14,7 @@ class BackwardTransitionExecution(
      * if model representation does not allow for exact identification of the cause.
      * Note that, as this is backward execution, the [cause] refers to the following transitions in the model.
      */
-    override val cause: Collection<Activity>,
+    override val cause: Array<out Transition>,
     private val marking: Marking
 ) : ActivityExecution {
     override fun execute() {

@@ -70,7 +70,7 @@ class MutableCausalNet(
         require(
             _outgoing.getValue(split.source).containsAll(split.dependencies)
         ) { "Not all dependencies are in the causal net" }
-        _splits.computeIfAbsent(split.source, { HashSet() }).apply {
+        _splits.computeIfAbsent(split.source, { ArrayList() }).apply {
             require(all { it.dependencies != split.dependencies }) { "Split already present in the causal net" }
             add(split)
         }
@@ -83,7 +83,7 @@ class MutableCausalNet(
         require(
             _incoming.getValue(join.target).containsAll(join.dependencies)
         ) { "Not all dependencies are in the causal net" }
-        _joins.computeIfAbsent(join.target, { HashSet() }).apply {
+        _joins.computeIfAbsent(join.target, { ArrayList() }).apply {
             require(all { it.dependencies != join.dependencies }) { "Join already present in the causal net" }
             add(join)
         }

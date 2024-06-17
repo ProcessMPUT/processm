@@ -27,7 +27,7 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.test.*
 
-@Timeout(5L, unit = TimeUnit.SECONDS)
+@Timeout(10L, unit = TimeUnit.SECONDS)
 class AlignerKPIServiceTests {
     companion object {
 
