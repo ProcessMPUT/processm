@@ -5,7 +5,6 @@ import processm.core.models.commons.*
 import processm.core.models.commons.DecisionPoint
 import processm.core.models.metadata.DefaultMutableMetadataHandler
 import processm.core.models.metadata.MetadataHandler
-import processm.helpers.asList
 import processm.helpers.cartesianProduct
 import processm.helpers.optimize
 import java.util.*
@@ -26,10 +25,6 @@ class PetriNet(
     private val metadataHandler: MetadataHandler = DefaultMutableMetadataHandler()
 ) : ProcessModel, MetadataHandler by metadataHandler {
     override val activities: List<Activity> = transitions
-
-    override val startActivities: List<Activity> = available(initialMarking).asList()
-
-    override val endActivities: List<Activity> = backwardAvailable(finalMarking).asList()
 
     override val decisionPoints: Sequence<DecisionPoint> = sequence {
         // FIXME: This sequence works in O(|T|^2*|P|^2). It can be reduced to O(|T|*|P|) using a mapping from places to transitions.
@@ -132,6 +127,10 @@ class PetriNet(
             for (entry in this)
                 entry.setValue(entry.value.optimize())
         }
+
+    override val startActivities: List<Activity> = available(initialMarking).toList()
+
+    override val endActivities: List<Activity> = backwardAvailable(finalMarking).toList()
 
     /**
      * Calculates the collection of transitions enabled for firing at given [marking].
