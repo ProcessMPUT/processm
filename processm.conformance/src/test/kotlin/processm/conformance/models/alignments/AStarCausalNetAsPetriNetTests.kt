@@ -285,13 +285,14 @@ class AStarCausalNetAsPetriNetTests {
 
         val converter = CausalNet2PetriNet(model)
         val petri = converter.toPetriNet()
-        val astar = CausalNetAsPetriNetAligner(AStar(petri), converter)
+        val astar = AStar(petri)
+        val aligner = CausalNetAsPetriNetAligner(astar, converter)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
-            val alignment = astar.align(trace)
+            val alignment = aligner.align(trace)
             val time = System.currentTimeMillis() - start
 
-            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}\tstates: ${astar.visitedStatesCount}")
 
             assertEquals(expectedCost[i], alignment.cost)
 
@@ -324,12 +325,12 @@ class AStarCausalNetAsPetriNetTests {
 
     @Test
     fun `instanceId uniquely determined by surrounding activities`() {
-        val a1=Node("a1")
-        val a2=Node("a2")
-        val b1=Node("b","1")
-        val b2=Node("b", "2")
-        val c1=Node("c1")
-        val c2=Node("c2")
+        val a1 = Node("a1")
+        val a2 = Node("a2")
+        val b1 = Node("b", "1")
+        val b2 = Node("b", "2")
+        val c1 = Node("c1")
+        val c2 = Node("c2")
         val model = causalnet {
             start splits a1 or a2
             a1 splits b1

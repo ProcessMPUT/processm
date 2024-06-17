@@ -76,16 +76,20 @@ abstract class AbstractCountUnmatchedLogMoves(
         protected const val MAX_CACHE_SIZE = 100000
     }
 
-    protected val pendingSCCcache = LinkedHashMap<ProcessModelState, IntArray>()
+    protected val pendingSCCcache = ThreadLocal.withInitial { LinkedHashMap<ProcessModelState, IntArray>() }
 
     protected abstract val createPendingSCC: java.util.function.Function<ProcessModelState, IntArray>
 
     protected fun getPendingSCC(prevProcessState: ProcessModelState): IntArray {
+        val pendingSCCcache = this.pendingSCCcache.get()
         // createPendingSCC moved to a separate method to prevent allocation of lambda
         val out = pendingSCCcache.computeIfAbsent(prevProcessState, createPendingSCC)
 
-        if (pendingSCCcache.size > MAX_CACHE_SIZE)
-            pendingSCCcache.iterator().remove()
+        if (pendingSCCcache.size > MAX_CACHE_SIZE) {
+            val it = pendingSCCcache.iterator()
+            it.next()
+            it.remove()
+        }
 
         return out
     }
