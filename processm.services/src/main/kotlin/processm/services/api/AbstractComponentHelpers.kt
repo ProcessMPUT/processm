@@ -286,13 +286,15 @@ fun WorkspaceComponent.updateData(data: String) = loggedScope { logger ->
     when (componentType) {
         ComponentTypeDto.CausalNet -> {
             JsonSerializer.decodeFromString<CausalNetComponentData>(data).modelVersion?.let { modelVersion ->
-                this.data =
-                    ProcessModelComponentData.create(this)
+                val componentData = ProcessModelComponentData.create(this)
+                if (componentData.acceptedModelVersion != modelVersion) {
+                    this.data = componentData
                         .apply { acceptedModelVersion = modelVersion }
                         .toJSON()
-                afterCommit {
-                    this as WorkspaceComponent
-                    triggerEvent(event = WorkspaceComponentEventType.ModelAccepted)
+                    afterCommit {
+                        this as WorkspaceComponent
+                        triggerEvent(event = WorkspaceComponentEventType.ModelAccepted)
+                    }
                 }
             }
         }

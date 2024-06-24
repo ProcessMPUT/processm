@@ -80,7 +80,7 @@ export default class WorkspaceService extends BaseService {
   }
 
   public async setComponentDataVariant(workspaceId: string, componentId: string, variantId: number): Promise<unknown> {
-    const response = await this.workspacesApi.postWorkspaceComponentData(workspaceId, componentId, variantId);
+    const response = await this.workspacesApi.patchWorkspaceComponentData(workspaceId, componentId, variantId);
 
     return response.data;
   }

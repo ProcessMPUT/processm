@@ -157,7 +157,7 @@ fun Route.WorkspacesApi() {
             else call.respond(HttpStatusCode.NotFound)
         }
 
-        post<Paths.WorkspaceComponentData> { data ->
+        patch<Paths.WorkspaceComponentData> { data ->
             val principal = call.authentication.principal<ApiUser>()!!
 
             aclService.checkAccess(principal.userId, Workspaces, data.workspaceId, RoleType.Writer)

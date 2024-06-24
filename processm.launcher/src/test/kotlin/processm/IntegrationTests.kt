@@ -8,6 +8,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.exposed.sql.batchInsert
 import org.jetbrains.exposed.sql.javatime.CurrentDateTime
 import org.junit.jupiter.api.Assumptions
@@ -39,30 +40,7 @@ import java.sql.DriverManager
 import java.sql.Statement
 import java.util.*
 import java.util.concurrent.ForkJoinPool
-import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.*
-
-/**
- * Ducktyping for raw results of JSON deserialization. Anything indexed with a string is assumed to be a map, and anything
- * indexed with an integer - to be a list.
- *
- * Intended usage:
- * ```
- * with(ducktyping) { ... }
- * ```
- */
-object ducktyping {
-
-    operator fun Any?.get(key: String): Any? {
-        assertIs<Map<String, *>>(this)
-        return this[key]
-    }
-
-    operator fun Any?.get(key: Int): Any? {
-        assertIs<List<*>>(this)
-        return this[key]
-    }
-}
 
 fun <T, K, V> Array<T>.associateNotNull(transform: (T) -> Pair<K, V>?): Map<K, V> {
     val result = HashMap<K, V>()
@@ -933,13 +911,13 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 return@post body<Workspace>().id!!
             }
 
-            val eventsCounter = AtomicInteger()
+            val eventsCounter = Semaphore(5, 5)
 
             sse(format<Paths.Notifications>()) {
-                eventsCounter.incrementAndGet()
+                eventsCounter.release()
             }
 
-            assertEquals(0, eventsCounter.get())
+            assertEquals(0, eventsCounter.availablePermits)
 
             waitUntil {
                 with(pqlQuery("where log:identity:id=$logIdentityId")) {
@@ -962,7 +940,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
 
             // first model + alignments
-            waitUntilEquals(2, eventsCounter::get)
+            eventsCounter.waitUntilAcquired(2)
 
             get<Paths.WorkspaceComponent, CausalNetComponentData?> {
                 return@get body<AbstractComponent>().data as CausalNetComponentData?
@@ -977,7 +955,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
 
             // alignments for the old model + new model
-            waitUntilEquals(4, eventsCounter::get)
+            eventsCounter.waitUntilAcquired(2)
 
             val availableModelVersions = get<Paths.WorkspaceComponentData, List<Long>> {
                 return@get body<List<Long>>()
@@ -1003,14 +981,14 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 assertEquals(4, this?.nodes?.size)
             }
 
-            assertEquals(4, eventsCounter.get())
+            assertEquals(0, eventsCounter.availablePermits)
 
-            post<Paths.WorkspaceComponentData, Long, Unit>(availableModelVersions.max()) {
+            patch<Paths.WorkspaceComponentData, Long, Unit>(availableModelVersions.max()) {
                 assertTrue { status.isSuccess() }
             }
 
             // alignments for the new model
-            waitUntilEquals(5, eventsCounter::get)
+            eventsCounter.waitUntilAcquired(1)
 
             get<Paths.WorkspaceComponent, CausalNetComponentData?> {
                 return@get body<AbstractComponent>().data as CausalNetComponentData?
@@ -1074,10 +1052,10 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
 
 
-            val eventsCounter = AtomicInteger()
+            val eventsCounter = Semaphore(6, 6)
 
             sse(format<Paths.Notifications>()) {
-                eventsCounter.incrementAndGet()
+                eventsCounter.release()
             }
 
             currentComponentId = UUID.randomUUID()
@@ -1095,7 +1073,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
 
             // error due to no data
-            waitUntilEquals(1, eventsCounter::get)
+            eventsCounter.waitUntilAcquired(1)
 
             simulator.insert(List(10) { listOf("a1", "a2") })
 
@@ -1110,7 +1088,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
 
             // first model + alignments
-            waitUntilEquals(3, eventsCounter::get)
+            eventsCounter.waitUntilAcquired(2)
 
             get<Paths.WorkspaceComponent, CausalNetComponentData?> {
                 return@get body<AbstractComponent>().data as CausalNetComponentData?
@@ -1125,7 +1103,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
 
             // alignments for the old model + new model
-            waitUntilEquals(5, eventsCounter::get)
+            eventsCounter.waitUntilAcquired(2)
 
             val availableModelVersions = get<Paths.WorkspaceComponentData, List<Long>> {
                 return@get body<List<Long>>()
@@ -1151,12 +1129,12 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 assertEquals(4, this?.nodes?.size)
             }
 
-            post<Paths.WorkspaceComponentData, Long, Unit>(availableModelVersions.max()) {
+            patch<Paths.WorkspaceComponentData, Long, Unit>(availableModelVersions.max()) {
                 assertTrue { status.isSuccess() }
             }
 
             // alignments for the new model
-            waitUntilEquals(6, eventsCounter::get)
+            eventsCounter.waitUntilAcquired(1)
 
             get<Paths.WorkspaceComponent, CausalNetComponentData?> {
                 return@get body<AbstractComponent>().data as CausalNetComponentData?
@@ -1224,13 +1202,13 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 return@post body<Workspace>().id!!
             }
 
-            val eventsCounter = AtomicInteger()
+            val eventsCounter = Semaphore(5, 5)
 
             sse(format<Paths.Notifications>()) {
-                eventsCounter.incrementAndGet()
+                eventsCounter.release()
             }
 
-            assertEquals(0, eventsCounter.get())
+            assertEquals(0, eventsCounter.availablePermits)
 
             waitUntil {
                 with(pqlQuery("where log:identity:id=$logIdentityId")) {
@@ -1253,7 +1231,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
 
             // first model + alignments
-            waitUntilEquals(2, eventsCounter::get)
+            eventsCounter.waitUntilAcquired(2)
 
             get<Paths.WorkspaceComponent, CausalNetComponentData?> {
                 return@get body<AbstractComponent>().data as CausalNetComponentData?
@@ -1270,7 +1248,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
 
             // alignments for the old model + new model
-            waitUntilEquals(4, eventsCounter::get)
+            eventsCounter.waitUntilAcquired(2)
 
             val availableModelVersions = get<Paths.WorkspaceComponentData, List<Long>> {
                 return@get body<List<Long>>()
@@ -1296,14 +1274,14 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 assertEquals(4, this?.nodes?.size)
             }
 
-            assertEquals(4, eventsCounter.get())
+            assertEquals(0, eventsCounter.availablePermits)
 
-            post<Paths.WorkspaceComponentData, Long, Unit>(availableModelVersions.max()) {
+            patch<Paths.WorkspaceComponentData, Long, Unit>(availableModelVersions.max()) {
                 assertTrue { status.isSuccess() }
             }
 
             // alignments for the new model
-            waitUntilEquals(5, eventsCounter::get)
+            eventsCounter.waitUntilAcquired(1)
 
             get<Paths.WorkspaceComponent, CausalNetComponentData?> {
                 return@get body<AbstractComponent>().data as CausalNetComponentData?

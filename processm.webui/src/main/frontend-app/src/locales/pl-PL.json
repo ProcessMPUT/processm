@@ -42,7 +42,7 @@
         "support": "Wsparcie"
       },
       "edit": {
-        "load-new-model": "Kliknij aby podejrzeć nowy model. Jeżeli chcesz go zaakceptować, kliknij przycisk zapisz.",
+        "load-new-model": "Kliknij, aby zobaczyć nowy model. Kliknij przycisk zapis, aby go zaakceptować.",
         "name": "Nazwa",
         "name-hint": "Etykieta wyświetlana na komponencie",
         "type": "Typ",

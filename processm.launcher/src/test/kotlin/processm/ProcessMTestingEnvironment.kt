@@ -15,6 +15,7 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.locations.*
 import io.ktor.utils.io.jvm.javaio.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Semaphore
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
@@ -286,6 +287,21 @@ class ProcessMTestingEnvironment : CoroutineScope {
             return@runBlocking response.block()
         }
 
+    inline fun <reified Endpoint, reified T, R> patch(data: T?, noinline block: suspend HttpResponse.() -> R): R =
+        patch<Any?, R>(format<Endpoint>(), data, block)
+
+    inline fun <reified T, R> patch(endpoint: String, data: T?, crossinline block: suspend HttpResponse.() -> R): R =
+        runBlocking {
+            val response = client.patch(apiUrl(endpoint)) {
+                token?.let { bearerAuth(it) }
+                if (data !== null) {
+                    contentType(ContentType.Application.Json)
+                    setBody(data)
+                }
+            }
+            return@runBlocking response.block()
+        }
+
     lateinit var pool: CloseableCoroutineDispatcher
     val Dispatchers.Request: CloseableCoroutineDispatcher
         get() = pool
@@ -316,11 +332,23 @@ class ProcessMTestingEnvironment : CoroutineScope {
         throw IllegalStateException()
     }
 
+    fun Semaphore.waitUntilAcquired(n: Int) {
+        var remaining = n
+        repeat(10) {
+            if (tryAcquire()) {
+                remaining--
+                if (remaining == 0) return
+            }
+            Thread.sleep(500)
+        }
+        throw IllegalStateException()
+    }
+
     fun <T> waitUntilEquals(expected: T, get: () -> T) {
         val history = ArrayList<T>()
         repeat(10) {
             val v = get()
-            if (v == expected) return
+            if (expected == v) return
             Thread.sleep(500)
             history.add(v)
         }

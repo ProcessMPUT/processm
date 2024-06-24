@@ -38,6 +38,17 @@ fun WorkspaceComponent.triggerEvent(producer: Producer = WCEproducer, eventData:
     triggerEvent(producer = producer, event = WorkspaceComponentEventType.DataChange, eventData = eventData.toString())
 
 
+/**
+ * A process model component can store multiple models computed for different snapshots of data. Moreover, for each
+ * model there can be multiple secondardy artifacts, such as alignments, that depend on the model, and on the data.
+ * Hence, the class uses two distinct, yet related notions: model version and data version.
+ * They both originate in the version number returned by [processm.core.log.hierarchical.DBHierarchicalXESInputStream.readVersion],
+ * thus are both assumed to be monotonic.
+ * Model version is the version number of the data the model was computed on.
+ * Data version is the version number of the data the secondary artifact (e.g., the alignments) was computed on.
+ * For example, alignments with data version 4 and model version 2 were computed by aligning a log returned by the stream
+ * with `readVersion()=4` to a model computed on a log with `readVersion()=2`
+ */
 @Serializable
 class ProcessModelComponentData private constructor() {
     companion object {
@@ -57,24 +68,45 @@ class ProcessModelComponentData private constructor() {
         }
     }
 
+    /**
+     * The component for displaying this data
+     */
     @Transient
     lateinit var component: WorkspaceComponent
+        private set
 
+    /**
+     * @see alignmentKPIReports
+     */
     @SerialName("alignment_kpi_report")
     private val mutableAlignmentKPIReports =
         HashMap<Long, HashMap<Long, @Serializable(with = URISerializer::class) URI>>()
 
+    /**
+     * @see models
+     */
     @SerialName("models")
     private val mutableModels = HashMap<Long, String>()
 
+    /**
+     * Alignment KPI reports relevant for the component. The outer key is the model version, the inner key is the data version
+     * (typically, the data key >= the model key), and the value is an URI corresponding to the actual KPI report.
+     */
     @Transient
     val alignmentKPIReports: Map<Long, Map<Long, URI>>
         get() = mutableAlignmentKPIReports
 
+    /**
+     * Maps model versions to their DB IDs
+     */
     @Transient
     val models: Map<Long, String>
         get() = mutableModels
 
+    /**
+     * The model version accepted by the user. It is the default version displayed to the user, and the version the new
+     * alignments are computed against.
+     */
     @SerialName("accepted_model_version")
     var acceptedModelVersion: Long? = null
         set(value) {
@@ -83,28 +115,51 @@ class ProcessModelComponentData private constructor() {
             field = value
         }
 
+    /**
+     * Equivalent to `models[acceptedModelVersion]`
+     */
     @Transient
     val acceptedModelId: String?
         get() = models[acceptedModelVersion]
 
+    /**
+     * Add a new alignment KPI report identified by [reportId], computed on the model `model[modelVersion]` by aligning
+     * the data with the version number [dataVersion]
+     */
     fun addAlignmentKPIReport(modelVersion: Long, dataVersion: Long, reportId: URI) {
         mutableAlignmentKPIReports.computeIfAbsent(modelVersion) { HashMap() }[dataVersion] = reportId
     }
 
+    /**
+     * Returns the URI of the alignment KPI report computed by aligning the data with the version number [dataVersion]
+     * to the model computed on the data with the version number [modelVersion] (i.e., on the model `models[modelVersion]`),
+     * or `null` if such a report is not available.
+     */
     fun getAlignmentKPIReport(modelVersion: Long, dataVersion: Long): URI? {
         return mutableAlignmentKPIReports[modelVersion]?.get(dataVersion)
     }
 
+    /**
+     * Returns the URI of the most-recent alignment KPI report (i.e., computed on the data with the highest version number)
+     * for the model identified by the version [modelVersion]. If [modelVersion] is `null`, [acceptedModelVersion] is used.
+     */
     fun getMostRecentAlignmentKPIReport(modelVersion: Long? = null): URI? =
         (modelVersion ?: acceptedModelVersion)?.let { modelVersion ->
             mutableAlignmentKPIReports[modelVersion]?.maxByOrNull { it.key }?.value
         }
 
+    /**
+     * Serializes this data structure to JSON, for DB storage or network transmission
+     */
     fun toJSON(): String = Json.encodeToString(this)
 
+    /**
+     * Returns `true` if [version] is a valid key for [models]
+     */
     fun hasModel(version: Long) = models.containsKey(version)
 
     /**
+     * Adds or replaces the model identified by [modelId] using the version number [version]
      * @return `true` if the model became the accepted model, `false` otherwise
      */
     fun addModel(version: Long, modelId: String): Boolean {

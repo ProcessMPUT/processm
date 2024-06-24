@@ -31,7 +31,7 @@ import processm.core.models.petrinet.DBSerializer as PetriNetDBSerializer
 class AlignerKPIService : AbstractJobService(
     QUARTZ_CONFIG,
     WORKSPACE_COMPONENTS_TOPIC,
-    "$WORKSPACE_COMPONENT_EVENT = '${WorkspaceComponentEventType.ModelAccepted}' OR $WORKSPACE_COMPONENT_EVENT = '${WorkspaceComponentEventType.Delete}'  OR $WORKSPACE_COMPONENT_EVENT = '${WorkspaceComponentEventType.NewExternalData}'",
+    "$WORKSPACE_COMPONENT_EVENT IN ('${WorkspaceComponentEventType.ModelAccepted}', '${WorkspaceComponentEventType.Delete}', '${WorkspaceComponentEventType.NewExternalData}')",
 ) {
     companion object {
 
@@ -43,6 +43,9 @@ class AlignerKPIService : AbstractJobService(
 
         private val producer = Producer()
 
+        /**
+         * Maps a componentID into a pair consisting of the model version and the drift detector for that model
+         */
         private val driftDetectors = ConcurrentHashMap<UUID, Pair<Long, DriftDetector<Alignment, List<Alignment>>>>()
     }
 
@@ -160,7 +163,7 @@ class AlignerKPIService : AbstractJobService(
                     )
                     val dataVersion = log.readVersion()
                     val report = calculator.calculate(log)
-                    if (acceptedModelVersion != dataVersion) {
+                    if (acceptedModelVersion < dataVersion) {
                         driftDetectors.compute(componentId) { _, oldValue ->
                             if (oldValue?.first != acceptedModelVersion)
                                 createDetector(componentData, acceptedModelVersion)?.let { acceptedModelVersion to it }

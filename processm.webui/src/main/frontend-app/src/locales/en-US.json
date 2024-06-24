@@ -42,7 +42,7 @@
         "support": "Support"
       },
       "edit": {
-        "load-new-model": "Click to preview new model. If you want to accept it, click the save button.",
+        "load-new-model": "Click to preview new model. Click the save button to accept.",
         "name": "Name",
         "name-hint": "The label shown on top of this component",
         "type": "Type",

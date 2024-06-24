@@ -1018,12 +1018,12 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-    post:
+    patch:
       tags:
         - workspaces
         - components
-      summary: Set the data variant
-      operationId: postWorkspaceComponentData
+      summary: Set the data variant, e.g., the accepted model version
+      operationId: patchWorkspaceComponentData
       requestBody:
         content:
           'application/json':
