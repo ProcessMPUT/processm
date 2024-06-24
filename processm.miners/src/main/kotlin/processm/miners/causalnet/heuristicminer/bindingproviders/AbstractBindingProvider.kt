@@ -5,6 +5,7 @@ import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Node
 import processm.helpers.allSubsets
 import processm.helpers.allSubsetsUpToSize
+import processm.helpers.containsAll
 
 abstract class AbstractBindingProvider : BindingProvider {
 
@@ -15,7 +16,7 @@ abstract class AbstractBindingProvider : BindingProvider {
     protected fun consumeCandidates(
         model: CausalNet,
         currentNode: Node,
-        available: Set<Dependency>,
+        available: Collection<Dependency>,
         maxSetSize: Int = Int.SIZE_BITS
     ): Iterable<Collection<Dependency>> {
         val consumable =

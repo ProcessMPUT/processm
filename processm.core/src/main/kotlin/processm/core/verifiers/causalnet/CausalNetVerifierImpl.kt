@@ -1,8 +1,10 @@
 package processm.core.verifiers.causalnet
 
 import processm.core.models.causalnet.*
+import processm.helpers.ArrayComparison
 import processm.helpers.mapToSet
 import processm.helpers.withMemory
+import processm.logging.debug
 import processm.logging.logger
 import java.util.*
 import kotlin.math.min
@@ -74,7 +76,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
     val validLoopFreeSequencesWithArbitrarySerialization: Sequence<CausalNetSequence> by lazy {
         val beenThereDoneThat = HashSet<Pair<Set<Node>, Set<Dependency>>>()
         computeSetOfValidSequences(true) { current, visiting ->
-            val key = current.mapToSet { it.a } to current.last().state.uniqueSet()
+            val key = current.mapToSet { it.a } to current.last().state.uniqueSet().toSet()
             if (beenThereDoneThat.contains(key))
                 return@computeSetOfValidSequences false
             if (visiting)
@@ -149,7 +151,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
         return splitDependencies == allDependencies && joinDependencies == allDependencies
     }
 
-    private fun getDependencies(bindingCollection: Collection<Set<Binding>>): Set<Dependency> {
+    private fun getDependencies(bindingCollection: Collection<Iterable<Binding>>): Set<Dependency> {
         if (bindingCollection.isEmpty())
             return emptySet()
 
@@ -179,7 +181,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
         val starts = model.instances.filter { model.incoming[it].isNullOrEmpty() }
         if (starts.size == 1)
             return true
-        logger().debug("There is an unexpected number of starts: $starts")
+        logger().debug { "There is an unexpected number of starts: $starts" }
         return false
     }
 
@@ -190,7 +192,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
         val ends = model.instances.filter { model.outgoing[it].isNullOrEmpty() }
         if (ends.size == 1)
             return true
-        logger().debug("There is an unexpected number of ends: $ends")
+        logger().debug { "There is an unexpected number of ends: $ends" }
         return false
     }
 
@@ -200,10 +202,10 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
                 if (model.joins.containsKey(a))
                     a to model.joins.getValue(a).map { join -> join.sources }
                 else
-                    a to listOf(setOf())
+                    a to listOf(arrayOf())
             }.all { (a, joins) ->
                 joins.all { join ->
-                    seqs.any { seq -> seq.any { ab -> ab.a == a && ab.i == join } }
+                    seqs.any { seq -> seq.any { ab -> ab.a == a && ArrayComparison.sortedSetEqual(join, ab.i) } }
                 }
             } &&
                 model.instances.asSequence()
@@ -211,10 +213,17 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
                         if (model.splits.containsKey(a))
                             a to model.splits.getValue(a).map { split -> split.targets }
                         else
-                            a to listOf(setOf())
+                            a to listOf(arrayOf())
                     }.all { (a, splits) ->
                         splits.all { split ->
-                            seqs.any { seq -> seq.any { ab -> ab.a == a && ab.o == split } }
+                            seqs.any { seq ->
+                                seq.any { ab ->
+                                    ab.a == a && ArrayComparison.sortedSetEqual(
+                                        split,
+                                        ab.o
+                                    )
+                                }
+                            }
                         }
                     }
     }
@@ -232,11 +241,11 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
 
         fun add(ab: ActivityBinding) {
             _data.add(ab)
-            states.computeIfAbsent(ab.state.uniqueSet().hashCode(), { ArrayList() }).add(ab.state)
+            states.computeIfAbsent(ab.state.uniqueSet().toSet().hashCode(), { ArrayList() }).add(ab.state)
         }
 
         fun containsBoringSubset(superset: CausalNetState): Boolean {
-            val candidates = states[superset.uniqueSet().hashCode()]
+            val candidates = states[superset.uniqueSet().toSet().hashCode()]
             if (!candidates.isNullOrEmpty()) {
                 return candidates.any { superset.containsAll(it) }
             }
@@ -260,7 +269,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
                     fromCache
         }
         val result = ArrayList<ActivityBinding>()
-        val candidates = currentState.map { it.target }.intersect(model.joins.keys)
+        val candidates = currentState.uniqueSet().mapTo(HashSet()) { it.target }.apply { retainAll(model.joins.keys) }
         for (ak in candidates) {
             for (join in model.joins.getValue(ak)) {
                 if (currentState.containsAll(join.dependencies)) {
@@ -271,7 +280,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
                             result.add(ab)
                         }
                     } else {
-                        val ab = ActivityBinding(ak, join.sources, setOf(), currentState)
+                        val ab = ActivityBinding(ak, join.sources, arrayOf(), currentState)
                         result.add(ab)
                     }
                 }
@@ -301,7 +310,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
             .splits.getOrDefault(model.start, setOf())
             .map { split ->
                 val tmp = CausalNetSequenceWithHash()
-                tmp.add(ActivityBinding(model.start, setOf(), split.targets, CausalNetStateImpl()))
+                tmp.add(ActivityBinding(model.start, arrayOf(), split.targets, CausalNetStateImpl()))
                 tmp
             })
         return sequence {
@@ -337,7 +346,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
             } else {
                 if (ab.i.isEmpty())
                     return false
-                if (!joins.any { join -> join.sources == ab.i })
+                if (!joins.any { join -> ArrayComparison.sortedSetEqual(join.sources, ab.i) })
                     return false
             }
             val splits = model.splits[ab.a]
@@ -347,7 +356,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
             } else {
                 if (ab.o.isEmpty())
                     return false
-                if (!splits.any { split -> split.targets == ab.o })
+                if (!splits.any { split -> ArrayComparison.sortedSetEqual(split.targets, ab.o) })
                     return false
             }
         }
@@ -357,7 +366,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
             if (state.isNotEmpty() || o.isNotEmpty())
                 return false
         }
-        var i = seq.iterator()
+        val i = seq.iterator()
         var prev = i.next()
         while (i.hasNext()) {
             val cur = i.next()

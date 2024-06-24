@@ -80,6 +80,10 @@ class CompositeAligner(
             alignerFactories.toList()
     }
 
+    private val aligners by lazy {
+        this.alignerFactories.map { factory -> factory(model, penalty, pool) }
+    }
+
     /**
      * Calculates [Alignment] for the given [trace].
      *
@@ -91,9 +95,9 @@ class CompositeAligner(
      */
     fun align(trace: Trace, costUpperBound: Int, timeout: Long, unit: TimeUnit): Alignment? {
         val completionService = ExecutorCompletionService<Alignment>(pool)
-        val futures = alignerFactories.map { factory ->
+        val futures = aligners.map { aligner ->
             completionService.submit {
-                factory(model, penalty, pool).align(trace, costUpperBound)
+                aligner.align(trace, costUpperBound)
             }
         }
 

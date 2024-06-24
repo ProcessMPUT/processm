@@ -1,10 +1,10 @@
 package processm.core.models.causalnet
 
-import org.apache.commons.collections4.MultiSet
-import org.apache.commons.collections4.multiset.HashMultiSet
 import processm.core.models.commons.ProcessModelState
+import processm.helpers.HashMultiSet
+import processm.helpers.MutableMultiSet
 
-interface CausalNetState : MultiSet<Dependency>, ProcessModelState {
+interface CausalNetState : MutableMultiSet<Dependency>, ProcessModelState {
     val isFresh: Boolean
 }
 

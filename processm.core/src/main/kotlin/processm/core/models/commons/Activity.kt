@@ -5,7 +5,7 @@ import processm.core.models.metadata.MetadataSubject
 /**
  * An activity of the model, identified by [name]
  */
-interface Activity : MetadataSubject {
+interface Activity : MetadataSubject, Comparable<Activity> {
     /**
      * The name of this activity.
      */
@@ -24,4 +24,6 @@ interface Activity : MetadataSubject {
      */
     val isArtificial: Boolean
         get() = false
+
+    override fun compareTo(other: Activity): Int = name.compareTo(other.name)
 }

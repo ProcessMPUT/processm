@@ -1,10 +1,10 @@
 package processm.core.models.petrinet
 
+import com.carrotsearch.hppc.ObjectIdentityHashSet
 import processm.core.models.commons.*
 import processm.core.models.commons.DecisionPoint
 import processm.core.models.metadata.DefaultMutableMetadataHandler
 import processm.core.models.metadata.MetadataHandler
-import processm.helpers.asList
 import processm.helpers.cartesianProduct
 import processm.helpers.optimize
 import java.util.*
@@ -25,10 +25,6 @@ class PetriNet(
     private val metadataHandler: MetadataHandler = DefaultMutableMetadataHandler()
 ) : ProcessModel, MetadataHandler by metadataHandler {
     override val activities: List<Activity> = transitions
-
-    override val startActivities: List<Activity> = available(initialMarking).asList()
-
-    override val endActivities: List<Activity> = backwardAvailable(finalMarking).asList()
 
     override val decisionPoints: Sequence<DecisionPoint> = sequence {
         // FIXME: This sequence works in O(|T|^2*|P|^2). It can be reduced to O(|T|*|P|) using a mapping from places to transitions.
@@ -105,8 +101,9 @@ class PetriNet(
                 if (transition.inPlaces.isEmpty()) {
                     (computeIfAbsent(null) { ArrayList() } as ArrayList<Transition>).add(transition)
                 } else {
-                    for (place in transition.inPlaces)
+                    for (place in transition.inPlaces) {
                         (computeIfAbsent(place) { ArrayList() } as ArrayList<Transition>).add(transition)
+                    }
                 }
             }
             for (entry in this)
@@ -122,23 +119,31 @@ class PetriNet(
                 if (transition.outPlaces.isEmpty()) {
                     (computeIfAbsent(null) { ArrayList() } as ArrayList<Transition>).add(transition)
                 } else {
-                    for (place in transition.outPlaces)
+                    for (place in transition.outPlaces) {
                         (computeIfAbsent(place) { ArrayList() } as ArrayList<Transition>).add(transition)
+                    }
                 }
             }
             for (entry in this)
                 entry.setValue(entry.value.optimize())
         }
 
+    override val startActivities: List<Activity> = available(initialMarking).toList()
+
+    override val endActivities: List<Activity> = backwardAvailable(finalMarking).toList()
+
     /**
      * Calculates the collection of transitions enabled for firing at given [marking].
      */
     fun available(marking: Marking): Sequence<Transition> = sequence {
         if (marking.isNotEmpty()) {
-            val visited = IdentityHashMap<Transition, Unit>(transitions.size * 4 / 3)
+            val visited = ObjectIdentityHashSet<Transition>()
             for (place in marking.keys) {
-                for (transition in placeToFollowingTransition[place].orEmpty()) {
-                    if (visited.put(transition, Unit) !== null)
+                val transitions = placeToFollowingTransition[place] ?: continue
+                var index = 0
+                while (index < transitions.size) {
+                    val transition = transitions[index++]
+                    if (!visited.add(transition))
                         continue
 
                     if (transition.inPlaces.size <= 1 || isAvailable(transition, marking))
@@ -204,10 +209,17 @@ class PetriNet(
             p in initialMarking || p in finalMarking || usedTransitions.any { t -> p in t.inPlaces }
         }
 
+        // drop unused out places from transitions
+        val outTransitions = usedTransitions.map { t ->
+            t.copy(outPlaces = t.outPlaces.filter { p -> p in usedPlaces })
+        }
+
         assert(initialMarking.keys.all { p -> p in usedPlaces })
         assert(finalMarking.keys.all { p -> p in usedPlaces })
+        assert(outTransitions.all { t -> usedPlaces.containsAll(t.inPlaces) })
+        assert(outTransitions.all { t -> usedPlaces.containsAll(t.outPlaces) })
 
-        return PetriNet(usedPlaces, usedTransitions, initialMarking, finalMarking)
+        return PetriNet(usedPlaces, outTransitions, initialMarking, finalMarking)
     }
 
     private val hashCode: Int by lazy {
@@ -385,10 +397,10 @@ class PetriNet(
      * @return The collection of transitions immediately preceding the input places of the given [transition]. The empty
      * collection for the start transition.
      */
-    fun getCause(transition: Transition, marking: Marking): Collection<Transition> {
+    fun getCause(transition: Transition, marking: Marking): Array<Transition> {
         check(isAvailable(transition, marking)) { "Transition $transition is not available in marking $marking." }
 
-        return transition.inPlaces.mapNotNullTo(HashSet()) { marking[it]!!.first().producer }
+        return transition.inPlaces.mapNotNullTo(HashSet()) { marking[it]!!.first().producer }.toTypedArray()
     }
 
     /**
@@ -401,11 +413,11 @@ class PetriNet(
      * @return The collection of transitions immediately following the output places of the given [transition]. The empty
      * collection for the end transition.
      */
-    fun getConsequence(transition: Transition, marking: Marking): Collection<Transition> {
+    fun getConsequence(transition: Transition, marking: Marking): Array<Transition> {
         check(isBackwardAvailable(transition, marking)) {
             "Transition $transition is not backward available in marking $marking."
         }
 
-        return transition.outPlaces.mapNotNullTo(HashSet()) { marking[it]!!.last().producer }
+        return transition.outPlaces.mapNotNullTo(HashSet()) { marking[it]!!.last().producer }.toTypedArray()
     }
 }

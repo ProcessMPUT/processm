@@ -11,7 +11,7 @@ import processm.helpers.ifNullOrEmpty
 class ActivityExecution(
     override val base: ProcessTreeActivity,
     parent: ExecutionNode?,
-    cause: Collection<ProcessTreeActivity> = parent?.lastExecuted.ifNullOrEmpty { parent?.cause.orEmpty() }
+    cause: Array<out ProcessTreeActivity> = parent?.lastExecuted.ifNullOrEmpty { parent?.cause.orEmpty() }
 ) : ExecutionNode(base, parent, cause),
     ActivityExecution {
 
@@ -21,8 +21,8 @@ class ActivityExecution(
     override var isComplete: Boolean = false
         private set
 
-    override val lastExecuted: Collection<ProcessTreeActivity>
-        get() = if (isComplete) listOf(base) else emptyList()
+    override val lastExecuted: Array<ProcessTreeActivity>
+        get() = if (isComplete) arrayOf(base) else emptyArray()
 
     override fun postExecution(child: ExecutionNode) =
         throw UnsupportedOperationException("An activity cannot have children")

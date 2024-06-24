@@ -11,8 +11,10 @@ import processm.core.models.commons.ProcessModelInstance
 import processm.core.models.commons.ProcessModelState
 import processm.core.models.petrinet.PetriNet
 import processm.helpers.asCollection
-import processm.helpers.ternarylogic.Ternary
 import java.util.*
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.concurrent.read
+import kotlin.concurrent.write
 
 
 /**
@@ -24,6 +26,7 @@ import java.util.*
  *
  * This class is thread-safe.
  */
+@OptIn(ResettableAligner::class)
 class AStar(
     override val model: ProcessModel,
     override val penalty: PenaltyFunction = PenaltyFunction(),
@@ -33,11 +36,18 @@ class AStar(
             is PetriNet -> CountUnmatchedPetriNetMoves(model)
             is CausalNet -> CountUnmatchedCausalNetMoves(model)
             else -> null
+        },
+    private val countUnmatchedLogMoves: CountUnmatchedLogMoves? =
+        when (model) {
+            is CausalNet -> CountUnmatchedLogMovesInCausalNet(model)
+            is PetriNet -> CountUnmatchedLogMovesInPetriNet(model)
+            else -> null
         }
 ) : Aligner {
     companion object {
-        private const val SKIP_EVENT = Int.MIN_VALUE
+        private const val SKIP_EVENT = Short.MIN_VALUE
         private const val QUEUE_INITIAL_CAP = 1 shl 7 // the default is 11
+        private const val INITIAL_SHORTEST_PATH = 1 shl 24
     }
 
     private val activities: Set<String?> =
@@ -46,12 +56,32 @@ class AStar(
     private val endActivities: Set<String?> =
         model.endActivities.mapNotNullTo(HashSet()) { if (it.isSilent) null else it.name }
 
+    private val visited = ThreadLocal.withInitial { Cache<SearchState>() }
+
+    /**
+     * The minimal known count of non-silent moves in the [model]. This property is updated when a new alignment is found.
+     */
+    private var shortestPathInModel = INITIAL_SHORTEST_PATH
+    private var shortestPathInModelSilentMoves = INITIAL_SHORTEST_PATH
+    private val shortestPathLock = ReentrantReadWriteLock()
+
     /**
      * Statistics for tests only.
      */
     @Deprecated("This property is not thread safe and concurrent runs of align() may yield unpredictable results. Do not use, except in the single-threaded tests.")
     internal var visitedStatesCount: Int = 0
         private set
+
+    override fun reset() {
+        shortestPathLock.write {
+            shortestPathInModel = INITIAL_SHORTEST_PATH
+            shortestPathInModelSilentMoves = INITIAL_SHORTEST_PATH
+        }
+    }
+
+    init {
+        reset()
+    }
 
     /**
      * Calculates [Alignment] for the given [trace]. Use [Thread.interrupt] to cancel calculation without yielding result.
@@ -67,16 +97,27 @@ class AStar(
         val eventsWithExistingActivities = events.filter { e -> activities.contains(e.conceptName) }
         visitedStatesCount = 0
         val alignment = alignInternal(eventsWithExistingActivities, costUpperBound)
+        val labeledModelMoves = alignment?.steps?.count { it.modelMove?.isSilent == false } ?: Int.MAX_VALUE
+        val silentModelMoves = alignment?.steps?.count { it.modelMove?.isSilent == true } ?: Int.MAX_VALUE
+        shortestPathLock.write {
+            if (labeledModelMoves < shortestPathInModel) {
+                shortestPathInModel = labeledModelMoves
+                shortestPathInModelSilentMoves = silentModelMoves
+            } else if (labeledModelMoves == shortestPathInModel && silentModelMoves < shortestPathInModelSilentMoves) {
+                shortestPathInModelSilentMoves = silentModelMoves
+            }
+        }
         if (events.size == eventsWithExistingActivities.size)
             return alignment
         return alignment?.fillMissingEvents(events, penalty)?.also { if (it.cost > costUpperBound) return@align null }
     }
 
     private fun alignInternal(events: List<Event>, costLimit: Int): Alignment? {
+        countUnmatchedLogMoves?.reset()
         val nEvents = countRemainingEventsWithTheSameConceptName(events)
         val thread = Thread.currentThread()
         val queue = PriorityQueue<SearchState>(QUEUE_INITIAL_CAP)
-        val visited = Cache<SearchState>()
+        val visited = this.visited.get()
 
         val instance = model.createInstance()
         val initialProcessState = instance.currentState
@@ -85,105 +126,159 @@ class AStar(
             predictedCost = predict(
                 events,
                 0,
-                when {
-                    instance.isFinalState -> Ternary.True
-                    instance.availableActivities.any(Activity::isSilent) -> Ternary.Unknown
-                    else -> Ternary.False
-                },
-                null,
+                initialProcessState,
                 nEvents,
-            ),
+                null
+            ).toShort(),
             activity = null, // before first activity
-            cause = emptyList(),
             event = -1, // before first event
             previousSearchState = null,
             processState = initialProcessState
         )
-        queue.add(initialSearchState)
+        val firstEvent = events.firstOrNull()
+        val lastEvent = events.lastOrNull()
+        val matchingStartEnd = (if (model.startActivities.any { isSynchronousMove(firstEvent, it) }) 1 else 0) +
+                (if (model.endActivities.any { isSynchronousMove(lastEvent, it) }) 1 else 0)
+        val upperBoundCostModelPart = shortestPathLock.read {
+            (shortestPathInModel - matchingStartEnd).coerceAtLeast(0) * penalty.modelMove +
+                    shortestPathInModelSilentMoves * penalty.silentMove
+        }
+        val upperBoundCostLogPart = (events.size - matchingStartEnd).coerceAtLeast(0) * penalty.logMove
+        var upperBoundCost = minOf(upperBoundCostModelPart + upperBoundCostLogPart, costLimit)
+        if (initialSearchState.predictedCost <= upperBoundCost)
+            queue.add(initialSearchState)
 
-        var upperBoundCost = costLimit
-        var lastCost = 0
-        while (queue.isNotEmpty()) {
-            val searchState = queue.poll()!!
+        try {
+            var lastCost = 0
+            while (queue.isNotEmpty()) {
+                val searchState = queue.poll()!!
 
-            val newCost = searchState.currentCost + searchState.predictedCost
-            assert(lastCost <= newCost)
-            assert(newCost <= upperBoundCost)
-            lastCost = newCost
+                val newCost = searchState.currentCost + searchState.predictedCost
+                assert(lastCost <= newCost)
+                assert(newCost <= upperBoundCost)
+                lastCost = newCost
 
-            val prevProcessState = searchState.getProcessState(instance)
-            instance.setState(prevProcessState)
+                val prevProcessState = searchState.getProcessState(instance)
+                instance.setState(prevProcessState)
 
-            assert(with(searchState) { activity !== null || event != SKIP_EVENT || previousSearchState == null })
+                assert(with(searchState) { activity !== null || event != SKIP_EVENT || previousSearchState == null })
 
-            val previousEventIndex = searchState.getPreviousEventIndex()
-            val isFinalState = instance.isFinalState
-            if (isFinalState) {
-                if (previousEventIndex == events.size - 1) {
-                    // we found the path
-                    assert(searchState.predictedCost == 0) { "Predicted cost: ${searchState.predictedCost}." }
-                    return formatAlignment(searchState, events)
+                val previousEventIndex = searchState.getPreviousEventIndex()
+                val isFinalState = instance.isFinalState
+                if (isFinalState) {
+                    if (previousEventIndex == events.size - 1) {
+                        // we found the path
+                        assert(searchState.predictedCost == 0.toShort()) { "Predicted cost: ${searchState.predictedCost}." }
+                        return formatAlignment(searchState, events)
+                    }
+
+                    // we found an upper bound
+                    val newUpperBoundCost =
+                        searchState.currentCost + (events.size - previousEventIndex - 1) * penalty.logMove
+                    if (newUpperBoundCost < upperBoundCost) {
+                        upperBoundCost = newUpperBoundCost
+                        // Clearing the queue at this point is linear in the queue size and brings insignificant reductions
+                        // that amount from 0 to few tens of search states in our experiments (compared to thousands or even
+                        // millions of states in the queue). On the other hand, the states with the cost over the upperbound
+                        // remaining in the queue will never be pushed to the root and/or reached, so keeping them is cheap.
+                        // Note that we prevent below the insertion of new states of larger cost than the upperbound.
+                        // Note also that the queue clean-up procedure can be done in O(log(n)) by replacing heap-based queue
+                        // with the queue with total order. However, this may increase the time of other operations on the
+                        // queue, and so we do not go this direction.
+                        // val sizeBefore = queue.size
+                        // queue.removeIf { s -> s.currentCost + s.predictedCost > upperBoundCost }
+                        // val fried = sizeBefore - queue.size
+                        // if (fried > 0)
+                        //    println("Found new upper bound cost of $upperBoundCost; removed $fried states from the queue; ${queue.size} states remain in the queue.")
+                    }
                 }
 
-                // we found an upper bound
-                val newUpperBoundCost =
-                    searchState.currentCost + (events.size - previousEventIndex - 1) * penalty.logMove
-                if (newUpperBoundCost < upperBoundCost) {
-                    upperBoundCost = newUpperBoundCost
-                    // Clearing the queue at this point is linear in the queue size and brings insignificant reductions
-                    // that amount from 0 to few tens of search states in our experiments (compared to thousands or even
-                    // millions of states in the queue). On the other hand, the states with the cost over the upperbound
-                    // remaining in the queue will never be pushed to the root and/or reached, so keeping them is cheap.
-                    // Note that we prevent below the insertion of new states of larger cost than the upperbound.
-                    // Note also that the queue clean-up procedure can be done in O(log(n)) by replacing heap-based queue
-                    // with the queue with total order. However, this may increase the time of other operations on the
-                    // queue, and so we do not go this direction.
-                    // val sizeBefore = queue.size
-                    // queue.removeIf { s -> s.currentCost + s.predictedCost > upperBoundCost }
-                    // val fried = sizeBefore - queue.size
-                    // if (fried > 0)
-                    //    println("Found new upper bound cost of $upperBoundCost; removed $fried states from the queue; ${queue.size} states remain in the queue.")
+                if (!visited.add(searchState))
+                    continue
+
+                visitedStatesCount++
+
+                if (thread.isInterrupted) {
+                    throw InterruptedException("A* was requested to cancel.")
                 }
-            }
 
-            if (!visited.add(searchState))
-                continue
+                val nextEventIndex = previousEventIndex + 1
+                val nextEvent = if (nextEventIndex < events.size) events[nextEventIndex] else null
+                // This condition imposes order of model-only moves before log-only moves, as they are independent
+                // and otherwise can be run in any order increasing so the total number of states.
+                val canMoveInModelOnly = searchState.activity !== null || searchState.event == (-1).toShort()
 
-            visitedStatesCount++
-
-            if (thread.isInterrupted) {
-                throw InterruptedException("A* was requested to cancel.")
-            }
-
-            val nextEventIndex = when {
-                previousEventIndex < events.size - 1 -> previousEventIndex + 1
-                else -> SKIP_EVENT
-            }
-            val nextEvent = if (nextEventIndex != SKIP_EVENT) events[nextEventIndex] else null
-
-            // add possible moves to the queue
-            assert(instance.currentState === prevProcessState)
-            for (activity in instance.availableActivities) {
-                // silent activities are special
-                if (activity.isSilent) {
-                    if (activity.isArtificial) {
-                        // just move the state of the model without moving in the log
-                        instance.setState(prevProcessState.copy())
-                        instance.getExecutionFor(activity).execute()
-                        val state = searchState.copy(processState = instance.currentState)
-                        if (!visited.contains(state)) {
-                            queue.add(state)
+                // add possible moves to the queue
+                assert(instance.currentState === prevProcessState)
+                for (activity in instance.availableActivities) {
+                    // silent activities are special
+                    if (activity.isSilent) {
+                        if (activity.isArtificial) {
+                            // just move the state of the model without moving in the log
+                            instance.setState(prevProcessState.copy())
+                            instance.getExecutionFor(activity).execute()
+                            val state = searchState.copy(processState = instance.currentState)
+                            if (!visited.contains(state)) {
+                                queue.add(state)
+                            }
+                        } else if (canMoveInModelOnly) {
+                            val currentCost = searchState.currentCost + penalty.silentMove
+                            val predictedCost = predict(events, nextEventIndex, prevProcessState, nEvents, activity)
+                            assert(predictedCost >= lastCost - currentCost)
+                            if (currentCost + predictedCost <= upperBoundCost) {
+                                queue.add(
+                                    SearchState(
+                                        currentCost = currentCost.toShort(),
+                                        predictedCost = predictedCost.toShort(),
+                                        activity = activity,
+                                        event = SKIP_EVENT,
+                                        previousSearchState = searchState
+                                    )
+                                )
+                            }
                         }
-                    } else {
-                        val currentCost = searchState.currentCost + penalty.silentMove
-                        // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
-                        val predictedCost = predict(events, nextEventIndex, Ternary.Unknown, prevProcessState, nEvents)
-                            .coerceAtLeast(searchState.predictedCost - penalty.silentMove)
+                        continue
+                    }
+
+                    assert(!activity.isSilent)
+
+                    // add synchronous move if applies
+                    val synchronousAvailable = isSynchronousMove(nextEvent, activity)
+                    if (synchronousAvailable) {
+                        val currentCost = searchState.currentCost + penalty.synchronousMove
+                        val predictedCost =
+                            predict(
+                                events,
+                                nextEventIndex + 1,
+                                searchState.processState!!,
+                                nEvents,
+                                activity
+                            )
+                        assert(predictedCost >= lastCost - currentCost)
                         if (currentCost + predictedCost <= upperBoundCost) {
                             queue.add(
                                 SearchState(
-                                    currentCost = currentCost,
-                                    predictedCost = predictedCost,
+                                    currentCost = currentCost.toShort(),
+                                    predictedCost = predictedCost.toShort(),
+                                    activity = activity,
+                                    event = nextEventIndex.toShort(),
+                                    previousSearchState = searchState
+                                )
+                            )
+                        }
+                    }
+
+                    // add model-only move
+                    if (!synchronousAvailable && canMoveInModelOnly) {
+                        val currentCost = searchState.currentCost + penalty.modelMove
+                        val predictedCost =
+                            predict(events, nextEventIndex, searchState.processState!!, nEvents, activity)
+                        assert(predictedCost >= lastCost - currentCost)
+                        if (currentCost + predictedCost <= upperBoundCost) {
+                            queue.add(
+                                SearchState(
+                                    currentCost = currentCost.toShort(),
+                                    predictedCost = predictedCost.toShort(),
                                     activity = activity,
                                     event = SKIP_EVENT,
                                     previousSearchState = searchState
@@ -191,81 +286,31 @@ class AStar(
                             )
                         }
                     }
-                    continue
                 }
 
-                assert(!activity.isSilent)
-
-                // add synchronous move if applies
-                if (isSynchronousMove(nextEvent, activity)) {
-                    val currentCost = searchState.currentCost + penalty.synchronousMove
-                    // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
-                    val predictedCost =
-                        predict(events, nextEventIndex + 1, Ternary.Unknown, searchState.processState, nEvents)
-                            .coerceAtLeast(searchState.predictedCost - penalty.synchronousMove)
+                // add log-only move
+                if (nextEvent !== null) {
+                    val currentCost = searchState.currentCost + penalty.logMove
+                    val predictedCost = predict(events, nextEventIndex + 1, prevProcessState, nEvents, null)
+                    assert(predictedCost >= lastCost - currentCost)
                     if (currentCost + predictedCost <= upperBoundCost) {
-                        queue.add(
-                            SearchState(
-                                currentCost = currentCost,
-                                predictedCost = predictedCost,
-                                activity = activity,
-                                event = nextEventIndex,
-                                previousSearchState = searchState
-                            )
+                        val state = SearchState(
+                            currentCost = currentCost.toShort(),
+                            predictedCost = predictedCost.toShort(),
+                            activity = null,
+                            event = nextEventIndex.toShort(),
+                            previousSearchState = searchState,
+                            processState = prevProcessState
                         )
-                    }
-                }
-
-                // add model-only move
-                run {
-                    val currentCost = searchState.currentCost + penalty.modelMove
-                    // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
-                    val predictedCost =
-                        predict(events, nextEventIndex, Ternary.Unknown, searchState.processState, nEvents)
-                            .coerceAtLeast(searchState.predictedCost - penalty.modelMove)
-                    if (currentCost + predictedCost <= upperBoundCost) {
-                        queue.add(
-                            SearchState(
-                                currentCost = currentCost,
-                                predictedCost = predictedCost,
-                                activity = activity,
-                                event = SKIP_EVENT,
-                                previousSearchState = searchState
-                            )
-                        )
-                    }
-                }
-            }
-
-            // add log-only move
-            if (nextEvent !== null) {
-                val currentCost = searchState.currentCost + penalty.logMove
-                val predictedCost = predict(
-                    events, nextEventIndex + 1, when {
-                        isFinalState -> Ternary.True
-                        instance.availableActivities.any(Activity::isSilent) -> Ternary.Unknown
-                        else -> Ternary.False
-                    },
-                    prevProcessState,
-                    nEvents
-                ).coerceAtLeast(searchState.predictedCost - penalty.logMove)
-                if (currentCost + predictedCost <= upperBoundCost) {
-                    val state = SearchState(
-                        currentCost = currentCost,
-                        predictedCost = predictedCost,
-                        activity = null,
-                        event = nextEventIndex,
-                        previousSearchState = searchState,
-                        processState = prevProcessState
-                    )
-                    if (!visited.contains(state)) {
                         queue.add(state)
                     }
                 }
             }
-        }
 
-        return null
+            return null
+        } finally {
+            visited.clear()
+        }
     }
 
     private fun countRemainingEventsWithTheSameConceptName(events: List<Event>): List<Map<String?, Int>> {
@@ -293,14 +338,15 @@ class AStar(
     ): Alignment {
         val steps = ArrayList<Step>()
         var state: SearchState = searchState
-        while (state.event != -1) {
+        val instance = model.createInstance()
+        while (state.event != (-1).toShort()) {
             with(state) {
                 steps.add(
                     Step(
                         modelMove = activity,
                         modelState = processState,
-                        modelCause = cause.orEmpty(),
-                        logMove = if (event != SKIP_EVENT) events[event] else null,
+                        modelCause = getCause(instance).asList(),
+                        logMove = if (event != SKIP_EVENT) events[event.toInt()] else null,
                         logState = events.subList(0, getPreviousEventIndex() + 1).asSequence(),
                         type = when {
                             activity === null -> DeviationType.LogDeviation
@@ -315,7 +361,7 @@ class AStar(
         }
         steps.reverse()
 
-        return Alignment(steps, searchState.currentCost)
+        return Alignment(steps, searchState.currentCost.toInt())
     }
 
     private fun isSynchronousMove(event: Event?, activity: Activity): Boolean =
@@ -324,86 +370,69 @@ class AStar(
     private fun predict(
         events: List<Event>,
         startIndex: Int,
-        isFinalState: Ternary,
-        prevProcessState: ProcessModelState?,
-        nEvents: List<Map<String?, Int>>
+        prevProcessState: ProcessModelState,
+        nEvents: List<Map<String?, Int>>,
+        curActivity: Activity?
     ): Int {
-        if (startIndex == SKIP_EVENT || startIndex >= events.size)
-            return if (isFinalState != Ternary.False) 0 else penalty.modelMove // we reached the end of trace, should we move in the model?
-
-        assert(startIndex in events.indices)
+        assert(startIndex in 0..events.size) { "startIndex: $startIndex" }
 
         var sum = 0
-        if (isFinalState == Ternary.False && endActivities.isNotEmpty()) {
-            var hasEndActivity = false
-            for (index in startIndex until events.size) {
-                if (endActivities.contains(events[index].conceptName)) {
-                    hasEndActivity = true
-                    break
-                }
-            }
-            if (!hasEndActivity)
-                sum += penalty.modelMove
-        }
 
-        val unmatchedModelMovesCount = if (prevProcessState == null)
-            0
-        else
-            countUnmatchedModelMoves?.compute(startIndex, nEvents, prevProcessState) ?: 0
+        val unmatchedLogMovesCount =
+            countUnmatchedLogMoves?.compute(startIndex, events, prevProcessState, curActivity) ?: 0
+        sum += unmatchedLogMovesCount * penalty.logMove
 
-        // Subtract one modelMove, because we are considering previous state and it may have been already included in the cost
-        sum += (unmatchedModelMovesCount - 1).coerceAtLeast(0) * penalty.modelMove
+        val unmatchedModelMovesCount =
+            countUnmatchedModelMoves?.compute(startIndex, nEvents, prevProcessState, curActivity) ?: 0
+        sum += unmatchedModelMovesCount * penalty.modelMove
 
+        assert(sum >= 0)
         return sum
     }
 
     private data class SearchState(
-        val currentCost: Int,
+        val currentCost: Short,
         /**
          * The predicted cost of reaching the end state.
          * This value must be less than or equal the actual value.
          */
-        val predictedCost: Int,
+        val predictedCost: Short,
         /**
          * The last executed activity or null if no move in the model has been done.
          */
         val activity: Activity?,
         /**
-         * The collection of activities that were the direct cause for [activity].
-         */
-        var cause: Collection<Activity>? = null,
-        /**
          * The last executed event.
          */
-        val event: Int,
+        val event: Short,
         val previousSearchState: SearchState?,
         var processState: ProcessModelState? = null
     ) : Comparable<SearchState> {
-        private fun calcProcessStateAndCause(instance: ProcessModelInstance) {
+        private fun calcProcessState(instance: ProcessModelInstance) {
             checkNotNull(activity)
             instance.setState(previousSearchState!!.getProcessState(instance).copy())
             val execution = instance.getExecutionFor(activity)
-            cause = execution.cause
             execution.execute()
             processState = instance.currentState
         }
 
         fun getProcessState(instance: ProcessModelInstance): ProcessModelState {
             if (processState === null && activity !== null) {
-                calcProcessStateAndCause(instance)
+                calcProcessState(instance)
             }
             return processState ?: previousSearchState!!.getProcessState(instance)
         }
 
-        fun getCause(instance: ProcessModelInstance): Collection<Activity> {
-            if (cause === null && activity !== null)
-                calcProcessStateAndCause(instance)
-            return cause!!
+        fun getCause(instance: ProcessModelInstance): Array<out Activity> {
+            activity ?: return emptyArray()
+            instance.setState(previousSearchState!!.getProcessState(instance))
+            val execution = instance.getExecutionFor(activity)
+            return execution.cause
         }
 
         fun getPreviousEventIndex(): Int {
             if (event != SKIP_EVENT)
-                return event
+                return event.toInt()
             if (previousSearchState === null)
                 return -1
             return previousSearchState.getPreviousEventIndex()
@@ -417,9 +446,12 @@ class AStar(
                 myTotalCost != otherTotalCost -> myTotalCost.compareTo(otherTotalCost)
                 predictedCost != other.predictedCost -> predictedCost.compareTo(other.predictedCost) // DFS-based second-order queuing criterion
                 event >= 0 && other.event >= 0 && event != other.event -> other.event.compareTo(event) // prefer more complete traces
+                (activity === null) != (other.activity === null) -> (activity === null).compareTo(other.activity === null) // prefer moves with activities
+                activity !== null && activity.isSilent != other.activity!!.isSilent ->
+                    other.activity.isSilent.compareTo(activity.isSilent) // prefer silent activities
                 event < 0 && other.event >= 0 -> 1 // prefer moves with events
                 event >= 0 && other.event < 0 -> -1
-                else -> (activity === null).compareTo(other.activity === null) // prefer moves with activities
+                else -> 0
             }
         }
 
@@ -436,7 +468,7 @@ class AStar(
         }
 
         override fun hashCode(): Int {
-            var result = currentCost
+            var result = currentCost.toInt()
             result = 31 * result + getPreviousEventIndex()
             result = 31 * result + processState.hashCode()
             return result

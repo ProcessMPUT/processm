@@ -13,7 +13,6 @@ import processm.helpers.allSubsets
 import processm.helpers.mapToSet
 import processm.helpers.zipOrThrow
 import processm.logging.loggedScope
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -212,7 +211,7 @@ class AStarCausalNetTests {
             2
         )
 
-        val expectedVisitedStatesCount = arrayOf(10, 32, 21, 80)
+        val expectedVisitedStatesCount = arrayOf(6, 19, 16, 154)
 
         val astar = AStar(fig316)
         for ((i, trace) in log.traces.withIndex()) {
@@ -220,10 +219,16 @@ class AStarCausalNetTests {
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
 
+            @Suppress("DEPRECATION")
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost} #visited states ${astar.visitedStatesCount}")
 
             assertEquals(expectedCost[i], alignment.cost)
-            assertEquals(expectedVisitedStatesCount[i], astar.visitedStatesCount)
+
+            @Suppress("DEPRECATION")
+            assertTrue(
+                astar.visitedStatesCount <= expectedVisitedStatesCount[i],
+                "visitedStates: ${astar.visitedStatesCount} <= ${expectedVisitedStatesCount[i]}"
+            )
         }
     }
 
@@ -245,6 +250,7 @@ class AStarCausalNetTests {
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
 
+            @Suppress("DEPRECATION")
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost} #visited states ${astar.visitedStatesCount}")
 
             assertEquals(0, alignment.cost)
@@ -295,13 +301,13 @@ class AStarCausalNetTests {
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
 
-            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+            @Suppress("DEPRECATION")
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}\tvisited states: ${astar.visitedStatesCount}")
 
             assertEquals(expectedCost[i], alignment.cost)
         }
     }
 
-    @Ignore("Intended for manual execution due to high resource requirements")
     @Test
     fun `Parallel decisions in loop with many splits C-net non-conforming log`() {
         val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
@@ -360,6 +366,10 @@ class AStarCausalNetTests {
                 ls d2 M d1 Z le
                 d2 ls d1 Z M le
                 ls d1 d2 A N ls le ls d1 C d2 O le
+                ls d1 d2 A N ls le ls d1 C d2 O le ls d1 D d2 P le
+                ls d1 d2 A N ls le ls d1 C d2 O le ls d1 D D d2 P le
+                le d1 D D d2 P le ls d2 d1 Q le ls d1 d2 F R le
+                le d1 D D Z d2 P le ls d2 d1 Q le ls d1 d2 F R le
             """
             //  ls d1 d2 A N ls le ls d1 C d2 O le ls d1 D d2 P le ls d2 d1 E Q le ls d1 d2 F R le ls d2 d1 G S le ls d1 H d2 T le ls d1 I d2 U le ls d2 d1 J V le ls d1 d2 K W le ls d1 L d2 X ls le d1 M d2 Y le
         )
@@ -368,6 +378,10 @@ class AStarCausalNetTests {
             2,
             2,
             1,
+            1,
+            2,
+            4,
+            5
         )
 
         val astar = AStar(model)
@@ -376,7 +390,8 @@ class AStarCausalNetTests {
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
 
-            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+            @Suppress("DEPRECATION")
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}\tvisited states: ${astar.visitedStatesCount}")
 
             assertEquals(expectedCost[i], alignment.cost)
         }

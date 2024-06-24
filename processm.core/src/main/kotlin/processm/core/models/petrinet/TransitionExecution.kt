@@ -1,6 +1,5 @@
 package processm.core.models.petrinet
 
-import processm.core.models.commons.Activity
 import processm.core.models.commons.ActivityExecution
 import java.util.*
 
@@ -10,7 +9,7 @@ import java.util.*
  */
 class TransitionExecution internal constructor(
     override val activity: Transition,
-    override val cause: Collection<Activity>,
+    override val cause: Array<Transition>,
     private val marking: Marking
 ) : ActivityExecution {
 
@@ -31,5 +30,7 @@ class TransitionExecution internal constructor(
                 (old ?: ArrayDeque()).apply { addLast(sharedToken) }
             }
         }
+
+        assert(marking.values.none { it.isEmpty() })
     }
 }

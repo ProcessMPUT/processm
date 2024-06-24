@@ -17,7 +17,7 @@ import processm.helpers.ifNullOrEmpty
 abstract class ExecutionNode(
     open val base: Node,
     internal var parent: ExecutionNode?,
-    val cause: Collection<ProcessTreeActivity> = parent?.lastExecuted.ifNullOrEmpty { parent?.cause.orEmpty() }
+    val cause: Array<out ProcessTreeActivity> = parent?.lastExecuted.ifNullOrEmpty { parent?.cause.orEmpty() }
 ) : ProcessModelState {
     /**
      * Activities (possibly silent) that can be currently executed in the process tree rooted at [base].
@@ -42,5 +42,5 @@ abstract class ExecutionNode(
      * [processm.core.models.processtree.Parallel] node. This property is mutable and represents the current state of
      * execution.
      */
-    abstract val lastExecuted: Collection<ProcessTreeActivity>
+    abstract val lastExecuted: Array<out ProcessTreeActivity>
 }

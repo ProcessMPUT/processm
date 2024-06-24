@@ -11,7 +11,7 @@ import processm.helpers.ifNullOrEmpty
 class ExclusiveExecution(
     override val base: Exclusive,
     parent: ExecutionNode?,
-    cause: Collection<ProcessTreeActivity> = parent?.lastExecuted.ifNullOrEmpty { parent?.cause.orEmpty() }
+    cause: Array<out ProcessTreeActivity> = parent?.lastExecuted.ifNullOrEmpty { parent?.cause.orEmpty() }
 ) : ExecutionNode(base, parent, cause) {
 
     private var selected: ExecutionNode? = null
@@ -27,8 +27,8 @@ class ExclusiveExecution(
     override var isComplete: Boolean = false
         private set
 
-    override val lastExecuted: Collection<ProcessTreeActivity>
-        get() = if (selected !== null) selected!!.lastExecuted else emptyList()
+    override val lastExecuted: Array<out ProcessTreeActivity>
+        get() = if (selected !== null) selected!!.lastExecuted else emptyArray()
 
     override fun postExecution(child: ExecutionNode) {
         require(child.parent === this)

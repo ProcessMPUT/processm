@@ -1,10 +1,10 @@
 package processm.miners.causalnet.onlineminer
 
-import org.apache.commons.collections4.MultiSet
 import processm.core.models.causalnet.CausalNetState
 import processm.core.models.causalnet.CausalNetStateImpl
 import processm.core.models.causalnet.Dependency
 import processm.core.models.commons.ProcessModelState
+import processm.helpers.MutableMultiSet
 import java.lang.ref.SoftReference
 import java.util.*
 
@@ -44,7 +44,7 @@ class LazyCausalNetState(
 
     override fun equals(other: Any?): Boolean = Objects.equals(backend, other)
 
-    override fun contains(element: Dependency?): Boolean = backend.contains(element)
+    override fun contains(element: Dependency): Boolean = backend.contains(element)
 
     override fun addAll(elements: Collection<Dependency>): Boolean = throw NotImplementedError("Not supported")
 
@@ -54,29 +54,34 @@ class LazyCausalNetState(
 
     override val isFresh: Boolean
         get() = backend.isFresh
+    override val uniqueSize: Int
+        get() = backend.uniqueSize
 
-    override fun add(element: Dependency?): Boolean = throw NotImplementedError("Not supported")
+    override fun add(element: Dependency, count: Byte): Boolean = throw NotImplementedError("Not supported")
 
-    override fun add(`object`: Dependency?, occurrences: Int): Int = throw NotImplementedError("Not supported")
+    override fun add(element: Dependency): Boolean = throw NotImplementedError("Not supported")
+
+    override fun addAll(other: MutableMultiSet<Dependency>): Boolean = throw NotImplementedError("Not supported")
 
     /**
      * The returned iterator should be considered immutable.
      */
-    override fun iterator(): MutableIterator<Dependency> = backend.iterator()
-
-    override fun setCount(`object`: Dependency?, count: Int): Int = throw NotImplementedError("Not supported")
-
-    override fun entrySet(): Set<MultiSet.Entry<Dependency>> = backend.entrySet()
-
-    override fun getCount(`object`: Any?): Int = backend.getCount(`object`)
+    override fun iterator(): MutableIterator<Dependency> =
+        object : MutableIterator<Dependency>, Iterator<Dependency> by backend.uniqueSet().iterator() {
+            override fun remove() = throw UnsupportedOperationException()
+        }
 
     override fun uniqueSet(): Set<Dependency> = backend.uniqueSet()
 
+    override fun entrySet(): Set<MutableMultiSet.Bucket<Dependency>> = backend.entrySet()
+
+    override fun countSet(): Collection<Byte> = backend.countSet()
+
+    override fun remove(element: Dependency, count: Byte): Boolean = throw NotImplementedError("Not supported")
+
+    override fun remove(element: Dependency): Boolean = throw NotImplementedError("Not supported")
+
     override fun isEmpty(): Boolean = backend.isEmpty()
-
-    override fun remove(`object`: Any?, occurrences: Int): Int = throw NotImplementedError("Not supported")
-
-    override fun remove(element: Dependency?): Boolean = throw NotImplementedError("Not supported")
 
     override fun containsAll(elements: Collection<Dependency>): Boolean = backend.containsAll(elements)
 
