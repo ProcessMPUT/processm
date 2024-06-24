@@ -72,6 +72,6 @@ export function isNonNegativeIntegerRule(
 }
 
 export function isPercentRule(value: string, errorMessage: string): string | boolean {
-  const int = Number(value);
-  return (Number.isInteger(int) && int >= 0 && int <= 100) || errorMessage;
+  const v = Number(value);
+  return (v >= 0 && v <= 100) || errorMessage;
 }

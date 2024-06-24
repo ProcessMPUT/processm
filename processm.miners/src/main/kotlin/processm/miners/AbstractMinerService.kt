@@ -34,14 +34,15 @@ interface MinerJob<T : ProcessModel> : ServiceJob {
     fun minerFromProperties(properties: Map<String, String>): Miner = when (properties["algorithm"]) {
         ALGORITHM_ORIGINAL_HEURISTIC_MINER -> {
             val dependencyThreshold =
-                properties["dependencyThreshold"]?.toIntOrNull()?.takeIf { it in 0..100 } ?: 50
+                properties["dependencyThreshold"]?.toDoubleOrNull()?.takeIf { it in 0.0..100.0 } ?: 50.0
             OriginalHeuristicMiner(
                 dependencyThreshold = dependencyThreshold / 100.0,
-                l1Threshold = (properties["l1Threshold"]?.toIntOrNull()?.takeIf { it in 0..100 }
+                l1Threshold = (properties["l1Threshold"]?.toDoubleOrNull()?.takeIf { it in 0.0..100.0 }
                     ?: dependencyThreshold) / 100.0,
-                l2Threshold = (properties["l2Threshold"]?.toIntOrNull()?.takeIf { it in 0..100 }
+                l2Threshold = (properties["l2Threshold"]?.toDoubleOrNull()?.takeIf { it in 0.0..100.0 }
                     ?: dependencyThreshold) / 100.0,
-                andThreshold = (properties["andThreshold"]?.toIntOrNull()?.takeIf { it in 0..100 } ?: 65) / 100.0
+                andThreshold = (properties["andThreshold"]?.toDoubleOrNull()?.takeIf { it in 0.0..100.0 }
+                    ?: 65.0) / 100.0
             )
         }
 
