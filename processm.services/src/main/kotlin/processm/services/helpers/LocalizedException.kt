@@ -1,32 +1,6 @@
 package processm.services.helpers
 
 import io.ktor.http.*
-import processm.helpers.AbstractLocalizedException
-import processm.logging.logger
-import java.util.*
-
-
-/**
- * An exception supporting localization according to the remote user's locale
- *
- * @property reason The reason for the exception
- * @property arguments Arguments for the description of the exception (a format string) retrieved from resources
- * @property message message passed to parent [Exception]. If not provided, `reason.toString()` is used.
- */
-open class LocalizedException(
-    val reason: ExceptionReason,
-    val arguments: Array<out Any?> = emptyArray(),
-    message: String? = null
-) : AbstractLocalizedException(message ?: reason.toString()) {
-
-    override fun localizedMessage(locale: Locale): String = try {
-        val formatString = getFormatString(locale, reason.toString())
-        String.format(locale, formatString, *arguments)
-    } catch (e: Exception) {
-        logger().error("An exception was thrown while preparing localized exception", e)
-        message ?: reason.toString()
-    }
-}
 
 enum class ExceptionReason(val statusCode: HttpStatusCode = HttpStatusCode.BadRequest) {
     UnspecifiedReason,

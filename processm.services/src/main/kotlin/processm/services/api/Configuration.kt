@@ -14,11 +14,11 @@ import io.ktor.util.logging.*
 import processm.helpers.AbstractLocalizedException
 import processm.logging.loggedScope
 import processm.services.api.models.ErrorMessage
-import processm.services.helpers.LocalizedException
+import processm.services.helpers.ExceptionReason
+import processm.helpers.LocalizedException
 import processm.services.helpers.locale
 import java.time.Duration
 import java.util.*
-import kotlin.NoSuchElementException
 import io.ktor.util.converters.DataConversion.Configuration as DataConversionConfig
 
 internal fun ApplicationHstsConfiguration(): HSTSConfig.() -> Unit = {
@@ -43,7 +43,8 @@ internal fun ApplicationStatusPageConfiguration(): StatusPagesConfig.() -> Unit 
     loggedScope { logger ->
         exception<LocalizedException> { call, cause ->
             logger.trace(cause.message)
-            call.respond(cause.reason.statusCode, ErrorMessage(cause.localizedMessage(call.locale)))
+            val statusCode = (cause.reason as? ExceptionReason)?.statusCode ?: HttpStatusCode.InternalServerError
+            call.respond(statusCode, ErrorMessage(cause.localizedMessage(call.locale)))
         }
         exception<AbstractLocalizedException> { call, cause ->
             logger.trace(cause.message)
