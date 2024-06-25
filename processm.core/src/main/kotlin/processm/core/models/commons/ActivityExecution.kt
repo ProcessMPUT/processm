@@ -13,7 +13,7 @@ interface ActivityExecution {
      * The collection of activities that were the direct cause for executing [activity]. This may be an overestimate
      * if model representation does not allow for exact identification of the cause.
      */
-    val cause: Collection<Activity>
+    val cause: Array<out Activity>
 
     /**
      * Execute [activity] and change the underlying context accordingly.

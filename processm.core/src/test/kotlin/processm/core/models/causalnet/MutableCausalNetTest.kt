@@ -176,8 +176,8 @@ class MutableCausalNetTest {
         assertEquals(setOf(Dependency(a, a)), mm.incoming[a])
         mm.addSplit(Split(setOf(Dependency(a, a))))
         mm.addJoin(Join(setOf(Dependency(a, a))))
-        assertEquals(setOf(Split(setOf(Dependency(a, a)))), mm.splits[a])
-        assertEquals(setOf(Join(setOf(Dependency(a, a)))), mm.joins[a])
+        assertEquals(listOf(Split(setOf(Dependency(a, a)))), mm.splits[a])
+        assertEquals(listOf(Join(setOf(Dependency(a, a)))), mm.joins[a])
     }
 
     @Ignore("We decided that protecting against it is too expensive")
@@ -193,7 +193,7 @@ class MutableCausalNetTest {
             (mm.splits as MutableMap).remove(s.source)
         }
         assertFailsWith(UnsupportedOperationException::class) {
-            (mm.splits.getValue(s.source) as MutableSet).remove(s)
+            (mm.splits.getValue(s.source) as ArrayList).remove(s)
         }
     }
 
@@ -210,7 +210,7 @@ class MutableCausalNetTest {
             (mm.joins as MutableMap).remove(s.target)
         }
         assertFailsWith(UnsupportedOperationException::class) {
-            (mm.joins.getValue(s.target) as MutableSet).remove(s)
+            (mm.joins.getValue(s.target) as ArrayList).remove(s)
         }
     }
 
@@ -226,9 +226,9 @@ class MutableCausalNetTest {
         mm.addJoin(Join(setOf(d1)))
         mm.addJoin(Join(setOf(d2)))
         assertTrue { mm.contains(Join(setOf(d2))) }
-        assertEquals(setOf(Join(setOf(d1)), Join(setOf(d2))), mm.joins[a])
+        assertEquals(listOf(Join(setOf(d1)), Join(setOf(d2))), mm.joins[a])
         mm.removeJoin(Join(setOf(d2)))
-        assertEquals(setOf(Join(setOf(d1))), mm.joins[a])
+        assertEquals(listOf(Join(setOf(d1))), mm.joins[a])
         assertFalse { mm.contains(Join(setOf(d2))) }
     }
 
@@ -241,9 +241,9 @@ class MutableCausalNetTest {
         val d1 = mm.addDependency(mm.start, a)
         val d2 = mm.addDependency(b, a)
         mm.addJoin(Join(setOf(d1)))
-        assertEquals(setOf(Join(setOf(d1))), mm.joins[a])
+        assertEquals(listOf(Join(setOf(d1))), mm.joins[a])
         mm.removeJoin(Join(setOf(d2)))
-        assertEquals(setOf(Join(setOf(d1))), mm.joins[a])
+        assertEquals(listOf(Join(setOf(d1))), mm.joins[a])
     }
 
     @Test
@@ -258,9 +258,9 @@ class MutableCausalNetTest {
         mm.addSplit(Split(setOf(d1)))
         mm.addSplit(Split(setOf(d2)))
         assertTrue { mm.contains(Split(setOf(d2))) }
-        assertEquals(setOf(Split(setOf(d1)), Split(setOf(d2))), mm.splits[mm.start])
+        assertEquals(listOf(Split(setOf(d1)), Split(setOf(d2))), mm.splits[mm.start])
         mm.removeSplit(Split(setOf(d2)))
-        assertEquals(setOf(Split(setOf(d1))), mm.splits[mm.start])
+        assertEquals(listOf(Split(setOf(d1))), mm.splits[mm.start])
         assertFalse { mm.contains(Split(setOf(d2))) }
     }
 
@@ -273,9 +273,9 @@ class MutableCausalNetTest {
         val d1 = mm.addDependency(mm.start, a)
         val d2 = mm.addDependency(mm.start, b)
         mm.addSplit(Split(setOf(d1)))
-        assertEquals(setOf(Split(setOf(d1))), mm.splits[mm.start])
+        assertEquals(listOf(Split(setOf(d1))), mm.splits[mm.start])
         mm.removeSplit(Split(setOf(d2)))
-        assertEquals(setOf(Split(setOf(d1))), mm.splits[mm.start])
+        assertEquals(listOf(Split(setOf(d1))), mm.splits[mm.start])
     }
 
     @Ignore("We decided that protecting against it is too expensive")

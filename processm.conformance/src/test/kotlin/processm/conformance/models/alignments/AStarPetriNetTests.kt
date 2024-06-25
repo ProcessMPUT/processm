@@ -38,6 +38,7 @@ class AStarPetriNetTests {
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
 
+            @Suppress("DEPRECATION")
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost} #visited states: ${astar.visitedStatesCount}")
 
             assertEquals(0, alignment.cost)
@@ -173,16 +174,66 @@ class AStarPetriNetTests {
                 "g" executing ("g" to listOf("e"))
                 cost = 1
             }),
-            arrayOf(alignment {// [a, c, d, e, log only: f, log only: e, h]
-                "a" executing "a"
-                "c" executing ("c" to listOf("a"))
-                "d" executing ("d" to listOf("a"))
-                "e" executing ("e" to listOf("c", "d"))
-                "f" executing null
-                "e" executing null
-                "h" executing ("h" to listOf("e"))
-                cost = 2
-            }),
+            arrayOf(
+                alignment {// [a, c, d, e, log only: f, log only: e, h]
+                    "a" executing "a"
+                    "c" executing ("c" to listOf("a"))
+                    "d" executing ("d" to listOf("a"))
+                    "e" executing ("e" to listOf("c", "d"))
+                    "f" executing null
+                    "e" executing null
+                    "h" executing ("h" to listOf("e"))
+                    cost = 2
+                },
+                alignment {// [a, c, d, e, f, model only: b, model only: d, e, h]
+                    "a" executing "a"
+                    "c" executing ("c" to listOf("a"))
+                    "d" executing ("d" to listOf("a"))
+                    "e" executing ("e" to listOf("c", "d"))
+                    "f" executing ("f" to listOf("e"))
+                    null executing ("b" to listOf("f"))
+                    null executing ("d" to listOf("f"))
+                    "e" executing ("e" to listOf("b", "d"))
+                    "h" executing ("h" to listOf("e"))
+                    cost = 2
+                },
+                alignment {// [a, c, d, e, f, model only: c, model only: d, e, h]
+                    "a" executing "a"
+                    "c" executing ("c" to listOf("a"))
+                    "d" executing ("d" to listOf("a"))
+                    "e" executing ("e" to listOf("c", "d"))
+                    "f" executing ("f" to listOf("e"))
+                    null executing ("c" to listOf("f"))
+                    null executing ("d" to listOf("f"))
+                    "e" executing ("e" to listOf("c", "d"))
+                    "h" executing ("h" to listOf("e"))
+                    cost = 2
+                },
+                alignment {// [a, c, d, e, f, model only: d, model only: b, e, h]
+                    "a" executing "a"
+                    "c" executing ("c" to listOf("a"))
+                    "d" executing ("d" to listOf("a"))
+                    "e" executing ("e" to listOf("c", "d"))
+                    "f" executing ("f" to listOf("e"))
+                    null executing ("d" to listOf("f"))
+                    null executing ("b" to listOf("f"))
+                    "e" executing ("e" to listOf("b", "d"))
+                    "h" executing ("h" to listOf("e"))
+                    cost = 2
+                },
+                alignment {// [a, c, d, e, f, model only: d, model only: c, e, h]
+                    "a" executing "a"
+                    "c" executing ("c" to listOf("a"))
+                    "d" executing ("d" to listOf("a"))
+                    "e" executing ("e" to listOf("c", "d"))
+                    "f" executing ("f" to listOf("e"))
+                    null executing ("d" to listOf("f"))
+                    null executing ("c" to listOf("f"))
+                    "e" executing ("e" to listOf("c", "d"))
+                    "h" executing ("h" to listOf("e"))
+                    cost = 2
+                },
+            ),
             arrayOf(
                 alignment {// [a, model only: b, model only: d, model only: e, g]
                     "a" executing "a"
@@ -350,7 +401,7 @@ class AStarPetriNetTests {
         )
 
 
-        val expectedVisitedStatesCount = listOf(34, 6, 10, 16, 19, 16, 76)
+        val expectedVisitedStatesCount = listOf(25, 10, 9, 12, 22, 8, 87)
 
         val astar = AStar(fig32)
         for ((i, trace) in log.traces.withIndex()) {
@@ -358,8 +409,10 @@ class AStarPetriNetTests {
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
 
+            @Suppress("DEPRECATION")
             logger.info("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost} #visited states: ${astar.visitedStatesCount}")
 
+            @Suppress("DEPRECATION")
             assertTrue { astar.visitedStatesCount <= expectedVisitedStatesCount[i] }
 
             val results = expected[i].map { expected ->

@@ -1,6 +1,5 @@
 package processm.core.verifiers.causalnet
 
-import processm.core.models.causalnet.CausalNetState
 import processm.core.models.causalnet.CausalNetStateImpl
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Node
@@ -30,13 +29,13 @@ class ActivityBindingTest {
         val b = Node("b")
         val d = Node("d")
         val e = Node("e")
-        val s1 = ActivityBinding(a, setOf(), setOf(b, d), CausalNetStateImpl()).state
-        assertEquals(setOf(Dependency(a, b), Dependency(a, d)), s1.toSet())
-        val s2 = ActivityBinding(d, setOf(a), setOf(e), s1).state
-        assertEquals(setOf(Dependency(a, b), Dependency(d, e)), s2.toSet())
-        val s3 = ActivityBinding(b, setOf(a), setOf(e), s2).state
-        assertEquals(setOf(Dependency(b, e), Dependency(d, e)), s3.toSet())
-        val s4 = ActivityBinding(e, setOf(b, d), setOf(), s3).state
+        val s1 = ActivityBinding(a, arrayOf(), arrayOf(b, d), CausalNetStateImpl()).state
+        assertEquals(setOf(Dependency(a, b), Dependency(a, d)), s1.uniqueSet().toSet())
+        val s2 = ActivityBinding(d, arrayOf(a), arrayOf(e), s1).state
+        assertEquals(setOf(Dependency(a, b), Dependency(d, e)), s2.uniqueSet().toSet())
+        val s3 = ActivityBinding(b, arrayOf(a), arrayOf(e), s2).state
+        assertEquals(setOf(Dependency(b, e), Dependency(d, e)), s3.uniqueSet().toSet())
+        val s4 = ActivityBinding(e, arrayOf(b, d), arrayOf(), s3).state
         assertTrue { s4.isEmpty() }
     }
 }

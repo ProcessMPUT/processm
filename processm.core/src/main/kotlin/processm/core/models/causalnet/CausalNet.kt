@@ -1,9 +1,12 @@
 package processm.core.models.causalnet
 
+import com.carrotsearch.hppc.ObjectHashSet
 import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.MetadataHandler
 import processm.helpers.asList
 import java.util.*
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 /**
  * A read-only causal net model
@@ -48,8 +51,8 @@ abstract class CausalNet(
      * Map from target to dependency
      */
     protected val _incoming = HashMap<Node, HashSet<Dependency>>()
-    protected val _splits = HashMap<Node, HashSet<Split>>()
-    protected val _joins = HashMap<Node, HashSet<Join>>()
+    protected val _splits = HashMap<Node, ArrayList<Split>>()
+    protected val _joins = HashMap<Node, ArrayList<Join>>()
 
 
     /**
@@ -78,14 +81,14 @@ abstract class CausalNet(
     /**
      * Splits AKA what other arcs must (not) be followed at the same time when going out of a node
      */
-    val splits: Map<Node, Set<Split>>
-        get() = Collections.unmodifiableMap(_splits)
+    val splits: Map<Node, List<Split>>
+        get() = _splits
 
     /**
      * Joins AKA what other arcs must (not) be followed at the same time when going out of a node
      */
-    val joins: Map<Node, Set<Join>>
-        get() = Collections.unmodifiableMap(_joins)
+    val joins: Map<Node, List<Join>>
+        get() = _joins
 
     /**
      * Same as [instances]
@@ -109,23 +112,49 @@ abstract class CausalNet(
      */
     override val decisionPoints: Sequence<DecisionPoint>
         get() = splits.entries.asSequence().map { DecisionPoint(it.key, it.value, true) } +
-                joins.entries.asSequence().map { DecisionPoint(it.key, it.value, false, it.value.flatMapTo(mutableSetOf()) { join -> join.sources }) }
+                joins.entries.asSequence()
+                    .map {
+                        DecisionPoint(
+                            it.key,
+                            it.value,
+                            false,
+                            it.value.flatMapTo(HashSet()) { it.sources.asList() })
+                    }
 
     override val controlStructures: Sequence<DecisionPoint>
         get() = decisionPoints
 
+    @OptIn(ExperimentalContracts::class)
     private inline fun available(state: CausalNetState, callback: (node: Node, join: Join?, split: Split?) -> Unit) {
+        contract {
+            callsInPlace(callback)
+        }
+
         if (state.isNotEmpty()) {
-            val visitedNodes = HashSet<Node>(this._instances.size)
+            val visitedNodes = ObjectHashSet<Node>(state.uniqueSize)
             for (dep in state.uniqueSet()) {
                 val node = dep.target
                 if (visitedNodes.add(node)) {
-                    for (join in _joins[node].orEmpty())
-                        if (state.containsAll(join.dependencies)) {
-                            val splits = if (node != end) _splits[node].orEmpty() else setOfNull
-                            for (split in splits)
-                                callback(node, join, split)
+                    var joinIndex = 0
+                    val joins = _joins[node].orEmpty()
+                    joinLoop@ while (joinIndex < joins.size) {
+                        val join = joins[joinIndex++]
+                        var index = 0
+                        while (index < join.dependenciesAsArray.size) {
+                            if (join.dependenciesAsArray[index++] !in state)
+                                continue@joinLoop
                         }
+
+                        if (node != end) {
+                            val splits = _splits[node].orEmpty()
+                            index = 0
+                            while (index < splits.size) {
+                                callback(node, join, splits[index++])
+                            }
+                        } else {
+                            callback(node, join, null)
+                        }
+                    }
                 }
             }
         } else if (state.isFresh /*prevent execution of activities in the final state*/) {
@@ -142,7 +171,7 @@ abstract class CausalNet(
             val result = ArrayList<DecoupledNodeExecution>()
             for (join in joins[node].orEmpty())
                 if (relevant.containsAll(join.dependencies)) {
-                    val splits = if (node != end) splits[node].orEmpty() else setOf(null)
+                    val splits = if (node != end) splits[node].orEmpty() else setOfNull
                     for (split in splits)
                         result.add(DecoupledNodeExecution(node, join, split))
                 }
@@ -257,8 +286,16 @@ abstract class CausalNet(
         return instances == other.instances &&
                 incoming == other.incoming &&
                 outgoing == other.outgoing &&
-                splits == other.splits &&
-                joins == other.joins
+                splits.size == other.splits.size &&
+                splits.all { (n, d) ->
+                    val d2 = other.splits[n].orEmpty()
+                    d.size == d2.size && d.containsAll(d2)
+                } &&
+                joins.size == other.joins.size &&
+                joins.all { (n, d) ->
+                    val d2 = other.joins[n].orEmpty()
+                    d.size == d2.size && d.containsAll(d2)
+                }
     }
 
 

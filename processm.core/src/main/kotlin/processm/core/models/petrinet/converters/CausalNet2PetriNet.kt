@@ -167,12 +167,13 @@ class CausalNet2PetriNet(val cnet: CausalNet) {
             val mainTransition = mainTransitionsInternal.computeIfAbsent(node.name) {
                 Transition(
                     name = node.name,
-                    inPlaces = listOf(Place()),
-                    outPlaces = listOf(Place()),
+                    inPlaces = listOf(Place().also { places.add(it) }),
+                    outPlaces = listOf(Place().also { places.add(it) }),
                     isSilent = node.isSilent
                 )
             }
             val auxPlace = Place()
+            places.add(auxPlace)
             assert(node !in node2InboundSilentTransitionInternal)
             node2InboundSilentTransitionInternal[node] = Transition(
                 name = "in ${node.name}/${node.instanceId}",
@@ -194,6 +195,16 @@ class CausalNet2PetriNet(val cnet: CausalNet) {
         createPlacesOnArcs()
         cnet.instances.forEach(::mapNode)
         assert(cnet.instances.all { node -> node in node2OutboundSilentTransition || node in node2InboundSilentTransition || node in node2Transition })
+        assert(split2SilentTransitionInternal.values.all { places.containsAll(it.inPlaces) && places.containsAll(it.outPlaces) })
+        assert(join2SilentTransitionInternal.values.all { places.containsAll(it.inPlaces) && places.containsAll(it.outPlaces) })
+        assert(node2TransitionInternal.values.all { places.containsAll(it.inPlaces) && places.containsAll(it.outPlaces) })
+        assert(mainTransitionsInternal.values.all { places.containsAll(it.inPlaces) && places.containsAll(it.outPlaces) })
+        assert(node2OutboundSilentTransitionInternal.values.all {
+            places.containsAll(it.inPlaces) && places.containsAll(it.outPlaces)
+        })
+        assert(node2InboundSilentTransitionInternal.values.all {
+            places.containsAll(it.inPlaces) && places.containsAll(it.outPlaces)
+        })
     }
 
     fun toPetriNet(): PetriNet = PetriNet(

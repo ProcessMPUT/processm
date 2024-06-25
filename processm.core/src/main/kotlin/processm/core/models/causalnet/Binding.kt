@@ -19,4 +19,15 @@ interface Binding : MetadataSubject {
         get() = dependencies.size
 
     val dependencies: Set<Dependency>
+
+    /**
+     * The array-based view on [dependencies] for fast iterations and indexed access.
+     * It is recommended to implement this property as lazy mapping:
+     * ```
+     * override val dependenciesAsArray: Array<out Dependency> by lazy(LazyThreadSafetyMode.PUBLICATION) {
+     *     dependencies.mapToArray { it }
+     * }
+     * ```
+     */
+    val dependenciesAsArray: Array<out Dependency>
 }

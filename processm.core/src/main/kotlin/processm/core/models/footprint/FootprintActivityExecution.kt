@@ -10,9 +10,9 @@ class FootprintActivityExecution(
     override val activity: FootprintActivity,
     val instance: FootprintInstance
 ) : ActivityExecution {
-    override val cause: Collection<Activity> =
-        if (instance.currentState is FootprintActivity) listOf(instance.currentState as FootprintActivity)
-        else emptyList()
+    override val cause: Array<out Activity> =
+        if (instance.currentState is FootprintActivity) arrayOf(instance.currentState as FootprintActivity)
+        else emptyArray()
 
     override fun execute() {
         instance.currentState = activity

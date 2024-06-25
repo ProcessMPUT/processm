@@ -88,7 +88,9 @@ class SingleReplayer(
         }
         if (mustConsume.isNotEmpty())
             logger.trace { "mustConsume $mustConsume" }
-        val allConsumable = current.trace.state.uniqueSet().intersect(context.model.incoming.getValue(currentNode))
+        val allConsumable = current.trace.state.uniqueSet().toHashSet().apply {
+            retainAll(context.model.incoming.getValue(currentNode))
+        }
         val consumable = allConsumable - mustConsume
         for (mayConsume in consumable.allSubsets(excludeEmpty = mustConsume.isEmpty())) {
             val consume = mayConsume + mustConsume
@@ -236,7 +238,7 @@ class SingleReplayer(
     private fun prepareState(initState: CausalNetState): RelaxedState {
         val state = HashMapWithDefault<Node, Counter<Dependency>>() { Counter<Dependency>() }
         for (e in initState.entrySet())
-            state[e.element.target][e.element] = e.count
+            state[e.element.target][e.element] = e.count.toInt()
         return state
     }
 
@@ -389,9 +391,17 @@ class SingleReplayer(
                 seen.add(key)
                 visitedStates++
                 if (visitedStates % 10000 == 0)
-                    logger.debug { "ctr=${visitedStates} efficiency=$efficiency ${current.debugInfo} ${current.trace.state.entrySet()}" }
+                    logger.debug {
+                        "ctr=${visitedStates} efficiency=$efficiency ${current.debugInfo} ${
+                            current.trace.state.entrySet().joinToString()
+                        }"
+                    }
                 val currentNode = trace[current.node]
-                logger.trace { "$currentNode ${current.node}/${current.produce}: ${current.debugInfo} ${current.trace.state.entrySet()} $trace" }
+                logger.trace {
+                    "$currentNode ${current.node}/${current.produce}: ${current.debugInfo} ${
+                        current.trace.state.entrySet().joinToString()
+                    } $trace"
+                }
                 logger.trace { "${current.trace.splits.toList()}" }
                 if (current.produce && current.node == trace.size - 1) {
                     if (current.trace.state.isEmpty()) {
