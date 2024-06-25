@@ -40,7 +40,7 @@ fun WorkspaceComponent.triggerEvent(producer: Producer = WCEproducer, eventData:
 
 /**
  * A process model component can store multiple models computed for different snapshots of data. Moreover, for each
- * model there can be multiple secondardy artifacts, such as alignments, that depend on the model, and on the data.
+ * model there can be multiple secondary artifacts, such as alignments, that depend on the model, and on the data.
  * Hence, the class uses two distinct, yet related notions: model version and data version.
  * They both originate in the version number returned by [processm.core.log.hierarchical.DBHierarchicalXESInputStream.readVersion],
  * thus are both assumed to be monotonic.
