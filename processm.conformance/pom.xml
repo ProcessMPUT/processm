@@ -55,7 +55,7 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>processm</groupId>
+            <groupId>${project.parent.groupId}</groupId>
             <artifactId>dbmodels</artifactId>
             <version>${project.parent.version}</version>
             <scope>compile</scope>
