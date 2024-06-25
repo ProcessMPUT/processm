@@ -115,8 +115,8 @@ class OriginalHeuristicMinerTest {
                 assertTrue { any { it.source == e && it.target == d } }
             }
             // Paper: (b XOR e) ^ (c XOR e), which is equivalent to (b ^ c) XOR e, as stated here
-            assertEquals(setOf(setOf(e), setOf(b, c)), splits[a]?.mapToSet { it.targets })
-            assertEquals(setOf(setOf(e), setOf(b, c)), joins[d]?.mapToSet { it.sources })
+            assertEquals(setOf(setOf(e), setOf(b, c)), splits[a]?.mapToSet { it.targets.toSet() })
+            assertEquals(setOf(setOf(e), setOf(b, c)), joins[d]?.mapToSet { it.sources.toSet() })
         }
     }
 
