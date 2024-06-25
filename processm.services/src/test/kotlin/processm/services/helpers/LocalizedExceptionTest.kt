@@ -20,6 +20,7 @@ class LocalizedExceptionTest {
         fun listReasons(): List<Arguments> =
             listOf(Locale.US, Locale("pl")).flatMap { locale ->
                 listOf(
+                    processm.helpers.ExceptionReason.values(),
                     ExceptionReason.values(),
                     PQLSyntaxException.Problem.values(),
                     PQLParserException.Problem.values()
