@@ -279,6 +279,20 @@ private fun PetriNetComponentData.toPetriNet(): PetriNet {
     return PetriNet(places.values.toList(), transitions, initialMarking, finalMarking)
 }
 
+private fun WorkspaceComponent.updateModelVersion(modelVersion: Long): ProcessModelComponentData {
+    val componentData = ProcessModelComponentData.create(this)
+    if (componentData.acceptedModelVersion != modelVersion) {
+        this.data = componentData
+            .apply { acceptedModelVersion = modelVersion }
+            .toJSON()
+        afterCommit {
+            this as WorkspaceComponent
+            triggerEvent(event = WorkspaceComponentEventType.ModelAccepted)
+        }
+    }
+    return componentData
+}
+
 /**
  * Updates the data within the component from the JSON received in the abstract component from the frontend
  */
@@ -286,36 +300,18 @@ fun WorkspaceComponent.updateData(data: String) = loggedScope { logger ->
     when (componentType) {
         ComponentTypeDto.CausalNet -> {
             JsonSerializer.decodeFromString<CausalNetComponentData>(data).modelVersion?.let { modelVersion ->
-                val componentData = ProcessModelComponentData.create(this)
-                if (componentData.acceptedModelVersion != modelVersion) {
-                    this.data = componentData
-                        .apply { acceptedModelVersion = modelVersion }
-                        .toJSON()
-                    afterCommit {
-                        this as WorkspaceComponent
-                        triggerEvent(event = WorkspaceComponentEventType.ModelAccepted)
-                    }
-                }
+                updateModelVersion(modelVersion)
             }
         }
 
         ComponentTypeDto.PetriNet -> {
-            JsonSerializer.decodeFromString<PetriNetComponentData>(data).modelVersion?.let { modelVersion ->
-                val petriNet = JsonSerializer.decodeFromString<PetriNetComponentData>(data).toPetriNet()
-                val componentData = ProcessModelComponentData.create(this)
-                if (componentData.acceptedModelVersion != modelVersion) {
-                    this.data = componentData
-                        .apply { acceptedModelVersion = modelVersion }
-                        .toJSON()
-                    afterCommit {
-                        this as WorkspaceComponent
-                        triggerEvent(event = WorkspaceComponentEventType.ModelAccepted)
-                    }
-                }
+            val petriNetComponentData = JsonSerializer.decodeFromString<PetriNetComponentData>(data)
+            petriNetComponentData.modelVersion?.let { modelVersion ->
+                val componentData = updateModelVersion(modelVersion)
                 processm.core.models.petrinet.DBSerializer.update(
                     DBCache.get(dataStoreId.toString()).database,
                     UUID.fromString(componentData.acceptedModelId ?: error("Model ID is not set for component $id")),
-                    petriNet
+                    petriNetComponentData.toPetriNet()
                 )
             }
         }
