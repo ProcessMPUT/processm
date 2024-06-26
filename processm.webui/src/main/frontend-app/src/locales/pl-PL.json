@@ -35,12 +35,14 @@
       "tree-log-view": "Hierarchiczny widok logu",
       "petri-net": "Sieć Petriego",
       "select": "Wybierz komponent",
+      "new-model-available": "Nowy model jest dostępny",
       "no-data": "Brak danych do wyświetlenia",
       "dfg": {
         "alignments-table": "Pokaż tabelę wyrównań",
         "support": "Wsparcie"
       },
       "edit": {
+        "load-new-model": "Kliknij, aby zobaczyć nowy model. Kliknij przycisk zapis, aby go zaakceptować.",
         "name": "Nazwa",
         "name-hint": "Etykieta wyświetlana na komponencie",
         "type": "Typ",
@@ -406,5 +408,11 @@
     "urn:processm:statistics/suspension_time": "Czas wstrzymania",
     "urn:processm:statistics/waiting_time": "Czas oczekiwania",
     "days": "dni"
+  },
+  "notifications": {
+    "new-model-available": {
+      "text": "Nowy model jest dostępny w komponencie {componentName} w przestrzeni roboczej {workspaceName}. Czy chcesz teraz wyświetlić edytor komponentu?",
+      "title": "Nowy model jest dostępny"
+    }
   }
 }

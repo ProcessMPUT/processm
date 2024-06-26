@@ -1,7 +1,8 @@
 package processm.core.models.metadata
 
 
-import java.lang.IllegalArgumentException
+import processm.helpers.ExceptionReason
+import processm.helpers.LocalizedException
 import kotlin.test.*
 
 class URNTest {
@@ -38,21 +39,35 @@ class URNTest {
 
     @Test
     fun invalidNID() {
-        assertFailsWith(IllegalArgumentException::class) { URN("urn:_example:a123") }
-        assertFailsWith(IllegalArgumentException::class) { URN("urn:example_:a123") }
-        assertFailsWith(IllegalArgumentException::class) { URN("urn:exampleexampleexampleexampleexampleexampleexample:a123") }
+        assertFailsWith(LocalizedException::class) { URN("urn:_example:a123") }.also {
+            assertEquals(ExceptionReason.NotAValidURN, it.reason)
+        }
+        assertFailsWith(LocalizedException::class) { URN("urn:example_:a123") }.also {
+            assertEquals(ExceptionReason.NotAValidURN, it.reason)
+        }
+        assertFailsWith(LocalizedException::class) { URN("urn:exampleexampleexampleexampleexampleexampleexample:a123") }.also {
+            assertEquals(ExceptionReason.NotAValidURN, it.reason)
+        }
     }
 
     @Test
     fun invalidNSS() {
-        assertFailsWith(IllegalArgumentException::class) { URN("urn:example:/a123bcd") }
-        assertFailsWith(IllegalArgumentException::class) { URN("urn:example:") }
+        assertFailsWith(LocalizedException::class) { URN("urn:example:/a123bcd") }.also {
+            assertEquals(ExceptionReason.NotAValidURN, it.reason)
+        }
+        assertFailsWith(LocalizedException::class) { URN("urn:example:") }.also {
+            assertEquals(ExceptionReason.NotAValidURN, it.reason)
+        }
     }
 
     @Test
     fun invalidPrefix() {
-        assertFailsWith(IllegalArgumentException::class) { URN("NRU:example:a123") }
-        assertFailsWith(IllegalArgumentException::class) { URN(":example:a123") }
+        assertFailsWith(LocalizedException::class) { URN("NRU:example:a123") }.also {
+            assertEquals(ExceptionReason.NotAValidURN, it.reason)
+        }
+        assertFailsWith(LocalizedException::class) { URN(":example:a123") }.also {
+            assertEquals(ExceptionReason.NotAValidURN, it.reason)
+        }
     }
 
 }

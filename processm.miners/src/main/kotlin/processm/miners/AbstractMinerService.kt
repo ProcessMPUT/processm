@@ -2,7 +2,6 @@ package processm.miners
 
 import jakarta.jms.MapMessage
 import jakarta.jms.Message
-import kotlinx.serialization.json.JsonObject
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
@@ -56,9 +55,7 @@ interface MinerJob<T : ProcessModel> : ServiceJob {
     fun delete(database: Database, id: String)
 
     fun batchDelete(database: Database, component: WorkspaceComponent) {
-        for (element in component.dataAsJsonObject()?.values.orEmpty()) {
-            element.asComponentData()?.let { delete(database, it.modelId) }
-        }
+        ProcessModelComponentData.create(component).models.values.forEach { delete(database, it) }
     }
 }
 
@@ -91,37 +88,33 @@ abstract class CalcJob<T : ProcessModel> : MinerJob<T> {
                     false
                 )
                 val version = stream.readVersion()
-                val previousData = component.dataAsJsonObject()
-                if (previousData !== null) {
-                    val mostRecentVersion = previousData.mostRecentVersion()
-                    if (mostRecentVersion == null || mostRecentVersion >= version) {
-                        logger.debug(
-                            "Component {} is already populated with data (most recent data in the component: {}, log version: {}), skipping",
-                            id, mostRecentVersion, version
-                        )
-                        return@transactionMain
-                    }
+                logger.debug("Mining for component $id at version $version")
+                val data = ProcessModelComponentData.create(component)
+
+                if (data.hasModel(version)) {
+                    logger.debug(
+                        "Component {} is already populated with data for the log version: {}, skipping",
+                        id, version
+                    )
+                    return@transactionMain
                 }
 
                 val model = mine(component, stream)
-                val newData = previousData.orEmpty().toMutableMap().apply {
-                    this[version.toString()] = ComponentData(
-                        modelId = store(database, model),
-                        alignmentKPIId = ""
-                    ).toJsonElement()
-                }
-                component.data = JsonObject(newData).toString()
+                val autoAccepted = data.addModel(version, store(database, model))
+                component.data = data.toJSON()
                 component.dataLastModified = Instant.now()
                 component.customizationData = updateCustomizationData(model, component.customizationData)
                 component.lastError = null
                 component.afterCommit {
-                    component.triggerEvent(producer, DATA_CHANGE, DATA_CHANGE_MODEL)
+                    component.triggerEvent(producer, DataChangeType.Model)
+                    if (autoAccepted)
+                        component.triggerEvent(producer, WorkspaceComponentEventType.ModelAccepted)
                 }
             } catch (e: Exception) {
                 component.lastError = e.message
                 logger.warn("Cannot calculate model for component with id $id.", e)
                 component.afterCommit {
-                    component.triggerEvent(producer, DATA_CHANGE, DATA_CHANGE_LAST_ERROR)
+                    component.triggerEvent(producer, DataChangeType.LastError)
                 }
             }
 
@@ -192,13 +185,14 @@ abstract class AbstractMinerService(
         require(type == componentType) { "Expected $componentType, got $type." }
 
         val id = message.getString(WORKSPACE_COMPONENT_ID)
-        val event = message.getStringProperty(WORKSPACE_COMPONENT_EVENT)
+        val event = WorkspaceComponentEventType.valueOf(message.getStringProperty(WORKSPACE_COMPONENT_EVENT))
 
         return when (event) {
-            CREATE_OR_UPDATE -> listOf(createJob(id.toUUID()!!, calcJob))
-            DELETE -> listOf(createJob(id.toUUID()!!, deleteJob))
-            DATA_CHANGE -> emptyList() // ignore
-            else -> throw IllegalArgumentException("Unknown event type: $event.")
+            WorkspaceComponentEventType.ComponentCreatedOrUpdated, WorkspaceComponentEventType.NewModelRequired ->
+                listOf(createJob(id.toUUID()!!, calcJob))
+
+            WorkspaceComponentEventType.Delete -> listOf(createJob(id.toUUID()!!, deleteJob))
+            else -> emptyList() // ignore
         }
     }
 
@@ -209,11 +203,11 @@ abstract class AbstractMinerService(
     private fun createJob(id: UUID, klass: java.lang.Class<out Job>): Pair<JobDetail, Trigger> = loggedScope {
         val job = JobBuilder
             .newJob(klass)
-            .withIdentity(id.toString())
+            .withIdentity(id.toString(), "MinerService/${klass.name}")
             .build()
         val trigger = TriggerBuilder
             .newTrigger()
-            .withIdentity(id.toString())
+            .withIdentity(id.toString(), "MinerService/${klass.name}")
             .startNow()
             .build()
 

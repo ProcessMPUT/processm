@@ -14,7 +14,8 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.locations.*
 import io.ktor.utils.io.jvm.javaio.*
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Semaphore
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
@@ -26,23 +27,29 @@ import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.LogInputStream
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DatabaseChecker
+import processm.enhancement.kpi.AlignerKPIService
 import processm.etl.PostgreSQLEnvironment
 import processm.etl.metamodel.MetaModelDebeziumWatchingService.Companion.DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY
 import processm.helpers.AtomicIntegerSequence
+import processm.logging.logger
 import processm.services.JsonSerializer
 import processm.services.api.Paths
 import processm.services.api.models.*
+import processm.services.helpers.SSE
+import processm.services.helpers.readSSE
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.nio.file.Files
 import java.util.*
+import java.util.concurrent.Executors
 import java.util.concurrent.ForkJoinPool
 import java.util.zip.ZipInputStream
+import kotlin.coroutines.CoroutineContext
 import kotlin.reflect.full.findAnnotation
 import kotlin.test.assertEquals
 
 @KtorExperimentalLocationsAPI
-class ProcessMTestingEnvironment {
+class ProcessMTestingEnvironment : CoroutineScope {
 
     var jdbcUrl: String? = null
         private set
@@ -52,6 +59,8 @@ class ProcessMTestingEnvironment {
     var currentDataStore: DataStore? = null
     var currentDataConnector: DataConnector? = null
     var currentEtlProcess: AbstractEtlProcess? = null
+    var currentWorkspaceId: UUID? = null
+    var currentComponentId: UUID? = null
     var properties: HashMap<String, String> = HashMap()
 
     val client = HttpClient(CIO) {
@@ -63,6 +72,10 @@ class ProcessMTestingEnvironment {
             requestTimeoutMillis = 300_000
         }
     }
+
+    override lateinit var coroutineContext: CoroutineContext
+        private set
+    private val sseJobs = ArrayList<Job>()
 
     // region Environment
 
@@ -136,6 +149,10 @@ class ProcessMTestingEnvironment {
         return this
     }
 
+    fun withAlignerDelay(delayInMs: Long) =
+        withProperty(AlignerKPIService.QUEUE_DELAY_MS_PROPERTY, delayInMs.toString())
+
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun <T> run(block: ProcessMTestingEnvironment.() -> T) {
         try {
             loadConfiguration(true)
@@ -146,12 +163,18 @@ class ProcessMTestingEnvironment {
             }
             httpPort = portSequence.next()
             System.setProperty("ktor.deployment.port", httpPort.toString())
+            pool = Executors.newFixedThreadPool(7).asCoroutineDispatcher()
             EnterpriseServiceBus().use { esb ->
                 esb.autoRegister()
                 esb.startAll()
-                block()
+                runBlocking {
+                    this@ProcessMTestingEnvironment.coroutineContext = this.coroutineContext
+                    block()
+                    sseJobs.forEach { it.cancelAndJoin() }
+                }
             }
         } finally {
+            pool.close()
             ForkJoinPool.commonPool().shutdownNow()
             client.close()
             if (sakilaEnv.isInitialized())
@@ -186,6 +209,8 @@ class ProcessMTestingEnvironment {
         result = result.ktorLocationSpecificReplace("dataStoreId", currentDataStore?.id)
         result = result.ktorLocationSpecificReplace("dataConnectorId", currentDataConnector?.id)
         result = result.ktorLocationSpecificReplace("etlProcessId", currentEtlProcess?.id)
+        result = result.ktorLocationSpecificReplace("workspaceId", currentWorkspaceId)
+        result = result.ktorLocationSpecificReplace("componentId", currentComponentId)
         return result
     }
 
@@ -246,6 +271,89 @@ class ProcessMTestingEnvironment {
             }
             return@runBlocking response.block()
         }
+
+    inline fun <reified Endpoint, reified T, R> put(data: T?, noinline block: suspend HttpResponse.() -> R): R =
+        put<Any?, R>(format<Endpoint>(), data, block)
+
+    inline fun <reified T, R> put(endpoint: String, data: T?, crossinline block: suspend HttpResponse.() -> R): R =
+        runBlocking {
+            val response = client.put(apiUrl(endpoint)) {
+                token?.let { bearerAuth(it) }
+                if (data !== null) {
+                    contentType(ContentType.Application.Json)
+                    setBody(data)
+                }
+            }
+            return@runBlocking response.block()
+        }
+
+    inline fun <reified Endpoint, reified T, R> patch(data: T?, noinline block: suspend HttpResponse.() -> R): R =
+        patch<Any?, R>(format<Endpoint>(), data, block)
+
+    inline fun <reified T, R> patch(endpoint: String, data: T?, crossinline block: suspend HttpResponse.() -> R): R =
+        runBlocking {
+            val response = client.patch(apiUrl(endpoint)) {
+                token?.let { bearerAuth(it) }
+                if (data !== null) {
+                    contentType(ContentType.Application.Json)
+                    setBody(data)
+                }
+            }
+            return@runBlocking response.block()
+        }
+
+    lateinit var pool: CloseableCoroutineDispatcher
+    val Dispatchers.Request: CloseableCoroutineDispatcher
+        get() = pool
+
+    fun sse(endpoint: String, handler: suspend (event: SSE) -> Unit) {
+        sseJobs.add(launch(Dispatchers.Request) {
+            client.prepareGet(apiUrl(endpoint)) {
+                token?.let { bearerAuth(it) }
+                header(HttpHeaders.Accept, ContentType.Text.EventStream.toString())
+            }.execute { response ->
+                try {
+                    val channel = response.bodyAsChannel()
+                    while (!channel.isClosedForRead) {
+                        handler(channel.readSSE())
+                    }
+                } catch (e: Exception) {
+                    logger().error("Exception in the SSE client handler", e)
+                }
+            }
+        })
+    }
+
+    fun waitUntil(predicate: () -> Boolean) {
+        repeat(10) {
+            if (predicate()) return
+            Thread.sleep(500)
+        }
+        throw IllegalStateException()
+    }
+
+    fun Semaphore.waitUntilAcquired(n: Int) {
+        var remaining = n
+        repeat(10) {
+            if (tryAcquire()) {
+                remaining--
+                if (remaining == 0) return
+            }
+            Thread.sleep(500)
+        }
+        throw IllegalStateException()
+    }
+
+    fun <T> waitUntilEquals(expected: T, get: () -> T) {
+        val history = ArrayList<T>()
+        repeat(10) {
+            val v = get()
+            if (expected == v) return
+            Thread.sleep(500)
+            history.add(v)
+        }
+        throw IllegalStateException("The expected value $expected was never achieved. The history of values: $history")
+    }
 
     // endregion
 

@@ -35,12 +35,14 @@
       "tree-log-view": "Tree log view",
       "petri-net": "Petri net",
       "select": "Select type",
+      "new-model-available": "New model is available",
       "no-data": "No data to be displayed",
       "dfg": {
         "alignments-table": "Show the alignments table",
         "support": "Support"
       },
       "edit": {
+        "load-new-model": "Click to preview new model. Click the save button to accept.",
         "name": "Name",
         "name-hint": "The label shown on top of this component",
         "type": "Type",
@@ -407,5 +409,11 @@
     "urn:processm:statistics/suspension_time": "Suspension time",
     "urn:processm:statistics/waiting_time": "Waiting time",
     "days": "days"
+  },
+  "notifications": {
+    "new-model-available": {
+      "text": "A new model is available in component {componentName} in workspace {workspaceName}. Do you want to display the component editor now?",
+      "title": "New model available"
+    }
   }
 }

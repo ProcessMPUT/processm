@@ -1,107 +1,45 @@
 <template>
   <div style="height: 100%">
-    <edit-place-dialog
-      v-if="isEditPlaceDialogVisible"
-      :place="selectedPlace"
-      @close="closeEditPlaceDialog"
-    />
+    <edit-place-dialog v-if="isEditPlaceDialogVisible" :place="selectedPlace" @close="closeEditPlaceDialog" />
 
-    <edit-transition-dialog
-      v-if="isEditTransitionDialogVisible"
-      :transition="selectedTransition"
-      @close="closeEditTransitionDialog"
-    />
+    <edit-transition-dialog v-if="isEditTransitionDialogVisible" :transition="selectedTransition" @close="closeEditTransitionDialog" />
 
-    <export-pnml-dialog
-      v-if="isExportPnmlDialogVisible"
-      :state="petriNetManager.state"
-      @close="closeExportPnmlDialog"
-    />
+    <export-pnml-dialog v-if="isExportPnmlDialogVisible" :state="petriNetManager.state" @close="closeExportPnmlDialog" />
 
-    <v-container
-      v-if="showButtons"
-      elevation-6
-      fill-width
-      fluid
-      pa-0
-      style="z-index: 1"
-    >
-      <v-btn
-        v-if="!isDebuggerEnabled"
-        class="ma-2"
-        color="primary"
-        light
-        @click="runLayouter"
-      >
+    <v-container v-if="showButtons || hasNewerVersion" elevation-6 fill-width fluid pa-0 style="z-index: 1">
+      <v-tooltip bottom v-if="hasNewerVersion">
+        <template v-slot:activator="{ on, attrs }">
+          <v-btn v-bind="attrs" v-on="on" icon v-if="showButtons" @click="$emit('loadNewestModel')">
+            <v-icon color="warning">priority_high</v-icon>
+          </v-btn>
+          <v-icon v-bind="attrs" v-on="on" color="warning" v-else>priority_high</v-icon>
+        </template>
+        <span v-if="showButtons">{{ $t("workspace.component.edit.load-new-model") }}</span>
+        <span v-else>{{ $t("workspace.component.new-model-available") }}</span>
+      </v-tooltip>
+      <v-btn v-if="showButtons && !isDebuggerEnabled" class="ma-2" color="primary" light @click="runLayouter">
         {{ $t("common.calculate-layout") }}
       </v-btn>
-      <v-btn
-        v-if="!isDebuggerEnabled"
-        class="ma-2"
-        color="primary"
-        light
-        @click="runDebugger"
-      >
+      <v-btn v-if="showButtons && !isDebuggerEnabled" class="ma-2" color="primary" light @click="runDebugger">
         {{ $t("common.debug") }}
       </v-btn>
-      <v-btn
-        v-if="!isDebuggerEnabled"
-        class="ma-2"
-        color="primary"
-        light
-        type="file"
-        @click="selectPnmlFile"
-      >
+      <v-btn v-if="showButtons && !isDebuggerEnabled" class="ma-2" color="primary" light type="file" @click="selectPnmlFile">
         {{ $t("petri-net.pnml.import") }}
-        <input
-          ref="importInput"
-          accept=".pnml"
-          hidden
-          type="file"
-          @change="importPnml"
-        />
+        <input ref="importInput" accept=".pnml" hidden type="file" @change="importPnml" />
       </v-btn>
-      <v-btn
-        v-if="!isDebuggerEnabled"
-        class="ma-2"
-        color="primary"
-        light
-        type="file"
-        v-on:click="() => (isExportPnmlDialogVisible = true)"
-      >
+      <v-btn v-if="showButtons && !isDebuggerEnabled" class="ma-2" color="primary" light type="file" v-on:click="() => (isExportPnmlDialogVisible = true)">
         {{ $t("petri-net.pnml.export") }}
       </v-btn>
 
-      <v-btn
-        v-if="isDebuggerEnabled"
-        class="ma-2"
-        color="primary"
-        light
-        v-on:click="() => (isDebuggerEnabled = false)"
-      >
-        Stop debugger
-      </v-btn>
+      <v-btn v-if="isDebuggerEnabled" class="ma-2" color="primary" light v-on:click="() => (isDebuggerEnabled = false)"> Stop debugger </v-btn>
     </v-container>
 
-    <PetriNetDebugger
-      v-if="isDebuggerEnabled"
-      :state="this.petriNetManager.state"
-      class="fill-height"
-    />
+    <PetriNetDebugger v-if="isDebuggerEnabled" :state="this.petriNetManager.state" class="fill-height" />
 
     <div v-show="!isDebuggerEnabled" class="fill-height">
       <svg ref="editorSvg" height="100%" width="100%">
         <defs>
-          <marker
-            id="arrow"
-            markerHeight="25"
-            markerUnits="userSpaceOnUse"
-            markerWidth="25"
-            orient="auto-start-reverse"
-            refX="0"
-            refY="5"
-            viewBox="0 0 10 10"
-          >
+          <marker id="arrow" markerHeight="25" markerUnits="userSpaceOnUse" markerWidth="25" orient="auto-start-reverse" refX="0" refY="5" viewBox="0 0 10 10">
             <path d="M 0 0 L 10 5 L 0 10 z" />
           </marker>
         </defs>
@@ -111,13 +49,7 @@
         <g class="places"></g>
       </svg>
 
-      <context-menu
-        v-if="showButtons"
-        v-show="!isDebuggerEnabled"
-        ref="contextMenu"
-        :items="this.contextMenuItems"
-        @expand="this.onContextMenuExpand"
-      />
+      <context-menu v-if="showButtons" v-show="!isDebuggerEnabled" ref="contextMenu" :items="this.contextMenuItems" @expand="this.onContextMenuExpand" />
     </div>
   </div>
 </template>
@@ -182,6 +114,8 @@ export default class PetriNetEditor extends Vue {
   @Prop()
   private showButtons!: boolean;
   @Prop()
+  private hasNewerVersion!: boolean;
+  @Prop()
   private enableDragging!: boolean;
   @Prop()
   private debug!: boolean;
@@ -197,12 +131,15 @@ export default class PetriNetEditor extends Vue {
 
     this.$refs.editorSvg.setAttribute("id", svgId);
 
-    this.petriNetManager = new PetriNetSvgManager(
-      d3.select(`#${svgId}`),
-      this.enableDragging
-    );
+    this.petriNetManager = new PetriNetSvgManager(d3.select(`#${svgId}`), this.enableDragging);
 
     this.layouter = new BlockLayouter(this.debug);
+
+    this.redraw();
+  }
+
+  redraw(forceLayouter: boolean = false) {
+    this.petriNetManager.reset();
 
     this.places.forEach((place) =>
       this.petriNetManager.createPlace({
@@ -223,9 +160,7 @@ export default class PetriNetEditor extends Vue {
         isSilent: transition.isSilent
       })
     );
-    this.arcs.forEach((arc) =>
-      this.petriNetManager.connect(arc.outElementId, arc.inElementId)
-    );
+    this.arcs.forEach((arc) => this.petriNetManager.connect(arc.outElementId, arc.inElementId));
 
     if (this.runLayouterOnStart) {
       this.runLayouter();
@@ -234,18 +169,7 @@ export default class PetriNetEditor extends Vue {
   }
 
   scale(): void {
-    this.$refs.editorSvg.setAttribute(
-      "viewBox",
-      `0 0 ${this.petriNetManager.width + 10} ${
-        this.petriNetManager.height + 10
-      }`
-    );
-
-    this.$refs.editorSvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-
-    this.$refs.editorSvg.style.removeProperty("min-width");
-
-    this.$refs.editorSvg.style.removeProperty("min-height");
+    this.petriNetManager.updateDimensions();
   }
 
   getPetriNetJson(): {
@@ -262,7 +186,7 @@ export default class PetriNetEditor extends Vue {
 
   private createPlace(): void {
     const scale = this.petriNetManager.scale;
-    const rect = this.$refs.editorSvg.getBoundingClientRect()
+    const rect = this.$refs.editorSvg.getBoundingClientRect();
     this.petriNetManager.createPlace({
       x: (this.$refs.contextMenu.x - rect.x) / scale,
       y: (this.$refs.contextMenu.y - rect.y) / scale,
@@ -272,7 +196,7 @@ export default class PetriNetEditor extends Vue {
 
   private createTransition(): void {
     const scale = this.petriNetManager.scale;
-    const rect = this.$refs.editorSvg.getBoundingClientRect()
+    const rect = this.$refs.editorSvg.getBoundingClientRect();
     this.petriNetManager.createTransition({
       x: (this.$refs.contextMenu.x - rect.x) / scale,
       y: (this.$refs.contextMenu.y - rect.y) / scale,
@@ -285,16 +209,13 @@ export default class PetriNetEditor extends Vue {
   }
 
   private onContextMenuExpand(target: Element | null): void {
-    const isPlaceOrTransition =
-      target instanceof SVGCircleElement || target instanceof SVGRectElement;
+    const isPlaceOrTransition = target instanceof SVGCircleElement || target instanceof SVGRectElement;
 
     this.targetIsPlaceOrTransition = isPlaceOrTransition;
-    this.targetIsDeletable =
-      isPlaceOrTransition || target instanceof SVGLineElement;
+    this.targetIsDeletable = isPlaceOrTransition || target instanceof SVGLineElement;
     this.isSetTokenVisible = target instanceof SVGCircleElement;
     this.isSetWidthVisible = target instanceof SVGLineElement;
-    this.contextMenuTargetId =
-      isPlaceOrTransition || target instanceof SVGLineElement ? target!.id : "";
+    this.contextMenuTargetId = isPlaceOrTransition || target instanceof SVGLineElement ? target!.id : "";
 
     this.contextMenuItems = this.createContextMenuItems();
   }
@@ -302,14 +223,10 @@ export default class PetriNetEditor extends Vue {
   private showEditDialog() {
     const element = this.petriNetManager.getElement(this.contextMenuTargetId);
     if (element instanceof SvgPlace) {
-      this.selectedPlace = this.petriNetManager.getPlace(
-        this.contextMenuTargetId
-      );
+      this.selectedPlace = this.petriNetManager.getPlace(this.contextMenuTargetId);
       this.isEditPlaceDialogVisible = true;
     } else if (element instanceof SvgTransition) {
-      this.selectedTransition = this.petriNetManager.getTransition(
-        this.contextMenuTargetId
-      );
+      this.selectedTransition = this.petriNetManager.getTransition(this.contextMenuTargetId);
       this.isEditTransitionDialogVisible = true;
     }
   }

@@ -31,7 +31,7 @@ class DirectlyFollowsGraphMinerServiceTest {
         private val artemis = Artemis()
         private val wctObserver = TopicObserver(
             WORKSPACE_COMPONENTS_TOPIC,
-            "$WORKSPACE_COMPONENT_EVENT = '$DATA_CHANGE'"
+            "$WORKSPACE_COMPONENT_EVENT = '${WorkspaceComponentEventType.DataChange}'"
         )
 
         @JvmStatic
@@ -59,7 +59,7 @@ class DirectlyFollowsGraphMinerServiceTest {
                 query = _query
                 workspace = Workspace.all().firstOrNull() ?: Workspace.new { name = "test-workspace" }
             }
-        }.triggerEvent(Producer())
+        }.triggerEvent(Producer(), WorkspaceComponentEventType.ComponentCreatedOrUpdated)
     }
 
     @BeforeTest
@@ -95,7 +95,7 @@ class DirectlyFollowsGraphMinerServiceTest {
 
             val dfg = DirectlyFollowsGraph.load(
                 DBCache.get(dataStore.toString()).database,
-                UUID.fromString(component.mostRecentData()?.asComponentData()?.modelId)
+                UUID.fromString(ProcessModelComponentData.create(component).models.values.single())
             )
             assertEquals(1, dfg.initialActivities.size)
             assertEquals(3, dfg.finalActivities.size)
@@ -142,7 +142,7 @@ class DirectlyFollowsGraphMinerServiceTest {
 
             val dfg = DirectlyFollowsGraph.load(
                 DBCache.get(dataStore.toString()).database,
-                UUID.fromString(component.mostRecentData()?.asComponentData()?.modelId)
+                UUID.fromString(ProcessModelComponentData.create(component).models.values.single())
             )
             assertEquals(1, dfg.initialActivities.size)
             assertEquals(3, dfg.finalActivities.size)

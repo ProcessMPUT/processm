@@ -42,6 +42,7 @@
       <component
         :is="componentType"
         v-if="isDisplayable"
+        :workspace-id="workspaceId"
         :component-mode="componentMode"
         :data="componentDetails"
         :update-data="updateData"
@@ -145,6 +146,8 @@ export enum ComponentMode {
   }
 })
 export default class WorkspaceComponent extends Vue {
+  @Prop()
+  readonly workspaceId!: string;
   @Prop({ default: null })
   readonly componentDetails!: WorkspaceComponentModel | null;
   @Prop({ default: false })

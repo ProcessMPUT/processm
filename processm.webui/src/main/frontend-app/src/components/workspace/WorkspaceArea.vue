@@ -76,7 +76,7 @@
       @edit="editComponent"
       @remove="removeComponent"
     ></single-component-view>
-    <edit-component-view
+    <edit-component-dialog
       v-if="displayEditModal"
       v-model="displayEditModal"
       :component-details="displayedComponentDetails"
@@ -86,7 +86,7 @@
       @edit="editComponent"
       @remove="removeComponent"
       @component-updated="updateComponent"
-    ></edit-component-view>
+    ></edit-component-dialog>
   </v-container>
 </template>
 
@@ -107,19 +107,19 @@
 </style>
 
 <script lang="ts">
-import Vue from "vue";
+import Vue, { watch } from "vue";
 import Component from "vue-class-component";
 import { Inject, Prop } from "vue-property-decorator";
 import { GridItem, GridLayout } from "vue-grid-layout";
 import { v4 as uuidv4 } from "uuid";
 import SingleComponentView from "./SingleComponentView.vue";
-import EditComponentView from "./EditComponentView.vue";
+import EditComponentDialog from "./EditComponentDialog.vue";
 import EmptyComponent from "./EmptyComponent.vue";
 import WorkspaceComponent, { ComponentMode } from "./WorkspaceComponent.vue";
 import WorkspaceService from "@/services/WorkspaceService";
 import { LayoutElement, WorkspaceComponent as WorkspaceComponentModel } from "@/models/WorkspaceComponent";
 import { ComponentType } from "@/openapi";
-import { WorkspaceObserver } from "@/utils/WorkspaceObserver";
+import App from "@/App.vue";
 
 @Component({
   components: {
@@ -127,7 +127,7 @@ import { WorkspaceObserver } from "@/utils/WorkspaceObserver";
     GridItem,
     WorkspaceComponent,
     SingleComponentView,
-    EditComponentView,
+    EditComponentDialog,
     EmptyComponent
   }
 })
@@ -137,6 +137,7 @@ export default class WorkspaceArea extends Vue {
   @Prop({ default: "" })
   readonly workspaceId!: string;
   @Inject() workspaceService!: WorkspaceService;
+  @Inject() app!: App;
 
   readonly defaultComponentWidth = 4;
   readonly defaultComponentHeight = 4;
@@ -154,7 +155,6 @@ export default class WorkspaceArea extends Vue {
     w: number;
     h: number;
   }> = [];
-  notifications: WorkspaceObserver | undefined = undefined;
 
   async fullRefresh() {
     const components = await this.workspaceService.getWorkspaceComponents(this.workspaceId);
@@ -174,14 +174,15 @@ export default class WorkspaceArea extends Vue {
 
   async created() {
     await this.fullRefresh();
-    if (this.notifications === undefined) this.notifications = this.workspaceService.observeWorkspace(this.workspaceId, this.refreshComponent);
-    await this.notifications.start();
+    watch(this.app.lastEvent, (lastEvent) => {
+      const componentId = lastEvent.lastEvent?.componentId;
+      if (componentId == null) return;
+      if (!this.componentsDetails.has(componentId)) return;
+      this.refreshComponent(componentId);
+    });
   }
 
   // noinspection JSUnusedGlobalSymbols
-  beforeDestroy() {
-    this.notifications?.close();
-  }
 
   async removeComponent(componentId: string) {
     const componentIndex = this.layout.findIndex((component) => component.i == componentId);
@@ -249,7 +250,9 @@ export default class WorkspaceArea extends Vue {
       updatedLayoutElements[layoutElement.i] = layout;
       component.layout = layout;
     });
-    await this.workspaceService.updateLayout(this.workspaceId, updatedLayoutElements);
+    if (Object.keys(updatedLayoutElements).length > 0) {
+      await this.workspaceService.updateLayout(this.workspaceId, updatedLayoutElements);
+    }
     this.dirtyLayout = false;
   }
 

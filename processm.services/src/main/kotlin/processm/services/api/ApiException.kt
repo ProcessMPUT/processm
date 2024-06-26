@@ -1,8 +1,7 @@
 package processm.services.api
 
-import io.ktor.http.*
+import processm.helpers.LocalizedException
 import processm.services.helpers.ExceptionReason
-import processm.services.helpers.LocalizedException
 
 /**
  * Represents failure during processing of API request.

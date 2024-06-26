@@ -1,7 +1,7 @@
 package processm.services.logic
 
 import processm.services.helpers.ExceptionReason
-import processm.services.helpers.LocalizedException
+import processm.helpers.LocalizedException
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 

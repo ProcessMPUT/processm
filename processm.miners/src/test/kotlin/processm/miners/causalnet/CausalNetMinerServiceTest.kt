@@ -39,7 +39,7 @@ class CausalNetMinerServiceTest {
         private var service: CausalNetMinerService? = null
         private val wctObserver = TopicObserver(
             WORKSPACE_COMPONENTS_TOPIC,
-            "$WORKSPACE_COMPONENT_EVENT = '$DATA_CHANGE'"
+            "$WORKSPACE_COMPONENT_EVENT = '${WorkspaceComponentEventType.DataChange}'"
         )
 
         @BeforeAll
@@ -88,7 +88,7 @@ class CausalNetMinerServiceTest {
             query = "where l:id=${DBTestHelper.JournalReviewExtra}"
 
             afterCommit {
-                triggerEvent(producer)
+                triggerEvent(producer, WorkspaceComponentEventType.ComponentCreatedOrUpdated)
             }
         }
     }
@@ -96,7 +96,7 @@ class CausalNetMinerServiceTest {
     private fun deleteComponent(component: WorkspaceComponent) = transactionMain {
         component.deleted = true
         component.afterCommit {
-            component.triggerEvent(producer, DELETE)
+            component.triggerEvent(producer, WorkspaceComponentEventType.Delete)
         }
 
         component.workspace.deleted = true
@@ -122,9 +122,8 @@ class CausalNetMinerServiceTest {
 
             val cnet = transactionMain {
                 component.refresh()
-                component.mostRecentData()?.asComponentData()?.let {
-                    DBSerializer.fetch(DBCache.get(DBTestHelper.dbName).database, it.modelId.toInt())
-                }
+                val modelId = ProcessModelComponentData.create(component).models.values.single().toInt()
+                DBSerializer.fetch(DBCache.get(DBTestHelper.dbName).database, modelId)
             }
 
             assertNotNull(cnet, "Expecting a C-net to be created.")
@@ -147,7 +146,7 @@ class CausalNetMinerServiceTest {
 
         val cnetId = transactionMain {
             component.refresh()
-            component.mostRecentData()?.asComponentData()?.let { it.modelId.toInt() }
+            ProcessModelComponentData.create(component).models.values.single().toInt()
         }
 
         assertNotNull(cnetId, "Expecting a C-net to be created.")

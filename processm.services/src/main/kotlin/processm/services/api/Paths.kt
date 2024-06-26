@@ -275,13 +275,23 @@ object Paths {
     class WorkspaceComponent(val workspaceId: UUID, val componentId: UUID)
 
     /**
-     * Get data of the specified component in the specified workspace
+     * Get identifiers of data variants / set the default data variant of the specified component in the specified workspace
      *
      * @param workspaceId Workspace ID
      * @param componentId Component ID
      */
     @Location("/workspaces/{workspaceId}/components/{componentId}/data")
     class WorkspaceComponentData(val workspaceId: UUID, val componentId: UUID)
+
+    /**
+     * Get the specified data variant of the specified component in the specified workspace
+     *
+     * @param workspaceId Workspace ID
+     * @param componentId Component ID
+     * @param variantId Data variant ID
+     */
+    @Location("/workspaces/{workspaceId}/components/{componentId}/data/{variantId}")
+    class WorkspaceComponentDataVariant(val workspaceId: UUID, val componentId: UUID, val variantId: Long)
 
     /**
      * Get all components available to the calling user in the specified workspace
@@ -306,7 +316,7 @@ object Paths {
     class Workspaces
 
     @Location("/workspaces/empty-component/{type}")
-    class EmptyComponent(val type:String)
+    class EmptyComponent(val type: String)
 
     /**
      * Get the whole ACL for the given URN
@@ -331,4 +341,7 @@ object Paths {
      */
     @Location("/acl/can-modify/{urn...}")
     class CanModifyACL(val urn: List<String>)
+
+    @Location("/notifications")
+    class Notifications()
 }

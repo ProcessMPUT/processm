@@ -32,18 +32,35 @@ const val WORKSPACE_COMPONENT_TYPE = "componentType"
 const val WORKSPACE_COMPONENT_EVENT = "event"
 const val WORKSPACE_COMPONENT_EVENT_DATA = "eventData"
 
-const val CREATE_OR_UPDATE = "create_or_update"
+enum class WorkspaceComponentEventType {
+    /**
+     * Event triggered when the system changed the component data.
+     */
+    DataChange,
+    Delete,
+    ComponentCreatedOrUpdated,
 
-const val DELETE = "delete"
+    /**
+     * Triggered by an ETL process once new, possibly relevant data becomes available
+     */
+    NewExternalData,
 
-/**
- * Event triggered when the system changed the component data.
- */
-const val DATA_CHANGE = "data_change"
+    /**
+     * Triggered when a new model is required, e.g., because a concept drift was observed
+     */
+    NewModelRequired,
 
-const val DATA_CHANGE_MODEL = "model"
-const val DATA_CHANGE_ALIGNMENT_KPI = "alignmentKPI"
-const val DATA_CHANGE_LAST_ERROR = "lastError"
+    /**
+     * Triggered once the user accepts a new model or the first model is mined for a component
+     */
+    ModelAccepted,
+}
+
+enum class DataChangeType(val value: String) {
+    Model("model"),
+    AlignmentKPI("alignment_kpi"),
+    LastError("last_error")
+}
 
 object WorkspaceComponents : UUIDTable("workspace_components") {
     /**
@@ -65,6 +82,7 @@ object WorkspaceComponents : UUIDTable("workspace_components") {
      * Component-specific properties stored as a json map.
      */
     val properties = text("properties").nullable()
+
     /**
      * The id of the data store holding the underlying log data (the configuration parameter).
      */

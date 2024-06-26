@@ -12,11 +12,10 @@ import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
 import processm.dbmodels.urn
 import processm.logging.loggedScope
-import processm.services.api.getCustomProperties
+import processm.logging.logger
+import processm.services.api.*
 import processm.services.api.models.AbstractComponent
 import processm.services.api.models.CustomProperty
-import processm.services.api.toComponentType
-import processm.services.api.updateData
 import processm.services.helpers.ExceptionReason
 import java.time.Instant
 import java.util.*
@@ -108,7 +107,7 @@ class WorkspaceService(
             }.forEach { component ->
                 component.deleted = true
                 component.afterCommit {
-                    component.triggerEvent(producer, DELETE)
+                    component.triggerEvent(producer, WorkspaceComponentEventType.Delete)
                 }
             }
 
@@ -200,7 +199,7 @@ class WorkspaceService(
     ): Unit = transactionMain {
         WorkspaceComponent.findById(workspaceComponentId)
             .validateNotNull(ExceptionReason.WorkspaceComponentNotFound)
-            .apply { triggerEvent(producer, DELETE) }
+            .apply { triggerEvent(producer, WorkspaceComponentEventType.Delete) }
             .deleted = true
     }
 
@@ -242,7 +241,7 @@ class WorkspaceService(
             this.userLastModified = Instant.now()
 
             afterCommit {
-                triggerEvent(producer)
+                triggerEvent(producer, WorkspaceComponentEventType.ComponentCreatedOrUpdated)
             }
         }
     }
@@ -283,7 +282,7 @@ class WorkspaceService(
 
             if (trigger) {
                 afterCommit {
-                    triggerEvent(producer)
+                    triggerEvent(producer, WorkspaceComponentEventType.ComponentCreatedOrUpdated)
                 }
             }
         }
@@ -297,4 +296,30 @@ class WorkspaceService(
             type.toComponentType(),
             customProperties = getCustomProperties(type)
         )
+
+    fun acceptModel(componentId: UUID, modelVersion: Long): Unit = transactionMain {
+        logger().debug("Accepting model {} for {}", modelVersion, componentId)
+        WorkspaceComponent[componentId].apply {
+            data = ProcessModelComponentData.create(this).apply {
+                acceptedModelVersion = modelVersion
+            }.toJSON()
+            afterCommit {
+                triggerEvent(producer, WorkspaceComponentEventType.ModelAccepted)
+            }
+        }
+    }
+
+    fun getAvailableVersions(componentId: UUID): Set<Long> = transactionMain {
+        return@transactionMain ProcessModelComponentData.create(WorkspaceComponent[componentId]).models.keys
+    }
+
+    fun getDataVariant(componentId: UUID, variantId: Long) = transactionMain {
+        with(ProcessModelComponentData.create(WorkspaceComponent[componentId])) {
+            when (component.componentType) {
+                ComponentTypeDto.CausalNet -> retrieveCausalNetComponentData(variantId)
+                ComponentTypeDto.PetriNet -> retrievePetriNetComponentData(variantId)
+                else -> throw UnsupportedOperationException("Component type ${component.componentType} does not support data versioning")
+            }
+        }
+    }
 }

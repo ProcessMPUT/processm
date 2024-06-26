@@ -1,5 +1,8 @@
 package processm.core.models.metadata
 
+import processm.helpers.ExceptionReason
+import processm.helpers.LocalizedException
+
 /**
  * Universal Resource Name. See RFC8141.
  */
@@ -7,7 +10,7 @@ package processm.core.models.metadata
 value class URN(val urn: String) {
     init {
         if (!reURN.matches(urn))
-            throw IllegalArgumentException()
+            throw LocalizedException(ExceptionReason.NotAValidURN, urn)
     }
 
     constructor(components: Iterable<String>) :

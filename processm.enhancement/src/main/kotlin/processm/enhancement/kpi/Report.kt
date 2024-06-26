@@ -43,7 +43,12 @@ data class Report(
     /**
      * Alignments corresponding used to calculate this report.
      */
-    val alignments: List<Alignment>
+    val alignments: List<Alignment>,
+
+    /**
+     * `true` if concept drift was detected, `false` if it was not detected, `null` if it was not checked
+     */
+    var hasConceptDrift: Boolean? = null
 ) {
     companion object {
         /**

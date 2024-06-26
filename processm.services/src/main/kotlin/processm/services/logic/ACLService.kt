@@ -215,4 +215,23 @@ class ACLService {
 
             return@transactionMain Group.wrapRows(groups)
         }
+
+    fun usersWithAccess(urn: URN, role: RoleType = RoleType.Reader, userIDs: Collection<UUID>? = null): List<UUID> =
+        transactionMain {
+            val allowedRoles = RoleType.values().filter { it.ordinal <= role.ordinal }.map { it.role.id }
+
+            Groups.innerJoin(UsersInGroups)
+                .join(AccessControlList, JoinType.INNER, AccessControlList.group_id, Groups.id)
+                .slice(UsersInGroups.userId)
+                .select {
+                    val query = (AccessControlList.role_id inList allowedRoles) and
+                            (AccessControlList.urn.column eq urn.urn)
+                    if (userIDs !== null)
+                        query and (UsersInGroups.userId inList userIDs)
+                    else
+                        query
+                }
+                .withDistinct()
+                .map { it[UsersInGroups.userId].value }
+        }
 }

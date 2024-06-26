@@ -6,9 +6,11 @@
       :run-layouter-on-start="!hasWorkingLayout"
       :show-buttons="showButtons"
       :enable-dragging="enableDragging"
+      :has-newer-version="hasNewerVersion()"
       :places="getPlacesAsDto()"
       :transitions="getTransitionsAsDto()"
       :arcs="getArcsAsDto()"
+      @loadNewestModel="loadNewestModel"
     ></petri-net-editor>
     <div class="node-details" />
   </div>
@@ -17,23 +19,37 @@
 
 <script lang="ts">
 import Vue from "vue";
-import { Component, Prop, Watch } from "vue-property-decorator";
+import { Component, Inject, Prop, Watch } from "vue-property-decorator";
 import { PetriNetComponentData, ProcessModelCustomizationData, WorkspaceComponent } from "@/models/WorkspaceComponent";
 import resize from "vue-resize-directive";
 import { ComponentMode } from "@/components/workspace/WorkspaceComponent.vue";
 import PetriNetEditor from "@/components/petri-net-editor/PetriNetEditor.vue";
 import { ArcDto, PlaceDto, TransitionDto } from "@/components/petri-net-editor/Dto";
 import { PlaceType } from "@/components/petri-net-editor/model/Place";
+import AlignmentsDialog from "@/components/AlignmentsDialog.vue";
+import { ComponentData } from "@/openapi";
+import WorkspaceService from "@/services/WorkspaceService";
+import { waitForRepaint } from "@/utils/waitForRepaint";
 
 @Component({
-  components: { PetriNetEditor },
+  computed: {
+    ComponentMode() {
+      return ComponentMode;
+    }
+  },
+  components: { AlignmentsDialog, PetriNetEditor },
   directives: {
     resize
   }
 })
 export default class PetriNetComponent extends Vue {
+  @Inject() workspaceService!: WorkspaceService;
+
+  @Prop()
+  readonly workspaceId!: string;
+
   @Prop({ default: {} })
-  readonly data!: WorkspaceComponent;
+  readonly data!: WorkspaceComponent & { data: PetriNetComponentData };
 
   @Prop({ default: null })
   readonly componentMode!: ComponentMode | null;
@@ -55,7 +71,19 @@ export default class PetriNetComponent extends Vue {
 
   private get hasWorkingLayout() {
     const layout = (this.data.customizationData as ProcessModelCustomizationData)?.layout;
-    return layout !== undefined && layout.length > 0;
+    if (layout == undefined || layout.length == 0) return false;
+    const knownIds: Set<String> = new Set(
+      layout.map((item) => {
+        return item.id;
+      })
+    );
+    for (const place of this.petriNet.places ?? []) {
+      if (!knownIds.has(place.id)) return false;
+    }
+    for (const transition of this.petriNet.transitions ?? []) {
+      if (!knownIds.has(transition.id)) return false;
+    }
+    return true;
   }
 
   private get layout() {
@@ -176,6 +204,31 @@ export default class PetriNetComponent extends Vue {
         return { id: place.id };
       });
     }
+  }
+
+  hasNewerVersion() {
+    const newest = this.data.data.newestVersion;
+    const current = this.data.data.modelVersion;
+    return newest !== undefined && current !== undefined && newest > current;
+  }
+
+  async loadNewestModel() {
+    const variantId = this.data.data.newestVersion;
+    if (variantId === undefined) return;
+    this.data.data = new PetriNetComponentData(
+      (await this.workspaceService.getComponentDataVariant(this.workspaceId, this.data.id, variantId)) as Partial<ComponentData>
+    );
+
+    await waitForRepaint(() => {
+      this.$refs.editor.redraw(true);
+    });
+  }
+
+  @Watch("data")
+  async update() {
+    await waitForRepaint(() => {
+      this.$refs.editor.redraw(true);
+    });
   }
 }
 </script>

@@ -48,13 +48,11 @@ class LogKPIService : AbstractJobService(
         require(type == ComponentTypeDto.Kpi) { "Expected ${ComponentTypeDto.Kpi}, got $type." }
 
         val id = message.getString(WORKSPACE_COMPONENT_ID)
-        val event = message.getStringProperty(WORKSPACE_COMPONENT_EVENT)
+        val event = WorkspaceComponentEventType.valueOf(message.getStringProperty(WORKSPACE_COMPONENT_EVENT))
 
         return when (event) {
-            CREATE_OR_UPDATE -> listOf(createJob(id.toUUID()!!))
-            DELETE -> emptyList() /* ignore for now */
-            DATA_CHANGE -> emptyList() // ignore
-            else -> throw IllegalArgumentException("Unknown event type: $event.")
+            WorkspaceComponentEventType.ComponentCreatedOrUpdated -> listOf(createJob(id.toUUID()!!))
+            else -> emptyList()
         }
     }
 
@@ -99,7 +97,7 @@ class LogKPIService : AbstractJobService(
                     component.lastError = e.message
                     logger.warn("Cannot calculate log-based KPI for component with id $id.", e)
                 }
-                component.triggerEvent(Producer(), DATA_CHANGE)
+                component.triggerEvent(Producer(), WorkspaceComponentEventType.DataChange)
             }
         }
     }

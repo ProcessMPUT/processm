@@ -13,7 +13,8 @@
       <v-card-text>
         <workspace-component
           v-if="isMounted"
-          :component-details="componentDetails"
+          :workspace-id="workspaceId"
+          :component-details="component"
           :component-mode="ComponentMode.Edit"
           :update-data="updateData"
           @view="$emit('view', componentDetails.id)"
@@ -134,7 +135,7 @@ import { isNonNegativeIntegerRule } from "@/utils/FormValidationRules";
 @Component({
   components: { WorkspaceComponent }
 })
-export default class EditComponentView extends Vue {
+export default class EditComponentDialog extends Vue {
   @Inject() app!: App;
   readonly availableComponents = Object.values(ComponentType);
   kebabize = kebabize;

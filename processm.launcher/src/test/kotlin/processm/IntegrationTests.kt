@@ -8,6 +8,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Semaphore
 import org.jetbrains.exposed.sql.batchInsert
 import org.jetbrains.exposed.sql.javatime.CurrentDateTime
 import org.junit.jupiter.api.Assumptions
@@ -19,6 +20,7 @@ import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.LogInputStream
 import processm.core.persistence.connection.transactionMain
+import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.DataStores
 import processm.etl.DBMSEnvironment
 import processm.etl.MSSQLEnvironment
@@ -29,35 +31,16 @@ import processm.logging.loggedScope
 import processm.logging.logger
 import processm.services.api.Paths
 import processm.services.api.defaultSampleSize
+import processm.services.api.getCustomProperties
 import processm.services.api.models.*
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
+import java.sql.DriverManager
 import java.sql.Statement
+import java.util.*
 import java.util.concurrent.ForkJoinPool
 import kotlin.test.*
-
-/**
- * Ducktyping for raw results of JSON deserialization. Anything indexed with a string is assumed to be a map, and anything
- * indexed with an integer - to be a list.
- *
- * Intended usage:
- * ```
- * with(ducktyping) { ... }
- * ```
- */
-object ducktyping {
-
-    operator fun Any?.get(key: String): Any? {
-        assertIs<Map<String, *>>(this)
-        return this[key]
-    }
-
-    operator fun Any?.get(key: Int): Any? {
-        assertIs<List<*>>(this)
-        return this[key]
-    }
-}
 
 fun <T, K, V> Array<T>.associateNotNull(transform: (T) -> Pair<K, V>?): Map<K, V> {
     val result = HashMap<K, V>()
@@ -819,6 +802,493 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
         }
         ProcessMTestingEnvironment().withPreexistingDatabase(jdbcUrl).run {
             login(email, "P@ssw0rd!")
+        }
+    }
+
+    class ProcessSimulator(val jdbcUrl: String, val tableName: String) {
+        private var eventId = 0
+        private var traceId = 0
+
+        init {
+            DriverManager.getConnection(jdbcUrl!!).use { connection ->
+                connection.createStatement().use { stmt ->
+                    stmt.execute(
+                        """
+                        CREATE TABLE $tableName (
+    trace_id integer NOT NULL,
+    event_id integer NOT NULL primary key ,
+    payload text NOT NULL
+);
+                    """.trimIndent()
+                    )
+                }
+            }
+        }
+
+        fun insert(log: List<List<String>>) {
+            val query = buildString {
+                append("insert into $tableName(trace_id, event_id, payload) values ")
+                repeat(log.sumOf { it.size }) {
+                    append("(?, ?, ?),")
+                }
+                deleteCharAt(length - 1)
+            }
+            DriverManager.getConnection(jdbcUrl).use { connection ->
+                connection.prepareStatement(query).use { stmt ->
+                    var varId = 0
+                    for (trace in log) {
+                        traceId++
+                        for (event in trace) {
+                            eventId++
+                            varId += 1
+                            stmt.setInt(varId, traceId)
+                            varId += 1
+                            stmt.setInt(varId, eventId)
+                            varId += 1
+                            stmt.setString(varId, event)
+                        }
+                    }
+                    stmt.executeUpdate()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `manual ETL with concept drift`() {
+        val etlProcessName = "concept drifting"
+
+        val tableName = "manualETL76b7c90b"
+
+        val query = """
+            SELECT event_id, trace_id, payload FROM $tableName
+ WHERE event_id > CAST(? AS bigint)
+    """.trimIndent()
+
+        ProcessMTestingEnvironment().withFreshDatabase().withAlignerDelay(100L).run {
+            val simulator = ProcessSimulator(jdbcUrl!!, tableName)
+
+            registerUser("test@example.com", "some organization")
+            login("test@example.com", "P@ssw0rd!")
+            currentOrganizationId = organizations.single().id
+            currentDataStore = createDataStore("datastore")
+            currentDataConnector = createDataConnector("dc1", mapOf("connection-string" to jdbcUrl!!))
+
+            val initialDefinition = AbstractEtlProcess(
+                name = etlProcessName,
+                dataConnectorId = currentDataConnector?.id!!,
+                type = EtlProcessType.jdbc,
+                configuration = JdbcEtlProcessConfiguration(
+                    query,
+                    false,
+                    false,
+                    JdbcEtlColumnConfiguration("trace_id", "trace_id"),
+                    JdbcEtlColumnConfiguration("event_id", "event_id"),
+                    arrayOf(JdbcEtlColumnConfiguration("payload", "concept:name")),
+                    lastEventExternalId = "0"
+                )
+            )
+
+            currentEtlProcess = post<Paths.EtlProcesses, AbstractEtlProcess, AbstractEtlProcess>(initialDefinition) {
+                return@post body<AbstractEtlProcess>()
+            }.apply {
+                assertEquals(etlProcessName, name)
+                assertEquals(currentDataConnector?.id, dataConnectorId)
+                assertNotNull(id)
+            }
+
+            simulator.insert(List(10) { listOf("a1", "a2") })
+
+            post<Paths.EtlProcess, Unit, Unit>(null) {
+                assertTrue { status.isSuccess() }
+            }
+
+            val logIdentityId = get<Paths.EtlProcess, UUID> {
+                return@get body<EtlProcessInfo>().logIdentityId
+            }
+
+            currentWorkspaceId = post<Paths.Workspaces, NewWorkspace, UUID>(NewWorkspace("workspace")) {
+                return@post body<Workspace>().id!!
+            }
+
+            val eventsCounter = Semaphore(5, 5)
+
+            sse(format<Paths.Notifications>()) {
+                eventsCounter.release()
+            }
+
+            assertEquals(0, eventsCounter.availablePermits)
+
+            waitUntil {
+                with(pqlQuery("where log:identity:id=$logIdentityId")) {
+                    count() == 1 && single().traces.count() == 10
+                }
+            }
+
+            currentComponentId = UUID.randomUUID()
+            put<Paths.WorkspaceComponent, AbstractComponent, Unit>(
+                AbstractComponent(
+                    currentComponentId!!,
+                    "where log:identity:id=$logIdentityId",
+                    currentDataStore?.id!!,
+                    ComponentType.causalNet,
+                    getCustomProperties(ComponentTypeDto.CausalNet),
+                    name = "test causalnet component"
+                )
+            ) {
+                assertTrue { status.isSuccess() }
+            }
+
+            // first model + alignments
+            eventsCounter.waitUntilAcquired(2)
+
+            get<Paths.WorkspaceComponent, CausalNetComponentData?> {
+                return@get body<AbstractComponent>().data as CausalNetComponentData?
+            }.apply {
+                assertEquals(4, this?.nodes?.size)
+            }
+
+            simulator.insert(List(5) { listOf("b1", "b2") })
+
+            post<Paths.EtlProcess, Unit, Unit>(null) {
+                assertTrue { status.isSuccess() }
+            }
+
+            // alignments for the old model + new model
+            eventsCounter.waitUntilAcquired(2)
+
+            val availableModelVersions = get<Paths.WorkspaceComponentData, List<Long>> {
+                return@get body<List<Long>>()
+            }
+
+            assertEquals(2, availableModelVersions.size)
+
+            get(format<Paths.WorkspaceComponentDataVariant>("variantId" to availableModelVersions.min().toString())) {
+                return@get body<CausalNetComponentData>()
+            }.apply {
+                assertEquals(4, nodes.size)
+            }
+
+            get(format<Paths.WorkspaceComponentDataVariant>("variantId" to availableModelVersions.max().toString())) {
+                return@get body<CausalNetComponentData>()
+            }.apply {
+                assertEquals(6, nodes.size)
+            }
+
+            get<Paths.WorkspaceComponent, CausalNetComponentData?> {
+                return@get body<AbstractComponent>().data as CausalNetComponentData?
+            }.apply {
+                assertEquals(4, this?.nodes?.size)
+            }
+
+            assertEquals(0, eventsCounter.availablePermits)
+
+            patch<Paths.WorkspaceComponentData, Long, Unit>(availableModelVersions.max()) {
+                assertTrue { status.isSuccess() }
+            }
+
+            // alignments for the new model
+            eventsCounter.waitUntilAcquired(1)
+
+            get<Paths.WorkspaceComponent, CausalNetComponentData?> {
+                return@get body<AbstractComponent>().data as CausalNetComponentData?
+            }.apply {
+                assertEquals(6, this?.nodes?.size)
+                assertEquals(15, this?.alignmentKPIReport?.alignments?.size)
+            }
+        }
+    }
+
+    @Test
+    fun `JDBC ETL with concept drift - component before the data`() {
+        val etlProcessName = "concept drifting"
+
+        val tableName = "manualETLfc9d56fe"
+
+        val query = """
+            SELECT event_id, trace_id, payload FROM $tableName
+ WHERE event_id > CAST(? AS bigint)
+    """.trimIndent()
+
+        ProcessMTestingEnvironment().withFreshDatabase().withAlignerDelay(100L).run {
+
+            val simulator = ProcessSimulator(jdbcUrl!!, tableName)
+
+            registerUser("test@example.com", "some organization")
+            login("test@example.com", "P@ssw0rd!")
+            currentOrganizationId = organizations.single().id
+            currentDataStore = createDataStore("datastore")
+            currentDataConnector = createDataConnector("dc1", mapOf("connection-string" to jdbcUrl!!))
+
+            val initialDefinition = AbstractEtlProcess(
+                name = etlProcessName,
+                dataConnectorId = currentDataConnector?.id!!,
+                type = EtlProcessType.jdbc,
+                configuration = JdbcEtlProcessConfiguration(
+                    query,
+                    false,
+                    false,
+                    JdbcEtlColumnConfiguration("trace_id", "trace_id"),
+                    JdbcEtlColumnConfiguration("event_id", "event_id"),
+                    arrayOf(JdbcEtlColumnConfiguration("payload", "concept:name")),
+                    lastEventExternalId = "0"
+                )
+            )
+
+            currentEtlProcess = post<Paths.EtlProcesses, AbstractEtlProcess, AbstractEtlProcess>(initialDefinition) {
+                return@post body<AbstractEtlProcess>()
+            }.apply {
+                assertEquals(etlProcessName, name)
+                assertEquals(currentDataConnector?.id, dataConnectorId)
+                assertNotNull(id)
+            }
+
+            val logIdentityId = get<Paths.EtlProcess, UUID> {
+                return@get body<EtlProcessInfo>().logIdentityId
+            }
+
+            currentWorkspaceId = post<Paths.Workspaces, NewWorkspace, UUID>(NewWorkspace("workspace")) {
+                return@post body<Workspace>().id!!
+            }
+
+
+            val eventsCounter = Semaphore(6, 6)
+
+            sse(format<Paths.Notifications>()) {
+                eventsCounter.release()
+            }
+
+            currentComponentId = UUID.randomUUID()
+            put<Paths.WorkspaceComponent, AbstractComponent, Unit>(
+                AbstractComponent(
+                    currentComponentId!!,
+                    "where log:identity:id=$logIdentityId",
+                    currentDataStore?.id!!,
+                    ComponentType.causalNet,
+                    getCustomProperties(ComponentTypeDto.CausalNet),
+                    name = "test causalnet component"
+                )
+            ) {
+                assertTrue { status.isSuccess() }
+            }
+
+            // error due to no data
+            eventsCounter.waitUntilAcquired(1)
+
+            simulator.insert(List(10) { listOf("a1", "a2") })
+
+            post<Paths.EtlProcess, Unit, Unit>(null) {
+                assertTrue { status.isSuccess() }
+            }
+
+            waitUntil {
+                with(pqlQuery("where log:identity:id=$logIdentityId")) {
+                    count() == 1 && single().traces.count() == 10
+                }
+            }
+
+            // first model + alignments
+            eventsCounter.waitUntilAcquired(2)
+
+            get<Paths.WorkspaceComponent, CausalNetComponentData?> {
+                return@get body<AbstractComponent>().data as CausalNetComponentData?
+            }.apply {
+                assertEquals(4, this?.nodes?.size)
+            }
+
+            simulator.insert(List(5) { listOf("b1", "b2") })
+
+            post<Paths.EtlProcess, Unit, Unit>(null) {
+                assertTrue { status.isSuccess() }
+            }
+
+            // alignments for the old model + new model
+            eventsCounter.waitUntilAcquired(2)
+
+            val availableModelVersions = get<Paths.WorkspaceComponentData, List<Long>> {
+                return@get body<List<Long>>()
+            }
+
+            assertEquals(2, availableModelVersions.size)
+
+            get(format<Paths.WorkspaceComponentDataVariant>("variantId" to availableModelVersions.min().toString())) {
+                return@get body<CausalNetComponentData>()
+            }.apply {
+                assertEquals(4, nodes.size)
+            }
+
+            get(format<Paths.WorkspaceComponentDataVariant>("variantId" to availableModelVersions.max().toString())) {
+                return@get body<CausalNetComponentData>()
+            }.apply {
+                assertEquals(6, nodes.size)
+            }
+
+            get<Paths.WorkspaceComponent, CausalNetComponentData?> {
+                return@get body<AbstractComponent>().data as CausalNetComponentData?
+            }.apply {
+                assertEquals(4, this?.nodes?.size)
+            }
+
+            patch<Paths.WorkspaceComponentData, Long, Unit>(availableModelVersions.max()) {
+                assertTrue { status.isSuccess() }
+            }
+
+            // alignments for the new model
+            eventsCounter.waitUntilAcquired(1)
+
+            get<Paths.WorkspaceComponent, CausalNetComponentData?> {
+                return@get body<AbstractComponent>().data as CausalNetComponentData?
+            }.apply {
+                assertEquals(6, this?.nodes?.size)
+                assertEquals(15, this?.alignmentKPIReport?.alignments?.size)
+            }
+        }
+    }
+
+    @Test
+    fun `JDBC ETL - aggregating multiple changes`() {
+        val etlProcessName = "concept drifting"
+
+        val tableName = "manualETL76b7c90b"
+
+        val query = """
+            SELECT event_id, trace_id, payload FROM $tableName
+ WHERE event_id > CAST(? AS bigint)
+    """.trimIndent()
+
+        ProcessMTestingEnvironment().withFreshDatabase().withAlignerDelay(500L).run {
+            val simulator = ProcessSimulator(jdbcUrl!!, tableName)
+
+            registerUser("test@example.com", "some organization")
+            login("test@example.com", "P@ssw0rd!")
+            currentOrganizationId = organizations.single().id
+            currentDataStore = createDataStore("datastore")
+            currentDataConnector = createDataConnector("dc1", mapOf("connection-string" to jdbcUrl!!))
+
+            val initialDefinition = AbstractEtlProcess(
+                name = etlProcessName,
+                dataConnectorId = currentDataConnector?.id!!,
+                type = EtlProcessType.jdbc,
+                configuration = JdbcEtlProcessConfiguration(
+                    query,
+                    false,
+                    false,
+                    JdbcEtlColumnConfiguration("trace_id", "trace_id"),
+                    JdbcEtlColumnConfiguration("event_id", "event_id"),
+                    arrayOf(JdbcEtlColumnConfiguration("payload", "concept:name")),
+                    lastEventExternalId = "0"
+                )
+            )
+
+            currentEtlProcess = post<Paths.EtlProcesses, AbstractEtlProcess, AbstractEtlProcess>(initialDefinition) {
+                return@post body<AbstractEtlProcess>()
+            }.apply {
+                assertEquals(etlProcessName, name)
+                assertEquals(currentDataConnector?.id, dataConnectorId)
+                assertNotNull(id)
+            }
+
+            simulator.insert(List(10) { listOf("a1", "a2") })
+
+            post<Paths.EtlProcess, Unit, Unit>(null) {
+                assertTrue { status.isSuccess() }
+            }
+
+            val logIdentityId = get<Paths.EtlProcess, UUID> {
+                return@get body<EtlProcessInfo>().logIdentityId
+            }
+
+            currentWorkspaceId = post<Paths.Workspaces, NewWorkspace, UUID>(NewWorkspace("workspace")) {
+                return@post body<Workspace>().id!!
+            }
+
+            val eventsCounter = Semaphore(5, 5)
+
+            sse(format<Paths.Notifications>()) {
+                eventsCounter.release()
+            }
+
+            assertEquals(0, eventsCounter.availablePermits)
+
+            waitUntil {
+                with(pqlQuery("where log:identity:id=$logIdentityId")) {
+                    count() == 1 && single().traces.count() == 10
+                }
+            }
+
+            currentComponentId = UUID.randomUUID()
+            put<Paths.WorkspaceComponent, AbstractComponent, Unit>(
+                AbstractComponent(
+                    currentComponentId!!,
+                    "where log:identity:id=$logIdentityId",
+                    currentDataStore?.id!!,
+                    ComponentType.causalNet,
+                    getCustomProperties(ComponentTypeDto.CausalNet),
+                    name = "test causalnet component"
+                )
+            ) {
+                assertTrue { status.isSuccess() }
+            }
+
+            // first model + alignments
+            eventsCounter.waitUntilAcquired(2)
+
+            get<Paths.WorkspaceComponent, CausalNetComponentData?> {
+                return@get body<AbstractComponent>().data as CausalNetComponentData?
+            }.apply {
+                assertEquals(4, this?.nodes?.size)
+            }
+
+            repeat(5) {
+                simulator.insert(listOf(listOf("b1", "b2")))
+
+                post<Paths.EtlProcess, Unit, Unit>(null) {
+                    assertTrue { status.isSuccess() }
+                }
+            }
+
+            // alignments for the old model + new model
+            eventsCounter.waitUntilAcquired(2)
+
+            val availableModelVersions = get<Paths.WorkspaceComponentData, List<Long>> {
+                return@get body<List<Long>>()
+            }
+
+            assertEquals(2, availableModelVersions.size)
+
+            get(format<Paths.WorkspaceComponentDataVariant>("variantId" to availableModelVersions.min().toString())) {
+                return@get body<CausalNetComponentData>()
+            }.apply {
+                assertEquals(4, nodes.size)
+            }
+
+            get(format<Paths.WorkspaceComponentDataVariant>("variantId" to availableModelVersions.max().toString())) {
+                return@get body<CausalNetComponentData>()
+            }.apply {
+                assertEquals(6, nodes.size)
+            }
+
+            get<Paths.WorkspaceComponent, CausalNetComponentData?> {
+                return@get body<AbstractComponent>().data as CausalNetComponentData?
+            }.apply {
+                assertEquals(4, this?.nodes?.size)
+            }
+
+            assertEquals(0, eventsCounter.availablePermits)
+
+            patch<Paths.WorkspaceComponentData, Long, Unit>(availableModelVersions.max()) {
+                assertTrue { status.isSuccess() }
+            }
+
+            // alignments for the new model
+            eventsCounter.waitUntilAcquired(1)
+
+            get<Paths.WorkspaceComponent, CausalNetComponentData?> {
+                return@get body<AbstractComponent>().data as CausalNetComponentData?
+            }.apply {
+                assertEquals(6, this?.nodes?.size)
+                assertEquals(15, this?.alignmentKPIReport?.alignments?.size)
+            }
         }
     }
 }

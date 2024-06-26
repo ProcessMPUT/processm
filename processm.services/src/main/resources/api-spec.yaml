@@ -1018,6 +1018,69 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
+    patch:
+      tags:
+        - workspaces
+        - components
+      summary: Set the data variant, e.g., the accepted model version
+      operationId: patchWorkspaceComponentData
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              type: integer
+              format: int64
+      responses:
+        '204':
+          description: successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: [ ]
+  /workspaces/{workspaceId}/components/{componentId}/data/{variantId}:
+    parameters:
+      - name: workspaceId
+        in: path
+        description: Workspace ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: componentId
+        in: path
+        description: Component ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: variantId
+        in: path
+        description: Variant ID
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags:
+        - workspaces
+        - components
+      summary: Get the specified data variant of the specified component in the specified workspace
+      operationId: getWorkspaceComponentDataVariant
+      responses:
+        '200':
+          description: successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/AbstractComponentData'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: [ ]
   /workspaces/{workspaceId}/layout:
     parameters:
       - name: workspaceId
@@ -2278,6 +2341,12 @@ components:
                     format: double
             alignmentKPIReport:
               $ref: '#/components/schemas/AlignmentKPIReport'
+            modelVersion:
+              type: integer
+              format: int64
+            newestVersion:
+              type: integer
+              format: int64
     CustomizationData:
       type: object
       properties:
@@ -2348,6 +2417,12 @@ components:
                       type: string
             alignmentKPIReport:
               $ref: '#/components/schemas/AlignmentKPIReport'
+            modelVersion:
+              type: integer
+              format: int64
+            newestVersion:
+              type: integer
+              format: int64
     PetriNetComponent:
       allOf:
         - $ref: '#/components/schemas/Component'
