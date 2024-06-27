@@ -95,7 +95,12 @@
         </v-tooltip>
       </template>
     </v-data-table>
-    <data-store-configuration :data-store-id="dataStoreIdToConfigure" :value="dataStoreIdToConfigure != null" @closed="closeDataStoreConfiguration" />
+    <data-store-configuration
+      :data-store-id="dataStoreIdToConfigure"
+      :value="dataStoreIdToConfigure != null"
+      @closed="closeDataStoreConfiguration"
+      @changed="dataStoreChanged"
+    />
     <acl-dialog :value="dataStoreUrn != null" :urn="dataStoreUrn" @closed="dataStoreUrn = null" :force-view-only="false" />
     <rename-dialog
       :value="dataStoreIdToRename != null"
@@ -207,6 +212,11 @@ export default class DataStores extends Vue {
 
   configureACL(dataStoreId: string) {
     this.dataStoreUrn = "urn:processm:db/data_stores/" + dataStoreId;
+  }
+
+  dataStoreChanged(dataStore: DataStore) {
+    const idx = this.dataStores.findIndex((ds) => ds.id == dataStore.id);
+    if (idx >= 0) this.dataStores[idx] = dataStore;
   }
 }
 </script>
