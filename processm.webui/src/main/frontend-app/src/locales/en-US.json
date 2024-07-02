@@ -169,6 +169,7 @@
     "database": "Database",
     "trust-server-certificate": "Always trust server certificate",
     "connector-not-supported": "Connection string based connectors are not yet supported",
+    "masked-password-notification": "Remember to change the masked password to the correct value.",
     "validation": {
       "non-empty-field": "The value cannot be empty",
       "connection-string-format": "The value doesn't conform to connection string format",

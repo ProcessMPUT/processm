@@ -5,6 +5,7 @@
         {{ $t("add-data-connector-dialog.dialog-title") }}
       </v-card-title>
       <v-card-text>
+        <v-banner v-show="isEdit">{{ $t("add-data-connector-dialog.masked-password-notification") }}</v-banner>
         <v-expansion-panels accordion mandatory v-model="configMode">
           <v-expansion-panel>
             <v-expansion-panel-header>{{ $t("add-data-connector-dialog.use-connection-string") }} </v-expansion-panel-header>
@@ -31,7 +32,9 @@
             </v-expansion-panel-content>
           </v-expansion-panel>
           <v-expansion-panel>
-            <v-expansion-panel-header name="header-specify-connection-properties">{{ $t("add-data-connector-dialog.specify-connection-properties") }} </v-expansion-panel-header>
+            <v-expansion-panel-header name="header-specify-connection-properties"
+              >{{ $t("add-data-connector-dialog.specify-connection-properties") }}
+            </v-expansion-panel-header>
             <v-expansion-panel-content>
               <v-form ref="connectionPropertiesForm" lazy-validation>
                 <v-text-field
@@ -83,9 +86,9 @@
 </style>
 
 <script lang="ts">
-import { ConnectionType } from "@/models/DataStore";
+import { ConnectionType, DataConnector } from "@/models/DataStore";
 import Vue from "vue";
-import { Component, Inject, Prop } from "vue-property-decorator";
+import { Component, Inject, Prop, Watch } from "vue-property-decorator";
 import PostgreSqlConnectionConfiguration from "@/components/data-connections/PostgreSqlConnectionConfiguration.vue";
 import SqlServerConnectionConfiguration from "@/components/data-connections/SqlServerConnectionConfiguration.vue";
 import MySqlConnectionConfiguration from "@/components/data-connections/MySqlConnectionConfiguration.vue";
@@ -116,6 +119,8 @@ export default class AddDataConnectorDialog extends Vue {
   readonly value!: boolean;
   @Prop()
   readonly dataStoreId?: string;
+  @Prop()
+  readonly initialConnector: DataConnector | null | undefined;
 
   connectionNameRules = [(v: string) => notEmptyRule(v, this.$t("add-data-connector-dialog.validation.non-empty-field").toString())];
 
@@ -129,10 +134,27 @@ export default class AddDataConnectorDialog extends Vue {
     (v: string) => notEmptyRule(v, this.$t("add-data-connector-dialog.validation.non-empty-field").toString()),
     (v: string) => connectionStringFormatRule(v, this.$t("add-data-connector-dialog.validation.connection-string-format").toString())
   ];
+  isEdit = false;
 
   constructor() {
     super();
     this.connectionProperties["connection-type"] = Object.keys(ConnectionType)[0];
+  }
+
+  @Watch("value")
+  componentVisibilityChanged(isVisble: boolean) {
+    if (!isVisble) return;
+    this.isEdit = this.initialConnector !== undefined && this.initialConnector !== null;
+    this.connectionName = this.initialConnector?.name ?? "";
+    if ("connection-type" in (this.initialConnector?.properties ?? {})) {
+      this.connectionProperties = Object.assign({}, this.initialConnector?.properties);
+      this.connectionString = {};
+      this.configMode = ConfigurationMode.ConnectionProperties;
+    } else {
+      this.connectionString = Object.assign({}, this.initialConnector?.properties);
+      this.connectionProperties = {};
+      this.configMode = ConfigurationMode.ConnectionString;
+    }
   }
 
   get availableConnectionTypes() {
@@ -164,13 +186,19 @@ export default class AddDataConnectorDialog extends Vue {
 
     try {
       this.isSubmitting = true;
-      const dataConnector = await this.dataStoreService.createDataConnector(
-        this.dataStoreId,
-        this.connectionName,
-        this.configMode == ConfigurationMode.ConnectionString ? this.connectionString : this.connectionProperties
-      );
+      const properties = this.configMode == ConfigurationMode.ConnectionString ? this.connectionString : this.connectionProperties;
+      if (this.isEdit) {
+        const id = this.initialConnector?.id!;
+        await this.dataStoreService.updateDataConnector(this.dataStoreId, id, {
+          id: id,
+          name: this.connectionName,
+          properties: properties
+        });
+      } else {
+        await this.dataStoreService.createDataConnector(this.dataStoreId, this.connectionName, properties);
+      }
       this.app.success(`${this.$t("common.saving.success")}`);
-      this.$emit("submitted", dataConnector);
+      this.$emit("submitted");
       this.resetForms();
     } catch (error) {
       this.app.error(error);

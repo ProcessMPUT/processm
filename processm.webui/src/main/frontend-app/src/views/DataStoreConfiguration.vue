@@ -134,7 +134,15 @@
                 </v-tooltip>
                 <v-fade-transition leave-absolute>
                   <div v-if="open" class="add-button-group">
-                    <v-btn class="mx-2" color="primary" @click.stop="addDataConnectorDialog = true" name="btn-add-data-connector">
+                    <v-btn
+                      class="mx-2"
+                      color="primary"
+                      @click.stop="
+                        dataConnectorToEdit = null;
+                        addDataConnectorDialog = true;
+                      "
+                      name="btn-add-data-connector"
+                    >
                       {{ $t("data-stores.add-data-connector") }}
                     </v-btn>
                   </div>
@@ -189,6 +197,21 @@
                     </v-btn>
                   </template>
                   <span>{{ $t("common.rename") }}</span>
+                </v-tooltip>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on" name="btn-data-connector-edit">
+                      <v-icon
+                        small
+                        @click="
+                          dataConnectorToEdit = item;
+                          addDataConnectorDialog = true;
+                        "
+                        >edit
+                      </v-icon>
+                    </v-btn>
+                  </template>
+                  <span>{{ $t("common.edit") }}</span>
                 </v-tooltip>
                 <v-tooltip bottom>
                   <template v-slot:activator="{ on, attrs }">
@@ -356,6 +379,7 @@
       :data-store-id="dataStoreId"
       @cancelled="addDataConnectorDialog = false"
       @submitted="addDataConnector"
+      :initial-connector="dataConnectorToEdit"
     />
     <automatic-etl-process-dialog
       v-model="automaticEtlProcessDialogVisible"
@@ -459,6 +483,7 @@ export default class DataStoreConfiguration extends Vue {
   processDetailsDialogEtlProcess: EtlProcess | null = null;
   etlProcessToEdit: EtlProcess | null = null;
   renameDataStoreDialog = false;
+  dataConnectorToEdit: DataConnector | null = null;
 
   @Prop({ default: false })
   readonly value!: boolean;
