@@ -2,18 +2,18 @@
   <v-dialog v-model="value" @click:outside="cancel" max-width="600" @keydown.esc="cancel">
     <v-card>
       <v-card-title class="headline">
-        {{ $t("add-data-connector-dialog.dialog-title") }}
+        {{ $t("data-connector-dialog.dialog-title") }}
       </v-card-title>
       <v-card-text>
-        <v-banner v-show="isEdit">{{ $t("add-data-connector-dialog.masked-password-notification") }}</v-banner>
+        <v-banner v-show="isEdit">{{ $t("data-connector-dialog.masked-password-notification") }}</v-banner>
         <v-expansion-panels accordion mandatory v-model="configMode">
           <v-expansion-panel>
-            <v-expansion-panel-header>{{ $t("add-data-connector-dialog.use-connection-string") }} </v-expansion-panel-header>
+            <v-expansion-panel-header>{{ $t("data-connector-dialog.use-connection-string") }} </v-expansion-panel-header>
             <v-expansion-panel-content>
               <v-form ref="connectionStringForm" lazy-validation>
                 <v-text-field
                   v-model="connectionName"
-                  :label="$t('add-data-connector-dialog.connector-name')"
+                  :label="$t('data-connector-dialog.connector-name')"
                   required
                   :rules="connectionNameRules"
                   name="connection-string-connection-name"
@@ -22,9 +22,9 @@
                   v-model="connectionString['connection-string']"
                   outlined
                   hide-details="auto"
-                  :label="$t('add-data-connector-dialog.connection-string')"
+                  :label="$t('data-connector-dialog.connection-string')"
                   :rules="connectionStringRules"
-                  :hint="$t('add-data-connector-dialog.connection-string-hint')"
+                  :hint="$t('data-connector-dialog.connection-string-hint')"
                   placeholder="jdbc:driver://host:port/database?user=login&password=password"
                   name="connection-string"
                 ></v-text-field>
@@ -33,13 +33,13 @@
           </v-expansion-panel>
           <v-expansion-panel>
             <v-expansion-panel-header name="header-specify-connection-properties"
-              >{{ $t("add-data-connector-dialog.specify-connection-properties") }}
+              >{{ $t("data-connector-dialog.specify-connection-properties") }}
             </v-expansion-panel-header>
             <v-expansion-panel-content>
               <v-form ref="connectionPropertiesForm" lazy-validation>
                 <v-text-field
                   v-model="connectionName"
-                  :label="$t('add-data-connector-dialog.connector-name')"
+                  :label="$t('data-connector-dialog.connector-name')"
                   required
                   :rules="connectionNameRules"
                   name="connection-name"
@@ -48,7 +48,7 @@
                 <v-select
                   v-model="connectionProperties['connection-type']"
                   :items="availableConnectionTypes"
-                  :label="$t('add-data-connector-dialog.connection-type')"
+                  :label="$t('data-connector-dialog.connection-type')"
                   required
                   name="available-connection-types"
                 ></v-select>
@@ -68,7 +68,7 @@
         </v-btn>
 
         <v-btn :color="testConnectionButtonColor" :loading="isTestingConnection" :outlined="connectionTestResult != null" text @click.stop="testConnection">
-          {{ $t("add-data-connector-dialog.test-connection") }}
+          {{ $t("data-connector-dialog.test-connection") }}
         </v-btn>
 
         <v-btn :loading="isSubmitting" color="primary" text @click.stop="createDataConnector" name="btn-create-data-connector">
@@ -112,7 +112,7 @@ enum ConfigurationMode {
     Db2ConnectionConfiguration
   }
 })
-export default class AddDataConnectorDialog extends Vue {
+export default class DataConnectorDialog extends Vue {
   @Inject() app!: App;
   @Inject() dataStoreService!: DataStoreService;
   @Prop({ default: false })
@@ -122,7 +122,7 @@ export default class AddDataConnectorDialog extends Vue {
   @Prop()
   readonly initialConnector: DataConnector | null | undefined;
 
-  connectionNameRules = [(v: string) => notEmptyRule(v, this.$t("add-data-connector-dialog.validation.non-empty-field").toString())];
+  connectionNameRules = [(v: string) => notEmptyRule(v, this.$t("data-connector-dialog.validation.non-empty-field").toString())];
 
   connectionName = "";
   connectionProperties: Record<string, string> = {};
@@ -131,8 +131,8 @@ export default class AddDataConnectorDialog extends Vue {
   isSubmitting = false;
   connectionTestResult: boolean | null = null;
   connectionStringRules = [
-    (v: string) => notEmptyRule(v, this.$t("add-data-connector-dialog.validation.non-empty-field").toString()),
-    (v: string) => connectionStringFormatRule(v, this.$t("add-data-connector-dialog.validation.connection-string-format").toString())
+    (v: string) => notEmptyRule(v, this.$t("data-connector-dialog.validation.non-empty-field").toString()),
+    (v: string) => connectionStringFormatRule(v, this.$t("data-connector-dialog.validation.connection-string-format").toString())
   ];
   isEdit = false;
 
@@ -219,10 +219,10 @@ export default class AddDataConnectorDialog extends Vue {
         this.configMode == ConfigurationMode.ConnectionString ? this.connectionString : this.connectionProperties
       );
       this.connectionTestResult = true;
-      this.app.success(`${this.$t("add-data-connector-dialog.testing.success")}`);
+      this.app.success(`${this.$t("data-connector-dialog.testing.success")}`);
     } catch (e) {
       this.connectionTestResult = null;
-      this.app.error(`${this.$t("add-data-connector-dialog.testing.failure")}: ${e.message}`);
+      this.app.error(`${this.$t("data-connector-dialog.testing.failure")}: ${e.message}`);
     } finally {
       this.isTestingConnection = false;
     }

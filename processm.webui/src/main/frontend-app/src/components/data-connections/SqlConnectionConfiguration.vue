@@ -8,7 +8,7 @@
         @click="displayAdvanced = !displayAdvanced"
         :plain="displayAdvanced"
       >
-        {{ $t("add-data-connector-dialog.advanced") }}
+        {{ $t("data-connector-dialog.advanced") }}
       </v-btn>
       <slot v-if="displayAdvanced" name="advanced"></slot>
     </div>

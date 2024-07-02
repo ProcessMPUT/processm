@@ -139,7 +139,7 @@
                       color="primary"
                       @click.stop="
                         dataConnectorToEdit = null;
-                        addDataConnectorDialog = true;
+                        dataConnectorDialog = true;
                       "
                       name="btn-add-data-connector"
                     >
@@ -205,7 +205,7 @@
                         small
                         @click="
                           dataConnectorToEdit = item;
-                          addDataConnectorDialog = true;
+                          dataConnectorDialog = true;
                         "
                         >edit
                       </v-icon>
@@ -374,11 +374,11 @@
         </v-expansion-panel>
       </v-expansion-panels>
     </v-card>
-    <add-data-connector-dialog
-      v-model="addDataConnectorDialog"
+    <data-connector-dialog
+      v-model="dataConnectorDialog"
       :data-store-id="dataStoreId"
-      @cancelled="addDataConnectorDialog = false"
-      @submitted="addDataConnector"
+      @cancelled="dataConnectorDialog = false"
+      @submitted="dataConnectorsModified"
       :initial-connector="dataConnectorToEdit"
     />
     <automatic-etl-process-dialog
@@ -431,7 +431,7 @@ import Vue from "vue";
 import { Component, Inject, Prop, Watch } from "vue-property-decorator";
 import DataStoreService from "@/services/DataStoreService";
 import DataStore, { DataConnector } from "@/models/DataStore";
-import AddDataConnectorDialog from "@/components/data-connections/AddDataConnectorDialog.vue";
+import DataConnectorDialog from "@/components/data-connections/DataConnectorDialog.vue";
 import LogsService from "@/services/LogsService";
 import { waitForRepaint } from "@/utils/waitForRepaint";
 import XesProcessor, { LogItem } from "@/utils/XesProcessor";
@@ -452,7 +452,7 @@ const XesDataTable = () => import("@/components/XesDataTable.vue");
     LogTable,
     ProcessDetailsDialog,
     JdbcEtlProcessDialog: JdbcEtlProcessDialog,
-    AddDataConnectorDialog,
+    DataConnectorDialog,
     XesDataTable,
     FileUploadDialog,
     RenameDialog,
@@ -464,7 +464,7 @@ export default class DataStoreConfiguration extends Vue {
   @Inject() dataStoreService!: DataStoreService;
   @Inject() logsService!: LogsService;
   private readonly xesProcessor = new XesProcessor();
-  addDataConnectorDialog = false;
+  dataConnectorDialog = false;
   automaticEtlProcessDialogVisible = false;
   jdbcEtlProcessDialogVisible = false;
   fileUploadDialog = false;
@@ -599,8 +599,8 @@ export default class DataStoreConfiguration extends Vue {
     }
   }
 
-  async addDataConnector() {
-    this.addDataConnectorDialog = false;
+  async dataConnectorsModified() {
+    this.dataConnectorDialog = false;
     await this.loadDataConnectors();
   }
 

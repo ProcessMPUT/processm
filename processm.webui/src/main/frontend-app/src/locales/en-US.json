@@ -150,8 +150,8 @@
     "last-event-external-id-type": "Last event ID datatype",
     "last-event-external-id-type-hint": "For continuous query only: the type of the initial event id. This type is used to supply the database driver with the correct type of the value."
   },
-  "add-data-connector-dialog": {
-    "dialog-title": "Add data connector",
+  "data-connector-dialog": {
+    "dialog-title": "Configure data connector",
     "connection-type": "Connection type",
     "check-configuration": "Check",
     "test-connection": "Test connection",
