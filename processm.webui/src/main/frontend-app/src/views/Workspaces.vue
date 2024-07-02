@@ -1,5 +1,5 @@
 <template>
-  <v-container class="pb-0 px-0">
+  <v-container class="px-0">
     <v-row class="workspace mx-0">
       <v-tabs-items v-model="currentWorkspaceIndex" style="overflow: auto;">
         <v-tab-item v-for="workspace in workspaces" :key="workspace.index">
