@@ -1,7 +1,7 @@
 <template>
   <v-container class="pb-0 px-0">
     <v-row class="workspace mx-0">
-      <v-tabs-items v-model="currentWorkspaceIndex">
+      <v-tabs-items v-model="currentWorkspaceIndex" style="overflow: auto;">
         <v-tab-item v-for="workspace in workspaces" :key="workspace.index">
           <workspace-area :workspaceId="workspace.id" />
         </v-tab-item>
