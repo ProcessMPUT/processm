@@ -152,7 +152,7 @@ export default class DataConnectorDialog extends Vue {
       this.configMode = ConfigurationMode.ConnectionProperties;
     } else {
       this.connectionString = Object.assign({}, this.initialConnector?.properties);
-      this.connectionProperties = {};
+      this.connectionProperties["connection-type"] = Object.keys(ConnectionType)[0];
       this.configMode = ConfigurationMode.ConnectionString;
     }
   }
