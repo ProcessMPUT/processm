@@ -1,6 +1,6 @@
 <template>
   <v-container>
-    <v-row justify="end" class="pa-1">
+    <v-row justify="end" class="pa-1" v-if="!viewOnly">
       <v-tooltip bottom :open-delay="tooltipOpenDelay">
         <template v-slot:activator="{ on, attrs }">
           <v-btn class="ma-1" color="primary" depressed fab small v-bind="attrs" @click="createComponent" v-on="on">
@@ -138,6 +138,8 @@ export default class WorkspaceArea extends Vue {
   readonly workspaceId!: string;
   @Inject() workspaceService!: WorkspaceService;
   @Inject() app!: App;
+  @Prop({ default: false })
+  readonly viewOnly!: boolean;
 
   readonly defaultComponentWidth = 4;
   readonly defaultComponentHeight = 4;

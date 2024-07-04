@@ -1,24 +1,17 @@
 import Vue from "vue";
-import Workspace from "@/models/Workspace";
 import BaseService from "./BaseService";
 import { LayoutElement, WorkspaceComponent } from "@/models/WorkspaceComponent";
 import { AbstractComponent, ComponentType, Workspace as ApiWorkspace } from "@/openapi";
 import { NotificationsObserver } from "@/utils/NotificationsObserver";
 
 export default class WorkspaceService extends BaseService {
-  public async getAll(): Promise<Array<Workspace>> {
+  public async getAll(): Promise<Array<ApiWorkspace>> {
     const response = await this.workspacesApi.getWorkspaces(this.currentOrganizationId);
 
-    return response.data.reduce((workspaces: Workspace[], workspace: ApiWorkspace) => {
-      if (workspace.id != null) {
-        workspaces.push({ id: workspace.id, name: workspace.name });
-      }
-
-      return workspaces;
-    }, []);
+    return response.data;
   }
 
-  public async createWorkspace(name: string): Promise<Workspace> {
+  public async createWorkspace(name: string): Promise<ApiWorkspace> {
     const response = await this.workspacesApi.createWorkspace({
       organizationId: this.currentOrganizationId,
       name: name
@@ -29,11 +22,11 @@ export default class WorkspaceService extends BaseService {
       throw new Error("The received workspace object should contain id");
     }
 
-    return { id: workspace.id, name: workspace.name };
+    return workspace;
   }
 
-  public async updateWorkspace(workspace: Workspace): Promise<boolean> {
-    const response = await this.workspacesApi.updateWorkspace(workspace.id, workspace);
+  public async updateWorkspace(workspace: ApiWorkspace): Promise<boolean> {
+    const response = await this.workspacesApi.updateWorkspace(workspace.id!, workspace);
 
     return response.status == 204;
   }

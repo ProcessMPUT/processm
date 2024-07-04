@@ -3,18 +3,13 @@
     <v-row class="workspace mx-0">
       <v-tabs-items v-model="currentWorkspaceIndex">
         <v-tab-item v-for="workspace in workspaces" :key="workspace.index">
-          <workspace-area :workspaceId="workspace.id" />
+          <workspace-area :workspaceId="workspace.id" :view-only="isViewOnly(workspace)" />
         </v-tab-item>
       </v-tabs-items>
     </v-row>
     <v-row class="workspace-selector mx-0">
-      <v-tabs
-        v-model="currentWorkspaceIndex"
-        background-color="primary lighten-2"
-        center-active
-        show-arrows
-      >
-        <v-menu top offset-y>
+      <v-tabs v-model="currentWorkspaceIndex" background-color="primary lighten-2" center-active show-arrows>
+        <v-menu top offset-y v-if="isWriter">
           <template #activator="{ on }">
             <v-btn tile color="primary lighten-1" v-on="on" name="btn-workspace-hamburger">
               <v-icon>more_vert</v-icon>
@@ -22,25 +17,20 @@
           </template>
 
           <v-list flat dense>
-            <v-list-item
-              @click.stop="removeWorkspace"
-              :disabled="!(workspaces.length > 1)"
-            >
-              <v-list-item-icon
-                ><v-icon>delete_forever</v-icon></v-list-item-icon
-              >
+            <v-list-item @click.stop="removeWorkspace" :disabled="!(workspaces.length > 1)" v-if="isOwner">
+              <v-list-item-icon>
+                <v-icon>delete_forever</v-icon>
+              </v-list-item-icon>
               <v-list-item-title>{{ $t("common.remove") }}</v-list-item-title>
             </v-list-item>
-            <v-divider />
-            <v-list-item
-              @click.stop="workspaceNameToRename = currentWorkspaceName"
-            >
-              <v-list-item-icon
-                ><v-icon>drive_file_rename_outline</v-icon></v-list-item-icon
-              >
+            <v-divider v-if="isOwner" />
+            <v-list-item @click.stop="workspaceNameToRename = currentWorkspaceName">
+              <v-list-item-icon>
+                <v-icon>drive_file_rename_outline</v-icon>
+              </v-list-item-icon>
               <v-list-item-title>{{ $t("common.rename") }}</v-list-item-title>
             </v-list-item>
-            <v-list-item @click.stop="aclDialogDisplayed = true" name="btn-workspace-security">
+            <v-list-item @click.stop="aclDialogDisplayed = true" name="btn-workspace-security" v-if="isOwner">
               <v-list-item-icon>
                 <v-icon>security</v-icon>
               </v-list-item-icon>
@@ -48,9 +38,9 @@
             </v-list-item>
           </v-list>
         </v-menu>
-        <v-tab v-for="workspace in workspaces" :key="workspace.index" :id="`workspace-tab-${workspace.id}`" >{{
-          workspace.name
-        }}</v-tab>
+        <v-tab v-for="workspace in workspaces" :key="workspace.index" :id="`workspace-tab-${workspace.id}`">
+          {{ workspace.name }}
+        </v-tab>
         <v-btn tile color="primary lighten-1" @click="createWorkspace" name="btn-create-workspace">
           <v-icon>add_box</v-icon>
         </v-btn>
@@ -61,12 +51,7 @@
         @submitted="renameWorkspace"
         :old-name="workspaceNameToRename"
       />
-      <acl-dialog
-          :value="aclDialogDisplayed"
-          :urn="currentWorkspaceUrn"
-          @closed="aclDialogDisplayed = false"
-          :force-view-only="false"
-      />
+      <acl-dialog :value="aclDialogDisplayed" :urn="currentWorkspaceUrn" @closed="aclDialogDisplayed = false" :force-view-only="false" />
     </v-row>
   </v-container>
 </template>
@@ -103,15 +88,15 @@
 
 <script lang="ts">
 import Vue from "vue";
-import { Component, Inject } from "vue-property-decorator";
+import { Component, Inject, Watch } from "vue-property-decorator";
 import WorkspaceArea from "@/components/workspace/WorkspaceArea.vue";
 import RenameDialog from "@/components/RenameDialog.vue";
 import WorkspaceService from "@/services/WorkspaceService";
-import Workspace from "@/models/Workspace";
 import AclDialog from "@/components/acl/AclDialog.vue";
+import { Workspace } from "@/openapi";
 
 @Component({
-  components: {AclDialog, WorkspaceArea, RenameDialog }
+  components: { AclDialog, WorkspaceArea, RenameDialog }
 })
 export default class Workspaces extends Vue {
   @Inject() workspaceService!: WorkspaceService;
@@ -119,9 +104,12 @@ export default class Workspaces extends Vue {
   currentWorkspaceIndex = 0;
   workspaces: Array<Workspace> = [];
   aclDialogDisplayed: boolean = false;
+  isWriter: boolean = true;
+  isOwner: boolean = true;
 
   async created() {
     this.workspaces = await this.workspaceService.getAll();
+    this.workspaceChanged();
   }
 
   get currentWorkspaceName(): string {
@@ -129,17 +117,13 @@ export default class Workspaces extends Vue {
   }
 
   get currentWorkspaceUrn(): string {
-    const id = this.workspaces[this.currentWorkspaceIndex]?.id
+    const id = this.workspaces[this.currentWorkspaceIndex]?.id;
     return "urn:processm:db/workspaces/" + id;
   }
 
   async createWorkspace() {
-    const workspaceName = `${this.$i18n.t("workspace.default-name")}${
-      this.workspaces.length + 1
-    }`;
-    const newWorkspace = await this.workspaceService.createWorkspace(
-      workspaceName
-    );
+    const workspaceName = `${this.$i18n.t("workspace.default-name")}${this.workspaces.length + 1}`;
+    const newWorkspace = await this.workspaceService.createWorkspace(workspaceName);
 
     this.workspaces.push(newWorkspace);
   }
@@ -147,9 +131,7 @@ export default class Workspaces extends Vue {
   async removeWorkspace() {
     const removedWorkspaceIndex = this.currentWorkspaceIndex;
 
-    await this.workspaceService.removeWorkspace(
-      this.workspaces[removedWorkspaceIndex].id
-    );
+    await this.workspaceService.removeWorkspace(this.workspaces[removedWorkspaceIndex].id!);
     this.currentWorkspaceIndex = Math.max(0, this.currentWorkspaceIndex - 1);
     this.workspaces.splice(removedWorkspaceIndex, 1);
   }
@@ -160,6 +142,17 @@ export default class Workspaces extends Vue {
     currentWorkspace.name = newName;
     await this.workspaceService.updateWorkspace(currentWorkspace);
     this.workspaceNameToRename = null;
+  }
+
+  private isViewOnly(workspace: Workspace) {
+    return workspace.role != "owner" && workspace.role != "writer";
+  }
+
+  @Watch("currentWorkspaceIndex")
+  private workspaceChanged() {
+    const currentWorkspace = this.workspaces[this.currentWorkspaceIndex];
+    this.isOwner = currentWorkspace.role == "owner";
+    this.isWriter = this.isOwner || currentWorkspace.role == "writer";
   }
 }
 </script>

@@ -84,21 +84,21 @@ class WorkspacesApiTest : BaseApiTest() {
 
         withAuthentication(userId) {
             every { workspaceService.getUserWorkspaces(userId) } returns listOf(
-                mockk {
+                mockk<processm.dbmodels.models.Workspace> {
                     every { id } returns EntityID(workspaceId1, Workspaces)
                     every { name } returns "Workspace1"
-                },
-                mockk {
+                } to RoleType.Owner,
+                mockk<processm.dbmodels.models.Workspace> {
                     every { id } returns EntityID(workspaceId2, Workspaces)
                     every { name } returns "Workspace2"
-                }
+                } to RoleType.Writer
             )
             with(handleRequest(HttpMethod.Get, "/api/workspaces")) {
                 assertEquals(HttpStatusCode.OK, response.status())
                 val workspaces = assertNotNull(response.deserializeContent<List<Workspace>>())
                 assertEquals(2, workspaces.count())
-                assertTrue { workspaces.any { it.id == workspaceId1 && it.name == "Workspace1" } }
-                assertTrue { workspaces.any { it.id == workspaceId2 && it.name == "Workspace2" } }
+                assertTrue { workspaces.any { it.id == workspaceId1 && it.name == "Workspace1" && it.role == OrganizationRole.owner } }
+                assertTrue { workspaces.any { it.id == workspaceId2 && it.name == "Workspace2" && it.role == OrganizationRole.writer } }
             }
         }
     }
@@ -473,7 +473,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 )
             )
 
-            withAuthentication(acl = acl { RoleType.Reader * Workspaces * workspaceId }) {
+            withAuthentication(acl = acl { RoleType.Writer * Workspaces * workspaceId }) {
                 every {
                     workspaceService.updateLayout(
                         layoutData.mapValues { JsonSerializer.encodeToString(it.value) }
@@ -522,7 +522,7 @@ class WorkspacesApiTest : BaseApiTest() {
                         addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                         withSerializedBody(LayoutCollectionMessageBody(layoutData.mapKeys { it.key.toString() }))
                     }) {
-                    assertEquals(HttpStatusCode.NotFound, response.status())
+                    assertEquals(HttpStatusCode.Forbidden, response.status())
                 }
             }
         }
