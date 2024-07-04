@@ -150,6 +150,7 @@ class AccountService(private val groupService: GroupService, private val produce
             urio1
                 .join(urio2, JoinType.INNER, urio1[URIO.organizationId], urio2[URIO.organizationId])
                 .join(Users, JoinType.INNER, urio2[URIO.userId], Users.id)
+                .slice(Users.columns)
                 .select { urio1[URIO.userId] eq queryingUserId }
                 .andWhere { Users.email ilike "%${emailFilter}%" }
                 .withDistinct()
