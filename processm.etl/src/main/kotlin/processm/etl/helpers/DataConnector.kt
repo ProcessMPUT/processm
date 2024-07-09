@@ -12,6 +12,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.postgresql.ds.PGSimpleDataSource
 import processm.dbmodels.models.ConnectionType
 import processm.dbmodels.models.DataConnector
+import processm.etl.jdbc.nosql.CouchDBConnection
 import java.sql.Connection
 import java.sql.DriverManager
 import java.time.LocalDateTime
@@ -38,6 +39,7 @@ private fun DataConnector.timestamp(success: Boolean) {
 fun DataConnector.getConnection(): Connection {
     try {
         val connection = if (connectionProperties.startsWith("jdbc")) DriverManager.getConnection(connectionProperties)
+        else if (connectionProperties.startsWith("couchdb:")) CouchDBConnection(connectionProperties.substring(8))
         else getDataSource(
             Json.decodeFromString(MapSerializer(String.serializer(), String.serializer()), connectionProperties)
         ).connection
