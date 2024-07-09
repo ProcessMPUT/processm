@@ -2,9 +2,9 @@ package processm.etl.jdbc.nosql
 
 import java.sql.*
 
-internal open class CouchDBStatement : Statement {
+internal open class NotImplementedStatement : Statement {
 
-    private fun intentionallyNotImplemented(): Nothing =
+    protected fun intentionallyNotImplemented(): Nothing =
         throw SQLFeatureNotSupportedException("Intentionally not implemented")
 
     override fun <T : Any?> unwrap(p0: Class<T>?): T {

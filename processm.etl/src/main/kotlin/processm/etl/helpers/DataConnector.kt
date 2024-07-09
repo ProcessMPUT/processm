@@ -13,6 +13,7 @@ import org.postgresql.ds.PGSimpleDataSource
 import processm.dbmodels.models.ConnectionType
 import processm.dbmodels.models.DataConnector
 import processm.etl.jdbc.nosql.CouchDBConnection
+import processm.etl.jdbc.nosql.MongoDBConnection
 import java.sql.Connection
 import java.sql.DriverManager
 import java.time.LocalDateTime
@@ -40,6 +41,7 @@ fun DataConnector.getConnection(): Connection {
     try {
         val connection = if (connectionProperties.startsWith("jdbc")) DriverManager.getConnection(connectionProperties)
         else if (connectionProperties.startsWith("couchdb:")) CouchDBConnection(connectionProperties.substring(8))
+        else if (connectionProperties.startsWith("mongodb")) MongoDBConnection.fromProcessMUrl(connectionProperties)
         else getDataSource(
             Json.decodeFromString(MapSerializer(String.serializer(), String.serializer()), connectionProperties)
         ).connection

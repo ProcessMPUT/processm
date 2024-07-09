@@ -8,9 +8,9 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import java.net.URL
-import java.sql.*
-import java.util.*
-import java.util.concurrent.Executor
+import java.sql.PreparedStatement
+import java.sql.SQLException
+import java.sql.SQLFeatureNotSupportedException
 
 /**
  * A class pretending to be a JDBC DB connection for CouchDB. It is quite crude, most notably:
@@ -27,7 +27,7 @@ import java.util.concurrent.Executor
  * @param client HttpClient to be used for making requests. The ownership of the client is transferred to the object.
  */
 class CouchDBConnection internal constructor(private val baseURL: URL, private val client: HttpClient = HttpClient()) :
-    Connection {
+    NotImplementedConnection() {
 
     /**
      * Auxiliary constructor ensuring URL ends with /
@@ -89,14 +89,6 @@ class CouchDBConnection internal constructor(private val baseURL: URL, private v
         }
     }
 
-    override fun <T : Any?> unwrap(p0: Class<T>?): T {
-        intentionallyNotImplemented()
-    }
-
-    override fun isWrapperFor(p0: Class<*>?): Boolean {
-        intentionallyNotImplemented()
-    }
-
     /**
      * Closes the underlying HTTP client
      */
@@ -104,204 +96,5 @@ class CouchDBConnection internal constructor(private val baseURL: URL, private v
         client.close()
     }
 
-    override fun createStatement(): Statement {
-        intentionallyNotImplemented()
-    }
-
-    override fun createStatement(p0: Int, p1: Int): Statement {
-        intentionallyNotImplemented()
-    }
-
-    override fun createStatement(p0: Int, p1: Int, p2: Int): Statement {
-        intentionallyNotImplemented()
-    }
-
     override fun prepareStatement(query: String): PreparedStatement = CouchDBPreparedStatement(this, query)
-
-    override fun prepareStatement(p0: String?, p1: Int, p2: Int): PreparedStatement {
-        intentionallyNotImplemented()
-    }
-
-    override fun prepareStatement(p0: String?, p1: Int, p2: Int, p3: Int): PreparedStatement {
-        intentionallyNotImplemented()
-    }
-
-    override fun prepareStatement(p0: String?, p1: Int): PreparedStatement {
-        intentionallyNotImplemented()
-    }
-
-    override fun prepareStatement(p0: String?, p1: IntArray?): PreparedStatement {
-        intentionallyNotImplemented()
-    }
-
-    override fun prepareStatement(p0: String?, p1: Array<out String>?): PreparedStatement {
-        intentionallyNotImplemented()
-    }
-
-    override fun prepareCall(p0: String?): CallableStatement {
-        intentionallyNotImplemented()
-    }
-
-    override fun prepareCall(p0: String?, p1: Int, p2: Int): CallableStatement {
-        intentionallyNotImplemented()
-    }
-
-    override fun prepareCall(p0: String?, p1: Int, p2: Int, p3: Int): CallableStatement {
-        intentionallyNotImplemented()
-    }
-
-    override fun nativeSQL(p0: String?): String {
-        intentionallyNotImplemented()
-    }
-
-    override fun setAutoCommit(p0: Boolean) {
-        intentionallyNotImplemented()
-    }
-
-    override fun getAutoCommit(): Boolean {
-        intentionallyNotImplemented()
-    }
-
-    override fun commit() {
-        intentionallyNotImplemented()
-    }
-
-    override fun rollback() {
-        intentionallyNotImplemented()
-    }
-
-    override fun rollback(p0: Savepoint?) {
-        intentionallyNotImplemented()
-    }
-
-    override fun isClosed(): Boolean {
-        intentionallyNotImplemented()
-    }
-
-    override fun getMetaData(): DatabaseMetaData {
-        intentionallyNotImplemented()
-    }
-
-    override fun setReadOnly(p0: Boolean) {
-        intentionallyNotImplemented()
-    }
-
-    override fun isReadOnly(): Boolean {
-        intentionallyNotImplemented()
-    }
-
-    override fun setCatalog(p0: String?) {
-        intentionallyNotImplemented()
-    }
-
-    override fun getCatalog(): String {
-        intentionallyNotImplemented()
-    }
-
-    override fun setTransactionIsolation(p0: Int) {
-        intentionallyNotImplemented()
-    }
-
-    override fun getTransactionIsolation(): Int {
-        intentionallyNotImplemented()
-    }
-
-    override fun getWarnings(): SQLWarning {
-        intentionallyNotImplemented()
-    }
-
-    override fun clearWarnings() {
-        intentionallyNotImplemented()
-    }
-
-    override fun getTypeMap(): MutableMap<String, Class<*>> {
-        intentionallyNotImplemented()
-    }
-
-    override fun setTypeMap(p0: MutableMap<String, Class<*>>?) {
-        intentionallyNotImplemented()
-    }
-
-    override fun setHoldability(p0: Int) {
-        intentionallyNotImplemented()
-    }
-
-    override fun getHoldability(): Int {
-        intentionallyNotImplemented()
-    }
-
-    override fun setSavepoint(): Savepoint {
-        intentionallyNotImplemented()
-    }
-
-    override fun setSavepoint(p0: String?): Savepoint {
-        intentionallyNotImplemented()
-    }
-
-    override fun releaseSavepoint(p0: Savepoint?) {
-        intentionallyNotImplemented()
-    }
-
-    override fun createClob(): Clob {
-        intentionallyNotImplemented()
-    }
-
-    override fun createBlob(): Blob {
-        intentionallyNotImplemented()
-    }
-
-    override fun createNClob(): NClob {
-        intentionallyNotImplemented()
-    }
-
-    override fun createSQLXML(): SQLXML {
-        intentionallyNotImplemented()
-    }
-
-    override fun isValid(p0: Int): Boolean {
-        intentionallyNotImplemented()
-    }
-
-    override fun setClientInfo(p0: String?, p1: String?) {
-        intentionallyNotImplemented()
-    }
-
-    override fun setClientInfo(p0: Properties?) {
-        intentionallyNotImplemented()
-    }
-
-    override fun getClientInfo(p0: String?): String {
-        intentionallyNotImplemented()
-    }
-
-    override fun getClientInfo(): Properties {
-        intentionallyNotImplemented()
-    }
-
-    override fun createArrayOf(p0: String?, p1: Array<out Any>?): java.sql.Array {
-        intentionallyNotImplemented()
-    }
-
-    override fun createStruct(p0: String?, p1: Array<out Any>?): Struct {
-        intentionallyNotImplemented()
-    }
-
-    override fun setSchema(p0: String?) {
-        intentionallyNotImplemented()
-    }
-
-    override fun getSchema(): String {
-        intentionallyNotImplemented()
-    }
-
-    override fun abort(p0: Executor?) {
-        intentionallyNotImplemented()
-    }
-
-    override fun setNetworkTimeout(p0: Executor?, p1: Int) = intentionallyNotImplemented()
-
-    override fun getNetworkTimeout(): Int = intentionallyNotImplemented()
-
-    private fun intentionallyNotImplemented(): Nothing =
-        throw SQLFeatureNotSupportedException("Intentionally not implemented")
 }
