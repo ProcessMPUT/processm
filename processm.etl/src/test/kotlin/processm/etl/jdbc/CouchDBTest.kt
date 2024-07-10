@@ -1,5 +1,7 @@
 package processm.etl.jdbc
 
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -16,8 +18,9 @@ import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.models.DataConnector
 import processm.dbmodels.models.EtlProcessMetadata
-import processm.etl.jdbc.nosql.CouchDBConnection
 import processm.etl.CouchDBContainer
+import processm.etl.helpers.getConnection
+import processm.etl.jdbc.nosql.CouchDBConnection
 import processm.etl.toJsonElements
 import java.sql.Types
 import kotlin.test.BeforeTest
@@ -52,6 +55,26 @@ class CouchDBTest {
     @BeforeTest
     fun setupTest() {
         dbName = "db" + UUID.randomUUID().toString().substring(8)
+    }
+
+    @Test
+    fun `property-based data connector`() {
+        transaction(DBCache.get(DBTestHelper.dbName).database) {
+            DataConnector.new {
+                name = "blah"
+                connectionProperties = buildJsonObject {
+                    put("connection-type", JsonPrimitive("CouchDB"))
+                    put("server", JsonPrimitive(container.host))
+                    put("port", JsonPrimitive(container.port.toString()))
+                    put("username", JsonPrimitive(username))
+                    put("password", JsonPrimitive(password))
+                    put("database", JsonPrimitive(dbName))
+                }.toString()
+            }.getConnection().use {
+                (it as CouchDBConnection).createDatabase()
+            }
+            rollback()
+        }
     }
 
     @Test

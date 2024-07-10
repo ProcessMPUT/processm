@@ -26,7 +26,12 @@ import java.sql.SQLFeatureNotSupportedException
  * @param baseURL The base URL for the CouchDB instance, including credentials and the DB name. Must end with /.
  * @param client HttpClient to be used for making requests. The ownership of the client is transferred to the object.
  */
-class CouchDBConnection internal constructor(private val baseURL: URL, private val client: HttpClient = HttpClient()) :
+class CouchDBConnection internal constructor(
+    private val baseURL: URL,
+    username: String? = null,
+    password: String? = null,
+    private val client: HttpClient = HttpClient()
+) :
     NotImplementedConnection() {
 
     /**
@@ -34,14 +39,17 @@ class CouchDBConnection internal constructor(private val baseURL: URL, private v
      */
     constructor(baseURL: String) : this(URL("$baseURL/"))
 
+    constructor(server: String, port: Int, username: String?, password: String?, database: String, https: Boolean) :
+            this(URL("${if (https) "https" else "http"}://$server:$port/$database/"), username, password)
+
     private val username: String?
     private val password: String?
 
     init {
         require(baseURL.path.endsWith("/"))
         with(baseURL.userInfo?.split(':', limit = 2)) {
-            username = this?.get(0)
-            password = this?.get(1)
+            this@CouchDBConnection.username = username ?: this?.get(0)
+            this@CouchDBConnection.password = password ?: this?.get(1)
         }
     }
 

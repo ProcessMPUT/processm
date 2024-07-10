@@ -26,6 +26,20 @@ class MongoDBConnection(url: String, dbName: String, collectionName: String) : N
         }
     }
 
+    constructor(
+        server: String,
+        port: Int,
+        username: String?,
+        password: String?,
+        dbName: String,
+        collectionName: String
+    ) :
+            this(
+                if (username !== null && password !== null) "mongodb://$username:$password@$server:$port/" else "montodb://$server:$port/",
+                dbName,
+                collectionName
+            )
+
     internal val client: MongoClient
     internal val db: MongoDatabase
     internal val collection: MongoCollection<Document>
