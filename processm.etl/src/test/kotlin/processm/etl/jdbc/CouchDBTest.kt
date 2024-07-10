@@ -68,10 +68,10 @@ class CouchDBTest {
                     put("port", JsonPrimitive(container.port.toString()))
                     put("username", JsonPrimitive(username))
                     put("password", JsonPrimitive(password))
-                    put("database", JsonPrimitive(dbName))
+                    put("database", JsonPrimitive(""))
                 }.toString()
             }.getConnection().use {
-                (it as CouchDBConnection).createDatabase()
+                (it as CouchDBConnection).createDatabase(dbName)
             }
             rollback()
         }
@@ -119,8 +119,10 @@ class CouchDBTest {
                 sourceColumn = "attributes.lifecycle:transition"
                 target = "lifecycle:transition"
             }
-            CouchDBConnection("${container.url}/$dbName").use { conn ->
-                conn.createDatabase()
+            CouchDBConnection(container.url).use { conn ->
+                conn.createDatabase(dbName)
+            }
+            CouchDBConnection("${container.url}/$dbName/").use { conn ->
                 val input = DBXESInputStream(
                     DBTestHelper.dbName,
                     Query("where l:identity:id=${DBTestHelper.JournalReviewExtra}")

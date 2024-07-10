@@ -167,6 +167,8 @@
     "password": "Hasło",
     "database-name": "Nazwa bazy danych",
     "database": "Baza danych",
+    "collection": "Kolekcja",
+    "https":  "Używaj HTTPS",
     "trust-server-certificate": "Zawsze ufaj certyfikatowi serwera",
     "connector-not-supported": "Łącza danych zdefiniowane za pomocą connection stringa nie są jeszcze wspierane",
     "masked-password-notification": "Pamiętaj o zmianie zamaskowanego hasła na poprawną wartość.",

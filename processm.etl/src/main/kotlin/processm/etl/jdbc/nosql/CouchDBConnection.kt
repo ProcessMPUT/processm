@@ -37,10 +37,14 @@ class CouchDBConnection internal constructor(
     /**
      * Auxiliary constructor ensuring URL ends with /
      */
-    constructor(baseURL: String) : this(URL("$baseURL/"))
+    constructor(baseURL: String) : this(URL(if (baseURL.last() == '/') baseURL else "$baseURL/"))
 
     constructor(server: String, port: Int, username: String?, password: String?, database: String, https: Boolean) :
-            this(URL("${if (https) "https" else "http"}://$server:$port/$database/"), username, password)
+            this(
+                URL("${if (https) "https" else "http"}://$server:$port/" + (if (database.isNotBlank()) "$database/" else "")),
+                username,
+                password
+            )
 
     private val username: String?
     private val password: String?
@@ -50,6 +54,13 @@ class CouchDBConnection internal constructor(
         with(baseURL.userInfo?.split(':', limit = 2)) {
             this@CouchDBConnection.username = username ?: this?.get(0)
             this@CouchDBConnection.password = password ?: this?.get(1)
+        }
+        runBlocking {
+            check(client.get(baseURL) {
+                this@CouchDBConnection.password?.let {
+                    basicAuth(this@CouchDBConnection.username!!, this@CouchDBConnection.password)
+                }
+            }.status.isSuccess())
         }
     }
 
@@ -80,8 +91,8 @@ class CouchDBConnection internal constructor(
      *
      * @throws SQLException if the operation failed
      */
-    fun createDatabase() {
-        runBlocking { check(put("") {}.status.isSuccess()) }
+    fun createDatabase(db: String) {
+        runBlocking { check(put(db) {}.status.isSuccess()) }
     }
 
     /**

@@ -94,6 +94,8 @@ import SqlServerConnectionConfiguration from "@/components/data-connections/SqlS
 import MySqlConnectionConfiguration from "@/components/data-connections/MySqlConnectionConfiguration.vue";
 import OracleDatabaseConnectionConfiguration from "@/components/data-connections/OracleDatabaseConnectionConfiguration.vue";
 import Db2ConnectionConfiguration from "@/components/data-connections/Db2ConnectionConfiguration.vue";
+import CouchDBConnectionConfiguration from "@/components/data-connections/CouchDBConnectionConfiguration.vue";
+import MongoDBConnectionConfiguration from "@/components/data-connections/MongoDBConnectionConfiguration.vue";
 import DataStoreService from "@/services/DataStoreService";
 import { connectionStringFormatRule, notEmptyRule } from "@/utils/FormValidationRules";
 import App from "@/App.vue";
@@ -109,7 +111,9 @@ enum ConfigurationMode {
     SqlServerConnectionConfiguration,
     MySqlConnectionConfiguration,
     OracleDatabaseConnectionConfiguration,
-    Db2ConnectionConfiguration
+    Db2ConnectionConfiguration,
+    CouchDBConnectionConfiguration,
+    MongoDBConnectionConfiguration
   }
 })
 export default class DataConnectorDialog extends Vue {

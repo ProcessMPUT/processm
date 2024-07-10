@@ -167,6 +167,8 @@
     "password": "Password",
     "database-name": "Database name",
     "database": "Database",
+    "collection": "Collection",
+    "https":  "Use HTTPS",
     "trust-server-certificate": "Always trust server certificate",
     "connector-not-supported": "Connection string based connectors are not yet supported",
     "masked-password-notification": "Remember to change the masked password to the correct value.",
