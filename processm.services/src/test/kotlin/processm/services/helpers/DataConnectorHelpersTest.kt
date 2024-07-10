@@ -356,4 +356,39 @@ class DataConnectorHelpersTest {
             maskPasswordInJdbcUrl("jdbc:db2://localhost:50000/testdb:password=password;user=db2inst1;", "MASK")
         )
     }
+
+    @Test
+    fun `couchdb - no password`() {
+        assertEquals("couchdb:http://localhost:12345/foo", maskPasswordInJdbcUrl("couchdb:http://localhost:12345/foo"))
+    }
+
+    @Test
+    fun `couchdb - password`() {
+        assertEquals(
+            "couchdb:http://user:MASK@localhost:12345/foo",
+            maskPasswordInJdbcUrl("couchdb:http://user:passworth@localhost:12345/foo", "MASK")
+        )
+    }
+
+    @Test
+    fun `mongo - srv, single server`() {
+        assertEquals(
+            "mongodb+srv://myDatabaseUser:MASK@cluster0.example.mongodb.net/?retryWrites=true&w=majority",
+            maskPasswordInJdbcUrl(
+                "mongodb+srv://myDatabaseUser:D1fficultP%40ssw0rd@cluster0.example.mongodb.net/?retryWrites=true&w=majority",
+                "MASK"
+            )
+        )
+    }
+
+    @Test
+    fun `mongo - standalone, multiple servers`() {
+        assertEquals(
+            "mongodb://myDatabaseUser:MASK@mongodb0.example.com:27017,mongodb1.example.com:27017,mongodb2.example.com:27017/?authSource=admin&replicaSet=myRepl",
+            maskPasswordInJdbcUrl(
+                "mongodb://myDatabaseUser:D1fficultP%40ssw0rd@mongodb0.example.com:27017,mongodb1.example.com:27017,mongodb2.example.com:27017/?authSource=admin&replicaSet=myRepl",
+                "MASK"
+            )
+        )
+    }
 }
