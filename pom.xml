@@ -78,6 +78,7 @@
         <ktor.version>2.3.8</ktor.version>
         <!-- Some Spark and Flink dependencies have Scala-dependent version. The variable is for consistency, even though ProcessM does not use Scala -->
         <scala.binary.version>2.12</scala.binary.version>
+        <org.jgrapht.version>1.5.1</org.jgrapht.version>
 
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>

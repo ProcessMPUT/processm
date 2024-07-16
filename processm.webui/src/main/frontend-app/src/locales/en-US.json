@@ -56,10 +56,15 @@
           "datastore-empty": "The datastore cannot be empty",
           "name-empty": "The name cannot be empty",
           "query-empty": "The query cannot be empty",
-          "not-a-non-negative-integer": "The value must be a non-negative integer"
+          "not-a-non-negative-integer": "The value must be a non-negative integer",
+          "not-a-percent": "The value must be an integer between 0 and 100"
         },
         "algorithm": "Discovery algorithm",
-        "horizon": "Valid only for Online Heuristic Miner. How many events forward in the trace to consider as possible effects of an activity."
+        "horizon": "Valid only for Online Heuristic Miner. How many events forward in the trace to consider as possible effects of an activity.",
+        "dependencyThreshold": "Valid only for Original Heuristic Miner. The threshold for the dependency measure.",
+        "l1Threshold": "Valid only for Original Heuristic Miner. The threshold for the dependency measure on 1-loops.",
+        "l2Threshold": "Valid only for Original Heuristic Miner. The threshold for the dependency measure on 2-loops.",
+        "andThreshold": "Valid only for Original Heuristic Miner. The threshold for the AND-dependency measure."
       },
       "flat-log-view": "Flat log view",
       "flat-log": {
