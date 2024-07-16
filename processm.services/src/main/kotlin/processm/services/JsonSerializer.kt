@@ -86,11 +86,6 @@ private object AnySerializer : KSerializer<Any?> {
             encoder.encodeNull()
         else if (value::class == Any::class || (value is Map<*, *> && value.isEmpty()))
             encoder.beginStructure(emptyObjectDescriptor).endStructure(emptyObjectDescriptor)
-        else if (value is Map<*, *> && value.keys.all { it is String } && value.values.all { it is List <*>}) {
-            encoder as JsonEncoder
-            val jsonElement = encoder.json.encodeToJsonElement(value as Map<String, List<Any>>)
-            encoder.encodeJsonElement(jsonElement)
-        }
         else {
             val serializer = encoder.serializersModule.serializer(value.javaClass)
             encoder.encodeSerializableValue(serializer, value)
