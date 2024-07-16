@@ -183,14 +183,14 @@ class XESExtensionLoaderTest {
                 mock.loadExtension("http://example.com/only-once.xesext")
                 mock["openExternalStream"]("http://example.com/only-once.xesext")
             }
+            verify(exactly = 1) { mock["openExternalStream"]("http://example.com/only-once.xesext") }
 
             val fromMemory = mock.loadExtension("http://example.com/only-once.xesext")!!
             verifyOrder {
                 mock.loadExtension("http://example.com/only-once.xesext")
-                // TODO This code is no longer valid. I am unsure what was supposed to be tested here.
-                // TODO According to the docs wasNot is to be used with a mock, not with a call
-//                mock["openExternalStream"]("http://example.com/only-once.xesext")?.wasNot(Called)
             }
+            // The count remains unchanged, i.e., openExternalStream was not called second time
+            verify(exactly = 1) { mock["openExternalStream"]("http://example.com/only-once.xesext") }
 
             assertEquals(fromMemory.name, "Once")
             assertEquals(fromMemory.prefix, "once")
