@@ -747,6 +747,7 @@ export default class DataStoreConfiguration extends Vue {
       if (!success) return;
       this.dataStore.name = newName;
       this.$emit("changed", this.dataStore);
+      this.app.success(`${this.$t("common.operation-successful")}`);
     } catch (error) {
       this.app.error(`${this.$t("common.saving.failure")}`);
     }
