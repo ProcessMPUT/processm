@@ -174,6 +174,48 @@ class OriginalHeuristicMinerTest {
     }
 
     @Test
+    fun `no and for sequential dependencies`() {
+        val log = Helpers.logFromString(
+            """
+            a b
+            a c
+            b c
+            b c
+            b c
+            b c
+        """.trimIndent()
+        )
+        val hm = OriginalHeuristicMiner(andThreshold = 0.0)
+        hm.processLog(log)
+        with(hm.result) {
+            assertTrue { splits.values.flatten().all { it.size == 1 } }
+            assertTrue { joins.values.flatten().all { it.size == 1 } }
+        }
+    }
+
+    @Test
+    fun `and for parallel dependencies`() {
+        val log = Helpers.logFromString(
+            """
+            a b
+            a c
+            b c
+            b c
+            c b
+            c b
+        """.trimIndent()
+        )
+        val hm = OriginalHeuristicMiner(andThreshold = 0.0)
+        hm.processLog(log)
+        with(hm.result) {
+            val a = activities.single { it.name == "a" }
+            val b = activities.single { it.name == "b" }
+            val c = activities.single { it.name == "c" }
+            assertEquals(setOf(b, c), splits[a]?.single()?.targets?.toSet())
+        }
+    }
+
+    @Test
     fun `JournalReviewExtra with threshold=0_9`() {
         val expectedModel = causalnet {
             val ir = Node("invite reviewers")

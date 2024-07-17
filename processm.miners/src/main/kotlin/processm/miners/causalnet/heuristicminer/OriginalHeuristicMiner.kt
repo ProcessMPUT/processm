@@ -219,7 +219,8 @@ class OriginalHeuristicMiner(
      *
      * The procedure consists of two steps:
      * 1. Determining pairwise AND-relations between any two dependencies in [edgesSet]. The paper gives a heuristic
-     * defined by Equation 4 for that and the code follows.
+     * defined by Equation 4 for that and the code follows, except that the heuristics is applied only to activities
+     * that are parallel (i.e., there's no edge between them)
      * 2. Aggregating the information. The paper seems to apply some heuristic algorithm that is not precisly defined.
      * I think the authors did not realize they are facing the maximal clique problem in a graph represented by the AND-relation.
      * The implementation uses the pivoting version of the Bron-Kerbosch algorithm from [PivotBronKerboschCliqueFinder].
@@ -230,7 +231,7 @@ class OriginalHeuristicMiner(
      *
      * 1. https://en.wikipedia.org/w/index.php?title=Bron%E2%80%93Kerbosch_algorithm&oldid=1209826174
      */
-    private fun computeBindings(a: Int, edgesSet: HashSet<Int>): Iterable<Set<Int>> {
+    private fun computeBindings(a: Int, edgesSet: HashSet<Int>, graph: Array<HashSet<Int>>): Iterable<Set<Int>> {
         if (edgesSet.isEmpty()) return emptyList()
         val edges = edgesSet.toIntArray()
         val conjunctsGraph = DefaultUndirectedGraph<Int, Int>(Int::class.java)
@@ -238,8 +239,14 @@ class OriginalHeuristicMiner(
         var nextEdgeId = 0
         for (i in edges.indices) {
             val b = edges[i]
+            if (b == a)
+                continue
             for (j in i + 1 until edges.size) {
                 val c = edges[j]
+                if (c == a)
+                    continue
+                if (c in graph[b] || b in graph[c])
+                    continue
                 // Equation 4
                 val v = ((freq1[b, c]?.toDouble() ?: 0.0) + (freq1[c, b]?.toDouble()
                     ?: 0.0)) / ((freq1[a, b]?.toDouble() ?: 0.0) + (freq1[a, c]?.toDouble() ?: 0.0) + 1)
@@ -300,12 +307,12 @@ class OriginalHeuristicMiner(
                     freq1[s, t]?.toDouble()?.let { dependencyMetadata[d] = SingleDoubleMetadata(it) }
                 }
             for (s in 0 until nNodes) {
-                for (split in computeBindings(s, outgoing[s])) {
+                for (split in computeBindings(s, outgoing[s], outgoing)) {
                     addSplit(Split(split.mapToSet { t -> Dependency(index2node[s], index2node[t]) }))
                 }
             }
             for (t in 0 until nNodes) {
-                for (join in computeBindings(t, incoming[t]))
+                for (join in computeBindings(t, incoming[t], outgoing))
                     addJoin(Join(join.mapToSet { s -> Dependency(index2node[s], index2node[t]) }))
             }
             addMetadataProvider(DefaultMetadataProvider(BasicMetadata.DEPENDENCY_MEASURE, dependencyMetadata))
