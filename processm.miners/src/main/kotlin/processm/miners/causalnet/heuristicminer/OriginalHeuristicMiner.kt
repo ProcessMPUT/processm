@@ -57,6 +57,12 @@ class OriginalHeuristicMiner(
             checkNotNull(besty)
             return bestx to besty
         }
+
+        private const val SILENT_START_NAME = "4f9cd754start"
+        private const val SILENT_START = 0
+        private const val SILENT_END_NAME = "4f9cd754end"
+        private const val SILENT_END = SILENT_START + 1
+        private const val FIRST_REAL_NODE = SILENT_END + 1
     }
 
     override lateinit var result: MutableCausalNet
@@ -78,22 +84,24 @@ class OriginalHeuristicMiner(
 
     private fun computeFrequencies(log: Log) {
         event2index.clear()
+        event2index[SILENT_START_NAME] = SILENT_START
+        event2index[SILENT_END_NAME] = SILENT_END
         freq1.clear()
         freq2.clear()
         for (trace in log.traces) {
-            var prev1: Int? = null
+            var prev1: Int = SILENT_START
             var prev2: Int? = null
             for (event in trace.events) {
                 val name = event.conceptName ?: continue
                 val idx = event2index.computeIfAbsent(name) { event2index.size }
-                if (prev1 !== null) {
-                    freq1.compute(prev1, idx) { _, _, v -> (v ?: 0) + 1 }
-                    if (prev2 == idx)
-                        freq2.compute(prev1, idx) { _, _, v -> (v ?: 0) + 1 }
-                }
+                assert(idx >= FIRST_REAL_NODE)
+                freq1.compute(prev1, idx) { _, _, v -> (v ?: 0) + 1 }
+                if (prev2 == idx)
+                    freq2.compute(prev1, idx) { _, _, v -> (v ?: 0) + 1 }
                 prev2 = prev1
                 prev1 = idx
             }
+            freq1.compute(prev1, SILENT_END) { _, _, v -> (v ?: 0) + 1 }
         }
     }
 
@@ -254,20 +262,37 @@ class OriginalHeuristicMiner(
             for ((e, i) in event2index) {
                 assert(i in 0 until nNodes)
                 assert(this[i] === null)
-                this[i] = Node(e)
+                this[i] = when (i) {
+                    SILENT_START -> Node("start", isSilent = true)
+                    SILENT_END -> Node("end", isSilent = true)
+                    else -> Node(e)
+                }
             }
         } as Array<Node> // cast, because nulls are no longer possible in the array
-        val starts = (0 until nNodes).filter { n -> incoming[n].isEmpty() || incoming[n].all { it == n } }
-        assert(starts.isNotEmpty())
-        val hasRealStart = starts.size == 1 && incoming[starts[0]].isEmpty()
-        val ends = (0 until nNodes).filter { n -> outgoing[n].isEmpty() || outgoing[n].all { it == n } }
-        assert(ends.isNotEmpty())
-        val hasRealEnd = ends.size == 1 && outgoing[ends[0]].isEmpty()
+        val start = outgoing[SILENT_START].singleOrNull()
+            ?.let { possibleStart -> if (incoming[possibleStart].singleOrNull() == SILENT_START) possibleStart else null }
+            ?: SILENT_START
+        val end = incoming[SILENT_END].singleOrNull()
+            ?.let { possibleEnd -> if (outgoing[possibleEnd].singleOrNull() == SILENT_END) possibleEnd else null }
+            ?: SILENT_END
+        if (start != SILENT_START) {
+            outgoing[SILENT_START].clear()
+            for (n in 0 until nNodes)
+                incoming[n].remove(SILENT_START)
+        }
+        if (end != SILENT_END) {
+            incoming[SILENT_END].clear()
+            for (n in 0 until nNodes)
+                outgoing[n].remove(SILENT_END)
+        }
         result = MutableCausalNet(
-            start = if (hasRealStart) index2node[starts[0]] else Node("start", isSilent = true),
-            end = if (hasRealEnd) index2node[ends[0]] else Node("end", isSilent = true),
+            start = index2node[start],
+            end = index2node[end]
         ).apply {
-            addInstance(*index2node)
+            addInstance(index2node[start])
+            addInstance(index2node[end])
+            for (n in FIRST_REAL_NODE until nNodes)
+                addInstance(index2node[n])
             val dependencyMetadata = HashMap<MetadataSubject, SingleDoubleMetadata>()
             for (s in 0 until nNodes)
                 for (t in outgoing[s]) {
@@ -283,18 +308,6 @@ class OriginalHeuristicMiner(
                 for (join in computeBindings(t, incoming[t]))
                     addJoin(Join(join.mapToSet { s -> Dependency(index2node[s], index2node[t]) }))
             }
-            if (!hasRealStart)
-                for (t in starts) {
-                    val d = setOf(addDependency(start, index2node[t]))
-                    addSplit(Split(d))
-                    addJoin(Join(d))
-                }
-            if (!hasRealEnd)
-                for (s in ends) {
-                    val d = setOf(addDependency(index2node[s], end))
-                    addSplit(Split(d))
-                    addJoin(Join(d))
-                }
             addMetadataProvider(DefaultMetadataProvider(BasicMetadata.DEPENDENCY_MEASURE, dependencyMetadata))
         }
     }
