@@ -55,14 +55,14 @@
         <org.jetbrains.exposed.version>0.44.0</org.jetbrains.exposed.version>
         <kotlin.code.style>official</kotlin.code.style>
         <junit.jupiter.version>5.10.0</junit.jupiter.version>
-        <mockk.version>1.13.8</mockk.version>
+        <mockk.version>1.13.11</mockk.version>
         <!-- cannot update ANTLR4 because of the version conflict with spark-catalyst and the runtime version check in ANTLR4 lib -->
         <antlr4.version>4.8-1</antlr4.version>
         <com.github.ben-manes.caffeine.version>3.1.1</com.github.ben-manes.caffeine.version>
         <org.apache.commons.commonsDbcp2.version>2.9.0</org.apache.commons.commonsDbcp2.version>
         <org.postgresql.version>42.4.0</org.postgresql.version>
         <mysql.mysql-connector-java.version>8.0.29</mysql.mysql-connector-java.version>
-        <com.microsoft.sqlserver.version>10.2.1.jre11</com.microsoft.sqlserver.version>
+        <com.microsoft.sqlserver.version>10.2.1.jre17</com.microsoft.sqlserver.version>
         <com.oracle.database.jdbc.version>21.6.0.0.1</com.oracle.database.jdbc.version>
         <com.ibm.db2.version>11.5.7.0</com.ibm.db2.version>
         <maven.dependency.plugin.version>3.6.1</maven.dependency.plugin.version>
@@ -80,9 +80,9 @@
         <org.jgrapht.version>1.5.1</org.jgrapht.version>
 
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
-        <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
+        <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
 
         <groups/>
         <excludedGroups>performance,slow</excludedGroups>
@@ -136,6 +136,15 @@
             <groupId>io.mockk</groupId>
             <artifactId>mockk-jvm</artifactId>
             <version>${mockk.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- mockk uses a version of byte-buddy that seems to be incompatible with Java 17. Explicitly including this
+version (the newest at the time of writing this) seems to solve the issue.
+Eventually, perhaps this dependency can be removed. -->
+        <dependency>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy</artifactId>
+            <version>1.14.17</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

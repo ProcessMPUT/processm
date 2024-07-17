@@ -1,8 +1,8 @@
 package processm.core.log
 
-import io.mockk.Called
 import io.mockk.every
 import io.mockk.spyk
+import io.mockk.verify
 import io.mockk.verifyOrder
 import processm.core.log.XESExtensionLoader.loadExtension
 import processm.core.log.extension.Extension
@@ -183,12 +183,14 @@ class XESExtensionLoaderTest {
                 mock.loadExtension("http://example.com/only-once.xesext")
                 mock["openExternalStream"]("http://example.com/only-once.xesext")
             }
+            verify(exactly = 1) { mock["openExternalStream"]("http://example.com/only-once.xesext") }
 
             val fromMemory = mock.loadExtension("http://example.com/only-once.xesext")!!
             verifyOrder {
                 mock.loadExtension("http://example.com/only-once.xesext")
-                mock["openExternalStream"]("http://example.com/only-once.xesext")?.wasNot(Called)
             }
+            // The count remains unchanged, i.e., openExternalStream was not called second time
+            verify(exactly = 1) { mock["openExternalStream"]("http://example.com/only-once.xesext") }
 
             assertEquals(fromMemory.name, "Once")
             assertEquals(fromMemory.prefix, "once")
