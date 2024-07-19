@@ -19,8 +19,10 @@ import processm.core.persistence.connection.DatabaseChecker
 import processm.helpers.AtomicIntegerSequence
 import java.time.Duration
 import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 import kotlin.test.assertNotNull
+import kotlin.test.fail
 
 
 val <T : PostgreSQLContainer<T>?> PostgreSQLContainer<T>.port: Int
@@ -251,7 +253,7 @@ abstract class SeleniumBase(
 
             esb = EnterpriseServiceBus()
             val mutex = Semaphore(0)
-            backendThread = object : Thread() {
+            backendThread = object : Thread("Backend setup - selenium test") {
                 override fun run() {
                     loadConfiguration(true)
                     System.setProperty(
@@ -267,7 +269,11 @@ abstract class SeleniumBase(
                 }
             }
             backendThread.start()
-            mutex.acquire()
+            if (!mutex.tryAcquire(60L, TimeUnit.SECONDS)) {
+                backendThread.interrupt()
+                backendThread.join(1000L)
+                fail("The system did not start in the time limit.")
+            }
         }
     }
 
@@ -278,7 +284,7 @@ abstract class SeleniumBase(
             if (language !== null)
                 setExperimentalOption("prefs", mapOf("intl.accept_languages" to language))
         })
-        driver.manage().timeouts().implicitlyWait(Duration.ofMillis(1000))
+        driver.manage().timeouts().implicitlyWait(Duration.ofMillis(2000))
         if (recordSlideshow) recorder = VideoRecorder(driver)
         wait = WebDriverWait(driver, Duration.ofSeconds(15))
         driver.get("http://localhost:$httpPort/")
