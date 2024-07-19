@@ -55,5 +55,10 @@
             <artifactId>jgrapht-core</artifactId>
             <version>${org.jgrapht.version}</version>
         </dependency>
+        <dependency>
+            <groupId>${project.parent.groupId}</groupId>
+            <artifactId>conformance</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
     </dependencies>
 </project>

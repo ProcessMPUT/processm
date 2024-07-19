@@ -1,12 +1,26 @@
 package processm.miners.causalnet.heuristicminer
 
+import org.junit.jupiter.api.Tag
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 import processm.core.DBTestHelper
+import processm.core.log.Event
 import processm.core.log.Helpers
+import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
-import processm.core.models.causalnet.Node
-import processm.core.models.causalnet.causalnet
+import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
+import processm.core.log.hierarchical.InMemoryXESProcessing
+import processm.core.log.takeTraces
+import processm.core.models.causalnet.*
 import processm.core.querylanguage.Query
 import processm.helpers.mapToSet
+import java.io.File
+import java.nio.file.Files
+import java.util.*
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.stream.Stream
+import java.util.zip.GZIPInputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -16,6 +30,16 @@ import kotlin.test.assertTrue
  * HM paper = https://pure.tue.nl/ws/portalfiles/portal/2388011/615595.pdf
  */
 class OriginalHeuristicMinerTest {
+
+    companion object {
+        @JvmStatic
+        private fun smallXESFiles(): Stream<File> =
+            File("../xes-logs").listFiles()?.filter { Files.size(it.toPath()) < 100000 }.orEmpty().stream()
+
+
+        @JvmStatic
+        val pool = Executors.newCachedThreadPool()
+    }
 
     @Test
     fun `HM paper Fig 2`() {
@@ -266,8 +290,95 @@ class OriginalHeuristicMinerTest {
             DBTestHelper.dbName,
             Query("select e:concept:name where l:identity:id=${DBTestHelper.JournalReviewExtra} and e:lifecycle:transition=\"complete\"")
         )
-        val hm = OriginalHeuristicMiner(.9, andThreshold = .1)
+        val hm = OriginalHeuristicMiner(.9, andThreshold = .8)
         hm.processLog(log)
         assertTrue { expectedModel.structurallyEquals(hm.result) }
+    }
+
+    private data class QueueElement(val cost: Int, val node: Node) : Comparable<QueueElement> {
+        override fun compareTo(other: QueueElement): Int = cost.compareTo(other.cost)
+    }
+
+    /**
+     * Very simple verifier, which finds the shortest path in the dependency graph, and then tries to follow it.
+     * Sound, but incomplete.
+     *
+     * @return true if there exists a valid binding sequence for the given model, false if the sequence was not found
+     */
+    private fun followShortestPath(model: CausalNet): Boolean {
+        val distanceFromStart = HashMap<Node, Int>()
+        val queue = PriorityQueue<QueueElement>()
+        queue.add(QueueElement(0, model.start))
+        distanceFromStart[model.start] = 0
+        while (queue.isNotEmpty()) {
+            val (cost, s) = queue.poll()
+            if (s == model.end)
+                break
+            for (d in model.outgoing[s].orEmpty()) {
+                if ((distanceFromStart[d.target] ?: Int.MAX_VALUE) > cost + 1) {
+                    distanceFromStart[d.target] = cost + 1
+                    queue.add(QueueElement(cost + 1, d.target))
+                }
+            }
+        }
+        val path = ArrayList<Node>()
+        path.add(model.end)
+        while (true) {
+            val node = path.last()
+            if (node == model.start)
+                break
+            val cost = distanceFromStart[node]!! - 1
+            val previous = distanceFromStart.entries.first {
+                it.value == cost && (model.incoming[node]?.any { d -> d.source == it.key } ?: false)
+            }.key
+            path.add(previous)
+        }
+        path.reverse()
+        val state = model.createInstance() as CausalNetInstance
+
+        for ((i, node) in path.withIndex()) {
+            val e = model.available(state.currentState as CausalNetState).firstOrNull {
+                it.activity == node && it.split?.let {
+                    path.subList(i + 1, path.size).containsAll(it.targets.toList())
+                } != false
+            } ?: return false
+            state.getExecutionFor(e).execute()
+        }
+        return state.isFinalState
+    }
+
+    @Tag("slow")
+    @OptIn(InMemoryXESProcessing::class)
+    @ParameterizedTest()
+    @MethodSource("smallXESFiles")
+    fun `andThreshold 1_01 generates an unconstrained model with at least one path`(f: File) {
+        f.inputStream().use { raw ->
+            GZIPInputStream(raw).use { gzip ->
+                val log = HoneyBadgerHierarchicalXESInputStream(
+                    XMLXESInputStream(gzip, allowExternalStreams = false).takeTraces(100)
+                        .filter { it !is Event || it.lifecycleTransition in setOf(null, "complete") }).first()
+                val miner = OriginalHeuristicMiner(1.0, andThreshold = 1.01, autotuneAndThreshold = false)
+                miner.processLog(log)
+                assertTrue { followShortestPath(miner.result) }
+            }
+        }
+    }
+
+    @Tag("slow")
+    @Test
+    fun `journal autotune`() {
+        val log = DBHierarchicalXESInputStream(
+            DBTestHelper.dbName,
+            Query("where l:identity:id=${DBTestHelper.JournalReviewExtra} and e:transition='complete'\n")
+        ).first()
+        val miner = OriginalHeuristicMiner(
+            dependencyThreshold = 0.9,
+            andThreshold = .5,
+            // on my system the test works just as well with timeout set to 1 and 20, so hopefully 10 is a reasonable trade-off
+            alignerTimeout = 10,
+            alignerTimeoutUnit = TimeUnit.SECONDS
+        )
+        miner.processLog(log)
+        assertTrue { miner.modelAndThreshold in 0.66..0.67 }
     }
 }
