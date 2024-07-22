@@ -1,10 +1,10 @@
 <template>
   <div class="workspace-component">
     <div v-if="componentDetails.type != null" class="component-name">
+      {{ componentDetails.name }}
       <v-menu offset-y bottom min-width="0">
         <template #activator="{ on }">
-          <v-btn :ripple="false" class="component-name" depressed small tile v-on="on"
-            >{{ componentDetails.name }}
+          <v-btn :ripple="false" class="component-name" depressed small tile v-on="on">
             <v-icon dark>expand_more</v-icon>
           </v-btn>
         </template>
@@ -73,8 +73,8 @@
 button.v-btn.v-btn.component-name[type="button"] {
   overflow: hidden;
   background-color: inherit;
-  max-width: 100%;
-  flex: auto;
+  align-self: center;
+  min-width: 0;
 }
 
 .component-name {
@@ -83,6 +83,9 @@ button.v-btn.v-btn.component-name[type="button"] {
   justify-content: center;
   background-color: var(--v-primary-base);
   flex: 0 0 1.5em;
+  text-transform: uppercase;
+  font-weight: 500;
+  font-size: small;
 }
 
 .component-name:hover {
