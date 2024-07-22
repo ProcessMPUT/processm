@@ -6,6 +6,9 @@
           <v-icon>arrow_back</v-icon>
         </v-btn>
         <v-spacer></v-spacer>
+        <v-icon>${{ componentDetails.type }}Component</v-icon>
+        {{ $t(`workspace.component.${kebabize(componentDetails.type)}`) }}
+        <v-spacer></v-spacer>
         <v-btn color="primary" icon @click.stop="saveChanges">
           <v-icon>save</v-icon>
         </v-btn>
