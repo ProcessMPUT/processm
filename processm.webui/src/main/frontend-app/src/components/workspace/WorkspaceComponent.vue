@@ -10,19 +10,19 @@
         </template>
 
         <v-list dense>
-          <v-list-item @click="$emit('view', componentDetails.id)">
+          <v-list-item @click="$emit('view', componentDetails.id)" v-if="canSwitchToView">
             <v-list-item-icon>
               <v-icon>visibility</v-icon>
             </v-list-item-icon>
             <v-list-item-title>{{ $t("common.view") }}</v-list-item-title>
           </v-list-item>
-          <v-list-item @click="$emit('edit', componentDetails.id)">
+          <v-list-item @click="$emit('edit', componentDetails.id)" v-if="canSwitchToEdit">
             <v-list-item-icon>
               <v-icon>edit</v-icon>
             </v-list-item-icon>
             <v-list-item-title>{{ $t("common.edit") }}</v-list-item-title>
           </v-list-item>
-          <v-divider></v-divider>
+          <v-divider v-if="canSwitchToEdit || canSwitchToView"></v-divider>
           <v-list-item @click="$emit('remove', componentDetails.id)">
             <v-list-item-icon>
               <v-icon>delete</v-icon>
@@ -159,6 +159,8 @@ export default class WorkspaceComponent extends Vue {
   readonly editable!: boolean;
   @Prop({ default: null })
   readonly componentMode?: ComponentMode;
+  @Prop({ default: false })
+  readonly isTransient!: boolean;
   /**
    * Set to true to let children update the data model (usually before sending it to the server).
    */
@@ -184,6 +186,14 @@ export default class WorkspaceComponent extends Vue {
 
   get componentType() {
     return `${this.componentDetails?.type}Component`;
+  }
+
+  get canSwitchToView() {
+    return this.componentMode != ComponentMode.Interactive && !this.isTransient;
+  }
+
+  get canSwitchToEdit() {
+    return this.componentMode != ComponentMode.Edit;
   }
 }
 </script>

@@ -58,6 +58,7 @@
               v-if="componentsDetails.has(item.i)"
               :component-details="componentsDetails.get(item.i)"
               :component-mode="ComponentMode.Static"
+              :is-transient="transientComponents.has(item.i)"
               @view="viewComponent"
               @edit="editComponent"
               @remove="removeComponent"
@@ -81,6 +82,7 @@
       v-model="displayEditModal"
       :component-details="displayedComponentDetails"
       :workspace-id="workspaceId"
+      :is-transient="transientComponents.has(displayedComponentDetails?.id ?? '')"
       @discard="discardComponentChanges"
       @view="viewComponent"
       @edit="editComponent"
@@ -189,10 +191,11 @@ export default class WorkspaceArea extends Vue {
   // noinspection JSUnusedGlobalSymbols
 
   async removeComponent(componentId: string) {
-    if (this.removeComponentFromLayout(componentId)) {
+    if (!this.transientComponents.has(componentId)) {
       await this.workspaceService.removeComponent(this.workspaceId, componentId);
-      this.closeModals();
     }
+    this.removeComponentFromLayout(componentId);
+    this.closeModals();
   }
 
   toggleLocked() {
