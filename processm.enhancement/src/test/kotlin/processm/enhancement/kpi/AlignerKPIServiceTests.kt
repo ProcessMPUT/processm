@@ -43,7 +43,7 @@ class AlignerKPIServiceTests {
         val artemis = Artemis()
         val wctObserver = TopicObserver(
             topic = WORKSPACE_COMPONENTS_TOPIC,
-            filter = "$WORKSPACE_COMPONENT_EVENT = '${WorkspaceComponentEventType.DataChange}' AND $WORKSPACE_COMPONENT_EVENT_DATA <> '${DataChangeType.Model}'"
+            filter = "$WORKSPACE_COMPONENT_EVENT = '${WorkspaceComponentEventType.DataChange}' AND $WORKSPACE_COMPONENT_EVENT_DATA <> '${DataChangeType.Model}' AND $WORKSPACE_COMPONENT_EVENT_DATA <> '${DataChangeType.InitialModel}'"
         )
         var perfectCNetId: Long = -1L
         var mainstreamCNetId: Long = -1L
