@@ -5,7 +5,6 @@ import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.models.bpmn.BPMNModel
 import processm.core.models.bpmn.DBSerializer
 import processm.core.models.bpmn.converters.toBPMN
-import processm.core.models.bpmn.toXML
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.processtree.ProcessTree
 import processm.dbmodels.models.ComponentTypeDto
@@ -53,7 +52,7 @@ class BPMNMinerService : AbstractMinerService(
         }
 
         override fun store(database: Database, model: BPMNModel): String =
-            DBSerializer.insert(database, model.toXML()).toString()
+            DBSerializer.insert(database, model).toString()
     }
 
     class CalcBPMNJob : CalcJob<BPMNModel>(), BPMNJob
