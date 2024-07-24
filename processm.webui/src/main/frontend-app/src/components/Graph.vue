@@ -137,7 +137,7 @@ export default class Graph extends Vue {
         fitCenter: true,
         plugins: [tooltip],
         modes: {
-          default: ["drag-node"]
+          default: ["drag-node", 'drag-canvas', 'zoom-canvas']
         },
         layout: {
           type: "comboCombined",
