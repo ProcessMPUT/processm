@@ -401,3 +401,11 @@ fun getCustomProperties(
         else -> emptyArray()
     }
 
+/**
+ * Returns an API object carrying the modification dates of the component
+ */
+val WorkspaceComponent.componentLastModified
+    get() = ComponentLastModified(
+        userLastModified = this.userLastModified.toLocalDateTime(),
+        dataLastModified = this.dataLastModified?.toLocalDateTime()
+    )

@@ -3,7 +3,6 @@ import Workspace from "@/models/Workspace";
 import BaseService from "./BaseService";
 import { LayoutElement, WorkspaceComponent } from "@/models/WorkspaceComponent";
 import { AbstractComponent, ComponentType, Workspace as ApiWorkspace } from "@/openapi";
-import { NotificationsObserver } from "@/utils/NotificationsObserver";
 
 export default class WorkspaceService extends BaseService {
   public async getAll(): Promise<Array<Workspace>> {
@@ -53,14 +52,6 @@ export default class WorkspaceService extends BaseService {
     }
 
     return new WorkspaceComponent(apiComponent);
-  }
-
-  public async addComponent(workspaceId: string, component: WorkspaceComponent) {
-    const payload = Object.assign({}, component) as { data?: any };
-    delete payload.data;
-    const response = await this.workspacesApi.addOrUpdateWorkspaceComponent(workspaceId, component.id, payload as AbstractComponent);
-
-    return response.status == 204;
   }
 
   private get currentOrganizationId() {
@@ -124,7 +115,7 @@ export default class WorkspaceService extends BaseService {
     }
     const response = await this.workspacesApi.addOrUpdateWorkspaceComponent(workspaceId, componentId, payload as AbstractComponent);
 
-    return response.status == 204;
+    return response.data;
   }
 
   public async getEmptyComponent(componentType: ComponentType) {
