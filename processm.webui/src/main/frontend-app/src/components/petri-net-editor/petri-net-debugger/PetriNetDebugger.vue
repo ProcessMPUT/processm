@@ -43,6 +43,7 @@ import { PetriNetSvgManager } from "@/components/petri-net-editor/svg/PetriNetSv
 import { PetriNetState } from "@/components/petri-net-editor/model/PetriNetState";
 import { ContextMenuItem } from "@/components/petri-net-editor/context-menu/ContextMenuItem";
 import { PlaceType } from "@/components/petri-net-editor/model/Place";
+import svgPanZoom from "svg-pan-zoom";
 
 @Component({
   components: { ContextMenu }
@@ -66,7 +67,7 @@ export default class PetriNetDebugger extends Vue {
       false
     );
     this.petriNetManager.state = this._state;
-    this.petriNetManager.updateDimensions();
+    svgPanZoom("#petri-net-debugger-svg");
 
     const places = this.petriNetManager.places;
 

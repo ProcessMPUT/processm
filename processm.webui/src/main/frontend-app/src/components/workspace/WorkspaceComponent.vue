@@ -46,7 +46,7 @@
         :component-mode="componentMode"
         :data="componentDetails"
         :update-data="updateData"
-        class="workspace-component-content"
+        class="workspace-component-content fill-height"
       />
       <p v-else class="no-data">{{ $t("workspace.component.no-data") }}</p>
       <div class="last-updated">
