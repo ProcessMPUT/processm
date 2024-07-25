@@ -4,7 +4,7 @@
       <td>
         <graph :key="version" :data="data.data" :filter-edge="filterEdge" :refresh="support"></graph>
       </td>
-      <td v-show="componentMode != ComponentMode.Static">
+      <td v-show="(componentMode != ComponentMode.Static) && (isFinite(support))">
         <v-card>
           <v-card-title>{{ $t("common.filter") }}</v-card-title>
           <v-card-text>
