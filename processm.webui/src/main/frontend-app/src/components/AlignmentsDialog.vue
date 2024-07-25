@@ -23,6 +23,7 @@
         <v-spacer />
       </v-toolbar>
       <log-table :headers="headers" :items="items" :show-search="true" :loading="loading"></log-table>
+      <v-pagination v-model="page" :length="nPages" total-visible="6" />
     </v-card>
   </v-dialog>
 </template>
@@ -50,6 +51,8 @@ export default class AlignmentsDialog extends Vue {
   readonly workspaceId!: string;
   @Prop()
   componentId!: string;
+  @Prop({default: 10})
+  pageSize!: number;
 
   alignments?: Array<Alignment>;
   loading: boolean = true;
@@ -62,19 +65,13 @@ export default class AlignmentsDialog extends Vue {
    */
   classifier: string = "concept:name";
 
-  @Watch("open")
-  async opened() {
-    if (!this.open) return;
+  page: number = 1;
+  nPages: number = 0;
 
+  @Watch("page")
+  pageChanged() {
     this.loading = true;
     try {
-      if (this.alignments === undefined) {
-        const data: WorkspaceComponentModel & {
-          data: { alignmentKPIReport?: AlignmentKPIReport };
-        } = await this.workspaceService.getComponent(this.workspaceId, this.componentId);
-        this.alignments = data.data.alignmentKPIReport?.alignments;
-      }
-
       const headers = new Map<string, Header>();
       headers.set("concept:name", { text: "concept:name", value: "concept:name" });
       headers.set(this.classifier, { text: this.classifier, value: this.classifier });
@@ -83,7 +80,7 @@ export default class AlignmentsDialog extends Vue {
       const log = new LogItem(XesComponentScope.Log, idSeq++);
       items.push(log);
 
-      this.alignments?.forEach((a, i) => {
+      this.alignments?.slice((this.page - 1) * this.pageSize, this.page * this.pageSize)?.forEach((a, i) => {
         const trace = new LogItem(XesComponentScope.Trace, idSeq++);
         trace["concept:name"] = i + 1;
         trace["_parent"] = log;
@@ -115,6 +112,27 @@ export default class AlignmentsDialog extends Vue {
 
       this.headers = [...headers.values()];
       this.items = items;
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  @Watch("open")
+  async opened() {
+    if (!this.open) return;
+
+    this.loading = true;
+    try {
+      if (this.alignments === undefined) {
+        const data: WorkspaceComponentModel & {
+          data: { alignmentKPIReport?: AlignmentKPIReport };
+        } = await this.workspaceService.getComponent(this.workspaceId, this.componentId);
+        this.alignments = data.data.alignmentKPIReport?.alignments;
+      }
+
+      this.nPages = (this.alignments?.length ?? 0) / this.pageSize;
+      this.page = Math.min(this.nPages, Math.max(this.page, 1));
+      this.pageChanged();
     } finally {
       this.loading = false;
     }
