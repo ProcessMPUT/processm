@@ -2339,6 +2339,9 @@ components:
                   support:
                     type: number
                     format: double
+            alignmentKPIReportVersion:
+              type: integer
+              format: int64
             alignmentKPIReport:
               $ref: '#/components/schemas/AlignmentKPIReport'
             modelVersion:
@@ -2415,6 +2418,9 @@ components:
                     type: array
                     items:
                       type: string
+            alignmentKPIReportVersion:
+              type: integer
+              format: int64
             alignmentKPIReport:
               $ref: '#/components/schemas/AlignmentKPIReport'
             modelVersion:
