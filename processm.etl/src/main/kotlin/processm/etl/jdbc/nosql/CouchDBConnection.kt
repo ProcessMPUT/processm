@@ -21,7 +21,7 @@ import java.sql.SQLFeatureNotSupportedException
  * It also offers some convenience methods: [createDatabase] to create a new database, and [batchInsert] to insert
  * multiple documents in a single request
  *
- * Almost any method of the class will throw [SQLFeatureNotSupportedException]
+ * Almost all methods of this class throw [SQLFeatureNotSupportedException]
  *
  * @param baseURL The base URL for the CouchDB instance, including credentials and the DB name. Must end with /.
  * @param client HttpClient to be used for making requests. The ownership of the client is transferred to the object.
@@ -37,7 +37,7 @@ class CouchDBConnection internal constructor(
     /**
      * Auxiliary constructor ensuring URL ends with /
      */
-    constructor(baseURL: String) : this(URL(if (baseURL.last() == '/') baseURL else "$baseURL/"))
+    constructor(baseURL: String) : this(URL(if (baseURL.endsWith('/')) baseURL else "$baseURL/"))
 
     constructor(server: String, port: Int, username: String?, password: String?, database: String, https: Boolean) :
             this(
@@ -53,7 +53,7 @@ class CouchDBConnection internal constructor(
         require(baseURL.path.endsWith("/"))
         with(baseURL.userInfo?.split(':', limit = 2)) {
             this@CouchDBConnection.username = username ?: this?.get(0)
-            this@CouchDBConnection.password = password ?: this?.get(1)
+            this@CouchDBConnection.password = password ?: this?.let { if (it.size >= 2) it[1] else "" }
         }
         runBlocking {
             check(client.get(baseURL) {
