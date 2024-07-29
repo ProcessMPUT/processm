@@ -17,9 +17,10 @@
     <name>ProcessM Services</name>
 
     <properties>
+        <ktor.version>2.3.12</ktor.version>
         <openapi-tools.version>7.3.0</openapi-tools.version>
         <swagger-ui.version>4.12.0</swagger-ui.version>
-        <koin.version>3.2.0</koin.version>
+        <koin.version>3.5.6</koin.version>
         <jargon2.version>1.1.1</jargon2.version>
         <openapi.specfile>api-spec.yaml</openapi.specfile>
     </properties>
@@ -347,6 +348,13 @@
             <artifactId>ktor-server-auth-jwt-jvm</artifactId>
             <version>${ktor.version}</version>
             <scope>compile</scope>
+            <exclusions>
+                <exclusion>
+                    <!-- It is explicitly included in a different version below -->
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-databind</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
@@ -411,6 +419,15 @@
             <groupId>io.ktor</groupId>
             <artifactId>ktor-server-websockets-jvm</artifactId>
             <version>${ktor.version}</version>
+        </dependency>
+        <!-- Ktor (more precisely: java-jwt imported by ktor-server-auth-jwt-jvm) expects
+        com.fasterxml.jackson.core.exc.StreamConstraintsException to be available, which seems to be missing from
+        jackson-databind 2.14.2 imported by java-jwt 4.4.0 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.17.1</version>
+            <scope>runtime</scope>
         </dependency>
 
         <dependency>
