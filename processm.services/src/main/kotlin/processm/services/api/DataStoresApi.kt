@@ -18,6 +18,7 @@ import processm.helpers.time.toLocalDateTime
 import processm.services.api.models.*
 import processm.services.helpers.ExceptionReason
 import processm.services.logic.DataStoreService
+import processm.services.logic.DataStoreService.Companion.connectionStringPropertyName
 import processm.services.logic.LogsService
 import java.io.OutputStream
 import java.util.*
@@ -31,7 +32,6 @@ const val maxSampleSize = 200
 
 @KtorExperimentalLocationsAPI
 fun Route.DataStoresApi() {
-    val connectionStringPropertyName = "connection-string"
     val dataStoreService by inject<DataStoreService>()
     val logsService by inject<LogsService>()
 
@@ -191,15 +191,7 @@ fun Route.DataStoresApi() {
                 pathParams.dataStoreId,
                 RoleType.Reader
             )
-            val dataConnectors = dataStoreService.getDataConnectors(pathParams.dataStoreId).mapToArray {
-                DataConnector(
-                    it.id,
-                    it.name,
-                    it.lastConnectionStatus,
-                    it.lastConnectionStatusTimestamp?.toString(),
-                    it.connectionProperties
-                )
-            }
+            val dataConnectors = dataStoreService.getDataConnectors(pathParams.dataStoreId)
 
             call.respond(HttpStatusCode.OK, dataConnectors)
         }
@@ -258,10 +250,11 @@ fun Route.DataStoresApi() {
             )
             val dataConnector = kotlin.runCatching { call.receiveNullable<DataConnector>() }.getOrNull()
                 ?: throw ApiException(ExceptionReason.UnparsableData)
-            dataStoreService.renameDataConnector(
+            dataStoreService.updateDataConnector(
                 pathParams.dataStoreId,
                 pathParams.dataConnectorId,
-                dataConnector.name ?: throw ApiException(ExceptionReason.ConnectorNameRequired)
+                dataConnector.name,
+                dataConnector.properties
             )
 
             call.respond(HttpStatusCode.NoContent)

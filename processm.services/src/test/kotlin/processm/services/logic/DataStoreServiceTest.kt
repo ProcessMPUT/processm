@@ -136,7 +136,7 @@ internal class DataStoreServiceTest : ServiceTestBase() {
 
     @Test
     fun `renaming data connector throws if nonexistent data store`(): Unit = withCleanTables(DataStores) {
-        assertDataStoreExistence { renameDataConnector(UUID.randomUUID(), UUID.randomUUID(), "newName") }
+        assertDataStoreExistence { updateDataConnector(UUID.randomUUID(), UUID.randomUUID(), "newName", emptyMap()) }
     }
 
     @Test

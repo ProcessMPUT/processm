@@ -154,8 +154,8 @@
     "last-event-external-id-type": "Typ danych ostatniego ID zdarzenia",
     "last-event-external-id-type-hint": "Tylko dla zapytań ciągłych: typ początkowego identyfikatora zdarzenia. Ten typ jest używany do dostarczania do sterownika bazy danych prawidłowego typu wartości."
   },
-  "add-data-connector-dialog": {
-    "dialog-title": "Dodaj łącze danych",
+  "data-connector-dialog": {
+    "dialog-title": "Konfiguracja łącza danych",
     "connection-type": "Typ połączenia",
     "check-configuration": "Sprawdź",
     "test-connection": "Testuj połączenie",
@@ -173,6 +173,7 @@
     "database": "Baza danych",
     "trust-server-certificate": "Zawsze ufaj certyfikatowi serwera",
     "connector-not-supported": "Łącza danych zdefiniowane za pomocą connection stringa nie są jeszcze wspierane",
+    "masked-password-notification": "Pamiętaj o zmianie zamaskowanego hasła na poprawną wartość.",
     "validation": {
       "non-empty-field": "Wartość nie może być pusta",
       "connection-string-format": "Wartość nie spełnia formatu connection stringa",
