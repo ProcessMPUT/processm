@@ -31,18 +31,50 @@ import processm.etl.metamodel.buildMetaModel
 import processm.helpers.mapToArray
 import processm.helpers.time.toLocalDateTime
 import processm.logging.loggedScope
+import processm.logging.logger
 import processm.services.api.models.*
 import processm.services.helpers.ExceptionReason
+import processm.services.helpers.defaultPasswordMask
+import processm.services.helpers.maskPasswordInJdbcUrl
 import java.sql.Connection
 import java.sql.DriverManager
 import java.time.Instant
 import java.util.*
+
+typealias ApiDataConnector = processm.services.api.models.DataConnector
 
 class DataStoreService(
     private val accountService: AccountService,
     private val aclService: ACLService,
     private val producer: Producer
 ) {
+
+    companion object {
+        val connectionStringPropertyName = "connection-string"
+
+        private fun DataConnector.toApi(): ApiDataConnector {
+            val maskedConnectionProperties = try {
+                Json.decodeFromString<MutableMap<String, String>>(connectionProperties).apply {
+                    replace("password", defaultPasswordMask)
+                }
+            } catch (e: SerializationException) {
+                val connectionProperties = try {
+                    maskPasswordInJdbcUrl(connectionProperties)
+                } catch (e: Exception) {
+                    logger().warn("Unable to mask connection string in the data connector ${this.id}", e)
+                    connectionProperties
+                }
+                mapOf(connectionStringPropertyName to connectionProperties)
+            }
+            return ApiDataConnector(
+                id.value,
+                name,
+                lastConnectionStatus,
+                lastConnectionStatusTimestamp?.toString(),
+                maskedConnectionProperties
+            )
+        }
+    }
 
     /**
      * Returns all data stores the user identified by [userId] can access
@@ -130,25 +162,11 @@ class DataStoreService(
     /**
      * Returns all data connectors for the specified [dataStoreId].
      */
-    @OptIn(ExperimentalSerializationApi::class)
-    fun getDataConnectors(dataStoreId: UUID): List<DataConnectorDto> {
+    fun getDataConnectors(dataStoreId: UUID): Array<ApiDataConnector> {
         assertDataStoreExists(dataStoreId)
         return transaction(DBCache.get("$dataStoreId").database) {
-            return@transaction DataConnector.wrapRows(DataConnectors.selectAll()).map {
-                val connectionProperties = try {
-                    Json.decodeFromString(it.connectionProperties)
-                } catch (e: SerializationException) {
-                    emptyMap<String, String>().toMutableMap()
-                }
-                connectionProperties.replace("password", "********")
-                return@map DataConnectorDto(
-                    it.id.value,
-                    it.name,
-                    it.lastConnectionStatus,
-                    it.lastConnectionStatusTimestamp,
-                    it.dataModel?.id?.value,
-                    connectionProperties
-                )
+            return@transaction DataConnector.wrapRows(DataConnectors.selectAll()).mapToArray {
+                it.toApi()
             }
         }
     }
@@ -199,13 +217,20 @@ class DataStoreService(
     }
 
     /**
-     * Renames the data connector specified by [dataConnectorId] to [newName].
+     * Update name and connection properties of the data connector specified by [dataConnectorId] to, respectively, [newName] and [newConnectionProperties].
+     * If any of the new values is `null`, the previous value remains unchanged.
      */
-    fun renameDataConnector(dataStoreId: UUID, dataConnectorId: UUID, newName: String) {
+    fun updateDataConnector(
+        dataStoreId: UUID,
+        dataConnectorId: UUID,
+        newName: String?,
+        newConnectionProperties: Map<String, String>?
+    ) {
         assertDataStoreExists(dataStoreId)
         transaction(DBCache.get("$dataStoreId").database) {
-            DataConnectors.update({ DataConnectors.id eq dataConnectorId }) {
-                it[name] = newName
+            DataConnectors.update({ DataConnectors.id eq dataConnectorId }) { stmt ->
+                newName?.let { stmt[name] = it }
+                newConnectionProperties?.let { stmt[connectionProperties] = Json.encodeToString(it) }
             } > 0
         }
     }

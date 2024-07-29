@@ -1,7 +1,7 @@
 <template>
-  <v-container class="pb-0 px-0">
+  <v-container class="px-0">
     <v-row class="workspace mx-0">
-      <v-tabs-items v-model="currentWorkspaceIndex">
+      <v-tabs-items v-model="currentWorkspaceIndex" style="overflow: auto">
         <v-tab-item v-for="workspace in workspaces" :key="workspace.index">
           <workspace-area :workspaceId="workspace.id" :view-only="isViewOnly(workspace)" />
         </v-tab-item>
@@ -38,8 +38,7 @@
             </v-list-item>
           </v-list>
         </v-menu>
-        <v-tab v-for="workspace in workspaces" :key="workspace.index" :id="`workspace-tab-${workspace.id}`">
-          {{ workspace.name }}
+        <v-tab v-for="workspace in workspaces" :id="`workspace-tab-${workspace.id}`":key="workspace.index">{{ workspace.name }}
         </v-tab>
         <v-btn tile color="primary lighten-1" @click="createWorkspace" name="btn-create-workspace">
           <v-icon>add_box</v-icon>
@@ -51,7 +50,7 @@
         @submitted="renameWorkspace"
         :old-name="workspaceNameToRename"
       />
-      <acl-dialog :value="aclDialogDisplayed" :urn="currentWorkspaceUrn" @closed="aclDialogDisplayed = false" :force-view-only="false" />
+      <acl-dialog :force-view-only="false" :urn="currentWorkspaceUrn":value="aclDialogDisplayed" @closed="aclDialogDisplayed = false"  />
     </v-row>
   </v-container>
 </template>
@@ -122,8 +121,13 @@ export default class Workspaces extends Vue {
   }
 
   async createWorkspace() {
-    const workspaceName = `${this.$i18n.t("workspace.default-name")}${this.workspaces.length + 1}`;
-    const newWorkspace = await this.workspaceService.createWorkspace(workspaceName);
+    let counter = 0;
+    let name = "";
+    do {
+      name = `${this.$i18n.t("workspace.default-name")} ${++counter}`;
+    } while (this.workspaces.find((w) => w.name == name));
+
+    const newWorkspace = await this.workspaceService.createWorkspace(name);
 
     this.workspaces.push(newWorkspace);
   }

@@ -35,10 +35,32 @@
                     <th class="text-left">{{ $t("common.value") }}</th>
                   </tr>
                 </thead>
-                <tbody>
-                  <tr v-for="item in dataStoreSummary" :key="item.field">
-                    <td>{{ item.field }}</td>
-                    <td>{{ item.value }}</td>
+                <tbody v-if="dataStore != null">
+                  <tr>
+                    <td>ID</td>
+                    <td>{{ dataStore.id }}</td>
+                  </tr>
+                  <tr>
+                    <td>{{ $t("common.name") }}</td>
+                    <td>
+                      {{ dataStore.name }}
+                      <v-tooltip bottom>
+                        <template v-slot:activator="{ on, attrs }">
+                          <v-btn icon color="primary" dark v-bind="attrs" v-on="on" name="btn-data-connector-rename">
+                            <v-icon small @click="renameDataStoreDialog = true">edit</v-icon>
+                          </v-btn>
+                        </template>
+                        <span>{{ $t("common.rename") }}</span>
+                      </v-tooltip>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>{{ $t("common.created-at") }}</td>
+                    <td>{{ dataStore.createdAt }}</td>
+                  </tr>
+                  <tr>
+                    <td>{{ $t("data-stores.size") }}</td>
+                    <td>{{ dataStore?.size != null ? (dataStore.size / 1024 / 1024).toFixed(2) : "?" }} MB</td>
                   </tr>
                 </tbody>
               </template>
@@ -112,7 +134,15 @@
                 </v-tooltip>
                 <v-fade-transition leave-absolute>
                   <div v-if="open" class="add-button-group">
-                    <v-btn class="mx-2" color="primary" @click.stop="addDataConnectorDialog = true" name="btn-add-data-connector">
+                    <v-btn
+                      class="mx-2"
+                      color="primary"
+                      @click.stop="
+                        dataConnectorToEdit = null;
+                        dataConnectorDialog = true;
+                      "
+                      name="btn-add-data-connector"
+                    >
                       {{ $t("data-stores.add-data-connector") }}
                     </v-btn>
                   </div>
@@ -167,6 +197,21 @@
                     </v-btn>
                   </template>
                   <span>{{ $t("common.rename") }}</span>
+                </v-tooltip>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on" name="btn-data-connector-edit">
+                      <v-icon
+                        small
+                        @click="
+                          dataConnectorToEdit = item;
+                          dataConnectorDialog = true;
+                        "
+                        >edit
+                      </v-icon>
+                    </v-btn>
+                  </template>
+                  <span>{{ $t("common.edit") }}</span>
                 </v-tooltip>
                 <v-tooltip bottom>
                   <template v-slot:activator="{ on, attrs }">
@@ -329,11 +374,12 @@
         </v-expansion-panel>
       </v-expansion-panels>
     </v-card>
-    <add-data-connector-dialog
-      v-model="addDataConnectorDialog"
+    <data-connector-dialog
+      v-model="dataConnectorDialog"
       :data-store-id="dataStoreId"
-      @cancelled="addDataConnectorDialog = false"
-      @submitted="addDataConnector"
+      @cancelled="dataConnectorDialog = false"
+      @submitted="dataConnectorsModified"
+      :initial-connector="dataConnectorToEdit"
     />
     <automatic-etl-process-dialog
       v-model="automaticEtlProcessDialogVisible"
@@ -353,6 +399,7 @@
       @cancelled="dataConnectorIdToRename = null"
       @submitted="renameDataConnector"
     />
+    <rename-dialog :value="renameDataStoreDialog" :old-name="dataStore?.name" @cancelled="renameDataStoreDialog = false" @submitted="renameDataStore" />
     <jdbc-etl-process-dialog
       v-model="jdbcEtlProcessDialogVisible"
       :data-store-id="dataStoreId"
@@ -384,7 +431,7 @@ import Vue from "vue";
 import { Component, Inject, Prop, Watch } from "vue-property-decorator";
 import DataStoreService from "@/services/DataStoreService";
 import DataStore, { DataConnector } from "@/models/DataStore";
-import AddDataConnectorDialog from "@/components/data-connections/AddDataConnectorDialog.vue";
+import DataConnectorDialog from "@/components/data-connections/DataConnectorDialog.vue";
 import LogsService from "@/services/LogsService";
 import { waitForRepaint } from "@/utils/waitForRepaint";
 import XesProcessor, { LogItem } from "@/utils/XesProcessor";
@@ -405,7 +452,7 @@ const XesDataTable = () => import("@/components/XesDataTable.vue");
     LogTable,
     ProcessDetailsDialog,
     JdbcEtlProcessDialog: JdbcEtlProcessDialog,
-    AddDataConnectorDialog,
+    DataConnectorDialog,
     XesDataTable,
     FileUploadDialog,
     RenameDialog,
@@ -417,7 +464,7 @@ export default class DataStoreConfiguration extends Vue {
   @Inject() dataStoreService!: DataStoreService;
   @Inject() logsService!: LogsService;
   private readonly xesProcessor = new XesProcessor();
-  addDataConnectorDialog = false;
+  dataConnectorDialog = false;
   automaticEtlProcessDialogVisible = false;
   jdbcEtlProcessDialogVisible = false;
   fileUploadDialog = false;
@@ -435,6 +482,8 @@ export default class DataStoreConfiguration extends Vue {
   capitalize = capitalize;
   processDetailsDialogEtlProcess: EtlProcess | null = null;
   etlProcessToEdit: EtlProcess | null = null;
+  renameDataStoreDialog = false;
+  dataConnectorToEdit: DataConnector | null = null;
 
   @Prop({ default: false })
   readonly value!: boolean;
@@ -444,29 +493,6 @@ export default class DataStoreConfiguration extends Vue {
 
   private readonly getLogsQuery = "select log:concept:name, log:identity:id, log:lifecycle:model";
   private readonly fileSizeLimit = 5242880;
-
-  get dataStoreSummary() {
-    return this.dataStore != null
-      ? [
-          {
-            field: "ID",
-            value: this.dataStore.id
-          },
-          {
-            field: this.$t("common.name"),
-            value: this.dataStore.name
-          },
-          {
-            field: this.$t("common.created-at"),
-            value: this.dataStore.createdAt
-          },
-          {
-            field: this.$t("data-stores.size"),
-            value: `${this.dataStore?.size != null ? (this.dataStore.size / 1024 / 1024).toFixed(2) : "?"} MB`
-          }
-        ]
-      : [];
-  }
 
   get dataConnectorNameToRename(): string | null {
     return this.dataConnectors.find((connector) => connector.id == this.dataConnectorIdToRename)?.name || null;
@@ -573,8 +599,8 @@ export default class DataStoreConfiguration extends Vue {
     }
   }
 
-  async addDataConnector() {
-    this.addDataConnectorDialog = false;
+  async dataConnectorsModified() {
+    this.dataConnectorDialog = false;
     await this.loadDataConnectors();
   }
 
@@ -734,6 +760,23 @@ export default class DataStoreConfiguration extends Vue {
 
   showEtlProcessDetails(etlProcess: EtlProcess) {
     this.processDetailsDialogEtlProcess = etlProcess;
+  }
+
+  async renameDataStore(newName: string) {
+    try {
+      if (this.dataStore == null) return;
+      const success = await this.dataStoreService.updateDataStore(this.dataStore.id, {
+        id: this.dataStore.id,
+        name: newName
+      });
+      if (!success) return;
+      this.dataStore.name = newName;
+      this.$emit("changed", this.dataStore);
+      this.app.success(`${this.$t("common.operation-successful")}`);
+    } catch (error) {
+      this.app.error(`${this.$t("common.saving.failure")}`);
+    }
+    this.renameDataStoreDialog = false;
   }
 }
 </script>

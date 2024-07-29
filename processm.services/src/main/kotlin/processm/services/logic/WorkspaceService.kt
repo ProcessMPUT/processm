@@ -9,7 +9,6 @@ import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
 import processm.dbmodels.urn
 import processm.logging.loggedScope
-import processm.logging.logger
 import processm.services.api.*
 import processm.services.api.models.AbstractComponent
 import processm.services.api.models.CustomProperty
@@ -297,14 +296,16 @@ class WorkspaceService(
             customProperties = getCustomProperties(type)
         )
 
-    fun acceptModel(componentId: UUID, modelVersion: Long): Unit = transactionMain {
-        logger().debug("Accepting model {} for {}", modelVersion, componentId)
-        WorkspaceComponent[componentId].apply {
-            data = ProcessModelComponentData.create(this).apply {
-                acceptedModelVersion = modelVersion
-            }.toJSON()
-            afterCommit {
-                triggerEvent(producer, WorkspaceComponentEventType.ModelAccepted)
+    fun acceptModel(componentId: UUID, modelVersion: Long): Unit = loggedScope { logger ->
+        transactionMain {
+            logger.debug("Accepting model {} for {}", modelVersion, componentId)
+            WorkspaceComponent[componentId].apply {
+                data = ProcessModelComponentData.create(this).apply {
+                    acceptedModelVersion = modelVersion
+                }.toJSON()
+                afterCommit {
+                    triggerEvent(producer, WorkspaceComponentEventType.ModelAccepted)
+                }
             }
         }
     }

@@ -108,7 +108,7 @@ export default class WorkspaceService extends BaseService {
           nodes: [],
           edges: [],
           modelVersion: payload.data.modelVersion,
-          type: payload.data.type
+          type: payload.data.type ?? "causalNet"
         };
         break;
       case "directlyFollowsGraph":

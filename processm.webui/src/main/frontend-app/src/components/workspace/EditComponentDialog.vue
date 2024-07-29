@@ -99,6 +99,15 @@
                 :hint="$te(`workspace.component.edit.${property.name}-hint`) ? $t(`workspace.component.edit.${property.name}-hint`) : ''"
                 required
               />
+              <v-text-field
+                  v-if="property.type == 'percent'"
+                  v-model="property.value"
+                  type="number"
+                  :rules="percentRules"
+                  :label="$t(`workspace.component.edit.${property.name}`)"
+                  :hint="$te(`workspace.component.edit.${property.name}-hint`) ? $t(`workspace.component.edit.${property.name}-hint`) : ''"
+                  required
+              />
             </v-list-item-content>
           </v-list-item>
         </v-list>
@@ -130,7 +139,7 @@ import DataStore from "@/models/DataStore";
 import { ComponentType } from "@/openapi";
 import { kebabize } from "@/utils/StringCaseConverter";
 import { waitForRepaint } from "@/utils/waitForRepaint";
-import { isNonNegativeIntegerRule } from "@/utils/FormValidationRules";
+import {isNonNegativeIntegerRule, isPercentRule} from "@/utils/FormValidationRules";
 
 @Component({
   components: { WorkspaceComponent }
@@ -160,6 +169,7 @@ export default class EditComponentDialog extends Vue {
   isMounted = false;
 
   nonNegativeIntegerRules = [(v: string) => isNonNegativeIntegerRule(v, this.$t("workspace.component.edit.validation.not-a-non-negative-integer").toString())];
+  percentRules = [(v: string) => isPercentRule(v, this.$t("workspace.component.edit.validation.not-a-percent").toString())];
 
   /**
    * A shallow copy of [componentDetails]. This object replaces the [componentDetails] when saved or is discarded.

@@ -56,11 +56,15 @@
           "datastore-empty": "Magazyn danych nie może być pusty",
           "name-empty": "Nazwa nie może być pusta",
           "query-empty": "Zapytanie nie może być puste",
-          "not-a-non-negative-integer": "Wartość musi być nieujemną liczbą całkowitą"
+          "not-a-non-negative-integer": "Wartość musi być nieujemną liczbą całkowitą",
+          "not-a-percent": "Wartość musi być liczbą całkowitą od 0 do 100"
         },
         "algorithm": "Algorytm odkrywania",
-        "horizon": "Adekwatne wyłącznie dla Online Heuristic Miner. Ile zdarzeń na przód w śladzie należy rozważać jako możliwe efekty aktywności."
-      },
+        "horizon": "Adekwatne wyłącznie dla Online Heuristic Miner. Ile zdarzeń na przód w śladzie należy rozważać jako możliwe efekty aktywności.",
+        "dependencyThreshold": "Adekwatne wyłącznie dla Original Heuristic Miner. Próg na miarę zależności (dependency).",
+        "l1Threshold": "Adekwatne wyłącznie dla Original Heuristic Miner. Próg na miarę zależności (dependency) dla 1-pętli.",
+        "l2Threshold": "Adekwatne wyłącznie dla Original Heuristic Miner. Próg na miarę zależności (dependency) dla 2-pętli.",
+        "andThreshold": "Adekwatne wyłącznie dla Original Heuristic Miner. Próg na miarę zależności koniunkcji (AND-dependency)."},
       "flat-log-view": "Tabelaryczny widok logu",
       "flat-log": {
         "log-deviation": "Zdarzenie w dzienniku niepasujące do modelu procesu",
@@ -150,8 +154,8 @@
     "last-event-external-id-type": "Typ danych ostatniego ID zdarzenia",
     "last-event-external-id-type-hint": "Tylko dla zapytań ciągłych: typ początkowego identyfikatora zdarzenia. Ten typ jest używany do dostarczania do sterownika bazy danych prawidłowego typu wartości."
   },
-  "add-data-connector-dialog": {
-    "dialog-title": "Dodaj łącze danych",
+  "data-connector-dialog": {
+    "dialog-title": "Konfiguracja łącza danych",
     "connection-type": "Typ połączenia",
     "check-configuration": "Sprawdź",
     "test-connection": "Testuj połączenie",
@@ -169,6 +173,7 @@
     "database": "Baza danych",
     "trust-server-certificate": "Zawsze ufaj certyfikatowi serwera",
     "connector-not-supported": "Łącza danych zdefiniowane za pomocą connection stringa nie są jeszcze wspierane",
+    "masked-password-notification": "Pamiętaj o zmianie zamaskowanego hasła na poprawną wartość.",
     "validation": {
       "non-empty-field": "Wartość nie może być pusta",
       "connection-string-format": "Wartość nie spełnia formatu connection stringa",
