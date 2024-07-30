@@ -14,15 +14,19 @@ import javax.xml.stream.XMLStreamReader
 
 /**
  * Extracts a sequence of [XESComponent]s from the underlying stream.
+ * @param allowExternalStreams If false, extensions not available locally will not be loaded.
  * @see XESInputStream
  */
-class XMLXESInputStream(private val reader: XMLStreamReader) : XESInputStream {
+class XMLXESInputStream(private val reader: XMLStreamReader, private val allowExternalStreams: Boolean = true) :
+    XESInputStream {
     companion object {
         private val exitTags = setOf("trace", "event")
         private val attributeTags = setOf("string", "date", "boolean", "int", "float", "list", "id")
     }
 
-    constructor(input: InputStream) : this(XMLInputFactory.newDefaultFactory().createXMLStreamReader(input))
+    constructor(input: InputStream, allowExternalStreams: Boolean = true) : this(
+        XMLInputFactory.newDefaultFactory().createXMLStreamReader(input), allowExternalStreams
+    )
 
     /**
      * Number formatter for parsing numeric attributes. This object changes its state during parsing and cannot be
@@ -120,7 +124,8 @@ class XMLXESInputStream(private val reader: XMLStreamReader) : XESInputStream {
         val extension = Extension(
             reader.getAttributeValue(null, "name"),
             prefix,
-            reader.getAttributeValue(null, "uri")
+            reader.getAttributeValue(null, "uri"),
+            allowExternalStreams
         )
 
         // map standard attribute names to custom names in the log

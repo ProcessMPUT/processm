@@ -81,8 +81,10 @@ object XESExtensionLoader {
      *
      * Use memory to return already loaded extension (singleton) or fetch, parse and add to memory.
      * Can read standard extensions (defined by xes-standard.org) from project's resources.
+     *
+     * @param allowExternalStreams If false and the extension must be downloaded from an external source, no download is attempted and null is returned instead
      */
-    internal fun loadExtension(uri: String): Extension? {
+    internal fun loadExtension(uri: String, allowExternalStreams: Boolean = true): Extension? {
         try {
             // Return stored Extension if in memory
             val extensionInMemory = loadedExtensions[uri]
@@ -104,7 +106,10 @@ object XESExtensionLoader {
 
             // Try to load from the Internet
             if (stream == null) {
-                stream = openExternalStream(uri)
+                if (allowExternalStreams)
+                    stream = openExternalStream(uri)
+                else
+                    return null
             }
 
             // Store new extension in memory
