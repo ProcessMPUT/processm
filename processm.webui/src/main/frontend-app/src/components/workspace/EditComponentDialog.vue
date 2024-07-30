@@ -17,6 +17,7 @@
           :component-details="component"
           :component-mode="ComponentMode.Edit"
           :update-data="updateData"
+          :is-transient="isTransient"
           @view="$emit('view', componentDetails.id)"
           @edit="$emit('edit', componentDetails.id)"
           @remove="$emit('remove', componentDetails.id)"
@@ -157,6 +158,8 @@ export default class EditComponentDialog extends Vue {
   readonly value!: boolean;
   @Prop()
   readonly workspaceId!: string;
+  @Prop({ default: false })
+  readonly isTransient!: boolean;
 
   /**
    * Set to true to let children update the data model (usually before sending it to the server).
