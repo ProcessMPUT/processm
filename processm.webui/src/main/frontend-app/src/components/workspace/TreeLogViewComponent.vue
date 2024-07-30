@@ -80,11 +80,9 @@ export default class TreeLogViewComponent extends Vue {
       const { headers, logItems } = this.xesProcessor.extractHierarchicalLogItemsFromAllScopes(queryResults);
       this.headers = headers;
 
-      for (const item of logItems) {
-        await waitForRepaint(() => {
-          this.items.push(item);
-        });
-      }
+      await waitForRepaint(() => {
+        this.items.push(...logItems);
+      });
     } catch (err) {
       this.app.error(err?.response?.data?.error ?? err);
     } finally {
