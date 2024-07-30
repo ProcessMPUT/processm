@@ -12,10 +12,13 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.postgresql.ds.PGSimpleDataSource
 import processm.dbmodels.models.ConnectionType
 import processm.dbmodels.models.DataConnector
+import processm.etl.jdbc.nosql.CouchDBConnection
+import processm.etl.jdbc.nosql.MongoDBConnection
+import processm.helpers.ExceptionReason
+import processm.helpers.LocalizedException
 import java.sql.Connection
 import java.sql.DriverManager
 import java.time.LocalDateTime
-import javax.sql.DataSource
 
 /**
  * Used by [getConnection] to update [DataConnector.lastConnectionStatus] and [DataConnector.lastConnectionStatusTimestamp]
@@ -38,9 +41,11 @@ private fun DataConnector.timestamp(success: Boolean) {
 fun DataConnector.getConnection(): Connection {
     try {
         val connection = if (connectionProperties.startsWith("jdbc")) DriverManager.getConnection(connectionProperties)
-        else getDataSource(
+        else if (connectionProperties.startsWith("couchdb:")) CouchDBConnection(connectionProperties.substring(8))
+        else if (connectionProperties.startsWith("mongodb")) MongoDBConnection.fromProcessMUrl(connectionProperties)
+        else getConnection(
             Json.decodeFromString(MapSerializer(String.serializer(), String.serializer()), connectionProperties)
-        ).connection
+        )
         timestamp(true)
         return connection
     } catch (e: Exception) {
@@ -49,49 +54,67 @@ fun DataConnector.getConnection(): Connection {
     }
 }
 
-fun getDataSource(connectionProperties: Map<String, String>): DataSource {
-    return when (connectionProperties["connection-type"]?.let(ConnectionType::valueOf) ?: null) {
+fun getConnection(connectionProperties: Map<String, String>): Connection {
+    return when (connectionProperties["connection-type"]?.let(ConnectionType::valueOf)) {
         ConnectionType.PostgreSql -> PGSimpleDataSource().apply {
             serverNames =
-                arrayOf(connectionProperties["server"] ?: throw IllegalArgumentException("Server address is required"))
+                arrayOf(connectionProperties["server"] ?: throw LocalizedException(ExceptionReason.MissingServerName))
             portNumbers = intArrayOf(connectionProperties["port"]?.toIntOrNull() ?: 5432)
             user = connectionProperties["username"]
             password = connectionProperties["password"]
             databaseName = connectionProperties["database"]
-        }
+        }.connection
 
         ConnectionType.SqlServer -> SQLServerDataSource().apply {
-            serverName = connectionProperties["server"] ?: throw IllegalArgumentException("Server address is required")
+            serverName = connectionProperties["server"] ?: throw LocalizedException(ExceptionReason.MissingServerName)
             portNumber = connectionProperties["port"]?.toIntOrNull() ?: 1433
             user = connectionProperties["username"]
             setPassword(connectionProperties["password"].orEmpty())
             databaseName = connectionProperties["database"]
             trustServerCertificate = connectionProperties["trustServerCertificate"]?.toBoolean() ?: false
-        }
+        }.connection
 
         ConnectionType.MySql -> MysqlDataSource().apply {
-            serverName = connectionProperties["server"] ?: throw IllegalArgumentException("Server address is required")
+            serverName = connectionProperties["server"] ?: throw LocalizedException(ExceptionReason.MissingServerName)
             portNumber = connectionProperties["port"]?.toIntOrNull() ?: 3306
             user = connectionProperties["username"]
             password = connectionProperties["password"]
             databaseName = connectionProperties["database"]
-        }
+        }.connection
 
         ConnectionType.OracleDatabase -> OracleDataSource().apply {
-            serverName = connectionProperties["server"] ?: throw IllegalArgumentException("Server address is required")
+            serverName = connectionProperties["server"] ?: throw LocalizedException(ExceptionReason.MissingServerName)
             portNumber = connectionProperties["port"]?.toIntOrNull() ?: 1521
             user = connectionProperties["username"]
             setPassword(connectionProperties["password"].orEmpty())
             databaseName = connectionProperties["database"]
-        }
+        }.connection
 
         ConnectionType.Db2 -> DB2SimpleDataSource().apply {
-            serverName = connectionProperties["server"] ?: throw IllegalArgumentException("Server address is required")
+            serverName = connectionProperties["server"] ?: throw LocalizedException(ExceptionReason.MissingServerName)
             portNumber = connectionProperties["port"]?.toIntOrNull() ?: 50000
             user = connectionProperties["username"]
             setPassword(connectionProperties["password"].orEmpty())
             databaseName = connectionProperties["database"]
-        }
+        }.connection
+
+        ConnectionType.CouchDB -> CouchDBConnection(
+            connectionProperties["server"] ?: throw LocalizedException(ExceptionReason.MissingServerName),
+            connectionProperties["port"]?.toIntOrNull() ?: 5984,
+            connectionProperties["username"],
+            connectionProperties["password"],
+            connectionProperties["database"].orEmpty(),
+            connectionProperties["https"]?.toBoolean() ?: false
+        )
+
+        ConnectionType.MongoDB -> MongoDBConnection(
+            connectionProperties["server"] ?: throw LocalizedException(ExceptionReason.MissingServerName),
+            connectionProperties["port"]?.toIntOrNull() ?: 27017,
+            connectionProperties["username"],
+            connectionProperties["password"],
+            connectionProperties["database"] ?: throw LocalizedException(ExceptionReason.MissingDatabaseName),
+            connectionProperties["collection"] ?: throw LocalizedException(ExceptionReason.MissingCollectionName)
+        )
 
         else -> throw Error("Unsupported connection type")
     }

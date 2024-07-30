@@ -1,18 +1,14 @@
 package processm.services.logic
 
 import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.sql.JoinType
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.BatchUpdateStatement
-import org.jetbrains.exposed.sql.stringLiteral
 import processm.core.communication.Producer
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
 import processm.dbmodels.urn
 import processm.logging.loggedScope
-import processm.logging.logger
 import processm.services.api.*
 import processm.services.api.models.AbstractComponent
 import processm.services.api.models.CustomProperty
@@ -31,27 +27,30 @@ class WorkspaceService(
     private val producer: Producer
 ) {
     /**
-     * Returns all user workspaces for the specified [userId]
+     * Returns all user workspaces for the specified [userId] along with their highest permission (role type) to each workspace
      */
-    fun getUserWorkspaces(userId: UUID): List<Workspace> =
+    fun getUserWorkspaces(userId: UUID): List<Pair<Workspace, RoleType>> =
         transactionMain {
-            Workspace.wrapRows(
-                Groups
-                    .innerJoin(UsersInGroups)
-                    .crossJoin(Workspaces)
-                    .join(AccessControlList, JoinType.INNER, AccessControlList.group_id, Groups.id)
-                    .slice(Workspaces.columns)
-                    .select {
-                        (UsersInGroups.userId eq userId) and
-                                (AccessControlList.urn.column eq concat(
-                                    stringLiteral("urn:processm:db/${Workspaces.tableName}/"),
-                                    Workspaces.id
-                                )) and
-                                (AccessControlList.role_id neq RoleType.None.role.id) and
-                                (Workspaces.deleted eq false)
-                    }.withDistinct(true)
-            ).toList()
-
+            val highestRole = Roles.name.function("highest_role")
+            Groups
+                .innerJoin(UsersInGroups)
+                .crossJoin(Workspaces)
+                .join(AccessControlList, JoinType.INNER, AccessControlList.group_id, Groups.id)
+                .join(Roles, JoinType.INNER, AccessControlList.role_id, Roles.id)
+                .slice(Workspaces.columns + listOf(highestRole))
+                .select {
+                    (UsersInGroups.userId eq userId) and
+                            (AccessControlList.urn.column eq concat(
+                                stringLiteral("urn:processm:db/${Workspaces.tableName}/"),
+                                Workspaces.id
+                            )) and
+                            (AccessControlList.role_id neq RoleType.None.role.id) and
+                            (Workspaces.deleted eq false)
+                }
+                .groupBy(*Workspaces.columns.toTypedArray())
+                .map {
+                    Workspace.wrapRow(it) to RoleType.byNameInDatabase(it[highestRole]!!)
+                }
         }
 
     /**
@@ -297,14 +296,16 @@ class WorkspaceService(
             customProperties = getCustomProperties(type)
         )
 
-    fun acceptModel(componentId: UUID, modelVersion: Long): Unit = transactionMain {
-        logger().debug("Accepting model {} for {}", modelVersion, componentId)
-        WorkspaceComponent[componentId].apply {
-            data = ProcessModelComponentData.create(this).apply {
-                acceptedModelVersion = modelVersion
-            }.toJSON()
-            afterCommit {
-                triggerEvent(producer, WorkspaceComponentEventType.ModelAccepted)
+    fun acceptModel(componentId: UUID, modelVersion: Long): Unit = loggedScope { logger ->
+        transactionMain {
+            logger.debug("Accepting model {} for {}", modelVersion, componentId)
+            WorkspaceComponent[componentId].apply {
+                data = ProcessModelComponentData.create(this).apply {
+                    acceptedModelVersion = modelVersion
+                }.toJSON()
+                afterCommit {
+                    triggerEvent(producer, WorkspaceComponentEventType.ModelAccepted)
+                }
             }
         }
     }

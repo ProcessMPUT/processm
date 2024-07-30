@@ -5,6 +5,10 @@ import java.util.*
 
 enum class ExceptionReason {
     NotAValidURN,
+    UnsupportedDatabaseForAutomaticETL,
+    MissingServerName,
+    MissingDatabaseName,
+    MissingCollectionName,
 }
 
 /**

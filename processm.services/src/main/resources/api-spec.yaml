@@ -2111,6 +2111,8 @@ components:
           format: uuid
         name:
           type: string
+        role:
+          $ref: '#/components/schemas/OrganizationRole'
     Component:
       type: object
       required: [ id, query, dataStore, type, customProperties ]
