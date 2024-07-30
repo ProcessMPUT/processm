@@ -49,7 +49,7 @@
             :h="item.h"
             :i="item.i"
             :key="item.i"
-            drag-ignore-from="div.workspace-component-content"
+            drag-ignore-from=".ignore-drag"
             class="elevation-1"
             @moved="updateComponentPosition"
             @resized="updateComponentSize"
