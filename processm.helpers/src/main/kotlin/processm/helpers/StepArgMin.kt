@@ -19,9 +19,11 @@ fun <T> stepArgMin(
     eps: Double = 1e-2,
     f: (v: Double) -> T?
 ): T {
+    require(low.isFinite())
+    require(high.isFinite())
     var l = low
     var h = high
-    require(eps > 0)
+    require(eps > 0.0)
     f(l)?.let { return it }
     var rh = requireNotNull(f(h))
     while (h - l > eps) {
