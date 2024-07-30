@@ -71,24 +71,18 @@ export default class TreeLogViewComponent extends Vue {
   isLoadingData = false;
 
   private async refresh() {
-    if (!this.data?.dataStore && !this.data?.query) return;
+    if (!this.data?.dataStore) return;
 
     this.isLoadingData = true;
     try {
-      if (!this.data?.dataStore) throw Error(this.$t("component.edit.validation.datastore-empty").toString());
-
-      if (!this.data?.query) throw Error(this.$t("component.edit.validation.query-empty").toString());
-
       const queryResults = await this.logsService.submitUserQuery(this.data.dataStore, this.data.query);
 
       const { headers, logItems } = this.xesProcessor.extractHierarchicalLogItemsFromAllScopes(queryResults);
       this.headers = headers;
 
-      for (const item of logItems) {
-        await waitForRepaint(() => {
-          this.items.push(item);
-        });
-      }
+      await waitForRepaint(() => {
+        this.items.push(...logItems);
+      });
     } catch (err) {
       this.app.error(err?.response?.data?.error ?? err);
     } finally {
