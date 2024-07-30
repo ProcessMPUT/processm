@@ -119,7 +119,7 @@ button.v-btn.v-btn.component-name[type="button"] {
 <script lang="ts">
 import Vue from "vue";
 import Component from "vue-class-component";
-import { Prop } from "vue-property-decorator"; //import CausalNetComponent from "./causal-net/CausalNetComponent.vue";
+import { Prop, Watch } from "vue-property-decorator";
 import { WorkspaceComponent as WorkspaceComponentModel } from "@/models/WorkspaceComponent";
 import { ComponentType } from "@/openapi/api";
 
@@ -167,7 +167,15 @@ export default class WorkspaceComponent extends Vue {
   @Prop({ default: false })
   readonly updateData = false;
 
-  readonly lastModified = this.componentDetails?.dataLastModified ?? this.componentDetails?.userLastModified ?? null;
+  lastModified: string | null = null;
+
+  private refreshLastModified() {
+    this.lastModified = this.componentDetails?.dataLastModified ?? this.componentDetails?.userLastModified ?? null;
+  }
+
+  mounted() {
+    this.refreshLastModified();
+  }
 
   private get loading(): boolean {
     switch (this.componentDetails?.type) {
@@ -194,6 +202,11 @@ export default class WorkspaceComponent extends Vue {
 
   get canSwitchToEdit() {
     return this.componentMode != ComponentMode.Edit;
+  }
+
+  @Watch("componentDetails")
+  componentDetailsChanged() {
+    this.refreshLastModified();
   }
 }
 </script>
