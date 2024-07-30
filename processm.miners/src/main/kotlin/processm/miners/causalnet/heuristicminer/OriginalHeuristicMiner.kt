@@ -102,9 +102,11 @@ class OriginalHeuristicMiner(
             return clusters
         }
 
-        const val SILENT_START_NAME = "4f9cd754start"
+        private const val SILENT_START_NAME =
+            "star\u0000t\u0000\u0000\u0000\u0000" // null should not occur in normal activity name
         private const val SILENT_START = 0
-        const val SILENT_END_NAME = "4f9cd754end"
+        private const val SILENT_END_NAME =
+            "en\u0000d\u0000\u0000\u0000\u0000" // null should not occur in normal activity name
         private const val SILENT_END = SILENT_START + 1
         private const val FIRST_REAL_NODE = SILENT_END + 1
     }
