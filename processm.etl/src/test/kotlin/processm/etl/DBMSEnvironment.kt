@@ -19,7 +19,7 @@ interface DBMSEnvironment<Container : JdbcDatabaseContainer<*>> : AutoCloseable 
     val jdbcUrl: String
 
     /**
-     * Properties in a format suitable for [processm.etl.helpers.getDataSource]
+     * Properties in a format suitable for [processm.etl.helpers.getConnection]
      */
     val connectionProperties: Map<String, String>
     fun connect(): Connection

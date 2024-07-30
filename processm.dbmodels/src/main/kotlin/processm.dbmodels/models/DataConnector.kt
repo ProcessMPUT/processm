@@ -43,7 +43,9 @@ enum class ConnectionType {
     SqlServer,
     MySql,
     OracleDatabase,
-    Db2
+    Db2,
+    CouchDB,
+    MongoDB
 }
 
 data class DataConnectorDto(

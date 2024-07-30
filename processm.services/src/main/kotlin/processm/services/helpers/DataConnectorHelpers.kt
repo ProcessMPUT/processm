@@ -21,6 +21,8 @@ fun maskPasswordInJdbcUrl(url: String, passwordMask: String = defaultPasswordMas
         url.startsWith("jdbc:sqlserver://", ignoreCase = true) -> maskSqlServer(url, passwordMask)
         url.startsWith("jdbc:oracle:", ignoreCase = true) -> maskOracle(url, passwordMask)
         db2Prefixes.any { url.startsWith(it, ignoreCase = true) } -> maskDb2(url, passwordMask)
+        url.startsWith("couchdb:", ignoreCase = true) -> maskCouchDB(url, passwordMask)
+        url.startsWith("mongodb", ignoreCase = true) -> maskMongoDB(url, passwordMask)
         else -> throw IllegalArgumentException()
     }
 
@@ -50,6 +52,13 @@ private fun StringBuilder.appendQuery(pairs: List<KeyValue?>) {
         append("&")
     }
     deleteCharAt(length - 1)
+}
+
+private val rePasswordInUrl = Regex("^([^/]+://[^:]+:)[^@]*(@.*)$")
+
+private fun maskPasswordInUrl(url: String, passwordMask: String): String {
+    require('@' !in passwordMask)
+    return rePasswordInUrl.replace(url, "$1${Regex.escapeReplacement(passwordMask)}$2")
 }
 
 // endregion
@@ -452,3 +461,15 @@ private fun maskDb2(url: String, passwordMask: String): String {
 }
 
 // endregion
+
+// region CouchDB
+
+fun maskCouchDB(url: String, passwordMask: String): String = maskPasswordInUrl(url, passwordMask)
+
+// endregion
+
+// region MongoDB
+
+fun maskMongoDB(url: String, passwordMask: String): String = maskPasswordInUrl(url, passwordMask)
+
+//endregion

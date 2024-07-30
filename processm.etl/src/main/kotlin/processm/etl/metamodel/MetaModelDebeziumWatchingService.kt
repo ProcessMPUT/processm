@@ -15,9 +15,7 @@ import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.*
 import processm.etl.helpers.getConnection
 import processm.etl.tracker.DebeziumChangeTracker
-import processm.helpers.getPropertyIgnoreCase
-import processm.helpers.mapToSet
-import processm.helpers.toUUID
+import processm.helpers.*
 import processm.logging.logger
 import java.io.File
 import java.util.*
@@ -298,6 +296,8 @@ class MetaModelDebeziumWatchingService : Service {
             ConnectionType.Db2 -> {
                 setProperty("connector.class", "io.debezium.connector.db2.Db2Connector")
             }
+
+            else -> throw LocalizedException(ExceptionReason.UnsupportedDatabaseForAutomaticETL, connectorType.name)
         }
 
         return this

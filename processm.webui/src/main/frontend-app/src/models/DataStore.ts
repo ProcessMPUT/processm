@@ -18,5 +18,7 @@ export enum ConnectionType {
   SqlServer = "SQL Server",
   MySql = "MySQL",
   OracleDatabase = "Oracle Database",
-  Db2 = "DB2"
+  Db2 = "DB2",
+  CouchDB = "CouchDB",
+  MongoDB = "MongoDB"
 }

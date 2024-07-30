@@ -24,7 +24,7 @@ import processm.dbmodels.models.DataStore
 import processm.dbmodels.models.TYPE
 import processm.dbmodels.urn
 import processm.etl.discovery.SchemaCrawlerExplorer
-import processm.etl.helpers.getDataSource
+import processm.etl.helpers.getConnection
 import processm.etl.jdbc.notifyUsers
 import processm.etl.metamodel.DAGBusinessPerspectiveExplorer
 import processm.etl.metamodel.buildMetaModel
@@ -246,7 +246,7 @@ class DataStoreService(
      * Tests connectivity using the provided [connectionProperties].
      */
     fun testDatabaseConnection(connectionProperties: Map<String, String>) {
-        getDataSource(connectionProperties).connection.close()
+        getConnection(connectionProperties).close()
     }
 
     /**
@@ -616,7 +616,7 @@ class DataStoreService(
     @OptIn(ExperimentalSerializationApi::class)
     private fun DataConnector.getConnection(): Connection {
         return if (connectionProperties.startsWith("jdbc")) DriverManager.getConnection(connectionProperties)
-        else getDataSource(Json.decodeFromString(connectionProperties)).connection
+        else getConnection(Json.decodeFromString(connectionProperties))
     }
 
     fun createSamplingJdbcEtlProcess(
