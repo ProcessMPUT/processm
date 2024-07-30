@@ -122,7 +122,10 @@ abstract class CalcJob<T : ProcessModel> : MinerJob<T> {
                 component.customizationData = updateCustomizationData(model, component.customizationData)
                 component.lastError = null
                 component.afterCommit {
-                    component.triggerEvent(producer, DataChangeType.Model)
+                    component.triggerEvent(
+                        producer,
+                        if (autoAccepted) DataChangeType.InitialModel else DataChangeType.Model
+                    )
                     if (autoAccepted)
                         component.triggerEvent(producer, WorkspaceComponentEventType.ModelAccepted)
                 }

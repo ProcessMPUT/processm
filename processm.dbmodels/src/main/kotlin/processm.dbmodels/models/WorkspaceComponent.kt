@@ -57,6 +57,7 @@ enum class WorkspaceComponentEventType {
 }
 
 enum class DataChangeType(val value: String) {
+    InitialModel("initial_model"),
     Model("model"),
     AlignmentKPI("alignment_kpi"),
     LastError("last_error")

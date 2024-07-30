@@ -111,7 +111,7 @@ class AlignerKPIService : AbstractJobService(
 
         private fun createDetector(data: ProcessModelComponentData, modelVersion: Long) =
             retrieveAlignments(data, modelVersion, modelVersion)?.let { alignments ->
-                BoundStatisticalDistanceDriftDetector(::NaiveJensenShannonDivergence).apply {
+                BoundStatisticalDistanceDriftDetector(::NaiveJensenShannonDivergence, kFolds = if(alignments.size>=10) 10 else -1).apply {
                     fit(alignments)
                 }
             }
