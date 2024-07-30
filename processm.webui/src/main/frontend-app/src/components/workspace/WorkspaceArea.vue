@@ -81,7 +81,7 @@
       v-model="displayEditModal"
       :component-details="displayedComponentDetails"
       :workspace-id="workspaceId"
-      @close="closeModals"
+      @discard="discardComponentChanges"
       @view="viewComponent"
       @edit="editComponent"
       @remove="removeComponent"
@@ -157,6 +157,10 @@ export default class WorkspaceArea extends Vue {
     w: number;
     h: number;
   }> = [];
+  /**
+   * IDs of components that were created but not yet pushed to the server.
+   */
+  private transientComponents: Set<string> = new Set();
 
   async fullRefresh() {
     const components = await this.workspaceService.getWorkspaceComponents(this.workspaceId);
@@ -187,11 +191,8 @@ export default class WorkspaceArea extends Vue {
   // noinspection JSUnusedGlobalSymbols
 
   async removeComponent(componentId: string) {
-    const componentIndex = this.layout.findIndex((component) => component.i == componentId);
-
-    if (componentIndex >= 0) {
+    if (this.removeComponentFromLayout(componentId)) {
       await this.workspaceService.removeComponent(this.workspaceId, componentId);
-      this.layout.splice(componentIndex, 1);
       this.closeModals();
     }
   }
@@ -201,13 +202,15 @@ export default class WorkspaceArea extends Vue {
   }
 
   createComponent() {
+    const id = uuidv4();
     this.layout.unshift({
-      i: uuidv4(),
+      i: id,
       x: 0,
       y: 0,
       w: this.defaultComponentWidth,
       h: this.defaultComponentHeight
     });
+    this.transientComponents.add(id);
   }
 
   viewComponent(id: string) {
@@ -223,6 +226,7 @@ export default class WorkspaceArea extends Vue {
   }
 
   updateComponent(componentData: WorkspaceComponentModel) {
+    this.transientComponents.delete(componentData.id);
     this.componentsDetails.set(componentData.id, componentData);
     this.closeModals();
     this.$children.find((v, _) => v.$data?.component?.id == componentData.id)?.$forceUpdate();
@@ -235,6 +239,7 @@ export default class WorkspaceArea extends Vue {
     this.layout.forEach((layoutElement) => {
       const component = this.componentsDetails.get(layoutElement.i);
       if (component === undefined) return;
+      if (this.transientComponents.has(component.id)) return;
       // skip components whose layout did not change
       if (
         component.layout?.x === layoutElement.x &&
@@ -283,13 +288,21 @@ export default class WorkspaceArea extends Vue {
     this.editComponent(componentId);
   }
 
+  private removeComponentFromLayout(componentId: string): boolean {
+    const componentIndex = this.layout.findIndex((component) => component.i == componentId);
+    if (componentIndex >= 0) {
+      this.layout.splice(componentIndex, 1);
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   private async refreshComponent(componentId: string) {
     const component = await this.workspaceService.getComponent(this.workspaceId, componentId);
     if (this.componentsDetails.has(component.id)) {
       this.componentsDetails.set(component.id, component);
-      const idx = this.layout.findIndex((value) => value.i == component.id);
-      console.assert(idx >= 0);
-      this.layout.splice(idx, 1);
+      this.removeComponentFromLayout(component.id);
       this.layout.push({
         i: component.id,
         x: component.layout?.x ?? 0,
@@ -300,6 +313,15 @@ export default class WorkspaceArea extends Vue {
     } else {
       await this.fullRefresh();
     }
+  }
+
+  discardComponentChanges(componentId: string) {
+    if (this.transientComponents.has(componentId)) {
+      this.componentsDetails.delete(componentId);
+      this.removeComponentFromLayout(componentId);
+      this.transientComponents.delete(componentId);
+    }
+    this.closeModals();
   }
 }
 </script>

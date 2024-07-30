@@ -2,7 +2,7 @@
   <v-dialog fullscreen persistent v-model="value">
     <v-card flat tile>
       <v-card-actions>
-        <v-btn color="primary darken-1" icon @click.stop="$emit('close')">
+        <v-btn color="primary darken-1" icon @click.stop="$emit('discard', componentDetails.id)">
           <v-icon>arrow_back</v-icon>
         </v-btn>
         <v-spacer></v-spacer>
