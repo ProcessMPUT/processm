@@ -21,7 +21,7 @@ class Counter<K> : HashMap<K, Int>() {
     /**
      * Increments the value stored for [keys] by [n] each. Duplicated keys are treated separately.
      */
-    fun inc(keys: Collection<K>, n: Int = 1) {
+    fun inc(keys: Iterable<K>, n: Int = 1) {
         for (it in keys)
             inc(it, n)
     }
@@ -30,5 +30,5 @@ class Counter<K> : HashMap<K, Int>() {
      * Decrements the value stored for [key] by [n], capping at 0
      */
     fun dec(key: K, n: Int = 1): Int? =
-        compute(key) { _, v -> if (v != null && v > n) v - n else null }
+        computeIfPresent(key) { _, v -> if (v > n) v - n else null }
 }
