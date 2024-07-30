@@ -112,6 +112,7 @@ export default class WorkspaceService extends BaseService {
         };
         break;
       case "directlyFollowsGraph":
+      case "kpi":
         delete payload.data;
         break;
     }
