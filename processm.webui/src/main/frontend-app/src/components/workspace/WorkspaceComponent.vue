@@ -1,28 +1,28 @@
 <template>
   <div class="workspace-component">
     <div v-if="componentDetails.type != null" class="component-name">
+      {{ componentDetails.name }}
       <v-menu offset-y bottom min-width="0">
         <template #activator="{ on }">
-          <v-btn :ripple="false" class="component-name" depressed small tile v-on="on"
-            >{{ componentDetails.name }}
+          <v-btn :ripple="false" class="component-name ignore-drag" depressed small tile v-on="on">
             <v-icon dark>expand_more</v-icon>
           </v-btn>
         </template>
 
         <v-list dense>
-          <v-list-item @click="$emit('view', componentDetails.id)">
+          <v-list-item @click="$emit('view', componentDetails.id)" v-if="canSwitchToView">
             <v-list-item-icon>
               <v-icon>visibility</v-icon>
             </v-list-item-icon>
             <v-list-item-title>{{ $t("common.view") }}</v-list-item-title>
           </v-list-item>
-          <v-list-item @click="$emit('edit', componentDetails.id)">
+          <v-list-item @click="$emit('edit', componentDetails.id)" v-if="canSwitchToEdit">
             <v-list-item-icon>
               <v-icon>edit</v-icon>
             </v-list-item-icon>
             <v-list-item-title>{{ $t("common.edit") }}</v-list-item-title>
           </v-list-item>
-          <v-divider></v-divider>
+          <v-divider v-if="canSwitchToEdit || canSwitchToView"></v-divider>
           <v-list-item @click="$emit('remove', componentDetails.id)">
             <v-list-item-icon>
               <v-icon>delete</v-icon>
@@ -37,7 +37,7 @@
         <v-icon>close</v-icon>
       </v-btn>
     </div>
-    <div class="workspace-component-content-parent">
+    <div class="workspace-component-content-parent ignore-drag">
       <v-progress-linear :active="loading" :indeterminate="true" absolute class="progressbar" color="secondary accent-4" top></v-progress-linear>
       <component
         :is="componentType"
@@ -73,8 +73,8 @@
 button.v-btn.v-btn.component-name[type="button"] {
   overflow: hidden;
   background-color: inherit;
-  max-width: 100%;
-  flex: auto;
+  align-self: center;
+  min-width: 0;
 }
 
 .component-name {
@@ -83,6 +83,9 @@ button.v-btn.v-btn.component-name[type="button"] {
   justify-content: center;
   background-color: var(--v-primary-base);
   flex: 0 0 1.5em;
+  text-transform: uppercase;
+  font-weight: 500;
+  font-size: small;
 }
 
 .component-name:hover {
@@ -156,6 +159,8 @@ export default class WorkspaceComponent extends Vue {
   readonly editable!: boolean;
   @Prop({ default: null })
   readonly componentMode?: ComponentMode;
+  @Prop({ default: false })
+  readonly isTransient!: boolean;
   /**
    * Set to true to let children update the data model (usually before sending it to the server).
    */
@@ -181,6 +186,14 @@ export default class WorkspaceComponent extends Vue {
 
   get componentType() {
     return `${this.componentDetails?.type}Component`;
+  }
+
+  get canSwitchToView() {
+    return this.componentMode != ComponentMode.Interactive && !this.isTransient;
+  }
+
+  get canSwitchToEdit() {
+    return this.componentMode != ComponentMode.Edit;
   }
 }
 </script>

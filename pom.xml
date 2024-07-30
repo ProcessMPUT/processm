@@ -75,6 +75,7 @@
         <org.slf4j.version>2.0.12</org.slf4j.version>
         <debezium.version>1.9.4.Final</debezium.version>
         <logback-classic.version>1.4.14</logback-classic.version>
+        <ktor.version>2.3.8</ktor.version>
         <!-- Some Spark and Flink dependencies have Scala-dependent version. The variable is for consistency, even though ProcessM does not use Scala -->
         <scala.binary.version>2.12</scala.binary.version>
         <org.jgrapht.version>1.5.1</org.jgrapht.version>

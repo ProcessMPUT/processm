@@ -6,6 +6,9 @@
           <v-icon>arrow_back</v-icon>
         </v-btn>
         <v-spacer></v-spacer>
+        <v-icon>${{ componentDetails.type }}Component</v-icon>
+        {{ $t(`workspace.component.${kebabize(componentDetails.type)}`) }}
+        <v-spacer></v-spacer>
       </v-card-actions>
       <v-card-text>
         <workspace-component
@@ -34,12 +37,14 @@ import Vue from "vue";
 import WorkspaceComponent, { ComponentMode } from "./WorkspaceComponent.vue";
 import { Component, Prop } from "vue-property-decorator";
 import { WorkspaceComponent as WorkspaceComponentModel } from "@/models/WorkspaceComponent";
+import { kebabize } from "@/utils/StringCaseConverter";
 
 @Component({
   components: { WorkspaceComponent }
 })
 export default class SingleComponentView extends Vue {
   ComponentMode = ComponentMode;
+  kebabize = kebabize;
 
   @Prop({ default: {} })
   readonly componentDetails!: WorkspaceComponentModel;

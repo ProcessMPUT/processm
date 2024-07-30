@@ -169,7 +169,7 @@ export default class AutomaticEtlProcessDialog extends Vue {
   classIdToName: Record<number, string> = {};
   nameToClassId: Record<string, number> = {};
   relationIdToDefinition: Record<number, RelationshipGraphEdgesInner> = {};
-  notEmptyRule = [(v: string) => notEmptyRule(v, this.$t("add-data-connector-dialog.validation.non-empty-field").toString())];
+  notEmptyRule = [(v: string) => notEmptyRule(v, this.$t("data-connector-dialog.validation.non-empty-field").toString())];
   isValid = false;
 
   @Watch("dataConnectors")

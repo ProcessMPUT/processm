@@ -3,33 +3,33 @@
     <template v-slot>
       <v-text-field
         v-model="value['server']"
-        :label="$t('add-data-connector-dialog.server')"
+        :label="$t('data-connector-dialog.server')"
         required
         :rules="hostnameRules"
       ></v-text-field>
       <v-text-field
         v-model="value['port']"
         type="number"
-        :label="$t('add-data-connector-dialog.port')"
+        :label="$t('data-connector-dialog.port')"
         required
         :rules="portRules"
       ></v-text-field>
       <v-text-field
         v-model="value['username']"
-        :label="$t('add-data-connector-dialog.username')"
+        :label="$t('data-connector-dialog.username')"
         required
         :rules="notEmptyRules"
       ></v-text-field>
       <v-text-field
         v-model="value['password']"
-        :label="$t('add-data-connector-dialog.password')"
+        :label="$t('data-connector-dialog.password')"
         required
         type="password"
         :rules="notEmptyRules"
       ></v-text-field>
       <v-text-field
         v-model="value['database-name']"
-        :label="$t('add-data-connector-dialog.database')"
+        :label="$t('data-connector-dialog.database')"
         required
       ></v-text-field>
     </template>
@@ -62,14 +62,14 @@ export default class Db2SqlConnectionConfiguration extends Vue {
       notEmptyRule(
         v,
         this.$t(
-          "add-data-connector-dialog.validation.non-empty-field"
+          "data-connector-dialog.validation.non-empty-field"
         ).toString()
       ),
     (v: string) =>
       hostnameOrIpV4Rule(
         v,
         this.$t(
-          "add-data-connector-dialog.validation.hostname-field"
+          "data-connector-dialog.validation.hostname-field"
         ).toString()
       )
   ];
@@ -78,7 +78,7 @@ export default class Db2SqlConnectionConfiguration extends Vue {
     (v: string) =>
       portNumberRule(
         v,
-        this.$t("add-data-connector-dialog.validation.port-field").toString()
+        this.$t("data-connector-dialog.validation.port-field").toString()
       )
   ];
 
@@ -87,7 +87,7 @@ export default class Db2SqlConnectionConfiguration extends Vue {
       notEmptyRule(
         v,
         this.$t(
-          "add-data-connector-dialog.validation.non-empty-field"
+          "data-connector-dialog.validation.non-empty-field"
         ).toString()
       )
   ];

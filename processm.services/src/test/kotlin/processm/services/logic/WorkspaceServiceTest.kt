@@ -39,14 +39,14 @@ class WorkspaceServiceTest : ServiceTestBase() {
         // use ACL service to set permission to workspace2
         aclService.updateEntry(Workspaces, workspace2, organization.sharedGroup.id.value, RoleType.Reader)
         // use ACL service to set permission to workspace3
-        aclService.addEntry(Workspaces, workspace3, otherGroupId, RoleType.Reader)
+        aclService.addEntry(Workspaces, workspace3, otherGroupId, RoleType.Writer)
 
         val userWorkspaces = workspaceService.getUserWorkspaces(userId)
 
         assertEquals(3, userWorkspaces.size)
-        assertTrue { userWorkspaces.any { it.name == "Workspace1" } }
-        assertTrue { userWorkspaces.any { it.name == "Workspace2" } }
-        assertTrue { userWorkspaces.any { it.name == "Workspace3" } }
+        assertTrue { userWorkspaces.any { it.first.name == "Workspace1" && it.second == RoleType.Owner } }
+        assertTrue { userWorkspaces.any { it.first.name == "Workspace2" && it.second == RoleType.Reader } }
+        assertTrue { userWorkspaces.any { it.first.name == "Workspace3" && it.second == RoleType.Writer } }
     }
 
     @Test
@@ -68,7 +68,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val userWorkspaces = workspaceService.getUserWorkspaces(userId)
 
         assertEquals(1, userWorkspaces.size)
-        assertEquals("Workspace1", userWorkspaces[0].name)
+        assertEquals("Workspace1", userWorkspaces[0].first.name)
     }
 
     @Test
@@ -82,7 +82,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
 
         val workspaces = workspaceService.getUserWorkspaces(user.id.value)
         assertEquals(1, workspaces.size)
-        assertEquals(workspaceId, workspaces[0].id.value)
+        assertEquals(workspaceId, workspaces[0].first.id.value)
     }
 
     @Test
