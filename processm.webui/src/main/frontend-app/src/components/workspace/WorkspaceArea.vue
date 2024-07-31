@@ -1,5 +1,5 @@
 <template>
-  <v-container>
+  <v-container fluid>
     <v-row justify="end" class="pa-1" v-if="!viewOnly">
       <v-tooltip bottom :open-delay="tooltipOpenDelay">
         <template v-slot:activator="{ on, attrs }">
