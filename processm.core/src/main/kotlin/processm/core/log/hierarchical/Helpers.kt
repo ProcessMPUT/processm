@@ -2,7 +2,6 @@ package processm.core.log.hierarchical
 
 import processm.core.querylanguage.Type
 import java.sql.ResultSet
-import java.util.*
 
 internal fun Iterable<Any>.join(transform: (a: Any) -> Any = { it }) = buildString {
     for (item in this@join) {
@@ -72,7 +71,7 @@ internal val Type.asAttributeType: String
     get() = when (this) {
         Type.String -> "string"
         Type.UUID -> "uuid"
-        Type.Number -> "number"
+        Type.Number -> "float"
         Type.Datetime -> "date"
         Type.Boolean -> "boolean"
         Type.Any -> "any"
