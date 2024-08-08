@@ -1,6 +1,7 @@
-FROM adoptopenjdk:11-jre-hotspot
+FROM eclipse-temurin:17
 EXPOSE 2080 2443
 RUN mkdir /processm
-COPY ./processm.launcher/target/launcher-0.6-SNAPSHOT-jar-with-dependencies.jar /processm/
+COPY ./LICENSE.md /processm/
+COPY ./processm.launcher/target/launcher-0.7.0-jar-with-dependencies.jar /processm/
 WORKDIR /processm
-ENTRYPOINT ["java", "-jar", "launcher-0.6-SNAPSHOT-jar-with-dependencies.jar"]
+ENTRYPOINT ["java", "-jar", "launcher-0.7.0-jar-with-dependencies.jar"]

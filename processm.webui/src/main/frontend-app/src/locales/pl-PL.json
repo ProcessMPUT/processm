@@ -5,7 +5,7 @@
   "navigation": {
     "menu": "Menu",
     "workspaces": "Przestrzenie robocze",
-    "users": "Użytkownicy",
+    "users": "@:users.page-title",
     "data-stores": "@:data-stores.page-title",
     "pql-interpreter": "Interpreter PQL",
     "about": "@:about.page-title"
@@ -188,7 +188,25 @@
     }
   },
   "about": {
-    "page-title": "O ProcessM"
+    "page-title": "O {brand}",
+    "acknowledgments": "Podziękowania",
+    "beneficiary": "Nazwa beneficjenta:",
+    "duration": "Okres realizacji:",
+    "grant": "Numer projektu:",
+    "homepage": "Strona internetowa projektu",
+    "funding-value": "Wartość dofinansowania:",
+    "license": "Licencja oprogramowania",
+    "lider": "Program LIDER X",
+    "ncbr": "Narodowe Centrum Badań i Rozwoju",
+    "note": "Rozwój ProcessM do wersji 0.7.0 został sfinansowany przez Narodowe Centrum Badań i Rozwoju, w ramach programu LIDER X.",
+    "project-title": "ProcessM: Oprogramowanie Inteligentnej Eksploracji Procesów w Czasie Rzeczywistym",
+    "project-value": "Wartość projektu:",
+    "put": "Politechnika Poznańska",
+    "version": "Wersja {version}"
+  },
+  "licensing": {
+    "page-title": "Licencja oprogramowania {brand} (w języku angielskim)",
+    "dependencies-licensing": "To oprogramowanie wykorzystuje poniższe komponenty na ich własnych licencjach:"
   },
   "user-profile": {
     "language": "Język",
@@ -355,6 +373,7 @@
     "no-candidates": "Nie ma grup które mogłyby zostać dodane do listy kontroli dostępu"
   },
   "common": {
+    "acknowledgments": "Podziękowania",
     "calculate-layout": "Oblicz układ",
     "initial": "Początkowe",
     "final": "Końcowe",

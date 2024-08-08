@@ -189,7 +189,25 @@
     }
   },
   "about": {
-    "page-title": "About ProcessM"
+    "page-title": "About {brand}",
+    "acknowledgments": "Acknowledgments",
+    "beneficiary": "Beneficiary name:",
+    "duration": "Duration:",
+    "grant": "Grant number:",
+    "homepage": "Project home page",
+    "funding-value": "Funding-value:",
+    "license": "Software license",
+    "lider": "LIDER X Programme",
+    "ncbr": "National Centre for Research and Development, Poland",
+    "note": "The development of ProcessM up to version 0.7.0 was financed by The National Centre for Research and Development, Poland, under the LIDER X Programme.",
+    "project-title": "ProcessM: Real-Time Intelligent Process Mining Software",
+    "project-value": "Project value:",
+    "put": "Poznan University of Technology, Poland",
+    "version": "Version {version}"
+  },
+  "licensing": {
+    "page-title": "{brand} software license",
+    "dependencies-licensing": "This software uses the following components under their own licenses:"
   },
   "user-profile": {
     "language": "Language",

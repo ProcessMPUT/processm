@@ -27,6 +27,8 @@ import TopBar from "@/components/TopBar.vue";
 import { Inject, Provide } from "vue-property-decorator";
 import NotificationService, { ComponentUpdatedEvent } from "@/services/NotificationService";
 import { NotificationsObserver } from "@/utils/NotificationsObserver";
+import { Config } from "@/openapi";
+import ConfigService from "@/services/ConfigService";
 
 @Component({
   components: { AppNavigation, TopBar }
@@ -40,10 +42,18 @@ export default class App extends Vue {
     timeout: 10000
   };
 
+  @Inject() configService!: ConfigService;
   @Inject() notificationService!: NotificationService;
   notifications: NotificationsObserver | undefined = undefined;
 
   lastEvent = reactive({ lastEvent: null } as { lastEvent: ComponentUpdatedEvent | null });
+
+  config: Config = reactive({
+    brand: "",
+    version: "",
+    loginMessage: "",
+    demoMode: false
+  });
 
   /**
    * @param locale Expected to follow RFC5646, because that's what web browsers seems to do
@@ -125,18 +135,23 @@ export default class App extends Vue {
   }
 
   async created() {
+    Object.assign(this.config, await this.configService.getConfig());
+
     if (this.notifications === undefined)
       this.notifications = this.notificationService.subscribe(async (event) => {
         this.lastEvent.lastEvent = event;
         if (event.changeType != "Model") return;
-        const goToModel = await this.$confirm(this.$t("notifications.new-model-available.text", {
-          workspaceName: event.workspaceName,
-          componentName: event.componentName
-        }).toString(), {
-          title: this.$t("notifications.new-model-available.title").toString(),
-          buttonTrueText: this.$t("common.yes").toString(),
-          buttonFalseText: this.$t("common.no").toString()
-        });
+        const goToModel = await this.$confirm(
+          this.$t("notifications.new-model-available.text", {
+            workspaceName: event.workspaceName,
+            componentName: event.componentName
+          }).toString(),
+          {
+            title: this.$t("notifications.new-model-available.title").toString(),
+            buttonTrueText: this.$t("common.yes").toString(),
+            buttonFalseText: this.$t("common.no").toString()
+          }
+        );
         if (!goToModel) return;
         await this.$router.push({
           name: "edit-component",
