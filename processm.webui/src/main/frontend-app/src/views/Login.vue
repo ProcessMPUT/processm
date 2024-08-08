@@ -4,6 +4,7 @@
       <v-flex xs12 sm8 md4>
         <v-card class="elevation-12" min-width="470">
           <v-toolbar color="primary" dark flat>
+            <v-img class="mr-3" max-height="48" max-width="48" src="favicon.png" />
             <v-toolbar-title>{{ $t("login-form.title") }}</v-toolbar-title>
           </v-toolbar>
           <v-card-text>

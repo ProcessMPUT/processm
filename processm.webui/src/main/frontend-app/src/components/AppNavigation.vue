@@ -2,8 +2,8 @@
   <v-navigation-drawer app :miniVariant="minimized" permanent>
     <v-list>
       <v-list-item class="px-2" @click.stop="toggleMinimized">
-        <v-list-item-avatar>
-          <v-icon>menu</v-icon>
+        <v-list-item-avatar rounded="0">
+          <v-img max-height="48" max-width="48" src="favicon.png" />
         </v-list-item-avatar>
         <v-list-item-title class="title">
           {{ $t("navigation.menu") }}
