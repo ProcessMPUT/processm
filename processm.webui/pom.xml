@@ -8,7 +8,7 @@
     <parent>
         <groupId>processm</groupId>
         <artifactId>root</artifactId>
-        <version>0.6-SNAPSHOT</version>
+        <version>${revision}</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -55,6 +55,17 @@
                         <configuration>
                             <nodeVersion>v18.20.4</nodeVersion>
                             <npmVersion>10.7.0</npmVersion>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>npm update version</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <phase>generate-sources</phase>
+                        <configuration>
+                            <arguments>version --allow-same-version ${revision}</arguments>
                         </configuration>
                     </execution>
 
