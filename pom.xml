@@ -13,16 +13,14 @@
 
     <organization>
         <name>Poznan University of Technology</name>
-        <url>http://processm.cs.put.poznan.pl</url>
+        <url>https://processm.cs.put.poznan.pl</url>
     </organization>
 
     <licenses>
         <license>
-            <!-- TODO -->
-            <name>ProcessM end-user license agreement</name>
+            <name>GNU Affero General Public License version 3</name>
             <url>http://processm.cs.put.poznan.pl/licensing</url>
             <distribution>repo</distribution>
-            <!--<comments></comments>-->
         </license>
     </licenses>
 
