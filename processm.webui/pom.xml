@@ -15,23 +15,6 @@
     <artifactId>webui</artifactId>
     <packaging>jar</packaging>
     <name>ProcessM User Interface</name>
-    <properties>
-        <outputType>development</outputType>
-    </properties>
-
-    <profiles>
-        <profile>
-            <id>production</id>
-            <activation>
-                <property>
-                    <name>production</name>
-                </property>
-            </activation>
-            <properties>
-                <outputType>production</outputType>
-            </properties>
-        </profile>
-    </profiles>
 
     <build>
         <plugins>

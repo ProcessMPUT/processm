@@ -88,6 +88,33 @@
         <excludedGroups>performance,slow</excludedGroups>
     </properties>
 
+    <profiles>
+        <profile>
+            <id>development</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <outputType>development</outputType>
+                <maven.compiler.debug>true</maven.compiler.debug>
+                <maven.compiler.debugLevel>lines,vars,source</maven.compiler.debugLevel>
+            </properties>
+        </profile>
+        <profile>
+            <id>production</id>
+            <activation>
+                <property>
+                    <name>production</name>
+                </property>
+            </activation>
+            <properties>
+                <outputType>production</outputType>
+                <maven.compiler.debug>false</maven.compiler.debug>
+                <maven.compiler.debugLevel>none</maven.compiler.debugLevel>
+            </properties>
+        </profile>
+    </profiles>
+
     <dependencies>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
@@ -204,7 +231,11 @@ Eventually, perhaps this dependency can be removed. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
+                <version>3.13.0</version>
+                <configuration>
+                    <debug>${maven.compiler.debug}</debug>
+                    <debuglevel>${maven.compiler.debugLevel}</debuglevel>
+                </configuration>
                 <executions>
                     <!-- Replacing default-compile as it is treated specially by maven -->
                     <execution>
