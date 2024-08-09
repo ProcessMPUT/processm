@@ -21,18 +21,18 @@
 
     <!-- File logger -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>processm-dev.log</file>
+        <file>processm-test.log</file>
         <encoder>
             <pattern>%date %-5level [%thread] %logger{10}: %msg [%file:%line]%n</pattern>
         </encoder>
         <!-- Log rotation -->
         <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-            <fileNamePattern>processm-dev.%i.log.gz</fileNamePattern>
+            <fileNamePattern>processm-test.%i.log.gz</fileNamePattern>
             <minIndex>1</minIndex>
             <maxIndex>3</maxIndex>
         </rollingPolicy>
         <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
-            <maxFileSize>5MB</maxFileSize>
+            <maxFileSize>10MB</maxFileSize>
         </triggeringPolicy>
     </appender>
 
