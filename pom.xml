@@ -266,7 +266,7 @@ Eventually, perhaps this dependency can be removed. -->
                         <plugin>
                             <groupId>org.jetbrains.dokka</groupId>
                             <artifactId>kotlin-as-java-plugin</artifactId>
-                            <version>${kotlin.version}</version>
+                            <version>${dokka.version}</version>
                         </plugin>
                     </dokkaPlugins>
                 </configuration>

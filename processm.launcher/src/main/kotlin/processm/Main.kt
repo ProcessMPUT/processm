@@ -10,7 +10,15 @@ object Main {
      * The main entry point for ProcessM.
      */
     @JvmStatic
-    fun main(args: Array<String>) = loggedScope { logger ->
+    fun main(args: Array<String>) {
+        if (Runtime.version().feature() < 17) {
+            System.out.println("This program requires Java 17 or later. Current version ${Runtime.version()}.")
+            return
+        }
+        actualMain()
+    }
+
+    private fun actualMain() = loggedScope { logger ->
         try {
             loadConfiguration()
 

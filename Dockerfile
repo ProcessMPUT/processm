@@ -1,7 +1,6 @@
 FROM eclipse-temurin:17
 EXPOSE 2080 2443
 RUN mkdir /processm
-COPY ./LICENSE.md /processm/
-COPY ./processm.launcher/target/launcher-0.7.0-jar-with-dependencies.jar /processm/
-WORKDIR /processm
-ENTRYPOINT ["java", "-jar", "launcher-0.7.0-jar-with-dependencies.jar"]
+ADD processm.launcher/target/processm-0.7.0-bin.tgz /
+WORKDIR /processm-0.7.0
+ENTRYPOINT ["java", "-Xmx8G", "-jar", "launcher-0.7.0.jar"]
