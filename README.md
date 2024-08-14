@@ -45,23 +45,16 @@ mvn package -DskipTests=true -P production
 ```
 
 The above produces a deployment package `./processm.launcher/target/processm-<version>.tar.xz`. To run, extract archive
-and
-execute command `./processm.sh` (linux/macOS) or `processm.bat` (Windows).
+and execute command `./processm.sh` (linux/macOS) or `processm.bat` (Windows).
 
-### Creating Docker image from sources
-
-Docker Desktop is required to be installed.
-
-```shell
-mvn docker:build --non-recursive
-```
+The above command also produces the docker image `processm:<version>`. Docker Desktop is required to be installed.
 
 ### Exporting the image to file and uploading it
 
-Instead of pushing the image to a remote repository we transfer the file directly to the server.
+Instead of pushing the image to a remote repository, transfer it directly to the server.
 
 ```shell
-docker save -o processm-docker-image.tar processm && scp ./processm-docker-image.tar <server-address>:~
+docker save -o processm-docker-image.tar processm:<version> && scp ./processm-docker-image.tar <server-address>:~
 ```
 
 ### Applying deployment package
