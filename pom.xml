@@ -279,6 +279,9 @@ Eventually, perhaps this dependency can be removed. -->
                     <images>
                         <image>
                             <name>processm</name>
+                            <build>
+                                <dockerFileDir>${project.basedir}</dockerFileDir>
+                            </build>
                         </image>
                     </images>
                 </configuration>
