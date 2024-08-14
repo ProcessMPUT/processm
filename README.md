@@ -1,12 +1,40 @@
-# processm
+# ProcessM
 
-## Deployment with Docker
+ProcessM is an artificial intelligence tool supporting business process management. ProcessM seamlessly integrates with
+variety of data sources such as database systems and ERP tools using fully-configurable ETL processes. ProcessM models
+he business process in online mode based on the incoming in real-time events from the data sources system, verifies the
+conformance of the process with the model, classifies detected deviations from the model into errors and concept drift,
+reports deviations together with a root cause analysis and calculates KPIs for performance analysis and bottleneck
+identification. ProcessM is a web-service that works in a continuous mode and does the above tasks unattended.
+Detected deviations in the operation of the process are immediately reported to the user. The web-service of ProcessM
+is compatible with Windows, Linux and MacOS, and the client of ProcessM works in a web-browser running on virtually
+any operating system.
 
-### Preparing deployment package
+## Getting started
+
+### Docker image
+
+For Docker users, download and run ProcessM by simply executing the following command:
+
+```bash
+docker run -p 80:2080 -p 443:2443 -d --name processm processm/processm-server-full:latest
+```
+
+### Downloads
+
+TODO: #282 github releases link
+
+## Configuration
+
+TODO
+
+## Build & deployment from sources
 
 Execute the following instructions in the project's main directory.
 
-#### Creating deployment package
+### Creating deployment package
+
+To produce a deployment package run
 
 ```shell
 mvn package
@@ -16,9 +44,11 @@ or
 mvn package -DskipTests=true -P production
 ```
 
-The above produces Uber JAR (containing code from all modules) in ./processm.launcher/target. The jar can be run with: `java -jar launcher-0.1-SNAPSHOT-jar-with-dependencies.jar`
+The above produces a deployment package `./processm.launcher/target/processm-<version>.tar.xz`. To run, extract archive
+and
+execute command `./processm.sh` (linux/macOS) or `processm.bat` (Windows).
 
-#### Creating Docker image
+### Creating Docker image from sources
 
 Docker Desktop is required to be installed.
 
@@ -26,7 +56,7 @@ Docker Desktop is required to be installed.
 mvn docker:build --non-recursive
 ```
 
-#### Exporting the image to file and uploading it
+### Exporting the image to file and uploading it
 
 Instead of pushing the image to a remote repository we transfer the file directly to the server.
 
