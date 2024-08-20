@@ -7,7 +7,7 @@
     <parent>
         <groupId>processm</groupId>
         <artifactId>root</artifactId>
-        <version>0.6-SNAPSHOT</version>
+        <version>${revision}</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -44,6 +44,11 @@
                 <exclusion>
                     <groupId>io.netty</groupId>
                     <artifactId>netty-all</artifactId>
+                </exclusion>
+                <!-- we do not use rocksdb but it consumes 60MB in the final JAR -->
+                <exclusion>
+                    <groupId>org.rocksdb</groupId>
+                    <artifactId>rocksdbjni</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>

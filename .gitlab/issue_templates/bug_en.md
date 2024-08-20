@@ -1,40 +1,30 @@
-/title bug: A single line bug description
+# Summary
 
-Summary
-
-
-
-Steps to reproduce the bug
+# Steps to reproduce the bug
 1.
 2.
 3.
 
-What is the error?
+# What is the error?
 
+# What is expected?
 
-
-What is expected?
-
-
-
-Environment:
+# Environment:
 * System version number:
 * Branch/commit:
 * JDK/JRE version:
 * Operating system and version:
 * Browser and version:
 
-Possible solutions
+# Possible solutions
 
-
-
-Related materials:
+# Related materials:
 * E.g., a log, a screenshot, a source/output file
 *
 *
 
-Related issues:
-#
-
+/assign
+/milestone
 /label ~bug ~"short-term roadmap"
+/relate
 /due 14 days

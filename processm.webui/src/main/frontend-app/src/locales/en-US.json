@@ -1,7 +1,7 @@
 {
   "language-name": "English",
   "code": "en-US",
-  "flag": "gb",
+  "flag": "us",
   "navigation": {
     "menu": "Menu",
     "workspaces": "Workspaces",
@@ -155,8 +155,8 @@
     "last-event-external-id-type": "Last event ID datatype",
     "last-event-external-id-type-hint": "For continuous query only: the type of the initial event id. This type is used to supply the database driver with the correct type of the value."
   },
-  "add-data-connector-dialog": {
-    "dialog-title": "Add data connector",
+  "data-connector-dialog": {
+    "dialog-title": "Configure data connector",
     "connection-type": "Connection type",
     "check-configuration": "Check",
     "test-connection": "Test connection",
@@ -172,8 +172,11 @@
     "password": "Password",
     "database-name": "Database name",
     "database": "Database",
+    "collection": "Collection",
+    "https":  "Use HTTPS",
     "trust-server-certificate": "Always trust server certificate",
     "connector-not-supported": "Connection string based connectors are not yet supported",
+    "masked-password-notification": "Remember to change the masked password to the correct value.",
     "validation": {
       "non-empty-field": "The value cannot be empty",
       "connection-string-format": "The value doesn't conform to connection string format",
@@ -186,7 +189,25 @@
     }
   },
   "about": {
-    "page-title": "About ProcessM"
+    "page-title": "About {brand}",
+    "acknowledgments": "Acknowledgments",
+    "beneficiary": "Beneficiary name:",
+    "duration": "Duration:",
+    "grant": "Grant number:",
+    "homepage": "Project home page",
+    "funding-value": "Funding-value:",
+    "license": "Software license",
+    "lider": "LIDER X Programme",
+    "ncbr": "National Centre for Research and Development, Poland",
+    "note": "The development of ProcessM up to version 0.7.0 was financed by The National Centre for Research and Development, Poland, under the LIDER X Programme.",
+    "project-title": "ProcessM: Real-Time Intelligent Process Mining Software",
+    "project-value": "Project value:",
+    "put": "Poznan University of Technology, Poland",
+    "version": "Version {version}"
+  },
+  "licensing": {
+    "page-title": "{brand} software license",
+    "dependencies-licensing": "This software uses the following components under their own licenses:"
   },
   "user-profile": {
     "language": "Language",

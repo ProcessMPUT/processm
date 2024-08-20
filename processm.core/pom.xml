@@ -7,7 +7,7 @@
     <parent>
         <groupId>processm</groupId>
         <artifactId>root</artifactId>
-        <version>0.6-SNAPSHOT</version>
+        <version>${revision}</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -36,7 +36,7 @@
         <dependency>
             <groupId>org.apache.activemq</groupId>
             <artifactId>artemis-jakarta-server</artifactId>
-            <version>2.32.0</version>
+            <version>2.36.0</version>
             <exclusions>
                 <!-- duplicate logger API dependency -->
                 <exclusion>
@@ -313,6 +313,25 @@
                 </executions>
             </plugin>
         </plugins>
+        <resources>
+            <resource>
+                <!-- Processing of resources must be explicitly set because we define special behavior for *.properties -->
+                <directory>src/main/resources</directory>
+                <excludes>
+                    <exclude>**/*.properties</exclude>
+                </excludes>
+                <targetPath>${project.build.outputDirectory}</targetPath>
+            </resource>
+            <resource>
+                <!-- allow using standard maven properties in *.properties files -->
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>**/*.properties</include>
+                </includes>
+                <targetPath>${project.build.outputDirectory}</targetPath>
+            </resource>
+        </resources>
     </build>
 
 </project>

@@ -229,16 +229,6 @@ export class PetriNetSvgManager {
     this._state.removeArc(id);
   }
 
-  updateDimensions(): void {
-    const width = this.width + 50;
-    const height = this.height + 50;
-
-    this._svg.node()?.setAttribute("viewBox", `0 0 ${width} ${height}`);
-    this._svg.node()?.setAttribute("preserveAspectRatio", "xMidYMid meet");
-    this._svg.node()?.style.removeProperty("min-width");
-    this._svg.node()?.style.removeProperty("min-height");
-  }
-
   getNumberOfIntersectingArcs(): number {
     let result = 0;
 

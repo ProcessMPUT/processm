@@ -4,11 +4,12 @@
       <v-flex xs12 sm8 md4>
         <v-card class="elevation-12" min-width="470">
           <v-toolbar color="primary" dark flat>
+            <v-img class="mr-3" max-height="48" max-width="48" src="favicon.png" />
             <v-toolbar-title>{{ $t("login-form.title") }}</v-toolbar-title>
           </v-toolbar>
           <v-card-text>
-            <v-alert type="info" text v-if="config.loginMessage !== ''">
-              {{ config.loginMessage }}
+            <v-alert v-if="app.config.loginMessage" text type="info">
+              {{ app.config.loginMessage }}
             </v-alert>
             <v-form id="loginForm" ref="loginForm" v-model="isValidForm" @submit.prevent="authenticate">
               <v-text-field
@@ -31,10 +32,10 @@
                 @keypress.enter="authenticate"
               ></v-text-field>
               <v-layout>
-                <v-btn v-if="!config.demoMode" name="btn-register" color="primary" text to="register">
+                <v-btn v-if="!app.config.demoMode" color="primary" name="btn-register" text to="register">
                   {{ $t("login-form.register-account") }}
                 </v-btn>
-                <v-btn v-if="!config.demoMode" color="primary" text to="reset-password">
+                <v-btn v-if="!app.config.demoMode" color="primary" text to="reset-password">
                   {{ $t("login-form.reset-password") }}
                 </v-btn>
                 <v-spacer></v-spacer>
@@ -55,10 +56,10 @@
       <template>
         <v-card title="Dialog">
           <v-toolbar color="primary" dark flat>
-            <v-toolbar-title>{{ this.$t("users.organizations") }}</v-toolbar-title>
+            <v-toolbar-title>{{ $t("users.organizations") }}</v-toolbar-title>
           </v-toolbar>
           <v-card-text>
-            {{ this.$t("users.select-organization") }}:
+            {{ $t("users.select-organization") }}:
             <v-select v-model="selectedOrganizationId" item-value="id" :items="organizations" item-text="name" name="combo-organization">
               <template v-slot:item="{ parent, item, on, attrs }">
                 <v-tooltip bottom>
@@ -75,7 +76,7 @@
             <v-spacer></v-spacer>
 
             <v-btn color="primary" @click="organizationSelected" name="btn-select-organization">
-              {{ this.$t("common.submit") }}
+              {{ $t("common.submit") }}
             </v-btn>
           </v-card-actions>
         </v-card>
@@ -88,24 +89,18 @@
 import Vue from "vue";
 import { Component, Inject } from "vue-property-decorator";
 import AccountService from "@/services/AccountService";
-import ConfigService from "@/services/ConfigService";
-import { Config, Organization, UserRoleInOrganization } from "@/openapi";
+import { Organization, UserRoleInOrganization } from "@/openapi";
 import App from "@/App.vue";
 
 @Component
 export default class Login extends Vue {
   @Inject() app!: App;
   @Inject() accountService!: AccountService;
-  @Inject() configService!: ConfigService;
   readonly errorTimeout = 3000;
   isValidForm = false;
   errorMessage = false;
   username = "";
   password = "";
-  config: Config = {
-    loginMessage: "",
-    demoMode: false
-  };
   selectOrganizationDialog: boolean = false;
   organizations: Organization[] = [];
   selectedOrganizationId: string | null = null;
@@ -114,8 +109,6 @@ export default class Login extends Vue {
     // Manually call to resetLocale to overwrite the locale of the user that just logged out
     // Since there's no user at this point, the login page will display in the first available language in the order of preference of the web browser
     this.app.resetLocale();
-    const c = await this.configService.getConfig();
-    Object.assign(this.config, c);
   }
 
   async authenticate() {

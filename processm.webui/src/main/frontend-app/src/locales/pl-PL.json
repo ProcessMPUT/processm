@@ -5,7 +5,7 @@
   "navigation": {
     "menu": "Menu",
     "workspaces": "Przestrzenie robocze",
-    "users": "Użytkownicy",
+    "users": "@:users.page-title",
     "data-stores": "@:data-stores.page-title",
     "pql-interpreter": "Interpreter PQL",
     "about": "@:about.page-title"
@@ -154,8 +154,8 @@
     "last-event-external-id-type": "Typ danych ostatniego ID zdarzenia",
     "last-event-external-id-type-hint": "Tylko dla zapytań ciągłych: typ początkowego identyfikatora zdarzenia. Ten typ jest używany do dostarczania do sterownika bazy danych prawidłowego typu wartości."
   },
-  "add-data-connector-dialog": {
-    "dialog-title": "Dodaj łącze danych",
+  "data-connector-dialog": {
+    "dialog-title": "Konfiguracja łącza danych",
     "connection-type": "Typ połączenia",
     "check-configuration": "Sprawdź",
     "test-connection": "Testuj połączenie",
@@ -171,8 +171,11 @@
     "password": "Hasło",
     "database-name": "Nazwa bazy danych",
     "database": "Baza danych",
+    "collection": "Kolekcja",
+    "https":  "Używaj HTTPS",
     "trust-server-certificate": "Zawsze ufaj certyfikatowi serwera",
     "connector-not-supported": "Łącza danych zdefiniowane za pomocą connection stringa nie są jeszcze wspierane",
+    "masked-password-notification": "Pamiętaj o zmianie zamaskowanego hasła na poprawną wartość.",
     "validation": {
       "non-empty-field": "Wartość nie może być pusta",
       "connection-string-format": "Wartość nie spełnia formatu connection stringa",
@@ -185,7 +188,25 @@
     }
   },
   "about": {
-    "page-title": "O ProcessM"
+    "page-title": "O {brand}",
+    "acknowledgments": "Podziękowania",
+    "beneficiary": "Nazwa beneficjenta:",
+    "duration": "Okres realizacji:",
+    "grant": "Numer projektu:",
+    "homepage": "Strona internetowa projektu",
+    "funding-value": "Wartość dofinansowania:",
+    "license": "Licencja oprogramowania",
+    "lider": "Program LIDER X",
+    "ncbr": "Narodowe Centrum Badań i Rozwoju",
+    "note": "Rozwój ProcessM do wersji 0.7.0 został sfinansowany przez Narodowe Centrum Badań i Rozwoju, w ramach programu LIDER X.",
+    "project-title": "ProcessM: Oprogramowanie Inteligentnej Eksploracji Procesów w Czasie Rzeczywistym",
+    "project-value": "Wartość projektu:",
+    "put": "Politechnika Poznańska",
+    "version": "Wersja {version}"
+  },
+  "licensing": {
+    "page-title": "Licencja oprogramowania {brand} (w języku angielskim)",
+    "dependencies-licensing": "To oprogramowanie wykorzystuje poniższe komponenty na ich własnych licencjach:"
   },
   "user-profile": {
     "language": "Język",
@@ -352,6 +373,7 @@
     "no-candidates": "Nie ma grup które mogłyby zostać dodane do listy kontroli dostępu"
   },
   "common": {
+    "acknowledgments": "Podziękowania",
     "calculate-layout": "Oblicz układ",
     "initial": "Początkowe",
     "final": "Końcowe",

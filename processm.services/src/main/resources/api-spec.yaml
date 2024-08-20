@@ -1880,8 +1880,14 @@ components:
   schemas:
     Config:
       type: object
-      required: [ loginMessage, demoMode ]
+      required: [ brand, version, loginMessage, demoMode ]
       properties:
+        brand:
+          type: string
+          description: The name of this software.
+        version:
+          type: string
+          description: The version of this software.
         loginMessage:
           type: string
           default: ""
@@ -2115,6 +2121,8 @@ components:
           format: uuid
         name:
           type: string
+        role:
+          $ref: '#/components/schemas/OrganizationRole'
     Component:
       type: object
       required: [ id, query, dataStore, type, customProperties ]

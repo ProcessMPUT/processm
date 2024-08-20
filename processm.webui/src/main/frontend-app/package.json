@@ -1,6 +1,6 @@
 {
   "name": "ProcessM",
-  "version": "0.1.0",
+  "version": "0.7.0",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
@@ -39,6 +39,7 @@
     "material-design-icons-iconfont": "^6.7.0",
     "mitt": "^3.0.0",
     "stream-browserify": "^3.0.0",
+    "svg-pan-zoom": "^3.6.1",
     "tree-table-vue-extend": "^1.1.18",
     "typeface-roboto": "^1.1.13",
     "url": "^0.11.3",

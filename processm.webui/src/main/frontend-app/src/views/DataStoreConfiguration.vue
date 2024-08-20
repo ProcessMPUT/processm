@@ -134,7 +134,15 @@
                 </v-tooltip>
                 <v-fade-transition leave-absolute>
                   <div v-if="open" class="add-button-group">
-                    <v-btn class="mx-2" color="primary" @click.stop="addDataConnectorDialog = true" name="btn-add-data-connector">
+                    <v-btn
+                      class="mx-2"
+                      color="primary"
+                      @click.stop="
+                        dataConnectorToEdit = null;
+                        dataConnectorDialog = true;
+                      "
+                      name="btn-add-data-connector"
+                    >
                       {{ $t("data-stores.add-data-connector") }}
                     </v-btn>
                   </div>
@@ -189,6 +197,21 @@
                     </v-btn>
                   </template>
                   <span>{{ $t("common.rename") }}</span>
+                </v-tooltip>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on" name="btn-data-connector-edit">
+                      <v-icon
+                        small
+                        @click="
+                          dataConnectorToEdit = item;
+                          dataConnectorDialog = true;
+                        "
+                        >edit
+                      </v-icon>
+                    </v-btn>
+                  </template>
+                  <span>{{ $t("common.edit") }}</span>
                 </v-tooltip>
                 <v-tooltip bottom>
                   <template v-slot:activator="{ on, attrs }">
@@ -351,11 +374,12 @@
         </v-expansion-panel>
       </v-expansion-panels>
     </v-card>
-    <add-data-connector-dialog
-      v-model="addDataConnectorDialog"
+    <data-connector-dialog
+      v-model="dataConnectorDialog"
       :data-store-id="dataStoreId"
-      @cancelled="addDataConnectorDialog = false"
-      @submitted="addDataConnector"
+      @cancelled="dataConnectorDialog = false"
+      @submitted="dataConnectorsModified"
+      :initial-connector="dataConnectorToEdit"
     />
     <automatic-etl-process-dialog
       v-model="automaticEtlProcessDialogVisible"
@@ -407,7 +431,7 @@ import Vue from "vue";
 import { Component, Inject, Prop, Watch } from "vue-property-decorator";
 import DataStoreService from "@/services/DataStoreService";
 import DataStore, { DataConnector } from "@/models/DataStore";
-import AddDataConnectorDialog from "@/components/data-connections/AddDataConnectorDialog.vue";
+import DataConnectorDialog from "@/components/data-connections/DataConnectorDialog.vue";
 import LogsService from "@/services/LogsService";
 import { waitForRepaint } from "@/utils/waitForRepaint";
 import XesProcessor, { LogItem } from "@/utils/XesProcessor";
@@ -428,7 +452,7 @@ const XesDataTable = () => import("@/components/XesDataTable.vue");
     LogTable,
     ProcessDetailsDialog,
     JdbcEtlProcessDialog: JdbcEtlProcessDialog,
-    AddDataConnectorDialog,
+    DataConnectorDialog,
     XesDataTable,
     FileUploadDialog,
     RenameDialog,
@@ -440,7 +464,7 @@ export default class DataStoreConfiguration extends Vue {
   @Inject() dataStoreService!: DataStoreService;
   @Inject() logsService!: LogsService;
   private readonly xesProcessor = new XesProcessor();
-  addDataConnectorDialog = false;
+  dataConnectorDialog = false;
   automaticEtlProcessDialogVisible = false;
   jdbcEtlProcessDialogVisible = false;
   fileUploadDialog = false;
@@ -459,6 +483,7 @@ export default class DataStoreConfiguration extends Vue {
   processDetailsDialogEtlProcess: EtlProcess | null = null;
   etlProcessToEdit: EtlProcess | null = null;
   renameDataStoreDialog = false;
+  dataConnectorToEdit: DataConnector | null = null;
 
   @Prop({ default: false })
   readonly value!: boolean;
@@ -574,8 +599,8 @@ export default class DataStoreConfiguration extends Vue {
     }
   }
 
-  async addDataConnector() {
-    this.addDataConnectorDialog = false;
+  async dataConnectorsModified() {
+    this.dataConnectorDialog = false;
     await this.loadDataConnectors();
   }
 

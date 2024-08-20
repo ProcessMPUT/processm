@@ -19,7 +19,6 @@ import processm.dbmodels.models.WorkspaceComponent
 import processm.dbmodels.models.Workspaces
 import processm.helpers.mapToArray
 import processm.logging.loggedScope
-import processm.logging.logger
 import processm.services.JsonSerializer
 import processm.services.api.models.*
 import processm.services.helpers.ExceptionReason
@@ -67,7 +66,8 @@ fun Route.WorkspacesApi() {
         get<Paths.Workspaces> {
             val principal = call.authentication.principal<ApiUser>()!!
             val workspaces = workspaceService.getUserWorkspaces(principal.userId)
-                .map { Workspace(it.name, it.id.value) }.toTypedArray()
+                .map { Workspace(it.first.name, it.first.id.value, OrganizationRole.valueOf(it.second.value)) }
+                .toTypedArray()
 
             call.respond(HttpStatusCode.OK, workspaces)
         }
@@ -190,7 +190,7 @@ fun Route.WorkspacesApi() {
                 runCatching { call.receiveNullable<LayoutCollectionMessageBody>() }.getOrNull()?.data
                     ?: throw ApiException(ExceptionReason.UnparsableData)
 
-            aclService.checkAccess(principal.userId, Workspaces, workspace.workspaceId, RoleType.Reader)
+            aclService.checkAccess(principal.userId, Workspaces, workspace.workspaceId, RoleType.Writer)
 
             val layoutData = workspaceLayout
                 .mapKeys { UUID.fromString(it.key) }

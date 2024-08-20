@@ -2,9 +2,12 @@
   <v-dialog fullscreen persistent v-model="value">
     <v-card flat tile>
       <v-card-actions>
-        <v-btn color="primary darken-1" icon @click.stop="$emit('close')">
+        <v-btn color="primary darken-1" icon @click.stop="$emit('discard', componentDetails.id)">
           <v-icon>arrow_back</v-icon>
         </v-btn>
+        <v-spacer></v-spacer>
+        <v-icon>${{ componentDetails.type }}Component</v-icon>
+        {{ $t(`workspace.component.${kebabize(componentDetails.type)}`) }}
         <v-spacer></v-spacer>
         <v-btn color="primary" icon @click.stop="saveChanges">
           <v-icon>save</v-icon>
@@ -17,6 +20,7 @@
           :component-details="component"
           :component-mode="ComponentMode.Edit"
           :update-data="updateData"
+          :is-transient="isTransient"
           @view="$emit('view', componentDetails.id)"
           @edit="$emit('edit', componentDetails.id)"
           @remove="$emit('remove', componentDetails.id)"
@@ -157,6 +161,8 @@ export default class EditComponentDialog extends Vue {
   readonly value!: boolean;
   @Prop()
   readonly workspaceId!: string;
+  @Prop({ default: false })
+  readonly isTransient!: boolean;
 
   /**
    * Set to true to let children update the data model (usually before sending it to the server).

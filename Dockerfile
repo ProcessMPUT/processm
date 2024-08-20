@@ -1,6 +1,7 @@
-FROM adoptopenjdk:11-jre-hotspot
+FROM eclipse-temurin:17
 EXPOSE 2080 2443
-RUN mkdir /processm
-COPY ./processm.launcher/target/launcher-0.6-SNAPSHOT-jar-with-dependencies.jar /processm/
-WORKDIR /processm
-ENTRYPOINT ["java", "-jar", "launcher-0.6-SNAPSHOT-jar-with-dependencies.jar"]
+ARG revision
+ENV revision=$revision
+ADD processm.launcher/target/processm-${revision}-bin.tar.xz /
+WORKDIR /processm-${revision}
+ENTRYPOINT ["sh", "-c", "java -Xmx8G -jar launcher-$revision.jar"]

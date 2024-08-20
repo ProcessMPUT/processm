@@ -1,5 +1,5 @@
 <template>
-  <div v-if="data != null" v-resize:debounce.10="onResize">
+  <div v-if="data != null">
     <petri-net-editor
       ref="editor"
       :debug="false"
@@ -159,10 +159,6 @@ export default class PetriNetComponent extends Vue {
     }
 
     return PlaceType.NORMAL;
-  }
-
-  private onResize(element: Element) {
-    this.$refs.editor.scale();
   }
 
   @Watch("updateData")

@@ -329,19 +329,19 @@ class ProcessMTestingEnvironment : CoroutineScope {
             if (predicate()) return
             Thread.sleep(500)
         }
-        throw IllegalStateException()
+        throw IllegalStateException("The predicate is not satisfied within time limit.")
     }
 
     fun Semaphore.waitUntilAcquired(n: Int) {
         var remaining = n
-        repeat(10) {
+        repeat(10 * n) {
             if (tryAcquire()) {
                 remaining--
                 if (remaining == 0) return
             }
             Thread.sleep(500)
         }
-        throw IllegalStateException()
+        throw IllegalStateException("The semaphore is not acquired within time limit. Expected acquisitions: $n; remaining: $remaining.")
     }
 
     fun <T> waitUntilEquals(expected: T, get: () -> T) {

@@ -1,12 +1,13 @@
 package processm.core.log
 
-import kotlin.collections.HashMap
 import processm.core.log.extension.Extension as LoadedExtension
 
 /**
  * XES Extension element
+ *
+ * @param allowExternalStreams If false and the extension is not available locally, [extension] will remain null
  */
-class Extension(name: String?, prefix: String?, uri: String?) {
+class Extension(name: String?, prefix: String?, uri: String?, allowExternalStreams: Boolean = true) {
     /**
      * The name of the extension from XES log file.
      */
@@ -25,7 +26,8 @@ class Extension(name: String?, prefix: String?, uri: String?) {
     /**
      * Loaded extension
      */
-    val extension: LoadedExtension? = if (uri.isNullOrEmpty()) null else XESExtensionLoader.loadExtension(uri)
+    val extension: LoadedExtension? =
+        if (uri.isNullOrEmpty()) null else XESExtensionLoader.loadExtension(uri, allowExternalStreams)
 
     internal fun mapStandardToCustomNames(nameMap: MutableMap<String, String>) {
         val extDecl = this.extension ?: return

@@ -8,30 +8,13 @@
     <parent>
         <groupId>processm</groupId>
         <artifactId>root</artifactId>
-        <version>0.6-SNAPSHOT</version>
+        <version>${revision}</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>webui</artifactId>
     <packaging>jar</packaging>
     <name>ProcessM User Interface</name>
-    <properties>
-        <outputType>development</outputType>
-    </properties>
-
-    <profiles>
-        <profile>
-            <id>production</id>
-            <activation>
-                <property>
-                    <name>production</name>
-                </property>
-            </activation>
-            <properties>
-                <outputType>production</outputType>
-            </properties>
-        </profile>
-    </profiles>
 
     <build>
         <plugins>
@@ -53,8 +36,19 @@
                         </goals>
                         <phase>initialize</phase>
                         <configuration>
-                            <nodeVersion>v18.18.0</nodeVersion>
-                            <npmVersion>9.8.1</npmVersion>
+                            <nodeVersion>v18.20.4</nodeVersion>
+                            <npmVersion>10.7.0</npmVersion>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>npm update version</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <phase>generate-sources</phase>
+                        <configuration>
+                            <arguments>version --allow-same-version ${revision}</arguments>
                         </configuration>
                     </execution>
 

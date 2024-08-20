@@ -76,6 +76,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Place } from "@/components/petri-net-editor/model/Place";
 import { Transition } from "@/components/petri-net-editor/model/Transition";
 import { Arc } from "@/components/petri-net-editor/model/Arc";
+import svgPanZoom from "svg-pan-zoom";
 
 @Component({
   name: "petri-net-editor",
@@ -124,6 +125,7 @@ export default class PetriNetEditor extends Vue {
   private contextMenuItems: ContextMenuItem[] = [];
   private petriNetManager!: PetriNetSvgManager;
   private layouter!: Layouter;
+  private zoomer?: SvgPanZoom.Instance;
 
   // noinspection JSUnusedGlobalSymbols
   mounted() {
@@ -165,11 +167,8 @@ export default class PetriNetEditor extends Vue {
     if (this.runLayouterOnStart) {
       this.runLayouter();
     }
-    this.petriNetManager.updateDimensions();
-  }
-
-  scale(): void {
-    this.petriNetManager.updateDimensions();
+    if (this.zoomer === undefined) this.zoomer = svgPanZoom(this.$refs.editorSvg);
+    this.zoomer.updateBBox().fit();
   }
 
   getPetriNetJson(): {
@@ -256,7 +255,6 @@ export default class PetriNetEditor extends Vue {
     }
 
     this.petriNetManager.state = this.layouter.run(this.petriNetManager.state);
-    this.petriNetManager.updateDimensions();
   }
 
   private runDebugger(): void {

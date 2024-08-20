@@ -1,24 +1,23 @@
-/title feat: The name of new functionality
+# Summary
 
-Summary
-
-
-
-Assumptions
+# Assumptions
 * Detail 1
 * Detail 2
 * Detail 3
 * Code location: `processm.<module>.<package>`
 
-Tasks
+# Tasks
 * [ ] Design
 * [ ] Implementation
 * [ ] Tests
 
-Related materials:
+# Related materials
 *
 *
 *
 
-Related issues:
-#
+/assign
+/milestone
+/label
+/relate
+/due
