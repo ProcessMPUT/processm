@@ -69,6 +69,14 @@ ARG PROCESSM_VERSION=0.7.0
 ENV PROCESSM_VERSION=$PROCESSM_VERSION
 ADD target/processm-${PROCESSM_VERSION}-bin.tar.xz /
 RUN mv /processm-${PROCESSM_VERSION} /processm
+
+RUN set -eux; apk add --no-cache msmtp; rm -rf /var/cache/apk/*
+# replace sendmail with msmtp in the default configuration, as our sendmail is provided by busybox and rather clumsy
+# however, we should not replace sendmail with msmtp, as msmtp does not exactly behave like a proper sendmail (not that the busybox variant does)
+RUN sed 's/\/usr\/sbin\/sendmail/\/usr\/bin\/msmtp/g' /processm/conf/config.properties >/processm/conf/config.properties.82D9ABXukU
+RUN mv /processm/conf/config.properties.82D9ABXukU /processm/conf/config.properties
+RUN ln -s /processm/conf/msmtprc /etc/msmtprc
+
 COPY docker-entrypoint.sh /processm
 VOLUME /processm/conf /processm/data
 WORKDIR /processm

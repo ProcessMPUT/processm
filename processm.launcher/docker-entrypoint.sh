@@ -1,8 +1,14 @@
 #!/bin/sh
 
 CONFIG_FILE=/processm/conf/config.properties
+MSMTPRC_FILE=/processm/conf/msmtprc
 SLEEP=1
 REPETITIONS=10
+
+if [ ! -f "$MSMTPRC_FILE" ] && [ -n "$MSMTPRC" ]
+then
+  echo "$MSMTPRC" >"$MSMTPRC_FILE"
+fi
 
 if [ -n "$POSTGRES_PASSWORD" ]
 then
