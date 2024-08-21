@@ -99,7 +99,7 @@
                             <arguments>
                                 <argument>build</argument>
                                 <argument>--build-arg</argument>
-                                <argument>revision=${revision}</argument>
+                                <argument>PROCESSM_VERSION=${revision}</argument>
                                 <argument>-t</argument>
                                 <argument>processm:${revision}</argument>
                                 <argument>../</argument>
