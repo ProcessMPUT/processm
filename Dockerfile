@@ -1,7 +1,75 @@
-FROM eclipse-temurin:17
+FROM timescale/timescaledb:latest-pg16-oss
+
+###############################
+# Copied from https://github.com/adoptium/containers/blob/d13a1cc170046e3b3ea4b35c82e1ff4b5b866ca1/17/jre/alpine/Dockerfile
+
+ENV JAVA_HOME=/opt/java/openjdk
+ENV PATH=$JAVA_HOME/bin:$PATH
+
+# Default to UTF-8 file.encoding
+ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
+
+RUN set -eux; \
+    apk add --no-cache \
+        # java.lang.UnsatisfiedLinkError: libfontmanager.so: libfreetype.so.6: cannot open shared object file: No such file or directory
+        # java.lang.NoClassDefFoundError: Could not initialize class sun.awt.X11FontManager
+        # https://github.com/docker-library/openjdk/pull/235#issuecomment-424466077
+        fontconfig ttf-dejavu \
+        # utilities for keeping Alpine and OpenJDK CA certificates in sync
+        # https://github.com/adoptium/containers/issues/293
+        ca-certificates p11-kit-trust \
+        # locales ensures proper character encoding and locale-specific behaviors using en_US.UTF-8
+        musl-locales musl-locales-lang \
+        tzdata \
+        # Contains `csplit` used for splitting multiple certificates in one file to multiple files, since keytool can
+        # only import one at a time.
+        coreutils \
+        # Needed to extract CN and generate aliases for certificates
+        openssl \
+    ; \
+    rm -rf /var/cache/apk/*
+
+ENV JAVA_VERSION=jdk-17.0.12+7
+
+RUN set -eux; \
+    ARCH="$(apk --print-arch)"; \
+    case "${ARCH}" in \
+       x86_64) \
+         ESUM='63bae276cc322532b451ae7473127c92a75db16cc95473577f133cd09349822a'; \
+         BINARY_URL='https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.12%2B7/OpenJDK17U-jre_x64_alpine-linux_hotspot_17.0.12_7.tar.gz'; \
+         ;; \
+       *) \
+         echo "Unsupported arch: ${ARCH}"; \
+         exit 1; \
+         ;; \
+    esac; \
+    wget -O /tmp/openjdk.tar.gz ${BINARY_URL}; \
+    echo "${ESUM} */tmp/openjdk.tar.gz" | sha256sum -c -; \
+    mkdir -p "$JAVA_HOME"; \
+    tar --extract \
+        --file /tmp/openjdk.tar.gz \
+        --directory "$JAVA_HOME" \
+        --strip-components 1 \
+        --no-same-owner \
+    ; \
+    rm -f /tmp/openjdk.tar.gz ${JAVA_HOME}/lib/src.zip;
+
+RUN set -eux; \
+    echo "Verifying install ..."; \
+    echo "java --version"; java --version; \
+    echo "Complete."
+
+################################################
+
+LABEL maintainer="ProcessM https://processm.cs.put.poznan.pl/"
+
 EXPOSE 2080 2443
-ARG revision
-ENV revision=$revision
-ADD processm.launcher/target/processm-${revision}-bin.tar.xz /
-WORKDIR /processm-${revision}
-ENTRYPOINT ["sh", "-c", "java -Xmx8G -jar launcher-$revision.jar"]
+ARG PROCESSM_VERSION=0.7.0
+# The variable is called PROCESSM_VERSION so it looks like PG_VERSION and JAVA_VERSION that are already in the image
+ENV PROCESSM_VERSION=$PROCESSM_VERSION
+ADD processm.launcher/target/processm-${PROCESSM_VERSION}-bin.tar.xz /
+RUN mv /processm-${PROCESSM_VERSION} /processm
+COPY docker-entrypoint.sh /processm
+VOLUME /processm/conf /processm/data
+WORKDIR /processm
+ENTRYPOINT ["sh", "docker-entrypoint.sh"]
