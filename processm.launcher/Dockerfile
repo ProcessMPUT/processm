@@ -67,7 +67,7 @@ EXPOSE 2080 2443
 ARG PROCESSM_VERSION=0.7.0
 # The variable is called PROCESSM_VERSION so it looks like PG_VERSION and JAVA_VERSION that are already in the image
 ENV PROCESSM_VERSION=$PROCESSM_VERSION
-ADD processm.launcher/target/processm-${PROCESSM_VERSION}-bin.tar.xz /
+ADD target/processm-${PROCESSM_VERSION}-bin.tar.xz /
 RUN mv /processm-${PROCESSM_VERSION} /processm
 COPY docker-entrypoint.sh /processm
 VOLUME /processm/conf /processm/data
