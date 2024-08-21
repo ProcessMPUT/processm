@@ -25,10 +25,10 @@
            NIO: Plain Java Files
        -->
         <journal-type>NIO</journal-type>
-        <paging-directory>data/paging</paging-directory>
-        <bindings-directory>data/bindings</bindings-directory>
-        <journal-directory>data/journal</journal-directory>
-        <large-messages-directory>data/large-messages</large-messages-directory>
+        <paging-directory>data/broker/paging</paging-directory>
+        <bindings-directory>data/broker/bindings</bindings-directory>
+        <journal-directory>data/broker/journal</journal-directory>
+        <large-messages-directory>data/broker/large-messages</large-messages-directory>
         <journal-datasync>true</journal-datasync>
         <journal-min-files>2</journal-min-files>
         <journal-pool-files>10</journal-pool-files>
