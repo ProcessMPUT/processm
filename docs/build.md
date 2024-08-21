@@ -36,6 +36,10 @@ the local Docker store the self-contained image `processm:<version>`.
 
 Follow the [administrative manual](administrative_manual.md) for configuration and running instructions.
 
+Omit the `-DskipTests=true` option to run full pipeline of building and testing. Note that the testing phase is time
+consuming (takes even over an hour on modern machines) and requires the database connection to be configured. Refer to
+the [administrative manual](administrative_manual.md) for configuration of database connection.
+
 ### Export the Docker image to file
 
 While using the custom-built docker image, it may be useful to save it to a file for the use in another host.
