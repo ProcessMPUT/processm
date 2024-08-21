@@ -102,7 +102,7 @@
                                 <argument>PROCESSM_VERSION=${revision}</argument>
                                 <argument>-t</argument>
                                 <argument>processm:${revision}</argument>
-                                <argument>../</argument>
+                                <argument>.</argument>
                             </arguments>
                         </configuration>
                     </execution>
