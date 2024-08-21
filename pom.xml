@@ -45,7 +45,7 @@
     </modules>
 
     <properties>
-        <revision>0.7.0</revision>
+        <revision>0.7.0${revision.suffix}</revision>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <kotlin.version>1.8.22</kotlin.version>
@@ -99,6 +99,7 @@
                 <outputType>development</outputType>
                 <maven.compiler.debug>true</maven.compiler.debug>
                 <maven.compiler.debugLevel>lines,vars,source</maven.compiler.debugLevel>
+                <revision.suffix>-dev</revision.suffix>
             </properties>
         </profile>
         <profile>
@@ -112,6 +113,7 @@
                 <outputType>production</outputType>
                 <maven.compiler.debug>false</maven.compiler.debug>
                 <maven.compiler.debugLevel>none</maven.compiler.debugLevel>
+                <revision.suffix/>
             </properties>
         </profile>
     </profiles>
