@@ -2,8 +2,6 @@
 
 CONFIG_FILE=/processm/conf/config.properties
 MSMTPRC_FILE=/processm/conf/msmtprc
-SLEEP=1
-REPETITIONS=10
 
 if [ ! -f "$MSMTPRC_FILE" ] && [ -n "$MSMTPRC" ]
 then
@@ -19,21 +17,11 @@ then
   tmp=$(mktemp)
   (sed 's/^processm.core.persistence.connection.URL[^[:alnum:]].*$/#&/gi' <"$CONFIG_FILE"; echo "processm.core.persistence.connection.URL=$url") >"$tmp"
   mv "$tmp" "$CONFIG_FILE"
+  chown root:processm "$CONFIG_FILE"
+  chmod 640 "$CONFIG_FILE"
 fi
-
-url=$(grep '^processm.core.persistence.connection.URL[^[:alnum:]]' <"$CONFIG_FILE" |tail -n 1|sed 's/^[^=]*=[[:space:]]*jdbc://')
 
 /usr/local/bin/docker-entrypoint.sh postgres &
 
-for i in $(seq 1 $REPETITIONS)
-do
-  if psql "$url" </dev/null
-  then
-    exec java -Xmx8G -jar "launcher-$PROCESSM_VERSION.jar"
-  else
-    sleep $SLEEP
-  fi
-done
-
-echo "The database is not available at $url. Terminating."
-exit 1
+url=$(grep '^processm.core.persistence.connection.URL[^[:alnum:]]' <"$CONFIG_FILE" |tail -n 1|sed 's/^[^=]*=[[:space:]]*jdbc://')
+URL="$url" exec gosu processm:processm sh docker-start-processm.sh
