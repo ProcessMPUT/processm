@@ -117,8 +117,8 @@ then the default scope of `event` applies.
 
 ### Escape sequences in `string` literals
 
-The `string` literals in PQL may contain escape sequences. An escape sequence consists of the backslash character `\`
-and the sequence of one or more characters. The below table shows the complete list of available escape sequences.
+The `string` literals in PQL may contain escape sequences. An escape sequence consists of the backslash character ``\``
+and the sequence of one or more characters. The table below shows the complete list of available escape sequences.
 
 | Escape sequence     | Meaning                                                                                |
 |---------------------|----------------------------------------------------------------------------------------|
@@ -130,8 +130,8 @@ and the sequence of one or more characters. The below table shows the complete l
 | `\o`, `\oo`, `\ooo` | Octal byte value, where `o` is a number from the range from 0 to 7                     |
 | `\uxxxx`            | 16-bit Unicode character, where `x` is a hexadecimal number from the range from 0 to F |
 
-Any other character following the backslash `\` is read literally. To include a backslash character, write two
-backslashes `\\`; to include a single-quote in the single-quoted string use `\'`, and to include a double-quote in the
+Any other character following the backslash ``\`` is read literally. To include a backslash character, write two
+backslashes ``\\``; to include a single-quote in the single-quoted string use `\'`, and to include a double-quote in the
 double-quoted string use `\"`.
 
 It is the user's responsibility that the byte sequences created using the octal and Unicode escape sequences are valid
@@ -368,7 +368,7 @@ All arithmetic operators yield `null` if any of their operands is `null`.
     * `_` - matches exactly one any character,
     * `%` - matches zero or more characters.
       To match a literal `_` or `%` without matching other characters, the respective character in the pattern must be
-      preceded by the escape character `\`. To match the escape character itself, write two escape characters.
+      preceded by the escape character ``\``. To match the escape character itself, write two escape characters.
 * `string matches string -> boolean` - evaluates to `true` if and only if the first string matches the regular
   expression specified by the second string, `false` otherwise. The match may occur anywhere within the string unless
   the regular expression is explicitly anchored to the beginning or the end of the string. The regular expression must
