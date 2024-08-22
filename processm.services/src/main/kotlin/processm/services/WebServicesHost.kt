@@ -37,7 +37,7 @@ class WebServicesHost : Service {
             env = commandLineEnvironment(args)
         } catch (e: IllegalArgumentException) {
             if (!e.message!!.contains("-sslKeyStore")) throw e
-            logger.warn("SSL certificate is not given, generating a self-signed certificate. Use -sslKeyStore= command line option to set certificate file.")
+            logger.warn("SSL certificate is not given, generating a self-signed certificate. Configure the certificate in the application.conf configuration file.")
             val certFile = File.createTempFile("ProcessM_SSL", ".jks").apply {
                 parentFile.mkdirs()
                 deleteOnExit()
