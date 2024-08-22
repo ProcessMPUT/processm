@@ -67,6 +67,10 @@ EXPOSE 2080 2443
 ARG PROCESSM_VERSION=0.7.0
 # The variable is called PROCESSM_VERSION so it looks like PG_VERSION and JAVA_VERSION that are already in the image
 ENV PROCESSM_VERSION=$PROCESSM_VERSION
+
+# I've tried to fix uid and gid, but busybox seemed to have some problems with it. Still, until something changes in alpine they seem to be 1000:1000
+RUN adduser -s /bin/false -D -H -h /processm processm processm
+
 ADD target/processm-${PROCESSM_VERSION}-bin.tar.xz /
 RUN mv /processm-${PROCESSM_VERSION} /processm
 
@@ -78,6 +82,13 @@ RUN mv /processm/conf/config.properties.82D9ABXukU /processm/conf/config.propert
 RUN ln -s /processm/conf/msmtprc /etc/msmtprc
 
 COPY docker-entrypoint.sh /processm
+COPY docker-start-processm.sh /processm
+
+RUN mkdir /processm/data
+RUN chown processm:processm /processm/data
+RUN chgrp -R processm /processm/conf
+RUN chmod -R 640 /processm/conf/*
+
 VOLUME /processm/conf /processm/data
 WORKDIR /processm
 ENTRYPOINT ["sh", "docker-entrypoint.sh"]
