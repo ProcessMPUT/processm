@@ -32,7 +32,8 @@ mvn clean install -DskipTests=true -T1C -P production
 
 The above commands produce a deployment package `./processm.launcher/target/processm-<version>.tar.xz`, install
 all Java dependencies and compiled project Java modules in the local Maven repository. It also produces and installs in
-the local Docker store the self-contained image `processm:<version>`.
+the local Docker store the self-contained image `processm:<version>`, where `<version>` is a placeholder for ProcessM
+version.
 
 Follow the [administrative manual](administrative_manual.md) for configuration and running instructions.
 
@@ -46,13 +47,15 @@ While using the custom-built docker image, it may be useful to save it to a file
 To do so, run the command:
 
 ```shell
-docker save -o processm-docker-image.tar processm:<version>
+docker save -o processm-<version>-docker.tar processm:<version>
 ```
+
+where `<version>` is a placeholder for ProcessM version.
 
 To run this custom image on another machine, first load it into docker store using command:
 
 ```shell
-docker load -i ./processm-docker-image.tar
+docker load -i ./processm-<version>-docker.tar
 ```
 
 Then, follow the [administrative manual](administrative_manual.md) for configuration and running instructions.
