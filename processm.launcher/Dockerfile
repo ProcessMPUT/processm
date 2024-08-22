@@ -81,8 +81,7 @@ RUN sed 's/\/usr\/sbin\/sendmail/\/usr\/bin\/msmtp/g' /processm/conf/config.prop
 RUN mv /processm/conf/config.properties.82D9ABXukU /processm/conf/config.properties
 RUN ln -s /processm/conf/msmtprc /etc/msmtprc
 
-COPY docker-entrypoint.sh /processm
-COPY docker-start-processm.sh /processm
+COPY src/main/docker/* /processm/
 
 RUN mkdir /processm/data
 RUN chown processm:processm /processm/data
