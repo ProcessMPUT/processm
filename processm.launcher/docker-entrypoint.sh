@@ -21,7 +21,8 @@ then
   chmod 640 "$CONFIG_FILE"
 fi
 
-/usr/local/bin/docker-entrypoint.sh postgres &
+#--auth-host to disable the default trust authentication in TCP/IP localhost connections
+POSTGRES_INITDB_ARGS="--auth-host=scram-sha-256" /usr/local/bin/docker-entrypoint.sh postgres &
 
 url=$(grep '^processm.core.persistence.connection.URL[^[:alnum:]]' <"$CONFIG_FILE" |tail -n 1|sed 's/^[^=]*=[[:space:]]*jdbc://')
 URL="$url" exec gosu processm:processm sh docker-start-processm.sh
