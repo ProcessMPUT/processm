@@ -88,7 +88,10 @@ public class HawtioMain {
         WebAppContext webapp = createHawtioWebapp(server, scheme);
 
         // lets set a temporary directory so jetty doesn't bork if some process zaps /tmp/*
-        String homeDir = System.getProperty("user.home", ".") + "/.hawtio";
+        String homeDir = System.getProperty("hawtio.homeDir");
+        if(homeDir == null) {
+            homeDir = "data/hawtio/";
+        }
         String tempDirPath = homeDir + "/tmp";
         File tempDir = new File(tempDirPath);
         tempDir.mkdirs();
