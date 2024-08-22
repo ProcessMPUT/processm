@@ -76,7 +76,7 @@ clauses, except as an argument to an [aggregation function](#aggregation-functio
 
 ## Data types
 
-PQL distinguishes the below data types:
+PQL distinguishes the data types below:
 
 * `uuid` - an universally unique identifier,
 * `string` - an UTF-8-encoded text,
@@ -100,7 +100,7 @@ PQL supports the use of literals in queries. The representation of the literal d
 * A `uuid` is a universally unique identifier compliant with
   the [ISO/IEC 9834-8:2014 standard](https://www.iso.org/standard/62795.html), 32 hexadecimal (base-16) digits,
   displayed in five groups separated by hyphens, in the form of 8-4-4-4-12,
-* A `string` literal is a `'single-quoted'` or `"double-quoted"` string; backslash `\` can be used as an escape
+* A `string` literal is a `'single-quoted'` or `"double-quoted"` string; backslash ``\`` can be used as an escape
   character, see below for the details,
 * A `number` literal is a valid [IEEE 754-2019](https://doi.org/10.1109%2FIEEESTD.2019.8766229) string representation of
   a number, such as e.g., the decimal point number `3.14` and the scientific notation number `1.23E45`,

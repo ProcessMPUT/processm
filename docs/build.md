@@ -4,10 +4,11 @@
 
 Before running build, make sure that the following dependencies are installed and working:
 
-* Java Development Kit 17
-* Maven 3.9
-* Docker 27
-* TimeScaleDB 2.15 + PostgreSQL 16 (not required for build, but required for development)
+* [Java Development Kit 17](https://adoptium.net/temurin/releases/?version=17/)
+* [Apache Maven 3.9](https://maven.apache.org/download.cgi)
+* [Docker 27](https://www.docker.com/)
+* [PostgreSQL 16](https://www.postgresql.org/download/) + [TimeScaleDB 2.15](https://www.docker.com/) (not required for
+  build, but required for testing and development)
 
 The remaining dependencies will be downloaded and installed automatically by the build system.
 
@@ -16,7 +17,7 @@ The remaining dependencies will be downloaded and installed automatically by the
 The build system distinguishes the development and production builds. The development package has debugging symbols
 and code maps compiled in, while the production build is striped out of them. By default, it compiles the development
 package and appends `-dev` suffix to the version number. To create production package, enable `production` profile in
-maven.
+Maven.
 
 To create the development package of ProcessM from sources, execute the following command in the main directory:
 
@@ -37,9 +38,9 @@ version.
 
 Follow the [administrative manual](administrative_manual.md) for configuration and running instructions.
 
-Omit the `-DskipTests=true` option to run full pipeline of building and testing. Note that the testing phase is time
+Omit the `-DskipTests=true` argument to run full pipeline of building and testing. Note that the testing phase is time
 consuming (takes even over an hour on modern machines) and requires the database connection to be configured. Refer to
-the [administrative manual](administrative_manual.md) for configuration of database connection.
+the [administrative manual](administrative_manual.md) for the configuration of a database connection.
 
 ### Export the Docker image to file
 

@@ -65,15 +65,15 @@ components into the workspace and flexibly configure their layout.
 
 To add workspace, navigate to the Workspaces view and click the plus button at the bottom pane. To add a component,
 click the `Add new component` button at the top of the workspace and select component type. For each component, you are
-required to set name, data store for event logs that you work with, and a [PQL](docs/pql.md) to retrieve events for the
-calculation of process model, KPI, or log view. Unlock the workspace layout using the `Unlock the area` button, and lay
-out components for your convenience.
+required to set name, data store for event logs that you work with, and a [PQL](docs/pql.md) query to retrieve events
+for the calculation of process model, KPI, or log view. Unlock the workspace layout using the `Unlock the area` button,
+and lay out components for your convenience.
 
 The content of the components calculates in the background and refreshes automatically, as new data matching the PQL
 query arrives. You will be notified for acceptance of the changes in the process models.
 
-ProcessM also calculates automatically typical KPIs for parts of the process models: activities, and arcs. They consist
-of lead, service, waiting times, running costs, etc. To observe non-conformance of process model with data, click the
+ProcessM also calculates automatically common KPIs for parts of the process models: activities, and arcs. They consist
+of lead, service, waiting times, running costs, etc. To observe non-conformance of a process model with data, click the
 `Alignments` button at the top of process model. Alignments are available only for process models with executable
 semantics, e.g., Causal nets and Petri nets.
 

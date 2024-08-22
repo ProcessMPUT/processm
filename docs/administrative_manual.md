@@ -64,7 +64,7 @@ isolated instance of PostgreSQL dedicated to ProcessM only.
 
 To install ProcessM, please extract the binary package [
 `processm-<version>.tar.xz`](https://github.com/ProcessMPUT/processm/releases)
-to the desired location. On linux and macOS use the terminal command:
+to the desired location. On Linux and macOS use the terminal command:
 
 ```bash
 tar -xf processm-<version>.tar.xz
@@ -76,7 +76,7 @@ On Windows use an archiver tool like [7-Zip](https://7-zip.org/).
 
 Before the first run it may be required to set basic configuration options, e.g., database connection parameters. All
 configuration files are stored in the `conf` directory in the main ProcessM directory. The main configuration file is
-`config.properties`. Edit this file using a text editor, e.g., vim on linux/macOS or Notepad on Windows.
+`config.properties`. Edit this file using a text editor, e.g., vim on Linux/macOS or Notepad on Windows.
 
 To set up database connection, uncomment if necessary and set the property `processm.core.persistence.connection.URL` to
 a valid [JDBC connection string](https://jdbc.postgresql.org/documentation/use/#connection-parameters). For instance:

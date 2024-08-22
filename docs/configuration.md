@@ -11,8 +11,8 @@ property name, and `value` is the property value. Lines starting with the hash `
 
 The same properties can be loaded from the environment variables, however, due to the
 [limitations of the operating systems](https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap08.html#tag_08)
-all letters in keys must be converted to uppercase and dots replaced with underscores `_`. For instance of database
-connection string, the valid setting in `config.properties` is given by line:
+all letters in keys must be converted to uppercase and dots replaced with underscores `_`. For instance of a database
+connection string, a valid setting in `config.properties` may be given by line:
 
 ```properties
 processm.core.persistence.connection.URL=jdbc:postgresql://host:port/database?user=user&password=password
