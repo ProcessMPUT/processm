@@ -13,7 +13,7 @@ for i in $(seq 1 $REPETITIONS)
 do
   if psql "$URL" </dev/null
   then
-    exec java -Xmx8G -jar "launcher-$PROCESSM_VERSION.jar"
+    exec sh processm.sh
   else
     sleep $SLEEP
   fi
