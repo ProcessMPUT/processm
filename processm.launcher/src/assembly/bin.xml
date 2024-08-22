@@ -39,6 +39,13 @@
             </includes>
         </fileSet>
         <fileSet>
+            <directory>${parent.basedir}/processm.services/src/main/resources</directory>
+            <outputDirectory>conf</outputDirectory>
+            <includes>
+                <include>application.conf</include>
+            </includes>
+        </fileSet>
+        <fileSet>
             <directory>${project.build.scriptSourceDirectory}</directory>
             <outputDirectory></outputDirectory>
             <fileMode>0755</fileMode>
