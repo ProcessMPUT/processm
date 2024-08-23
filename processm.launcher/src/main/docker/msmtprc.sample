@@ -1,0 +1,11 @@
+account        gmail
+auth           on
+tls            on
+host           smtp.gmail.com
+port           465
+tls_starttls   off
+from           username@gmail.com
+user           username
+password       plain-text-password
+
+account default: gmail
