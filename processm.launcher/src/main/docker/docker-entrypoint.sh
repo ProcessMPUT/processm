@@ -8,6 +8,12 @@ then
   echo "$MSMTPRC" >"$MSMTPRC_FILE"
 fi
 
+if [ ! -s "$PGDATA/PG_VERSION" ] && [ -z "$POSTGRES_PASSWORD" ]
+then
+  POSTGRES_PASSWORD=$(dd if=/dev/urandom count=1 bs=12|base64)
+  export POSTGRES_PASSWORD
+fi
+
 if [ -n "$POSTGRES_PASSWORD" ]
 then
   # := is used to set the varabiles if they are not set. This ensures that the DB initialization script will not use different defaults
