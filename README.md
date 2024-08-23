@@ -24,7 +24,7 @@ configuration of dependencies.
 For Docker users, download and run ProcessM by simply executing the following command:
 
 ```bash
-docker run -d -p 80:2080 -p 443:2443 -e POSTGRES_PASSWORD=$(dd if=/dev/urandom count=1 bs=12|base64) --mount source=processm_conf,target=/processm/conf --mount source=processm_data,target=/processm/data --mount source=processm_db,target=/var/lib/postgresql/data processm/processm-server-full:latest
+docker run -d -p 80:2080 -p 443:2443 --name processm processm/processm-server-full:latest
 ```
 
 #### Local installation

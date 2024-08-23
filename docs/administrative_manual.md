@@ -4,12 +4,10 @@
 
 TL;DR: Run the following command and enjoy fully-fledged ProcessM with configuration and data persistence.
 ```shell
-docker run -d -p 80:2080 -p 443:2443 -e POSTGRES_PASSWORD=$(dd if=/dev/urandom count=1 bs=12|base64) --mount source=processm_conf,target=/processm/conf --mount source=processm_data,target=/processm/data --mount source=processm_db,target=/var/lib/postgresql/data processm/processm-server-full:latest 
+docker run -d -p 80:2080 -p 443:2443 --name processm processm/processm-server-full:latest 
 ```
-This will bring up a new Docker container with a random database password, exposing ProcessM on the host ports 80 (HTTP)
-and 443 (HTTPS with a self-signed certificate). It will also create three volumes: `processm_conf`, `processm_data`, and
-`processm_db` that will ensure persistence of the configuration and data, and enable re-creation of the container without
-a data loss.
+This will bring up a new Docker container named `processm` with a random database password, exposing ProcessM on the host 
+ports 80 (HTTP) and 443 (HTTPS with a self-signed certificate) and no data persistence exceeding the lifetime of the container.
 
 ### Volumes
 
@@ -20,13 +18,18 @@ The ProcessM Docker image exposes three Docker volumes:
 * `/var/lib/postgresql/data` where the TimescaleDB (PostgreSQL) database is stored.
 
 You may need to access the content of the `/processm/conf` from the host system to adjust the ProcessM configuration (e.g., add SSL certificate).
-Use `docker volume inspect processm_conf` (where `processm_conf` is the volume name you have used with `docker run`) to
-check the path where the volume is available at your host.
-
+Follow the Docker documentation on how to access a volume (see, e.g., [the Docker Desktop documentation](https://docs.docker.com/desktop/use-desktop/volumes/)).
 
 The `/var/lib/postgresql/data` volume is maintained by the TimescaleDB base image
-[timescale/timescaledb:latest-pg16](https://hub.docker.com/r/timescale/timescaledb/). 
+[timescale/timescaledb:latest-pg16-oss](https://hub.docker.com/r/timescale/timescaledb/). 
 See [its description](https://hub.docker.com/r/timescale/timescaledb) for more information.
+
+To expose the volumes to the host environment, add the following to the `docker run` command:
+```shell
+--mount source=processm_conf,target=/processm/conf --mount source=processm_data,target=/processm/data --mount source=processm_db,target=/var/lib/postgresql/data
+```
+This will create three volumes: `processm_conf`, `processm_data`, and `processm_db` that will ensure persistence of the 
+configuration and data, and enable re-creation of the container without a data loss.
 
 You can safely reuse the volumes between different ProcessM containers (one at a time). Neither the database, nor the configuration
 will be overriden or removed.
@@ -45,18 +48,17 @@ Due to security concerns, unencrypted 2080 should never be exposed to a wide net
 ### Environment
 
 The container makes use of all the environment variables specified by the TimescaleDB base image
-[timescale/timescaledb:latest-pg16](https://hub.docker.com/r/timescale/timescaledb/). In particular, the following
+[timescale/timescaledb:latest-pg16-oss](https://hub.docker.com/r/timescale/timescaledb/). In particular, the following
 environment variables are of note:
 * `POSTGRES_DB` the name of the main ProcessM database, defaults to `processm`;
 * `POSTGRES_USER` the name of the administrator user of the database, defaults to `postgres`;
-* `POSTGRES_PASSWORD`, the password for the user. There is no default, the password **must be specified** when creating 
-   a container with a new database or configuration volume.
+* `POSTGRES_PASSWORD`, the password for the user. By default a strong random password is generated.
   * **Caveat 1**: If you bring up a container with a pre-populated `/var/lib/postgresql/data` volume, but with an empty 
-    `/processm/conf` directory, you must specify a database password (and, optionally, `POSTGRES_DB` and `POSTGRES_USER`) 
+    `/processm/conf` directory, you must specify the database password (and, optionally, `POSTGRES_DB` and `POSTGRES_USER`) 
     that will permit accessing the database. They will not overwrite the database configuration.
   * **Caveat 2**: Even if `/processm/conf` is populated, the environment variable `POSTGRES_PASSWORD` takes precedence
     and the configuration is updated accordingly. Hence, if you create a new container using an old configuration you
-    must either specify the password (and, optionally, `POSTGRES_DB` and `POSTGRES_USER`) or not specify it at all.
+    must either leave `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` empty, or set them to old values.
 
 Moreover, the container accepts the `MSMTPRC` variable, which is expected to contain configuration for the `msmtp` daemon 
 (see below). If the file `/processm/conf/msmtprc` does not exist, the content of the variable will be written to the file.
