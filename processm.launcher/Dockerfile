@@ -64,7 +64,7 @@ RUN set -eux; \
 LABEL maintainer="ProcessM https://processm.cs.put.poznan.pl/"
 
 EXPOSE 2080 2443
-ARG PROCESSM_VERSION=0.7.0
+ARG PROCESSM_VERSION
 # The variable is called PROCESSM_VERSION so it looks like PG_VERSION and JAVA_VERSION that are already in the image
 ENV PROCESSM_VERSION=$PROCESSM_VERSION
 
@@ -72,21 +72,23 @@ ENV PROCESSM_VERSION=$PROCESSM_VERSION
 RUN adduser -s /bin/false -D -H -h /processm processm processm
 
 ADD target/processm-${PROCESSM_VERSION}-bin.tar.xz /
-RUN mv /processm-${PROCESSM_VERSION} /processm
 
-RUN set -eux; apk add --no-cache msmtp; rm -rf /var/cache/apk/*
 # replace sendmail with msmtp in the default configuration, as our sendmail is provided by busybox and rather clumsy
 # however, we should not replace sendmail with msmtp, as msmtp does not exactly behave like a proper sendmail (not that the busybox variant does)
-RUN sed 's/\/usr\/sbin\/sendmail/\/usr\/bin\/msmtp/g' /processm/conf/config.properties >/processm/conf/config.properties.82D9ABXukU
-RUN mv /processm/conf/config.properties.82D9ABXukU /processm/conf/config.properties
-RUN ln -s /processm/conf/msmtprc /etc/msmtprc
+RUN set -eux; \
+    apk add --no-cache msmtp; \
+    rm -rf /var/cache/apk/*; \
+    sed 's/\/usr\/sbin\/sendmail/\/usr\/bin\/msmtp/g' /processm/conf/config.properties >/processm/conf/config.properties.82D9ABXukU; \
+    mv /processm/conf/config.properties.82D9ABXukU /processm/conf/config.properties; \
+    ln -s /processm/conf/msmtprc /etc/msmtprc
+
 
 COPY src/main/docker/* /processm/
 
-RUN mkdir /processm/data
-RUN chown processm:processm /processm/data
-RUN chgrp -R processm /processm/conf
-RUN chmod -R 640 /processm/conf/*
+RUN mkdir /processm/data; \
+    chown processm:processm /processm/data; \
+    chgrp -R processm /processm/conf; \
+    chmod -R 640 /processm/conf/*
 
 VOLUME /processm/conf /processm/data
 WORKDIR /processm
