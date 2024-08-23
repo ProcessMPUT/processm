@@ -83,7 +83,8 @@ RUN set -eux; \
     ln -s /processm/conf/msmtprc /etc/msmtprc
 
 
-COPY src/main/docker/* /processm/
+ADD src/main/docker/*.sh /processm/
+ADD src/main/docker/msmtprc.sample /processm/conf/
 
 RUN mkdir /processm/data; \
     chown processm:processm /processm/data; \

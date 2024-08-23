@@ -88,6 +88,8 @@ password       plain-text-password
 account default: gmail
 ```
 
+For convenience, this file is also available as `/processm/conf/msmtprc.sample` in the container.
+
 Adjust `host`, `user`, `password` (and, optionally, the other options) according to your needs.
 The configuration can also be done when starting the container. Simply pass the content of the configuration file as
 the environment variable `MSTPRC`. For convenience, you can prepare the configuration in a file (e.g., `msmtprc`), and
