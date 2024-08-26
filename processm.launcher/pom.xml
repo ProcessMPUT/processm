@@ -98,14 +98,20 @@
                         <goals>
                             <goal>exec</goal>
                         </goals>
+                        <!-- The following configuration uses docker buildx plugin AND multi-arch support
+                        To install the buildx plugin see, e.g., https://docs.docker.com/engine/install/debian/
+                        To enable multi-arch support see, e.g., https://docs.docker.com/desktop/containerd/ or https://docs.docker.com/engine/storage/containerd/
+                        -->
                         <configuration>
                             <executable>docker</executable>
                             <arguments>
+                                <argument>buildx</argument>
                                 <argument>build</argument>
                                 <argument>--build-arg</argument>
                                 <argument>PROCESSM_VERSION=${revision}</argument>
                                 <argument>-t</argument>
                                 <argument>processm:${revision}</argument>
+                                <argument>--platform=linux/arm64,linux/amd64</argument>
                                 <argument>.</argument>
                             </arguments>
                         </configuration>

@@ -1,7 +1,9 @@
 FROM timescale/timescaledb:latest-pg16-oss
 
 ###############################
-# Copied from https://github.com/adoptium/containers/blob/d13a1cc170046e3b3ea4b35c82e1ff4b5b866ca1/17/jre/alpine/Dockerfile
+# Based on:
+# * https://github.com/adoptium/containers/blob/d13a1cc170046e3b3ea4b35c82e1ff4b5b866ca1/17/jre/alpine/Dockerfile
+# * https://github.com/adoptium/containers/blob/d13a1cc170046e3b3ea4b35c82e1ff4b5b866ca1/21/jre/alpine/Dockerfile
 
 ENV JAVA_HOME=/opt/java/openjdk
 ENV PATH=$JAVA_HOME/bin:$PATH
@@ -29,7 +31,6 @@ RUN set -eux; \
     ; \
     rm -rf /var/cache/apk/*
 
-ENV JAVA_VERSION=jdk-17.0.12+7
 
 RUN set -eux; \
     ARCH="$(apk --print-arch)"; \
@@ -37,6 +38,10 @@ RUN set -eux; \
        x86_64) \
          ESUM='63bae276cc322532b451ae7473127c92a75db16cc95473577f133cd09349822a'; \
          BINARY_URL='https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.12%2B7/OpenJDK17U-jre_x64_alpine-linux_hotspot_17.0.12_7.tar.gz'; \
+         ;; \
+       aarch64) \
+         ESUM='f9410264235861deaf30f97bec80870cf3bc38b1d8e57d897d8bb1f706ae6705'; \
+         BINARY_URL='https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.4%2B7/OpenJDK21U-jre_aarch64_alpine-linux_hotspot_21.0.4_7.tar.gz'; \
          ;; \
        *) \
          echo "Unsupported arch: ${ARCH}"; \
