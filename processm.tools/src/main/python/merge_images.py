@@ -136,43 +136,64 @@ def update_annotations(name_and_tag: str, annotations: Optional[dict] = None) ->
     return annotations
 
 
-def merge_dirs(base_dir: Path, other_dir: Path, name_and_tag: str, remove_base_layers: bool, remove_other_layers: bool):
+def find_object_by_digest(digest, objects):
+    assert digest.startswith("sha256:")
+    o = [o for o in objects if o["digest"] == digest]
+    assert len(o) == 1
+    return o[0]
+
+
+def merge_dirs(dir_base: Path, dir_other: Path, name_and_tag: str, remove_base_layers: bool, remove_other_layers: bool,
+               digest_base: str, digest_other: str):
+    logging.info("Merging %s with %s", digest_base, digest_other)
     manifest = {"RepoTags": None}
-    with FileUpdater('index.json', base_dir) as index_base:
-        with index_base.from_object(index_base.content["manifests"][0]) as manifest_base, \
-                FileUpdater('index.json', other_dir, read_only=True) as index_other, \
-                index_other.from_object(index_other.content["manifests"][0]) as manifest_other:
-            layers_base: list = manifest_base.content["layers"]
-            layers_other: list = manifest_other.content["layers"]
+    with FileUpdater('index.json', dir_base) as index_base:
+        with index_base.from_object(index_base.content["manifests"][0]) as image_index_base, \
+                FileUpdater('index.json', dir_other, read_only=True) as index_other, \
+                index_other.from_object(index_other.content["manifests"][0]) as image_index_other:
 
-            if remove_base_layers:
-                for layer in layers_base:
-                    os.remove(base_dir / digest_to_path(layer["digest"]))
+            assert image_index_base.content["mediaType"] == "application/vnd.oci.image.index.v1+json"
+            assert image_index_other.content["mediaType"] == "application/vnd.oci.image.index.v1+json"
 
-            if remove_other_layers:
-                for layer in layers_other:
-                    file = base_dir / digest_to_path(layer["digest"])
-                    # It may be the case the layer was already deleted, because it was shared with the base
-                    if file.exists():
-                        os.remove(file)
+            image_index_base.content["manifests"] = [
+                find_object_by_digest(digest_base, image_index_base.content["manifests"])]
+            image_index_other.content["manifests"] = [
+                find_object_by_digest(digest_other, image_index_other.content["manifests"])]
 
-            logging.info("Base layers count %d, other layers count %d", len(layers_base), len(layers_other))
-            layers_base += [layer for layer in layers_other if
-                            not any([layers_equal(layer, base) for base in layers_base])]
-            manifest["Layers"] = [str(digest_to_path(layer["digest"])) for layer in layers_base]
-            logging.info("Final layers count %d", len(layers_base))
-            with manifest_base.from_object(manifest_base.content["config"]) as config_base, \
-                    manifest_other.from_object(manifest_other.content["config"]) as config_other:
-                diff_ids_other: list = config_other.content['rootfs']['diff_ids']
-                diff_ids_base: list = config_base.content['rootfs']['diff_ids']
-                logging.info("Base diff ids count %d, other diff ids count %d", len(diff_ids_base),
-                             len(diff_ids_other))
-                diff_ids_base += [id for id in diff_ids_other if id not in diff_ids_base]
-                logging.info("Final diff ids count %d", len(diff_ids_base))
-            manifest["Config"] = str(digest_to_path(manifest_base.content["config"]["digest"]))
+            with image_index_base.from_object(image_index_base.content["manifests"][0]) as manifest_base, \
+                    image_index_other.from_object(image_index_other.content["manifests"][0]) as manifest_other:
+                layers_base: list = manifest_base.content["layers"]
+                layers_other: list = manifest_other.content["layers"]
+
+                # TODO reconsider how to handle it. I'm starting to think it should be a completely separate thing - you give a base image and reference images and anything shared is removed from the base image
+                if remove_base_layers:
+                    for layer in layers_base:
+                        os.remove(dir_base / digest_to_path(layer["digest"]))
+
+                if remove_other_layers:
+                    for layer in layers_other:
+                        file = dir_base / digest_to_path(layer["digest"])
+                        # It may be the case the layer was already deleted, because it was shared with the base
+                        if file.exists():
+                            os.remove(file)
+
+                logging.info("Base layers count %d, other layers count %d", len(layers_base), len(layers_other))
+                layers_base += [layer for layer in layers_other if
+                                not any([layers_equal(layer, base) for base in layers_base])]
+                manifest["Layers"] = [str(digest_to_path(layer["digest"])) for layer in layers_base]
+                logging.info("Final layers count %d", len(layers_base))
+                with manifest_base.from_object(manifest_base.content["config"]) as config_base, \
+                        manifest_other.from_object(manifest_other.content["config"]) as config_other:
+                    diff_ids_other: list = config_other.content['rootfs']['diff_ids']
+                    diff_ids_base: list = config_base.content['rootfs']['diff_ids']
+                    logging.info("Base diff ids count %d, other diff ids count %d", len(diff_ids_base),
+                                 len(diff_ids_other))
+                    diff_ids_base += [id for id in diff_ids_other if id not in diff_ids_base]
+                    logging.info("Final diff ids count %d", len(diff_ids_base))
+                manifest["Config"] = str(digest_to_path(manifest_base.content["config"]["digest"]))
         annotations: dict[str, str] = index_base.content["manifests"][0]["annotations"]
         update_annotations(name_and_tag, annotations)
-    with open(base_dir / 'manifest.json', 'wt') as f:
+    with open(dir_base / 'manifest.json', 'wt') as f:
         json.dump([manifest], f)
     # TODO merge envs
     # TODO manage labels/maintainer
@@ -198,12 +219,11 @@ def export(base_dir, output):
 class Merger:
     root_dir: Path
 
-    def __init__(self, output_prefix: str, name_and_tag: str, pull: bool = False):
+    def __init__(self, output_prefix: str, name_and_tag: str):
         self.root_dir = None
         self._root_dir = None
         self.output_prefix = output_prefix
         self.name_and_tag = name_and_tag
-        self.pull = pull
 
     def __enter__(self):
         self._root_dir = TemporaryDirectory()
@@ -220,19 +240,12 @@ class Merger:
         if target.exists() and target.is_dir():
             logging.info("%s exists, assuming it contains %s", target, image_file)
             return target
-        # n = 0
-        # while target.exists():
-        #     n += 1
-        #     target = self.root_dir / f"{dir_name_prefix}-{n}"
-        # assert not target.exists()
         target.mkdir(exist_ok=False, parents=True)
         if Path(image_file).exists():
             logging.info("Extracting %s to %s", image_file, target)
             subprocess.run(['tar', 'xf', image_file], cwd=target, check=True)
         else:
             logging.info("File %s does not exist. Assuming it is an image name, extracting to %s", image_file, target)
-            if self.pull:
-                subprocess.run(["docker", "pull", image_file])
             with subprocess.Popen(["docker", "save", image_file], stdout=subprocess.PIPE) as proc:
                 subprocess.run(['tar', 'x'], stdin=proc.stdout, cwd=target, check=True)
                 assert proc.wait() == 0
@@ -246,15 +259,19 @@ class Merger:
             with index.from_object(manifests[0]) as manifests:
                 return [(m['digest'], m['platform']) for m in manifests.content['manifests']]
 
-    def match_platforms(self, image1: str, image2: str, predicate: Optional[Callable[[dict], bool]] = None):
-        # TODO i drugi wariant: merge obrazu bez architektury do wszystkich architektur
+    def match_platforms(self, image1: str, image2: str, image1_is_public: bool, image2_is_public: bool,
+                        predicate: Optional[Callable[[dict], bool]] = None):
         platforms1 = self.get_platforms(image1)
         platforms2 = self.get_platforms(image2)
-        if filter is not None:
+        if predicate is not None:
             platforms1 = [p for p in platforms1 if predicate(p[1])]
             platforms2 = [p for p in platforms2 if predicate(p[1])]
         for d1, p1 in platforms1:
+            if p1['architecture'] == 'unknown':
+                continue
             for d2, p2 in platforms2:
+                if p2['architecture'] == 'unknown':
+                    continue
                 if p1 == p2:
                     logging.info("Fully matching platform %s", p1)
                     yield p1, d1, d2
@@ -268,17 +285,18 @@ class Merger:
     def merge(self, image1: str, image2: str, predicate: Optional[Callable[[dict], bool]],
               image1_is_public: bool, image2_is_public: bool):
         images = []
-        for platform, digest1, digest2 in self.match_platforms(image1, image2, predicate=predicate):
+        for platform, digest1, digest2 in self.match_platforms(image1, image2, image1_is_public, image2_is_public,
+                                                               predicate=predicate):
             descriptor = describe_platform(platform)
 
-            base_dir = self.extract(f'{image1}@{digest1}')
-            other_dir = self.extract(f'{image2}@{digest2}')
-            new_dir = Path(f"{base_dir}+{other_dir.name}")
+            base_dir = self.extract(f'{image1}')
+            other_dir = self.extract(f'{image2}')
+            new_dir = Path(f"{base_dir}@{digest1}+{other_dir.name}@{digest2}")
             base_dir.rename(new_dir)
             base_dir = new_dir
             subprocess.run(['cp', '-Rn', other_dir / 'blobs', base_dir], check=True)
             merge_dirs(base_dir, other_dir, f'{self.name_and_tag}-{descriptor}', image1_is_public,
-                       image2_is_public)
+                       image2_is_public, digest1, digest2)
             file = f'{self.output_prefix}-{descriptor}.tar'
             export(base_dir, file)
             logging.info('Stored image for %s in %s', platform, file)
@@ -290,9 +308,14 @@ class Merger:
         for platform, img_dir in images:
             with FileUpdater('index.json', img_dir, read_only=True) as index:
                 for m in index.content["manifests"]:
-                    del m["annotations"]
-                    m["platform"] = platform
-                    manifests.append(m)
+                    # We are not doing nested image indexes. They are either not supported or I've made a mistake somewhere.
+                    if m['mediaType'] == 'application/vnd.oci.image.index.v1+json':
+                        with index.from_object(m) as subindex:
+                            manifests += subindex.content["manifests"]
+                    else:
+                        del m["annotations"]
+                        m["platform"] = platform
+                        manifests.append(m)
         image_index = {
             "schemaVersion": 2,
             "mediaType": "application/vnd.oci.image.index.v1+json",
@@ -316,16 +339,18 @@ class Merger:
         export(output_dir, file)
 
     def main(self):
-        images = merger.merge('timescale/timescaledb:latest-pg16-oss', 'eclipse-temurin:21-jre-alpine',
-                              predicate=lambda p: p['architecture'] == 'arm64', image1_is_public=True,
-                              image2_is_public=True)
-        images += merger.merge('timescale/timescaledb:latest-pg16-oss', 'eclipse-temurin:17-jre-alpine',
-                               predicate=lambda p: p['architecture'] == 'amd64', image1_is_public=True,
-                               image2_is_public=True)
+        images = merger.merge('docker.io/jpotoniec/processm-bare:0.7.0', 'timescale/timescaledb:latest-pg16-oss',
+                              predicate=None, image1_is_public=True, image2_is_public=True)
+        # images = merger.merge('timescale/timescaledb:latest-pg16-oss', 'eclipse-temurin:21-jre-alpine',
+        #                       predicate=lambda p: p['architecture'] == 'arm64', image1_is_public=True,
+        #                       image2_is_public=True)
+        # images += merger.merge('timescale/timescaledb:latest-pg16-oss', 'eclipse-temurin:17-jre-alpine',
+        #                        predicate=lambda p: p['architecture'] == 'amd64', image1_is_public=True,
+        #                        image2_is_public=True)
         self.build_multiarch_image(images)
 
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.INFO)
-    with Merger('/tmp/final', 'jpotoniec/timescale_temurin:0.0.2', pull=False) as merger:
+    with Merger('/tmp/final', 'jpotoniec/processm-intermediate:0.0.0') as merger:
         merger.main()
