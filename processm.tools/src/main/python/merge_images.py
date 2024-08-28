@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import subprocess
+import sys
 from contextlib import nullcontext
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -144,8 +145,7 @@ def find_object_by_digest(digest, objects):
     return o[0]
 
 
-def merge_dirs(dir_base: Path, dir_other: Path, name_and_tag: str, remove_base_layers: bool, remove_other_layers: bool,
-               digest_base: str, digest_other: str):
+def merge_dirs(dir_base: Path, dir_other: Path, name_and_tag: str, digest_base: str, digest_other: str):
     logging.info("Merging %s with %s", digest_base, digest_other)
     manifest = {"RepoTags": None}
     with FileUpdater('index.json', dir_base) as index_base:
@@ -164,7 +164,6 @@ def merge_dirs(dir_base: Path, dir_other: Path, name_and_tag: str, remove_base_l
                 layers_base: list = manifest_base.content["layers"]
                 layers_other: list = manifest_other.content["layers"]
 
-                # TODO develop a separate tool to prune an image from blobs available in specified images
                 # Remove data blobs
                 for layer in layers_base + layers_other:
                     file = dir_base / digest_to_path(layer["digest"])
@@ -206,8 +205,11 @@ def describe_platform(platform):
     return descriptor
 
 
-def export(base_dir, output):
-    subprocess.run(["tar", "cf", output, "."], cwd=base_dir, check=True)
+def export(base_dir: Union[str, Path], output: Union[str, Path]):
+    if output is not None:
+        subprocess.run(["tar", "cf", output, "."], cwd=base_dir, check=True)
+    else:
+        subprocess.run(["tar", "c", "."], cwd=base_dir, check=True)
 
 
 def cp(source, target):
@@ -217,10 +219,9 @@ def cp(source, target):
 class Merger:
     root_dir: Path
 
-    def __init__(self, root_dir: Union[str, Path], output_prefix: str, name_and_tag: str):
+    def __init__(self, root_dir: Union[str, Path], name_and_tag: str):
         self.root_dir = Path(root_dir)
         logging.info("Root dir is %s", self.root_dir)
-        self.output_prefix = output_prefix
         self.name_and_tag = name_and_tag
 
     def extract(self, image_file: Union[str, Path]):
@@ -252,8 +253,7 @@ class Merger:
             with index.from_object(manifests[0]) as manifests:
                 return [(m['digest'], m['platform']) for m in manifests.content['manifests']]
 
-    def match_platforms(self, image1: str, image2: str, image1_is_public: bool, image2_is_public: bool,
-                        predicate: Optional[Callable[[dict], bool]] = None):
+    def match_platforms(self, image1: str, image2: str, predicate: Optional[Callable[[dict], bool]] = None):
         platforms1 = self.get_platforms(image1)
         platforms2 = self.get_platforms(image2)
         if predicate is not None:
@@ -275,11 +275,9 @@ class Merger:
                     logging.info("Partially matching platforms: %s %s -> %s", p1, p2, p1)
                     yield p1, d1, d2
 
-    def merge(self, image1: Union[str, Path], image2: Union[str, Path], predicate: Optional[Callable[[dict], bool]],
-              image1_is_public: bool, image2_is_public: bool):
+    def merge(self, image1: Union[str, Path], image2: Union[str, Path], predicate: Optional[Callable[[dict], bool]]):
         images = []
-        for platform, digest1, digest2 in self.match_platforms(image1, image2, image1_is_public, image2_is_public,
-                                                               predicate=predicate):
+        for platform, digest1, digest2 in self.match_platforms(image1, image2, predicate=predicate):
             descriptor = describe_platform(platform)
 
             base_dir = self.extract(image1)
@@ -289,11 +287,7 @@ class Merger:
             cp(base_dir, new_dir)
             assert new_dir.exists() and new_dir.is_dir()
             cp(other_dir / 'blobs', new_dir)
-            merge_dirs(new_dir, other_dir, f'{self.name_and_tag}-{descriptor}', image1_is_public,
-                       image2_is_public, digest1, digest2)
-            # file = f'{self.output_prefix}-{descriptor}.tar'
-            # export(new_dir, file)
-            # logging.info('Stored image for %s in %s', platform, file)
+            merge_dirs(new_dir, other_dir, f'{self.name_and_tag}-{descriptor}', digest1, digest2)
             images.append((platform, new_dir))
         return images
 
@@ -334,30 +328,39 @@ class Merger:
             layout.content = {"imageLayoutVersion": "1.0.0"}
         return output_dir
 
-    def export(self, directory: Path) -> str:
-        fn = f'{self.output_prefix}-{directory.name}.tar'
-        export(directory, fn)
-        return fn
 
-
-def main():
+def main(processm_version: str, output_file: Optional[str] = None,
+         intermediate_name_prefix: str = 'jpotoniec/processm-intermediate',
+         processm_bare: str = 'jpotoniec/processm-bare', timescale: str = 'timescale/timescaledb:latest-pg16-oss',
+         temurin_for_amd64: str = 'eclipse-temurin:17-jre-alpine',
+         temurin_for_arm64: str = 'eclipse-temurin:21-jre-alpine'
+         ):
     with TemporaryDirectory() as root_dir:
-        merger = Merger(root_dir, '/tmp/final', 'jpotoniec/processm-intermediate1:0.0.0')
-        images = merger.merge('docker.io/jpotoniec/processm-bare:0.7.0', 'timescale/timescaledb:latest-pg16-oss',
-                              predicate=None, image1_is_public=True, image2_is_public=True)
+        merger = Merger(root_dir, f'{intermediate_name_prefix}1:{processm_version}')
+        images = merger.merge(f'{processm_bare}:{processm_version}', timescale, predicate=None)
         bare_and_timescale = merger.build_multiarch_image(images, True)
-        merger = Merger(root_dir, '/tmp/final', 'jpotoniec/processm-intermediate2:0.0.0')
-        images = merger.merge(bare_and_timescale, 'eclipse-temurin:21-jre-alpine',
-                              predicate=lambda p: p['architecture'] == 'arm64', image1_is_public=True,
-                              image2_is_public=True)
-        images += merger.merge(bare_and_timescale, 'eclipse-temurin:17-jre-alpine',
-                               predicate=lambda p: p['architecture'] == 'amd64', image1_is_public=True,
-                               image2_is_public=True)
+        merger = Merger(root_dir, f'{intermediate_name_prefix}2:{processm_version}')
+        images = merger.merge(bare_and_timescale, temurin_for_arm64, predicate=lambda p: p['architecture'] == 'arm64')
+        images += merger.merge(bare_and_timescale, temurin_for_amd64, predicate=lambda p: p['architecture'] == 'amd64')
         intermediate = merger.build_multiarch_image(images, True)
-        fn = merger.export(intermediate)
-        logging.info("Exported the final image to %s", fn)
+        export(intermediate, output_file)
+        logging.info("Exported the final image to %s",
+                     output_file if output_file is not None else "the standard output")
 
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.INFO)
-    main()
+    try:
+        import fire
+
+        has_fire = True
+    except ModuleNotFoundError:
+        has_fire = False
+    if has_fire:
+        fire.Fire(main)
+    else:
+        if len(sys.argv) <= 1:
+            print("Install the Python fire module or read the source code", file=sys.stderr)
+            sys.exit(1)
+        else:
+            main(*sys.argv)
