@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import subprocess
+from contextlib import nullcontext
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Union, Optional, Callable
@@ -70,7 +71,7 @@ class FileUpdater:
             with open(self.path, 'rt') as f:
                 self.content = json.load(f)
         else:
-            assert self.allow_missing
+            assert self.allow_missing, f"{self.path} is missing and allow_missing is set to False"
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -152,30 +153,23 @@ def merge_dirs(dir_base: Path, dir_other: Path, name_and_tag: str, remove_base_l
                 FileUpdater('index.json', dir_other, read_only=True) as index_other, \
                 index_other.from_object(index_other.content["manifests"][0]) as image_index_other:
 
-            assert image_index_base.content["mediaType"] == "application/vnd.oci.image.index.v1+json"
-            assert image_index_other.content["mediaType"] == "application/vnd.oci.image.index.v1+json"
-
             image_index_base.content["manifests"] = [
                 find_object_by_digest(digest_base, image_index_base.content["manifests"])]
             image_index_other.content["manifests"] = [
                 find_object_by_digest(digest_other, image_index_other.content["manifests"])]
 
-            with image_index_base.from_object(image_index_base.content["manifests"][0]) as manifest_base, \
-                    image_index_other.from_object(image_index_other.content["manifests"][0]) as manifest_other:
+            with image_index_base.from_object(
+                    image_index_base.content["manifests"][0]) as manifest_base, image_index_other.from_object(
+                image_index_other.content["manifests"][0]) as manifest_other:
                 layers_base: list = manifest_base.content["layers"]
                 layers_other: list = manifest_other.content["layers"]
 
-                # TODO reconsider how to handle it. I'm starting to think it should be a completely separate thing - you give a base image and reference images and anything shared is removed from the base image
-                if remove_base_layers:
-                    for layer in layers_base:
-                        os.remove(dir_base / digest_to_path(layer["digest"]))
-
-                if remove_other_layers:
-                    for layer in layers_other:
-                        file = dir_base / digest_to_path(layer["digest"])
-                        # It may be the case the layer was already deleted, because it was shared with the base
-                        if file.exists():
-                            os.remove(file)
+                # TODO develop a separate tool to prune an image from blobs available in specified images
+                # Remove data blobs
+                for layer in layers_base + layers_other:
+                    file = dir_base / digest_to_path(layer["digest"])
+                    if file.exists():
+                        os.remove(file)
 
                 logging.info("Base layers count %d, other layers count %d", len(layers_base), len(layers_other))
                 layers_base += [layer for layer in layers_other if
@@ -216,32 +210,31 @@ def export(base_dir, output):
     subprocess.run(["tar", "cf", output, "."], cwd=base_dir, check=True)
 
 
+def cp(source, target):
+    subprocess.run(['cp', '-Rn', source, target], check=True)
+
+
 class Merger:
     root_dir: Path
 
-    def __init__(self, output_prefix: str, name_and_tag: str):
-        self.root_dir = None
-        self._root_dir = None
+    def __init__(self, root_dir: Union[str, Path], output_prefix: str, name_and_tag: str):
+        self.root_dir = Path(root_dir)
+        logging.info("Root dir is %s", self.root_dir)
         self.output_prefix = output_prefix
         self.name_and_tag = name_and_tag
 
-    def __enter__(self):
-        self._root_dir = TemporaryDirectory()
-        self.root_dir = Path(self._root_dir.__enter__())
-        logging.info("Root dir is %s", self.root_dir)
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._root_dir.__exit__(exc_type, exc_val, exc_tb)
-
-    def extract(self, image_file: str):
+    def extract(self, image_file: Union[str, Path]):
+        image_file_path = Path(image_file)
+        if image_file_path.exists() and image_file_path.is_dir():
+            logging.info("Reusing pre-existing %s", image_file_path)
+            return image_file_path
         dir_name_prefix = image_file.replace('/', '_')
         target = self.root_dir / dir_name_prefix
         if target.exists() and target.is_dir():
             logging.info("%s exists, assuming it contains %s", target, image_file)
             return target
         target.mkdir(exist_ok=False, parents=True)
-        if Path(image_file).exists():
+        if image_file_path.exists():
             logging.info("Extracting %s to %s", image_file, target)
             subprocess.run(['tar', 'xf', image_file], cwd=target, check=True)
         else:
@@ -282,28 +275,29 @@ class Merger:
                     logging.info("Partially matching platforms: %s %s -> %s", p1, p2, p1)
                     yield p1, d1, d2
 
-    def merge(self, image1: str, image2: str, predicate: Optional[Callable[[dict], bool]],
+    def merge(self, image1: Union[str, Path], image2: Union[str, Path], predicate: Optional[Callable[[dict], bool]],
               image1_is_public: bool, image2_is_public: bool):
         images = []
         for platform, digest1, digest2 in self.match_platforms(image1, image2, image1_is_public, image2_is_public,
                                                                predicate=predicate):
             descriptor = describe_platform(platform)
 
-            base_dir = self.extract(f'{image1}')
-            other_dir = self.extract(f'{image2}')
+            base_dir = self.extract(image1)
+            other_dir = self.extract(image2)
             new_dir = Path(f"{base_dir}@{digest1}+{other_dir.name}@{digest2}")
-            base_dir.rename(new_dir)
-            base_dir = new_dir
-            subprocess.run(['cp', '-Rn', other_dir / 'blobs', base_dir], check=True)
-            merge_dirs(base_dir, other_dir, f'{self.name_and_tag}-{descriptor}', image1_is_public,
+            assert not new_dir.exists()
+            cp(base_dir, new_dir)
+            assert new_dir.exists() and new_dir.is_dir()
+            cp(other_dir / 'blobs', new_dir)
+            merge_dirs(new_dir, other_dir, f'{self.name_and_tag}-{descriptor}', image1_is_public,
                        image2_is_public, digest1, digest2)
-            file = f'{self.output_prefix}-{descriptor}.tar'
-            export(base_dir, file)
-            logging.info('Stored image for %s in %s', platform, file)
-            images.append((platform, base_dir))
+            # file = f'{self.output_prefix}-{descriptor}.tar'
+            # export(new_dir, file)
+            # logging.info('Stored image for %s in %s', platform, file)
+            images.append((platform, new_dir))
         return images
 
-    def build_multiarch_image(self, images: list[tuple[dict, Path]]):
+    def build_multiarch_image(self, images: list[tuple[dict, Path]], include_blobs: bool = False) -> Path:
         manifests = []
         for platform, img_dir in images:
             with FileUpdater('index.json', img_dir, read_only=True) as index:
@@ -324,7 +318,11 @@ class Merger:
         descriptor = '+'.join(describe_platform(m['platform']) for m in image_index['manifests'])
         output_dir = self.root_dir / f"{self.name_and_tag.replace('/', '_')}-{descriptor}"
         output_dir.mkdir(exist_ok=False, parents=False)
-        (output_dir / 'blobs' / 'sha256').mkdir(parents=True)
+        if include_blobs:
+            for _, img_dir in images:
+                cp(img_dir / 'blobs', output_dir)
+        else:
+            (output_dir / 'blobs' / 'sha256').mkdir(parents=True)
         with FileUpdater('index.json', output_dir, allow_missing=True) as index:
             index.content = {"schemaVersion": 2, "mediaType": "application/vnd.oci.image.index.v1+json", "manifests": [
                 {"mediaType": "application/vnd.oci.image.index.v1+json",
@@ -334,23 +332,32 @@ class Merger:
                 image_index_file.content = image_index
         with FileUpdater('oci-layout', output_dir, allow_missing=True) as layout:
             layout.content = {"imageLayoutVersion": "1.0.0"}
-        file = f'{self.output_prefix}-{descriptor}.tar'
-        logging.info("Multi-arch image saved to %s", file)
-        export(output_dir, file)
+        return output_dir
 
-    def main(self):
+    def export(self, directory: Path) -> str:
+        fn = f'{self.output_prefix}-{directory.name}.tar'
+        export(directory, fn)
+        return fn
+
+
+def main():
+    with TemporaryDirectory() as root_dir:
+        merger = Merger(root_dir, '/tmp/final', 'jpotoniec/processm-intermediate1:0.0.0')
         images = merger.merge('docker.io/jpotoniec/processm-bare:0.7.0', 'timescale/timescaledb:latest-pg16-oss',
                               predicate=None, image1_is_public=True, image2_is_public=True)
-        # images = merger.merge('timescale/timescaledb:latest-pg16-oss', 'eclipse-temurin:21-jre-alpine',
-        #                       predicate=lambda p: p['architecture'] == 'arm64', image1_is_public=True,
-        #                       image2_is_public=True)
-        # images += merger.merge('timescale/timescaledb:latest-pg16-oss', 'eclipse-temurin:17-jre-alpine',
-        #                        predicate=lambda p: p['architecture'] == 'amd64', image1_is_public=True,
-        #                        image2_is_public=True)
-        self.build_multiarch_image(images)
+        bare_and_timescale = merger.build_multiarch_image(images, True)
+        merger = Merger(root_dir, '/tmp/final', 'jpotoniec/processm-intermediate2:0.0.0')
+        images = merger.merge(bare_and_timescale, 'eclipse-temurin:21-jre-alpine',
+                              predicate=lambda p: p['architecture'] == 'arm64', image1_is_public=True,
+                              image2_is_public=True)
+        images += merger.merge(bare_and_timescale, 'eclipse-temurin:17-jre-alpine',
+                               predicate=lambda p: p['architecture'] == 'amd64', image1_is_public=True,
+                               image2_is_public=True)
+        intermediate = merger.build_multiarch_image(images, True)
+        fn = merger.export(intermediate)
+        logging.info("Exported the final image to %s", fn)
 
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.INFO)
-    with Merger('/tmp/final', 'jpotoniec/processm-intermediate:0.0.0') as merger:
-        merger.main()
+    main()
