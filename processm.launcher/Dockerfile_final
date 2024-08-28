@@ -1,0 +1,21 @@
+# The architecture-dependent part of ProcessM
+
+ARG PROCESSM_VERSION=0.7.0
+FROM processm/processm-intermediate2:${PROCESSM_VERSION}
+
+# I've tried to fix uid and gid, but busybox seemed to have some problems with it. Still, until something changes in alpine they seem to be 1000:1000
+RUN adduser -s /bin/false -D -H -h /processm processm processm
+
+# replace sendmail with msmtp in the default configuration, as our sendmail is provided by busybox and rather clumsy
+# however, we should not replace sendmail with msmtp, as msmtp does not exactly behave like a proper sendmail (not that the busybox variant does)
+RUN set -eux; \
+    apk add --no-cache msmtp; \
+    rm -rf /var/cache/apk/*; \
+    text=$(sed 's/\/usr\/sbin\/sendmail/\/usr\/bin\/msmtp/g' /processm/conf/config.properties) ; \
+    echo "$text" >/processm/conf/config.properties; \
+    ln -s /processm/conf/msmtprc /etc/msmtprc
+
+RUN mkdir /processm/data; \
+    chown processm:processm /processm/data; \
+    chgrp -R processm /processm/conf; \
+    chmod -R 640 /processm/conf/*

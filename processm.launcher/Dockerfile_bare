@@ -1,0 +1,19 @@
+# The architecture-independent part of ProcessM
+
+FROM scratch
+
+LABEL maintainer="ProcessM https://processm.cs.put.poznan.pl/"
+
+EXPOSE 2080 2443
+ARG PROCESSM_VERSION
+# The variable is called PROCESSM_VERSION so it looks like PG_VERSION and JAVA_VERSION that are already in the image
+ENV PROCESSM_VERSION=$PROCESSM_VERSION
+
+ADD target/processm-${PROCESSM_VERSION}-bin.tar.xz /
+
+ADD src/main/docker/*.sh /processm/
+ADD src/main/docker/msmtprc.sample /processm/conf/
+
+VOLUME /processm/conf /processm/data
+WORKDIR /processm
+ENTRYPOINT ["sh", "docker-entrypoint.sh"]

@@ -267,7 +267,9 @@ def export(base_dir: Union[str, Path], output: Union[str, Path]):
     if output is not None:
         subprocess.run(["tar", "cf", output, "."], cwd=base_dir, check=True)
     else:
-        subprocess.run(["tar", "c", "."], cwd=base_dir, check=True)
+        with subprocess.Popen(["tar", "c", "."], cwd=base_dir, stdout=subprocess.PIPE) as tar:
+            subprocess.run(["docker", "load"], stdin=tar.stdout)
+        assert tar.returncode == 0
 
 
 def cp(source, target):
@@ -403,7 +405,7 @@ def main(processm_version: str, output_file: Optional[str] = None,
         intermediate = merger.build_multiarch_image(images, True)
         export(intermediate, output_file)
         logging.info("Exported the final image to %s",
-                     output_file if output_file is not None else "the standard output")
+                     output_file if output_file is not None else "the local Docker repository")
 
 
 if __name__ == '__main__':
