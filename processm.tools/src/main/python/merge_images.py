@@ -388,8 +388,8 @@ class Merger:
 
 
 def main(processm_version: str, output_file: Optional[str] = None,
-         intermediate_name_prefix: str = 'jpotoniec/processm-intermediate',
-         processm_bare: str = 'jpotoniec/processm-bare', timescale: str = 'timescale/timescaledb:latest-pg16-oss',
+         intermediate_name_prefix: str = 'processm/processm-intermediate',
+         processm_bare: str = 'processm/processm-bare', timescale: str = 'timescale/timescaledb:latest-pg16-oss',
          temurin_for_amd64: str = 'eclipse-temurin:17-jre-alpine',
          temurin_for_arm64: str = 'eclipse-temurin:21-jre-alpine'
          ):
