@@ -5,10 +5,10 @@ import logging
 import os
 import subprocess
 import sys
-from contextlib import nullcontext
+from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Union, Optional, Callable
+from typing import Union, Optional, Callable, Any
 
 
 def digest_to_path(digest: str) -> Path:
@@ -78,21 +78,21 @@ class FileUpdater:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
             if self.read_only:
-                logging.info("Skipping %s, since it is read-only", self.path)
+                logging.debug("Skipping %s, since it is read-only", self.path)
                 return
             if self.is_digest:
                 if self.path is not None and self.path.exists():
-                    logging.info("Removing %s", self.path)
+                    logging.debug("Removing %s", self.path)
                     os.remove(self.path)
                 else:
                     assert self.allow_missing
                 blob_descriptor = save_blob(json.dumps(self.content), self.base_dir)
-                logging.info("Saved new blob %s", blob_descriptor)
+                logging.debug("Saved new blob %s", blob_descriptor)
                 if self.object is not None:
-                    logging.info("Updating reference in parent")
+                    logging.debug("Updating reference in parent")
                     update_reference(self.object, blob_descriptor)
             else:
-                logging.info("Overwriting %s", self.path)
+                logging.debug("Overwriting %s", self.path)
                 with open(self.path, 'wt') as f:
                     json.dump(self.content, f)
 
@@ -145,6 +145,62 @@ def find_object_by_digest(digest, objects):
     return o[0]
 
 
+def merge_paths(base: str, other: str):
+    base = base.split(':')
+    other = other.split(':')
+    base_set = set(base)
+    return ":".join(base + [o for o in other if o not in base_set])
+
+
+def merge_envs(base: list[str], other: list[str]):
+    def parse(entry: str):
+        i = entry.index('=')
+        return entry[:i], entry[i + 1:]
+
+    logging.info("Base env: %s", base)
+    logging.info("Other env: %s", other)
+    base_parsed = dict(map(parse, base))
+    for entry in other:
+        key, value = parse(entry)
+        if key in base_parsed:
+            if base_parsed[key] != value:
+                if key == "PATH":
+                    base_parsed[key] = merge_paths(base_parsed[key], value)
+                else:
+                    logging.info("Shared key %s and values are not equal, ignoring the second: '%s' '%s'", key,
+                                 base_parsed[key], value)
+        else:
+            base_parsed[key] = value
+    final = [f"{k}={v}" for k, v in base_parsed.items()]
+    logging.info("Final env: %s", final)
+    return final
+
+
+def merge_dicts(base: dict, other: dict):
+    # base is to the right, so it overrides the content of other
+    return other | base
+
+
+def merge_constants(base, other):
+    assert base == other
+    return base
+
+
+def merge_configs(base: dict, other: dict):
+    def helper(key: str, reconcile: Callable[[Any, Any], Any]):
+        if key in other:
+            if key in base:
+                base[key] = reconcile(base[key], other[key])
+            else:
+                base[key] = other[key]
+
+    helper("Env", merge_envs)
+    helper("ExposedPorts", merge_dicts)
+    helper("Volumes", merge_dicts)
+    helper("StopSignal", merge_constants)
+    logging.info("Final config: %s", base)
+
+
 def merge_dirs(dir_base: Path, dir_other: Path, name_and_tag: str, digest_base: str, digest_other: str):
     logging.info("Merging %s with %s", digest_base, digest_other)
     manifest = {"RepoTags": None}
@@ -183,15 +239,17 @@ def merge_dirs(dir_base: Path, dir_other: Path, name_and_tag: str, digest_base: 
                                  len(diff_ids_other))
                     diff_ids_base += [id for id in diff_ids_other if id not in diff_ids_base]
                     logging.info("Final diff ids count %d", len(diff_ids_base))
+                    merge_configs(config_base.content["config"], config_other.content["config"])
+                    config_base.content["created"] = datetime.now(timezone.utc).isoformat()
+                    # Remove history, because it is misleading
+                    # Perhaps it could be handled differently, but who cares
+                    if "history" in config_base.content:
+                        del config_base.content["history"]
                 manifest["Config"] = str(digest_to_path(manifest_base.content["config"]["digest"]))
         annotations: dict[str, str] = index_base.content["manifests"][0]["annotations"]
         update_annotations(name_and_tag, annotations)
     with open(dir_base / 'manifest.json', 'wt') as f:
         json.dump([manifest], f)
-    # TODO merge envs
-    # TODO manage labels/maintainer
-    # TODO manage ports
-    # TODO manage entrypoint
 
 
 def is_contained_by(a: dict, b: dict):
