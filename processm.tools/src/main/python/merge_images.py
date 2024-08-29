@@ -405,6 +405,9 @@ def main(processm_version: str, output_file: Optional[str] = None,
          pull: bool = True
          ):
     if pull:
+        # We pull every image on the default architecture first, since pulling with the architecture specified seems to omit something. I suspect it is the multi-arch manifest, but I may be wrong.
+        for image in [timescale, temurin_for_arm64, temurin_for_amd64]:
+            docker_pull(image)
         docker_pull(timescale, 'linux/amd64')
         docker_pull(temurin_for_amd64, 'linux/amd64')
         docker_pull(timescale, 'linux/arm64')
@@ -437,4 +440,4 @@ if __name__ == '__main__':
             print("Install the Python fire module or read the source code", file=sys.stderr)
             sys.exit(1)
         else:
-            main(*sys.argv)
+            main(*sys.argv[1:])
