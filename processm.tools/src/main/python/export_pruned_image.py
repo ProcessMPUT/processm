@@ -22,6 +22,10 @@ def exclude_blobs(image: str, exclude: list[str]):
 
 
 def main(base_image: str, reference_images: list[str]):
+    """
+    Export `base_image` by using `docker save`, but removing blobs that are present in `reference_images`.
+    Docker can load such exports with no problem given that `reference_images` are present in its local repository.
+    """
     blobs = []
     for image in reference_images:
         blobs += get_blobs(image)
