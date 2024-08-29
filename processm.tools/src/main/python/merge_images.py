@@ -389,12 +389,26 @@ class Merger:
         return output_dir
 
 
+def docker_pull(image: str, platform: Optional[str] = None):
+    cmd = ['docker', 'pull']
+    if platform is not None:
+        cmd += ['--platform', platform]
+    cmd += [image]
+    subprocess.run(cmd, check=True)
+
+
 def main(processm_version: str, output_file: Optional[str] = None,
          intermediate_name_prefix: str = 'processm/processm-intermediate',
          processm_bare: str = 'processm/processm-bare', timescale: str = 'timescale/timescaledb:latest-pg16-oss',
          temurin_for_amd64: str = 'eclipse-temurin:17-jre-alpine',
-         temurin_for_arm64: str = 'eclipse-temurin:21-jre-alpine'
+         temurin_for_arm64: str = 'eclipse-temurin:21-jre-alpine',
+         pull: bool = True
          ):
+    if pull:
+        docker_pull(timescale, 'linux/amd64')
+        docker_pull(temurin_for_amd64, 'linux/amd64')
+        docker_pull(timescale, 'linux/arm64')
+        docker_pull(temurin_for_arm64, 'linux/arm64')
     with TemporaryDirectory() as root_dir:
         merger = Merger(root_dir, f'{intermediate_name_prefix}1:{processm_version}')
         images = merger.merge(f'{processm_bare}:{processm_version}', timescale, predicate=None)
