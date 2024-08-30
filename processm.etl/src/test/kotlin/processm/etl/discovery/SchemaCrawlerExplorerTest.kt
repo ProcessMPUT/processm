@@ -51,7 +51,7 @@ class SchemaCrawlerExplorerTest {
             val explorer = SchemaCrawlerExplorer(connection)
             with(explorer.getClasses()) {
                 assertEquals(1, size)
-                assertEquals("events", single().name)
+                assertEquals(""""public"."events"""", single().name)
             }
         }
     }

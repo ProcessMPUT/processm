@@ -30,6 +30,8 @@ class MetaModelDebeziumWatchingService : Service {
     companion object {
         private val logger = logger()
         const val DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY = "processm.etl.debezium.persistence.directory"
+
+        private val schemaTableRegex = Regex("^\"(.*)\"\\.\"(.*)\"$")
     }
 
     private val defaultSlotName = "processm"
@@ -227,10 +229,17 @@ class MetaModelDebeziumWatchingService : Service {
                 connection.prepareCall("{call sys.sp_cdc_enable_db}").use { call ->
                     call.execute()
                 }
-                connection.prepareCall("{call sys.sp_cdc_enable_table(N'dbo', ?, @role_name =?)}").use { call ->
+                connection.prepareCall("{call sys.sp_cdc_enable_table(?, ?, @role_name =?)}").use { call ->
                     for (e in trackedEntities) {
-                        call.setString(1, e)
-                        call.setString(2, connectionProperties["username"])
+                        val m = schemaTableRegex.matchEntire(e)
+                        if (m !== null) {
+                            call.setString(1, m.groupValues[1])
+                            call.setString(2, m.groupValues[2])
+                        } else {
+                            call.setString(1, "dbo")
+                            call.setString(2, e)
+                        }
+                        call.setString(3, connectionProperties["username"])
                         call.execute()
                     }
                 }
