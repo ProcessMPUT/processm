@@ -10,7 +10,8 @@ fi
 
 if [ ! -s "$PGDATA/PG_VERSION" ] && [ -z "$POSTGRES_PASSWORD" ]
 then
-  POSTGRES_PASSWORD=$(dd if=/dev/urandom count=1 bs=12|base64)
+  # + does not play well with URLs. Base64 could also produce =, but since we generate 12 random bytes, it does not.
+  POSTGRES_PASSWORD=$(dd if=/dev/urandom count=1 bs=12|base64|sed 's/+/_/')
   export POSTGRES_PASSWORD
 fi
 
