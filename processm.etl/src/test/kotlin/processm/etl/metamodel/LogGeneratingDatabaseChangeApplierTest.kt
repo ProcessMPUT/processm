@@ -152,6 +152,7 @@ class LogGeneratingDatabaseChangeApplierTest {
         return DatabaseChangeApplier.DatabaseChangeEvent(
             "id",
             entityId,
+            null,
             entityTable,
             null,
             null,
@@ -181,7 +182,7 @@ class LogGeneratingDatabaseChangeApplierTest {
             every { dataStoreDBName } returns temporaryDB
             every { this@mockk.metaModelId } returns this@LogGeneratingDatabaseChangeApplierTest.metaModelId!!
             every { applyChange(any()) } answers { callOriginal() }
-            every { getExecutorsForClass(any()) } returns listOf(executor)
+            every { getExecutorsForClass(any(), any()) } returns listOf(executor)
         }
 
         return applier

@@ -305,8 +305,11 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
     @OptIn(InMemoryXESProcessing::class)
     private fun <T : DBMSEnvironment<*>> `complete workflow for automatic ETL process with Sakila`(
         sakila: T,
+        defaultSchema: String?,
         populate: T.() -> Unit
     ) {
+        val wrap: (String) -> String =
+            if (defaultSchema == null) { className -> className } else { className -> "$defaultSchema.$className" }
         ProcessMTestingEnvironment()
             .withTemporaryDebeziumStorage()
             .withFreshDatabase()
@@ -336,14 +339,16 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 }
                 assertTrue { caseNotions.isNotEmpty() }
 
+                val classNames = setOf(wrap("city"), wrap("country"), wrap("address"), wrap("store"))
                 val classes = relationshipGraph.classes.associateNotNull {
-                    if (it.name in setOf("city", "country", "address", "store")) it.name to it.id
+                    if (it.name in classNames) it.name to it.id
                     else null
                 }
-                val storeId = classes["store"]!!
-                val addressId = classes["address"]!!
-                val cityId = classes["city"]!!
-                val countryId = classes["country"]!!
+                assertEquals(4, classes.size)
+                val storeId = classes[wrap("store")]!!
+                val addressId = classes[wrap("address")]!!
+                val cityId = classes[wrap("city")]!!
+                val countryId = classes[wrap("country")]!!
                 val expectedEdges = relationshipGraph.edges.mapNotNullTo(HashSet()) { edge ->
                     if ((edge.sourceClassId == storeId && edge.targetClassId == addressId) ||
                         (edge.sourceClassId == addressId && edge.targetClassId == cityId) ||
@@ -393,13 +398,19 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
 
                 val logs = runBlocking {
                     var previousNEvents = -1
+                    var counter = 0
                     for (i in 0..60) {
                         val stream: XMLXESInputStream = pqlQueryXES("where log:identity:id=$logIdentityId")
                         val logs = HoneyBadgerHierarchicalXESInputStream(stream)
                         val nEvents = logs.sumOf { log -> log.traces.sumOf { trace -> trace.events.count() } }
-                        if (previousNEvents == nEvents)
-                            return@runBlocking logs
-                        previousNEvents = nEvents
+                        if (previousNEvents == nEvents) {
+                            counter += 1
+                            if (counter == 5)
+                                return@runBlocking logs
+                        } else {
+                            counter = 0
+                            previousNEvents = nEvents
+                        }
                         delay(1_000)
                     }
                     error("The number of components in the log did not stabilize in the prescribed amount of time")
@@ -436,7 +447,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             PostgreSQLEnvironment.SAKILA_SCHEMA_SCRIPT,
             null
         ).use { sakila ->
-            `complete workflow for automatic ETL process with Sakila`(sakila) {
+            `complete workflow for automatic ETL process with Sakila`(sakila, "public") {
                 connect().use { connection ->
                     connection.autoCommit = false
                     connection.createStatement().use { s ->
@@ -458,7 +469,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
         Startables.deepStart(listOf(container)).join()
         MySQLEnvironment(container, "sakila").use { sakila ->
             sakila.configure(listOf(MySQLEnvironment.SAKILA_SCHEMA_SCRIPT))
-            `complete workflow for automatic ETL process with Sakila`(sakila) {
+            `complete workflow for automatic ETL process with Sakila`(sakila, null) {
                 sakila.configure(listOf(MySQLEnvironment.SAKILA_INSERT_SCRIPT))
             }
         }
@@ -470,7 +481,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
         Startables.deepStart(listOf(container)).join()
         MSSQLEnvironment(container, "sakila").use { sakila ->
             sakila.configureWithScripts(MSSQLEnvironment.SAKILA_SCHEMA_SCRIPT, null)
-            `complete workflow for automatic ETL process with Sakila`(sakila) {
+            `complete workflow for automatic ETL process with Sakila`(sakila, "dbo") {
                 sakila.configureWithScripts(null, MSSQLEnvironment.SAKILA_INSERT_SCRIPT)
             }
         }
@@ -482,8 +493,11 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
     @OptIn(InMemoryXESProcessing::class)
     private fun <T : DBMSEnvironment<*>> `complete workflow for multiple automatic ETL processes with Sakila`(
         sakila: T,
+        defaultSchema: String?,
         populate: T.() -> Unit
     ) {
+        val wrap: (String) -> String =
+            if (defaultSchema == null) { className -> className } else { className -> "$defaultSchema.$className" }
         ProcessMTestingEnvironment().withTemporaryDebeziumStorage().withFreshDatabase()
             .withProperty("processm.logs.limit.trace", "3000").run {
                 registerUser("test@example.com", "some organization")
@@ -528,27 +542,22 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                     ),
                 ).map {
                     Triple(
-                        it.first.mapToSet { classNameToId[it]!! },
-                        it.second.mapToSet { classesToRelationships[classNameToId[it.first]!! to classNameToId[it.second]!!]!! },
+                        it.first.mapToSet { classNameToId[wrap(it)]!! },
+                        it.second.mapToSet {
+                            classesToRelationships[classNameToId[wrap(it.first)]!! to classNameToId[wrap(it.second)]!!]!!
+                        },
                         it.third
                     )
                 }
 
-                val relevantCaseNotions = expectedCaseNotions.map { (expectedClasses, expectedEdges, _) ->
-                    caseNotions.single { caseNotion ->
-                        return@single caseNotion.classes.toSet() == expectedClasses && caseNotion.edges.toSet() == expectedEdges
-                    }
-                }
-                assertEquals(relevantCaseNotions.size, expectedCaseNotions.size)
-
-                val etlProcesses = relevantCaseNotions.map { caseNotion ->
+                val etlProcesses = expectedCaseNotions.map { caseNotion ->
                     post<Paths.EtlProcesses, AbstractEtlProcess, AbstractEtlProcess>(
                         AbstractEtlProcess(
                             name = "autosakila",
                             dataConnectorId = currentDataConnector?.id,
                             isActive = true,
                             type = EtlProcessType.automatic,
-                            caseNotion = caseNotion
+                            caseNotion = CaseNotion(caseNotion.first.toTypedArray(), caseNotion.second.toTypedArray())
                         )
                     ) {
                         assertEquals(HttpStatusCode.Created, status)
@@ -609,7 +618,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             PostgreSQLEnvironment.SAKILA_SCHEMA_SCRIPT,
             null
         ).use { sakila ->
-            `complete workflow for multiple automatic ETL processes with Sakila`(sakila) {
+            `complete workflow for multiple automatic ETL processes with Sakila`(sakila, "public") {
                 connect().use { connection ->
                     connection.autoCommit = false
                     connection.createStatement().use { s ->
@@ -647,21 +656,22 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                         currentDataStore = createDataStore("datastore")
                         val postgresDC = createDataConnector("dc1", postgresSakila.connectionProperties)
                         val mysqlDC = createDataConnector("dc1", mysqlSakila.connectionProperties)
-                        fun prepare(dc: DataConnector): AbstractEtlProcess {
+                        fun prepare(dc: DataConnector, wrap: (String) -> String): AbstractEtlProcess {
                             currentDataConnector = dc
 
                             val relationshipGraph = get<Paths.RelationshipGraph, RelationshipGraph> {
                                 assertEquals(HttpStatusCode.OK, status)
                                 return@get body<RelationshipGraph>()
                             }
+                            val classNames = setOf(wrap("city"), wrap("country"), wrap("address"), wrap("store"))
                             val classes = relationshipGraph.classes.associateNotNull {
-                                if (it.name in setOf("city", "country", "address", "store")) it.name to it.id
+                                if (it.name in classNames) it.name to it.id
                                 else null
                             }
-                            val storeId = classes["store"]!!
-                            val addressId = classes["address"]!!
-                            val cityId = classes["city"]!!
-                            val countryId = classes["country"]!!
+                            val storeId = classes[wrap("store")]!!
+                            val addressId = classes[wrap("address")]!!
+                            val cityId = classes[wrap("city")]!!
+                            val countryId = classes[wrap("country")]!!
                             val expectedEdges = relationshipGraph.edges.mapNotNullTo(HashSet()) { edge ->
                                 if ((edge.sourceClassId == storeId && edge.targetClassId == addressId) ||
                                     (edge.sourceClassId == addressId && edge.targetClassId == cityId) ||
@@ -692,7 +702,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                             }
                         }
 
-                        val etlProcesses = listOf(prepare(postgresDC), prepare(mysqlDC))
+                        val etlProcesses = listOf(prepare(postgresDC) { "public.$it" }, prepare(mysqlDC) { it })
                         currentDataConnector = null
 
                         // A delay for Debezium to kick in and start monitoring the DB

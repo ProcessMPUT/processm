@@ -23,6 +23,7 @@ class AttributesName(id: EntityID<Int>) : IntEntity(id) {
 }
 
 object Classes : IntIdTable("classes") {
+    val schema = text("schema").nullable()
     val name = text("name")
     val dataModelId = reference("data_model_id", DataModels)
 }
@@ -30,6 +31,7 @@ object Classes : IntIdTable("classes") {
 class Class(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<Class>(Classes)
 
+    var schema by Classes.schema
     var name by Classes.name
     var dataModel by DataModel referencedOn Classes.dataModelId
     val attributesNames by AttributesName referrersOn AttributesNames.classId

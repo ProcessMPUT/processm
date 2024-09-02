@@ -15,6 +15,7 @@ interface DatabaseChangeApplier {
     data class DatabaseChangeEvent(
         val entityKey: String,
         val entityId: String,
+        val entityTableSchema: String?,
         val entityTable: String,
         val transactionId: String?,
         val timestamp: Long?,

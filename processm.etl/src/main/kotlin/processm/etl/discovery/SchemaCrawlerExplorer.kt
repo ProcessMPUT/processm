@@ -64,6 +64,6 @@ class SchemaCrawlerExplorer(private val connection: Connection, schema: String? 
     }
 
     private fun Table.convertToClass(schema: Schema) =
-        Class(""""${schema.name}"."${this.name}"""",
+        Class(schema.name, this.name,
             this.columns.map { Attribute(it.name, it.columnDataType.name, it.isPartOfForeignKey) })
 }

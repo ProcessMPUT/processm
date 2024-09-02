@@ -18,9 +18,10 @@ class LogGeneratingDatabaseChangeApplier(
     val dataStoreDBName: String,
     val metaModelId: Int
 ) : DatabaseChangeApplier {
-    internal fun getProcessesForClass(className: String): List<Pair<UUID, LocalDateTime?>> {
+    internal fun getProcessesForClass(schemaName: String?, className: String): List<Pair<UUID, LocalDateTime?>> {
         val classId =
-            Classes.slice(Classes.id).select { (Classes.name eq className) and (Classes.dataModelId eq metaModelId) }
+            Classes.slice(Classes.id)
+                .select { (Classes.schema eq schemaName) and (Classes.name eq className) and (Classes.dataModelId eq metaModelId) }
         return AutomaticEtlProcessRelations
             .join(AutomaticEtlProcesses, JoinType.INNER)
             .join(Relationships, JoinType.INNER, Relationships.id, AutomaticEtlProcessRelations.relationship)
@@ -35,8 +36,8 @@ class LogGeneratingDatabaseChangeApplier(
 
     private val executorsCache = HashMap<UUID, Pair<LocalDateTime?, AutomaticEtlProcessExecutor>>()
 
-    internal fun getExecutorsForClass(className: String): List<AutomaticEtlProcessExecutor> {
-        return getProcessesForClass(className).map { (processId, lastModificationTime) ->
+    internal fun getExecutorsForClass(schemaName: String?, className: String): List<AutomaticEtlProcessExecutor> {
+        return getProcessesForClass(schemaName, className).map { (processId, lastModificationTime) ->
             executorsCache.compute(processId) { _, current ->
                 // Create a new executor if:
                 // 1. The current one does not exist
@@ -61,7 +62,9 @@ class LogGeneratingDatabaseChangeApplier(
             for (dbEvent in databaseChangeEvents) {
                 transaction(DBCache.get(dataStoreDBName).database) {
                     val executorsForClass =
-                        executors.computeIfAbsent(dbEvent.entityTable) { getExecutorsForClass(dbEvent.entityTable) }
+                        executors.computeIfAbsent(dbEvent.entityTable) {
+                            getExecutorsForClass(dbEvent.entityTableSchema, dbEvent.entityTable)
+                        }
                     assert(executorsForClass.mapToSet { it.logId }.size == executorsForClass.size)
                     for (executor in executorsForClass) {
                         if (executor.processEvent(dbEvent)) {

@@ -287,7 +287,12 @@ class DataStoreService(
             val relations = relationshipGraph.edgeSet()
 
             return@transaction RelationshipGraph(
-                classNames.mapToArray { RelationshipGraphClassesInner(it.id.value, it.name) },
+                classNames.mapToArray {
+                    RelationshipGraphClassesInner(
+                        it.id.value,
+                        it.schema?.let { schema -> "$schema.${it.name}" } ?: it.name
+                    )
+                },
                 relations.mapToArray {
                     RelationshipGraphEdgesInner(
                         it.id.value,
