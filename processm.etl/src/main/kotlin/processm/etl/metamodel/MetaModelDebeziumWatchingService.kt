@@ -152,7 +152,7 @@ class MetaModelDebeziumWatchingService : Service {
         }
     }
 
-    private fun getEntitiesToBeTracked(dataConnectorId: UUID): Set<String> {
+    private fun getEntitiesToBeTracked(dataConnectorId: UUID): Set<Class> {
         val sourceClassAlias = Classes.alias("c1")
         val targetClassAlias = Classes.alias("c2")
         return EtlProcessesMetadata
@@ -167,11 +167,11 @@ class MetaModelDebeziumWatchingService : Service {
                 targetClassAlias,
                 { Relationships.targetClassId },
                 { targetClassAlias[Classes.id] })
-            .slice(sourceClassAlias[Classes.name], targetClassAlias[Classes.name])
+            .slice(sourceClassAlias.columns + targetClassAlias.columns)
             .select { EtlProcessesMetadata.dataConnectorId eq dataConnectorId and (EtlProcessesMetadata.isActive) }
             .fold(mutableSetOf()) { entities, relation ->
-                entities.add(relation[sourceClassAlias[Classes.name]])
-                entities.add(relation[targetClassAlias[Classes.name]])
+                entities.add(Class.wrapRow(relation, sourceClassAlias))
+                entities.add(Class.wrapRow(relation, targetClassAlias))
 
                 return@fold entities
             }
@@ -211,7 +211,7 @@ class MetaModelDebeziumWatchingService : Service {
     private fun createDebeziumTracker(
         dataStoreId: UUID,
         dataConnector: DataConnector,
-        trackedEntities: Set<String>
+        trackedEntities: Set<Class>
     ): DebeziumChangeTracker = loggedScope { logger ->
         val dataModelId =
             requireNotNull(dataConnector.dataModel?.id?.value) { "Automatic ETL process has no data model assigned and cannot be tracked" }
@@ -234,16 +234,8 @@ class MetaModelDebeziumWatchingService : Service {
                 connection.prepareCall("{call sys.sp_cdc_enable_table(?, ?, ?, @role_name =?)}").use { enable ->
                     connection.prepareCall("{call sys.sp_cdc_disable_table(?, ?, ?)}").use { disable ->
                         for (e in trackedEntities) {
-                            val m = schemaTableRegex.matchEntire(e)
-                            val schema: String
-                            val name: String
-                            if (m !== null) {
-                                schema = m.groupValues[1]
-                                name = m.groupValues[2]
-                            } else {
-                                schema = "dbo"
-                                name = e
-                            }
+                            val schema: String = e.schema ?: "dbo"
+                            val name: String = e.name
                             val instance = "ProcessM_${schema}_$name"
                             disable.setString(1, schema)
                             disable.setString(2, name)
@@ -361,13 +353,15 @@ class MetaModelDebeziumWatchingService : Service {
         return this
     }
 
-    private fun Properties.setTrackedEntities(entities: Set<String>): Properties {
+    private fun Properties.setTrackedEntities(entities: Set<Class>): Properties {
         setProperty("table.include.list", entities.joinToString(",", transform = {
-            val m = schemaTableRegex.matchEntire(it)
-            if (m !== null) {
-                "(\\w+\\.)?${Regex.escape(m.groupValues[1])}.${Regex.escape(m.groupValues[2])}"
-            } else {
-                "(\\w+\\.)?${Regex.escape(it)}"
+            buildString {
+                append("(\\w+\\.)?")
+                it.schema?.let { schema ->
+                    append(Regex.escape(schema))
+                    append("\\.")
+                }
+                append(Regex.escape(it.name))
             }
         }))
 

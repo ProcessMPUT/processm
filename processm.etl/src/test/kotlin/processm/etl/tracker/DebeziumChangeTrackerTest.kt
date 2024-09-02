@@ -356,7 +356,7 @@ class DebeziumChangeTrackerTest {
                         graph.addVertex(r.targetClass.id)
                         graph.addEdge(r.sourceClass.id, r.targetClass.id, r)
                     }
-                val identifyingClassesIds = classes.filter { it.name in identifyingClasses }.mapToSet { it.id }
+                val identifyingClassesIds = classes.filter { """"${it.schema}"."${it.name}"""" in identifyingClasses }.mapToSet { it.id }
                 AutomaticEtlProcessExecutor(
                     dataStoreDBName,
                     etlProcessId,
@@ -368,7 +368,7 @@ class DebeziumChangeTrackerTest {
                 every { this@mockk.dataStoreDBName } returns this@DebeziumChangeTrackerTest.dataStoreDBName
                 every { this@mockk.metaModelId } returns metaModelId.value
                 every { applyChange(any()) } answers { callOriginal() }
-                every { getExecutorsForClass(any()) } returns listOf(executor)
+                every { getExecutorsForClass(any(), any()) } returns listOf(executor)
             }
 
             DebeziumChangeTracker(
