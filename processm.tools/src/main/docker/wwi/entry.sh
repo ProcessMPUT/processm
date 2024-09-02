@@ -13,4 +13,4 @@ do
    sleep 1
 done
 
-exec java -D'processm.tools.generator.dbURL=jdbc:sqlserver://localhost:1433;database=WideWorldImporters' -D'processm.tools.generator.dbUser=SA' -D"processm.tools.generator.dbPassword=$MSSQL_SA_PASSWORD" -jar "/processm/processm.tools-${PROCESSM_VERSION}-jar-with-dependencies.jar"
+exec java -D'processm.tools.generator.dbURL=jdbc:sqlserver://localhost:1433;database=WideWorldImporters;trustServerCertificate=true' -D'processm.tools.generator.dbUser=SA' -D"processm.tools.generator.dbPassword=$MSSQL_SA_PASSWORD" -jar "/processm/processm.tools-${PROCESSM_VERSION}-jar-with-dependencies.jar"

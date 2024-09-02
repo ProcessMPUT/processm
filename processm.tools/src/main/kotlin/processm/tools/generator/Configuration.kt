@@ -142,6 +142,12 @@ class Configuration : AbstractConfiguration() {
     var customerOrderBusinessCaseRemoveLineProbability = 0.0
         private set
 
+    /**
+     * Maximal number of workers serving in the purchase orders department
+     */
+    var purchaseOrderThreadPoolSize = 5
+        private set
+
     // init must be the last in the class body to ensure all the properties were already initialized
     init {
         val prefix = "processm.tools.generator"
@@ -160,5 +166,6 @@ class Configuration : AbstractConfiguration() {
         require(this::dbURL.isInitialized) { "$prefix.dbURL must be set" }
         require(this::dbUser.isInitialized) { "$prefix.dbUser must be set" }
         require(this::dbPassword.isInitialized) { "$prefix.dbPassword must be set" }
+        require(purchaseOrderThreadPoolSize >= 1)
     }
 }
