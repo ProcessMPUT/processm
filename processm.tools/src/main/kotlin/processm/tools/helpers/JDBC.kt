@@ -1,9 +1,11 @@
 package processm.tools.helpers
 
 import java.sql.Connection
+import java.sql.SQLException
 import java.sql.Types
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.Semaphore
+import kotlin.random.Random
 
 /**
  * A wrapper to be used with [Connection.call] to indicate the return parameter of a stored procedure
@@ -33,28 +35,42 @@ class Out<T>(val type: Int) {
 fun Connection.call(name: String, args: List<Any?>): List<List<Any?>>? {
     val questionMarks = args.filter { it !is Out<*> || it.type != Types.NULL }.joinToString(separator = ", ") { "?" }
     val sql = "{call $name($questionMarks)}"
-    val result = prepareCall(sql).use { stmt ->
-        for ((i, arg) in args.withIndex())
-            if (arg is Out<*>) {
-                if (arg.type != Types.NULL)
-                    stmt.registerOutParameter(i + 1, arg.type)
-            } else
-                stmt.setObject(i + 1, arg)
-        val result = if (stmt.execute())
-            stmt.resultSet.use { rs ->
-                val result = ArrayList<List<Any?>>()
-                while (rs.next()) {
-                    result.add((1..rs.metaData.columnCount).map { rs.getObject(it) })
-                }
+    val logger = logger()
+    val nTries = 10
+    for (tryId in 1..nTries) {
+        try {
+            val result = prepareCall(sql).use { stmt ->
+                for ((i, arg) in args.withIndex())
+                    if (arg is Out<*>) {
+                        if (arg.type != Types.NULL)
+                            stmt.registerOutParameter(i + 1, arg.type)
+                    } else
+                        stmt.setObject(i + 1, arg)
+                val result = if (stmt.execute())
+                    stmt.resultSet.use { rs ->
+                        val result = ArrayList<List<Any?>>()
+                        while (rs.next()) {
+                            result.add((1..rs.metaData.columnCount).map { rs.getObject(it) })
+                        }
+                        return@use result
+                    } else null
+                for ((i, arg) in args.withIndex())
+                    if (arg is Out<*> && arg.type != Types.NULL)
+                        arg.set(stmt.getObject(i + 1))
                 return@use result
-            } else null
-        for ((i, arg) in args.withIndex())
-            if (arg is Out<*> && arg.type != Types.NULL)
-                arg.set(stmt.getObject(i + 1))
-        return@use result
+            }
+            commit()
+            return result
+        } catch (e: SQLException) {
+            rollback()
+            logger.warn("SQL exception on try $tryId/$nTries", e)
+            if (tryId < nTries)
+                Thread.sleep(100 + Random.nextLong(8) * 50) // 100..500 ms with 50 ms resolution
+            else
+                throw e
+        }
     }
-    commit()
-    return result
+    throw IllegalStateException("This exception should never happen")
 }
 
 /**
