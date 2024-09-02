@@ -16,6 +16,7 @@ import processm.dbmodels.models.*
 import processm.etl.helpers.getConnection
 import processm.etl.tracker.DebeziumChangeTracker
 import processm.helpers.*
+import processm.logging.loggedScope
 import processm.logging.logger
 import java.io.File
 import java.util.*
@@ -211,7 +212,7 @@ class MetaModelDebeziumWatchingService : Service {
         dataStoreId: UUID,
         dataConnector: DataConnector,
         trackedEntities: Set<String>
-    ): DebeziumChangeTracker {
+    ): DebeziumChangeTracker = loggedScope { logger ->
         val dataModelId =
             requireNotNull(dataConnector.dataModel?.id?.value) { "Automatic ETL process has no data model assigned and cannot be tracked" }
         val connectionProperties = try {
@@ -229,18 +230,38 @@ class MetaModelDebeziumWatchingService : Service {
                 connection.prepareCall("{call sys.sp_cdc_enable_db}").use { call ->
                     call.execute()
                 }
-                connection.prepareCall("{call sys.sp_cdc_enable_table(?, ?, @role_name =?)}").use { call ->
-                    for (e in trackedEntities) {
-                        val m = schemaTableRegex.matchEntire(e)
-                        if (m !== null) {
-                            call.setString(1, m.groupValues[1])
-                            call.setString(2, m.groupValues[2])
-                        } else {
-                            call.setString(1, "dbo")
-                            call.setString(2, e)
+
+                connection.prepareCall("{call sys.sp_cdc_enable_table(?, ?, ?, @role_name =?)}").use { enable ->
+                    connection.prepareCall("{call sys.sp_cdc_disable_table(?, ?, ?)}").use { disable ->
+                        for (e in trackedEntities) {
+                            val m = schemaTableRegex.matchEntire(e)
+                            val schema: String
+                            val name: String
+                            if (m !== null) {
+                                schema = m.groupValues[1]
+                                name = m.groupValues[2]
+                            } else {
+                                schema = "dbo"
+                                name = e
+                            }
+                            val instance = "ProcessM_${schema}_$name"
+                            disable.setString(1, schema)
+                            disable.setString(2, name)
+                            disable.setString(3, instance)
+                            try {
+                                disable.execute()
+                            } catch (t: Throwable) {
+                                logger.warn(
+                                    "Disabling CDC for $instance failed. Most probably this error can be ignored",
+                                    t
+                                )
+                            }
+                            enable.setString(1, schema)
+                            enable.setString(2, name)
+                            enable.setString(3, instance)
+                            enable.setString(4, connectionProperties["username"])
+                            enable.execute()
                         }
-                        call.setString(3, connectionProperties["username"])
-                        call.execute()
                     }
                 }
             }
@@ -341,7 +362,14 @@ class MetaModelDebeziumWatchingService : Service {
     }
 
     private fun Properties.setTrackedEntities(entities: Set<String>): Properties {
-        setProperty("table.include.list", entities.joinToString(",", transform = { "(\\w+\\.)?$it" }))
+        setProperty("table.include.list", entities.joinToString(",", transform = {
+            val m = schemaTableRegex.matchEntire(it)
+            if (m !== null) {
+                "(\\w+\\.)?${Regex.escape(m.groupValues[1])}.${Regex.escape(m.groupValues[2])}"
+            } else {
+                "(\\w+\\.)?${Regex.escape(it)}"
+            }
+        }))
 
         return this
     }
