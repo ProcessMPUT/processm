@@ -38,6 +38,7 @@ fun Connection.call(name: String, args: List<Any?>): List<List<Any?>>? {
     val logger = logger()
     val nTries = 10
     for (tryId in 1..nTries) {
+        autoCommit = false
         try {
             val result = prepareCall(sql).use { stmt ->
                 for ((i, arg) in args.withIndex())
