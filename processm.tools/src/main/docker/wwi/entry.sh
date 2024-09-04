@@ -15,7 +15,9 @@ done
 
 exec java -D'processm.tools.generator.dbURL=jdbc:sqlserver://localhost:1433;database=WideWorldImporters;trustServerCertificate=true' \
   -D'processm.tools.generator.dbUser=SA' -D"processm.tools.generator.dbPassword=$MSSQL_SA_PASSWORD" \
-  -D'processm.tools.generator.customerOrderMinStepLength=10000' \
-  -D'processm.tools.generator.customerOrderMaxStepLength=20000' \
+  -D'processm.tools.generator.customerOrderMinStepLength=60000' \
+  -D'processm.tools.generator.customerOrderMaxStepLength=120000' \
+  -D'processm.tools.generator.purchaseOrderMinStepLength=120000' \
+  -D'processm.tools.generator.purchaseOrderMaxStepLength=240000' \
   -D'processm.tools.generator.connectionPoolSize=20' \
   -jar "/processm/processm.tools-${PROCESSM_VERSION}-jar-with-dependencies.jar"

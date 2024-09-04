@@ -7,4 +7,5 @@ RUN apt-get update && apt-get install -yyy openjdk-17-jre-headless && apt-get cl
 USER mssql
 RUN --mount=type=bind,source=src/main/docker/wwi/,target=/processm/ sh /processm/populate_db.sh
 COPY src/main/docker/wwi/entry.sh target/processm.tools-${PROCESSM_VERSION}-jar-with-dependencies.jar /processm/
+VOLUME /var/opt/mssql/
 ENTRYPOINT ["/bin/bash", "/processm/entry.sh"]

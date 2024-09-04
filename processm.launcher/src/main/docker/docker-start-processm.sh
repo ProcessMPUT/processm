@@ -1,7 +1,7 @@
 #!/bin/sh
 
 SLEEP=1
-REPETITIONS=10
+REPETITIONS=120
 
 if [ "$(id -u)" -eq 0 ]
 then
