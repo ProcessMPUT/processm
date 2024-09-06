@@ -129,7 +129,7 @@ export default class DataConnectorDialog extends Vue {
   connectionNameRules = [(v: string) => notEmptyRule(v, this.$t("data-connector-dialog.validation.non-empty-field").toString())];
 
   connectionName = "";
-  connectionProperties: Record<string, string> = {};
+  connectionProperties: Record<string, any> = {};
   connectionString: Record<string, string> = {};
   isTestingConnection = false;
   isSubmitting = false;
@@ -184,13 +184,21 @@ export default class DataConnectorDialog extends Vue {
     this.resetForms();
   }
 
+  private valuesToString(input: Record<string, any>): Record<string, string> {
+    const result: Record<string, string> = {};
+    for (let key of Object.keys(input)) {
+      result[key] = input[key].toString();
+    }
+    return result;
+  }
+
   async createDataConnector() {
     if (this.dataStoreId == null) return this.app.error(this.$t("data-stores.data-store-not-found").toString());
     if (!this.validateForm()) throw new Error("The provided data is invalid");
 
     try {
       this.isSubmitting = true;
-      const properties = this.configMode == ConfigurationMode.ConnectionString ? this.connectionString : this.connectionProperties;
+      const properties = this.configMode == ConfigurationMode.ConnectionString ? this.connectionString : this.valuesToString(this.connectionProperties);
       if (this.isEdit) {
         const id = this.initialConnector?.id!;
         await this.dataStoreService.updateDataConnector(this.dataStoreId, id, {
@@ -220,7 +228,7 @@ export default class DataConnectorDialog extends Vue {
 
       await this.dataStoreService.testDataConnector(
         this.dataStoreId,
-        this.configMode == ConfigurationMode.ConnectionString ? this.connectionString : this.connectionProperties
+        this.configMode == ConfigurationMode.ConnectionString ? this.connectionString : this.valuesToString(this.connectionProperties)
       );
       this.connectionTestResult = true;
       this.app.success(`${this.$t("data-connector-dialog.testing.success")}`);
