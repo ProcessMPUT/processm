@@ -149,6 +149,15 @@ class ProcessModelComponentData private constructor() {
         }
 
     /**
+     * Returns the data version of the most-recent alignment KPI report (i.e., computed on the data with the highest version number)
+     * for the model identified by the version [modelVersion]. If [modelVersion] is `null`, [acceptedModelVersion] is used.
+     */
+    fun getMostRecentAlignmentKPIReportVersion(modelVersion: Long? = null): Long? =
+        (modelVersion ?: acceptedModelVersion)?.let { modelVersion ->
+            mutableAlignmentKPIReports[modelVersion]?.maxOf { it.key }
+        }
+
+    /**
      * Serializes this data structure to JSON, for DB storage or network transmission
      */
     fun toJSON(): String = Json.encodeToString(this)

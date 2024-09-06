@@ -88,7 +88,7 @@ fun Route.WorkspacesApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             aclService.checkAccess(principal.userId, Workspaces, path.workspaceId, RoleType.Reader)
 
-            val component = workspaceService.getComponent(path.componentId).toAbstractComponent()
+            val component = workspaceService.getComponent(path.componentId).toAbstractComponent(true)
 
             call.respond(HttpStatusCode.OK, component)
         }
@@ -178,7 +178,7 @@ fun Route.WorkspacesApi() {
                 aclService.checkAccess(principal.userId, Workspaces, path.workspaceId, RoleType.Reader)
 
                 val components = workspaceService.getComponents(path.workspaceId)
-                    .mapToArray(WorkspaceComponent::toAbstractComponent)
+                    .mapToArray { it.toAbstractComponent(false) }
 
                 call.respond(HttpStatusCode.OK, components)
             }

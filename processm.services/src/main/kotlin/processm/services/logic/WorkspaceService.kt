@@ -318,8 +318,8 @@ class WorkspaceService(
     fun getDataVariant(componentId: UUID, variantId: Long) = transactionMain {
         with(ProcessModelComponentData.create(WorkspaceComponent[componentId])) {
             when (component.componentType) {
-                ComponentTypeDto.CausalNet -> retrieveCausalNetComponentData(variantId)
-                ComponentTypeDto.PetriNet -> retrievePetriNetComponentData(variantId)
+                ComponentTypeDto.CausalNet -> retrieveCausalNetComponentData(variantId, true)
+                ComponentTypeDto.PetriNet -> retrievePetriNetComponentData(variantId, true)
                 else -> throw UnsupportedOperationException("Component type ${component.componentType} does not support data versioning")
             }
         }
