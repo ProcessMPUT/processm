@@ -956,8 +956,12 @@ paths:
               $ref: '#/components/schemas/AbstractComponent'
         required: true
       responses:
-        '204':
+        '200':
           description: successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ComponentLastModified'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -2687,6 +2691,16 @@ components:
     DeviationType:
       type: string
       enum: [ None, LogDeviation, ModelDeviation ]
+    ComponentLastModified:
+      type: object
+      required: [ userLastModified ]
+      properties:
+        userLastModified:
+          type: string
+          format: date-time
+        dataLastModified:
+          type: string
+          format: date-time
   responses:
     BadRequest:
       description: Invalid request body

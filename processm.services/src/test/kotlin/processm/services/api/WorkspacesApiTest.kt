@@ -19,6 +19,7 @@ import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.RoleType
 import processm.dbmodels.models.WorkspaceComponents
 import processm.dbmodels.models.Workspaces
+import processm.helpers.time.toLocalDateTime
 import processm.services.JsonSerializer
 import processm.services.api.models.*
 import processm.services.helpers.ExceptionReason
@@ -357,7 +358,7 @@ class WorkspacesApiTest : BaseApiTest() {
     }
 
     @Test
-    fun `responds to workspace component update without component customization data request with 204`() =
+    fun `responds to workspace component update without component customization data request with 200`() =
         withConfiguredTestApplication {
             val workspaceService = declareMock<WorkspaceService>()
             val organizationId = UUID.randomUUID()
@@ -366,6 +367,8 @@ class WorkspacesApiTest : BaseApiTest() {
             val componentName = "Component1"
             val dataQuery = "query"
             val dataStore = UUID.randomUUID()
+            val expectedUserLastModified = Instant.ofEpochMilli(0xdeadbeef)
+            val expectedDataLastModified = Instant.ofEpochMilli(0xc00ffee)
 
             withAuthentication(acl = acl { RoleType.Writer * Workspaces * workspaceId }) {
                 every {
@@ -379,7 +382,10 @@ class WorkspacesApiTest : BaseApiTest() {
                         customizationData = null,
                         customProperties = emptyArray()
                     )
-                } just Runs
+                } returns mockk {
+                    every { userLastModified } returns expectedUserLastModified
+                    every { dataLastModified } returns expectedDataLastModified
+                }
                 with(
                     handleRequest(
                         HttpMethod.Put,
@@ -398,13 +404,17 @@ class WorkspacesApiTest : BaseApiTest() {
                             )
                         )
                     }) {
-                    assertEquals(HttpStatusCode.NoContent, response.status())
+                    assertEquals(HttpStatusCode.OK, response.status())
+                    with(response.deserializeContent<ComponentLastModified>()) {
+                        assertEquals(expectedUserLastModified.toLocalDateTime(), userLastModified)
+                        assertEquals(expectedDataLastModified.toLocalDateTime(), dataLastModified)
+                    }
                 }
             }
         }
 
     @Test
-    fun `responds to workspace component update request with 204`() = withConfiguredTestApplication {
+    fun `responds to workspace component update request with 200`() = withConfiguredTestApplication {
         val workspaceService = declareMock<WorkspaceService>()
         val organizationId = UUID.randomUUID()
         val workspaceId = UUID.randomUUID()
@@ -412,6 +422,8 @@ class WorkspacesApiTest : BaseApiTest() {
         val componentName = "Component1"
         val dataQuery = "query"
         val dataStore = UUID.randomUUID()
+        val expectedUserLastModified = Instant.ofEpochMilli(0xdeadbeef)
+        val expectedDataLastModified = Instant.ofEpochMilli(0xc00ffee)
 
         withAuthentication(acl = acl { RoleType.Writer * Workspaces * workspaceId }) {
             every {
@@ -425,7 +437,10 @@ class WorkspacesApiTest : BaseApiTest() {
                     customizationData = """{"layout":[{"id":"id1","x":10.0,"y":10.0}]}""",
                     customProperties = any()
                 )
-            } just Runs
+            } returns mockk {
+                every { userLastModified } returns expectedUserLastModified
+                every { dataLastModified } returns expectedDataLastModified
+            }
             with(
                 handleRequest(
                     HttpMethod.Put,
@@ -452,7 +467,11 @@ class WorkspacesApiTest : BaseApiTest() {
                         )
                     )
                 }) {
-                assertEquals(HttpStatusCode.NoContent, response.status())
+                assertEquals(HttpStatusCode.OK, response.status())
+                with(response.deserializeContent<ComponentLastModified>()) {
+                    assertEquals(expectedUserLastModified.toLocalDateTime(), userLastModified)
+                    assertEquals(expectedDataLastModified.toLocalDateTime(), dataLastModified)
+                }
             }
         }
     }

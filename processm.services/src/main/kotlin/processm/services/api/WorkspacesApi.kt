@@ -112,7 +112,7 @@ fun Route.WorkspacesApi() {
 
             aclService.checkAccess(principal.userId, Workspaces, component.workspaceId, RoleType.Writer)
             with(workspaceComponent) {
-                workspaceService.addOrUpdateComponent(
+                val actualComponent = workspaceService.addOrUpdateComponent(
                     component.componentId,
                     component.workspaceId,
                     name,
@@ -124,9 +124,9 @@ fun Route.WorkspacesApi() {
                     data = data?.let { JsonSerializer.encodeToString(it) },
                     customProperties = customProperties
                 )
-            }
 
-            call.respond(HttpStatusCode.NoContent)
+                call.respond(HttpStatusCode.OK, actualComponent.componentLastModified)
+            }
         }
 
         delete<Paths.WorkspaceComponent> { component ->
