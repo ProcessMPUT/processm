@@ -6,6 +6,7 @@
       :component-details="displayedComponentDetails"
       :workspace-id="workspaceId"
       @close="close"
+      @component-updated="close"
     ></edit-component-dialog>
   </v-container>
 </template>

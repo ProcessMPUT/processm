@@ -197,8 +197,9 @@ export default class EditComponentDialog extends Vue {
       this.updateData = true;
       await waitForRepaint(() => 0);
 
-      await this.workspaceService.updateComponent(this.workspaceId, this.componentDetails.id, this.component);
-      this.component.userLastModified = new Date().toISOString().slice(0, -1);
+      const lastModified = await this.workspaceService.updateComponent(this.workspaceId, this.componentDetails.id, this.component);
+      this.component.userLastModified = lastModified.userLastModified;
+      this.component.dataLastModified = lastModified.dataLastModified;
 
       this.$emit("component-updated", this.component);
       this.app.success(`${this.$t("common.saving.success")}`);

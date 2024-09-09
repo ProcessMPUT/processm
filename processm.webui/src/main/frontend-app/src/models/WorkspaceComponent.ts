@@ -38,6 +38,7 @@ export class CNetComponentData extends ComponentData {
   nodes!: Array<CNetNodeConfig | CausalNetComponentDataAllOfNodes>;
   edges!: Array<EdgeConfig>;
   alignmentKPIReport?: AlignmentKPIReport;
+  alignmentKPIReportVersion?: number;
   'modelVersion'?: number;
   'newestVersion'?: number;
 

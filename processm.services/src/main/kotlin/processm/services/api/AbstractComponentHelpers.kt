@@ -27,8 +27,10 @@ import java.util.*
 
 /**
  * Converts the database representation of the [WorkspaceComponent] into service API [AbstractComponent].
+ *
+ * @param includeAlignments If false, no alignments will be returned in the data field of [AbstractComponent]
  */
-fun WorkspaceComponent.toAbstractComponent(): AbstractComponent =
+fun WorkspaceComponent.toAbstractComponent(includeAlignments: Boolean): AbstractComponent =
     AbstractComponent(
         id = id.value,
         query = query,
@@ -37,7 +39,7 @@ fun WorkspaceComponent.toAbstractComponent(): AbstractComponent =
         name = name,
         layout = getLayout(),
         customizationData = getCustomizationData(),
-        data = getData(),
+        data = getData(includeAlignments),
         dataLastModified = dataLastModified?.toLocalDateTime(),
         userLastModified = userLastModified.toLocalDateTime(),
         lastError = lastError,
@@ -83,7 +85,10 @@ private fun WorkspaceComponent.getCustomizationData(): CustomizationData? {
     }
 }
 
-fun ProcessModelComponentData.retrievePetriNetComponentData(modelVersion: Long?): PetriNetComponentData? =
+fun ProcessModelComponentData.retrievePetriNetComponentData(
+    modelVersion: Long?,
+    includeAlignments: Boolean
+): PetriNetComponentData? =
     loggedScope { logger ->
         val actualModelVersion = (modelVersion ?: acceptedModelVersion) ?: return null.apply {
             logger.warn("Missing Petri-net id for component ${component.id}.")
@@ -107,9 +112,9 @@ fun ProcessModelComponentData.retrievePetriNetComponentData(modelVersion: Long?)
             )
         }
 
-        val alignmentKPIReport = getMostRecentAlignmentKPIReport()?.let { reportURI ->
+        val alignmentKPIReport = if (includeAlignments) getMostRecentAlignmentKPIReport()?.let { reportURI ->
             DurablePersistenceProvider(component.dataStoreId.toString()).use { it.get<Report>(reportURI) }
-        }
+        } else null
         PetriNetComponentData(
             type = ComponentType.petriNet,
             initialMarking = HashMap<String, Int>().apply {
@@ -122,13 +127,17 @@ fun ProcessModelComponentData.retrievePetriNetComponentData(modelVersion: Long?)
             },
             places = petriNet.places.mapToArray { PetriNetComponentDataAllOfPlaces(it.id.toString()) },
             transitions = componentDataTransitions,
+            alignmentKPIReportVersion = getMostRecentAlignmentKPIReportVersion(actualModelVersion),
             alignmentKPIReport = alignmentKPIReport,
             modelVersion = actualModelVersion,
             newestVersion = this.models.keys.maxOrNull()
         )
     }
 
-fun ProcessModelComponentData.retrieveCausalNetComponentData(modelVersion: Long?): CausalNetComponentData? =
+fun ProcessModelComponentData.retrieveCausalNetComponentData(
+    modelVersion: Long?,
+    includeAlignments: Boolean
+): CausalNetComponentData? =
     loggedScope { logger ->
         val actualModelVersion = (modelVersion ?: acceptedModelVersion) ?: return null.apply {
             logger.warn("No model available")
@@ -163,13 +172,15 @@ fun ProcessModelComponentData.retrieveCausalNetComponentData(modelVersion: Long?
                 support = dependencyMeasure
             )
         }
-        val alignmentKPIReport = getMostRecentAlignmentKPIReport(actualModelVersion)?.let { reportURI ->
-            DurablePersistenceProvider(component.dataStoreId.toString()).use { it.get<Report>(reportURI) }
-        }
+        val alignmentKPIReport =
+            if (includeAlignments) getMostRecentAlignmentKPIReport(actualModelVersion)?.let { reportURI ->
+                DurablePersistenceProvider(component.dataStoreId.toString()).use { it.get<Report>(reportURI) }
+            } else null
         return@loggedScope CausalNetComponentData(
             type = ComponentType.causalNet,
             nodes = nodes,
             edges = edges,
+            alignmentKPIReportVersion = getMostRecentAlignmentKPIReportVersion(actualModelVersion),
             alignmentKPIReport = alignmentKPIReport,
             modelVersion = actualModelVersion,
             newestVersion = this.models.keys.maxOrNull()
@@ -179,11 +190,11 @@ fun ProcessModelComponentData.retrieveCausalNetComponentData(modelVersion: Long?
 /**
  * Deserializes the component data for the component.
  */
-private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
+private fun WorkspaceComponent.getData(includeAlignments: Boolean): Any? = loggedScope { logger ->
     try {
         when (componentType) {
             ComponentTypeDto.CausalNet -> {
-                ProcessModelComponentData.create(this).retrieveCausalNetComponentData(null)
+                ProcessModelComponentData.create(this).retrieveCausalNetComponentData(null, includeAlignments)
             }
 
             ComponentTypeDto.Kpi -> {
@@ -207,7 +218,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
             }
 
             ComponentTypeDto.PetriNet -> {
-                ProcessModelComponentData.create(this).retrievePetriNetComponentData(null)
+                ProcessModelComponentData.create(this).retrievePetriNetComponentData(null, includeAlignments)
             }
 
             ComponentTypeDto.DirectlyFollowsGraph -> {
@@ -401,3 +412,11 @@ fun getCustomProperties(
         else -> emptyArray()
     }
 
+/**
+ * Returns an API object carrying the modification dates of the component
+ */
+val WorkspaceComponent.componentLastModified
+    get() = ComponentLastModified(
+        userLastModified = this.userLastModified.toLocalDateTime(),
+        dataLastModified = this.dataLastModified?.toLocalDateTime()
+    )

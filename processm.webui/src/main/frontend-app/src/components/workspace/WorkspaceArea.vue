@@ -56,6 +56,7 @@
           >
             <workspace-component
               v-if="componentsDetails.has(item.i)"
+              :workspace-id="workspaceId"
               :component-details="componentsDetails.get(item.i)"
               :component-mode="ComponentMode.Static"
               :is-transient="transientComponents.has(item.i)"
