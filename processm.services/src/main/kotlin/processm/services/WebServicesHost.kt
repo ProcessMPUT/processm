@@ -2,7 +2,7 @@ package processm.services
 
 import io.ktor.network.tls.certificates.*
 import io.ktor.server.engine.*
-import io.ktor.server.netty.*
+import io.ktor.server.jetty.*
 import processm.core.esb.Service
 import processm.core.esb.ServiceStatus
 import processm.logging.loggedScope
@@ -17,7 +17,7 @@ class WebServicesHost : Service {
     }
 
     private val defaultResponseTimeoutSeconds = 10
-    private lateinit var engine: NettyApplicationEngine
+    private lateinit var engine: ApplicationEngine
     private lateinit var env: ApplicationEngineEnvironment
     override val name = "WebServicesHost"
     override var status = ServiceStatus.Unknown
@@ -29,7 +29,7 @@ class WebServicesHost : Service {
 
     override fun start() = loggedScope { logger ->
         logger.debug("Starting HTTP server")
-        // A work-around, because it seems ktor reads properties once into a its own static cache
+        // A work-around, because it seems ktor reads properties once into its own static cache
         val args = System.getProperty("ktor.deployment.port")?.let { port ->
             arrayOf("-port=$port")
         } ?: emptyArray<String>()
@@ -59,11 +59,8 @@ class WebServicesHost : Service {
             )
             assert(env.config.propertyOrNull(keyStoreProperty) != null)
         }
-
-        engine = embeddedServer(Netty, env, configure = {
-            responseWriteTimeoutSeconds =
-                env.config.property("ktor.deployment.responseTimeoutSeconds").getString().toIntOrNull()
-                    ?: defaultResponseTimeoutSeconds
+        engine = embeddedServer(Jetty, env, configure = {
+            // Nothing for now
         })
         engine.start()
         status = ServiceStatus.Started

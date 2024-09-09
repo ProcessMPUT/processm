@@ -18,7 +18,6 @@
 
     <properties>
         <dbschema>public</dbschema>
-        <jetty.version>9.4.48.v20220622</jetty.version>
         <jaxb.version>3.0.1</jaxb.version>
     </properties>
 
