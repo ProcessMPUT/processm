@@ -3,6 +3,7 @@
           xmlns="http://maven.apache.org/ASSEMBLY/2.2.0"
           xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.2.0 https://maven.apache.org/xsd/assembly-2.2.0.xsd">
     <id>bin</id>
+    <baseDirectory>processm</baseDirectory>
     <formats>
         <format>tar.xz</format>
     </formats>
@@ -36,6 +37,13 @@
             <outputDirectory>conf</outputDirectory>
             <includes>
                 <include>config.properties</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>${parent.basedir}/processm.services/src/main/resources</directory>
+            <outputDirectory>conf</outputDirectory>
+            <includes>
+                <include>application.conf</include>
             </includes>
         </fileSet>
         <fileSet>

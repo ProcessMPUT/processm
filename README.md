@@ -24,7 +24,7 @@ configuration of dependencies.
 For Docker users, download and run ProcessM by simply executing the following command:
 
 ```bash
-docker run -p 80:2080 -p 443:2443 -d --name processm processm/processm-server-full:latest
+docker run -d -p 80:2080 -p 443:2443 --name processm processm/processm-server-full:latest
 ```
 
 #### Local installation

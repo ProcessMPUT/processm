@@ -314,7 +314,7 @@ class MetaModelDebeziumWatchingService : Service {
     }
 
     private fun Properties.setTemporaryFiles(dataConnectorId: UUID): Properties {
-        val directory = File(getPropertyIgnoreCase(DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY) ?: ".")
+        val directory = File(getPropertyIgnoreCase(DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY) ?: "data/debezium/")
         if (!directory.exists())
             directory.mkdirs()
         check(directory.exists() && directory.isDirectory) { "The property `$DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY' points to a path that either is not a directory or does not exists and cannot be created, e.g., due to insufficient privileges." }

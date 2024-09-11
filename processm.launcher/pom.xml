@@ -72,6 +72,10 @@
                         <descriptor>src/assembly/bin.xml</descriptor>
                     </descriptors>
                     <finalName>processm-${project.version}</finalName>
+                    <overrideUserName>root</overrideUserName>
+                    <overrideGroupName>root</overrideGroupName>
+                    <overrideUid>0</overrideUid>
+                    <overrideGid>0</overrideGid>
                 </configuration>
                 <executions>
                     <execution>
@@ -89,7 +93,47 @@
                 <version>3.3.0</version>
                 <executions>
                     <execution>
-                        <id>Create docker image</id>
+                        <id>Create docker image for processm-bare</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <!-- The following configuration uses docker buildx plugin AND multi-arch support
+                        To install the buildx plugin see, e.g., https://docs.docker.com/engine/install/debian/
+                        To enable multi-arch support see, e.g., https://docs.docker.com/desktop/containerd/ or https://docs.docker.com/engine/storage/containerd/
+                        -->
+                        <configuration>
+                            <executable>docker</executable>
+                            <arguments>
+                                <argument>buildx</argument>
+                                <argument>build</argument>
+                                <argument>-f</argument>
+                                <argument>Dockerfile_bare</argument>
+                                <argument>--build-arg</argument>
+                                <argument>PROCESSM_VERSION=${revision}</argument>
+                                <argument>-t</argument>
+                                <argument>processm/processm-bare:${revision}</argument>
+                                <argument>--platform=linux/arm64,linux/amd64</argument>
+                                <argument>.</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>Create docker image for processm-intermediate</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>python3</executable>
+                            <arguments>
+                                <argument>../processm.tools/src/main/python/merge_images.py</argument>
+                                <argument>${revision}</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>Create docker image for processm-server-full</id>
                         <phase>package</phase>
                         <goals>
                             <goal>exec</goal>
@@ -97,12 +141,16 @@
                         <configuration>
                             <executable>docker</executable>
                             <arguments>
+                                <argument>buildx</argument>
                                 <argument>build</argument>
+                                <argument>-f</argument>
+                                <argument>Dockerfile_final</argument>
                                 <argument>--build-arg</argument>
-                                <argument>revision=${revision}</argument>
+                                <argument>PROCESSM_VERSION=${revision}</argument>
                                 <argument>-t</argument>
-                                <argument>processm:${revision}</argument>
-                                <argument>../</argument>
+                                <argument>processm/processm-server-full:${revision}</argument>
+                                <argument>--platform=linux/arm64,linux/amd64</argument>
+                                <argument>.</argument>
                             </arguments>
                         </configuration>
                     </execution>
