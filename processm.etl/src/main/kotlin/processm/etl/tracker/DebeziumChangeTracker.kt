@@ -157,6 +157,8 @@ class DebeziumChangeTracker(
         val valueInfo: JsonObject = kotlinx.serialization.json.Json.decodeFromString<JsonObject>(changeEvent.value())
         val eventType = valueInfo.extractNestedValue<String>("payload", "op").getEventTypeFromDebeziumOperation()
         val objectData = valueInfo.extractNestedValue<Map<String, String>?>("payload", "after")
+        val dbSchemaName =
+            runCatching { valueInfo.extractNestedValue<String>("payload", "source", "schema") }.getOrNull()
         val tableName = valueInfo.extractNestedValue<String>("payload", "source", "table")
 //        val isSnapshot = valueInfo.extractNestedValue<String?>("payload", "source", "snapshot")
         val timestamp = valueInfo.extractNestedValue<Long?>("payload", "ts_ms")
@@ -165,6 +167,7 @@ class DebeziumChangeTracker(
         return DatabaseChangeEvent(
             entityKey = keyName,
             entityId = keyValue,
+            entityTableSchema = dbSchemaName,
             entityTable = tableName,
             transactionId = transaction,
             timestamp = timestamp,

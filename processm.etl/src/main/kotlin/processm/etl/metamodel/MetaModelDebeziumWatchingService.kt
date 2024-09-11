@@ -16,6 +16,7 @@ import processm.dbmodels.models.*
 import processm.etl.helpers.getConnection
 import processm.etl.tracker.DebeziumChangeTracker
 import processm.helpers.*
+import processm.logging.loggedScope
 import processm.logging.logger
 import java.io.File
 import java.util.*
@@ -30,6 +31,8 @@ class MetaModelDebeziumWatchingService : Service {
     companion object {
         private val logger = logger()
         const val DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY = "processm.etl.debezium.persistence.directory"
+
+        private val schemaTableRegex = Regex("^\"(.*)\"\\.\"(.*)\"$")
     }
 
     private val defaultSlotName = "processm"
@@ -149,7 +152,7 @@ class MetaModelDebeziumWatchingService : Service {
         }
     }
 
-    private fun getEntitiesToBeTracked(dataConnectorId: UUID): Set<String> {
+    private fun getEntitiesToBeTracked(dataConnectorId: UUID): Set<Class> {
         val sourceClassAlias = Classes.alias("c1")
         val targetClassAlias = Classes.alias("c2")
         return EtlProcessesMetadata
@@ -164,11 +167,11 @@ class MetaModelDebeziumWatchingService : Service {
                 targetClassAlias,
                 { Relationships.targetClassId },
                 { targetClassAlias[Classes.id] })
-            .slice(sourceClassAlias[Classes.name], targetClassAlias[Classes.name])
+            .slice(sourceClassAlias.columns + targetClassAlias.columns)
             .select { EtlProcessesMetadata.dataConnectorId eq dataConnectorId and (EtlProcessesMetadata.isActive) }
             .fold(mutableSetOf()) { entities, relation ->
-                entities.add(relation[sourceClassAlias[Classes.name]])
-                entities.add(relation[targetClassAlias[Classes.name]])
+                entities.add(Class.wrapRow(relation, sourceClassAlias))
+                entities.add(Class.wrapRow(relation, targetClassAlias))
 
                 return@fold entities
             }
@@ -208,8 +211,8 @@ class MetaModelDebeziumWatchingService : Service {
     private fun createDebeziumTracker(
         dataStoreId: UUID,
         dataConnector: DataConnector,
-        trackedEntities: Set<String>
-    ): DebeziumChangeTracker {
+        trackedEntities: Set<Class>
+    ): DebeziumChangeTracker = loggedScope { logger ->
         val dataModelId =
             requireNotNull(dataConnector.dataModel?.id?.value) { "Automatic ETL process has no data model assigned and cannot be tracked" }
         val connectionProperties = try {
@@ -227,11 +230,30 @@ class MetaModelDebeziumWatchingService : Service {
                 connection.prepareCall("{call sys.sp_cdc_enable_db}").use { call ->
                     call.execute()
                 }
-                connection.prepareCall("{call sys.sp_cdc_enable_table(N'dbo', ?, @role_name =?)}").use { call ->
-                    for (e in trackedEntities) {
-                        call.setString(1, e)
-                        call.setString(2, connectionProperties["username"])
-                        call.execute()
+
+                connection.prepareCall("{call sys.sp_cdc_enable_table(?, ?, ?, @role_name =?)}").use { enable ->
+                    connection.prepareCall("{call sys.sp_cdc_disable_table(?, ?, ?)}").use { disable ->
+                        for (e in trackedEntities) {
+                            val schema: String = e.schema ?: "dbo"
+                            val name: String = e.name
+                            val instance = "ProcessM_${schema}_$name"
+                            disable.setString(1, schema)
+                            disable.setString(2, name)
+                            disable.setString(3, instance)
+                            try {
+                                disable.execute()
+                            } catch (t: Throwable) {
+                                logger.warn(
+                                    "Disabling CDC for $instance failed. Most probably this error can be ignored",
+                                    t
+                                )
+                            }
+                            enable.setString(1, schema)
+                            enable.setString(2, name)
+                            enable.setString(3, instance)
+                            enable.setString(4, connectionProperties["username"])
+                            enable.execute()
+                        }
                     }
                 }
             }
@@ -331,8 +353,17 @@ class MetaModelDebeziumWatchingService : Service {
         return this
     }
 
-    private fun Properties.setTrackedEntities(entities: Set<String>): Properties {
-        setProperty("table.include.list", entities.joinToString(",", transform = { "(\\w+\\.)?$it" }))
+    private fun Properties.setTrackedEntities(entities: Set<Class>): Properties {
+        setProperty("table.include.list", entities.joinToString(",", transform = {
+            buildString {
+                append("(\\w+\\.)?")
+                it.schema?.let { schema ->
+                    append(Regex.escape(schema))
+                    append("\\.")
+                }
+                append(Regex.escape(it.name))
+            }
+        }))
 
         return this
     }

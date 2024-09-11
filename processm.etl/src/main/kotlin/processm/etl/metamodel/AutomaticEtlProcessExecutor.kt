@@ -44,8 +44,9 @@ class AutomaticEtlProcessExecutor(
         checkNotNull(Class.findById(descriptor.graph.vertexSet().first())?.dataModel?.id) { "The DB is broken" }
 
     private val classIds = HashMap<String, EntityID<Int>>()
-    private fun getClassId(className: String): EntityID<Int> = classIds.computeIfAbsent(className) {
-        Classes.slice(Classes.id).select { (Classes.name eq className) and (Classes.dataModelId eq metaModelId) }
+    private fun getClassId(schema: String?, className: String): EntityID<Int> = classIds.computeIfAbsent(className) {
+        Classes.slice(Classes.id)
+            .select { (Classes.schema eq schema) and (Classes.name eq className) and (Classes.dataModelId eq metaModelId) }
             .firstOrNull()?.getOrNull(Classes.id)
             ?: throw NoSuchElementException("A class with the specified name $className does not exist")
     }
@@ -419,7 +420,7 @@ class AutomaticEtlProcessExecutor(
     }
 
     private fun DatabaseChangeApplier.DatabaseChangeEvent.getObject() =
-        RemoteObjectID(entityId, getClassId(entityTable))
+        RemoteObjectID(entityId, getClassId(entityTableSchema, entityTable))
 
     /**
      * Process queue of postponed events. The events are processed in the FIFO order using [Connection.processEvent].

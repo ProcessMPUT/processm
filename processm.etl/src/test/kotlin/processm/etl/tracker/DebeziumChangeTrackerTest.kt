@@ -193,7 +193,7 @@ class DebeziumChangeTrackerTest {
     @Test
     fun `v1 table 2 id a`() {
         testBase(
-            setOf("eban", "eket"), listOf(
+            setOf(""""public"."eban"""", """"public"."eket""""), listOf(
                 setOf(setOf("ae1", "be1")),
                 setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2")),
                 setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3")),
@@ -208,7 +208,7 @@ class DebeziumChangeTrackerTest {
     @Test
     fun `v1 table 2 id b`() {
         testBase(
-            setOf("eban", "eket", "ekko"), listOf(
+            setOf(""""public"."eban"""", """"public"."eket"""", """"public"."ekko""""), listOf(
                 setOf(setOf("ae1", "be1")),
                 setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2")),
                 setOf(
@@ -227,7 +227,7 @@ class DebeziumChangeTrackerTest {
     @Test
     fun `v1 table 2 id c`() {
         testBase(
-            setOf("eban", "eket", "ekko", "ekpo"), listOf(
+            setOf(""""public"."eban"""", """"public"."eket"""", """"public"."ekko"""", """"public"."ekpo""""), listOf(
                 setOf(setOf("ae1", "be1")),
                 setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"), setOf("ae1", "ae2", "be1", "be2", "ce1", "de2")),
                 setOf(
@@ -248,7 +248,7 @@ class DebeziumChangeTrackerTest {
     @Test
     fun `v2 table 2 id a`() {
         testBase(
-            setOf("eban", "eket"), listOf(
+            setOf(""""public"."eban"""", """"public"."eket""""), listOf(
                 setOf(setOf("be1")), //be1
                 setOf(setOf("be1", "ae1")), //ae1
                 setOf(setOf("be1", "ae1", "be2")), //be2
@@ -275,7 +275,7 @@ class DebeziumChangeTrackerTest {
     @Test
     fun `v3 table 2 id c`() {
         testBase(
-            setOf("eban", "eket", "ekko", "ekpo"), listOf(
+            setOf(""""public"."eban"""", """"public"."eket"""", """"public"."ekko"""", """"public"."ekpo""""), listOf(
                 setOf(setOf("ae1", "be1")),
                 setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"), setOf("ae1", "ae2", "be1", "be2", "ce1", "de2")),
                 setOf(
@@ -299,7 +299,7 @@ class DebeziumChangeTrackerTest {
     @Test
     fun `v4 table 2 id c`() {
         testBase(
-            setOf("eban", "eket", "ekko", "ekpo"), listOf(
+            setOf(""""public"."eban"""", """"public"."eket"""", """"public"."ekko"""", """"public"."ekpo""""), listOf(
                 setOf(setOf("ae1", "be1")),
                 setOf(setOf("ae1", "be1", "ce1", "de1"), setOf("ae1", "be1", "ce1", "de2")),
                 setOf(
@@ -356,7 +356,7 @@ class DebeziumChangeTrackerTest {
                         graph.addVertex(r.targetClass.id)
                         graph.addEdge(r.sourceClass.id, r.targetClass.id, r)
                     }
-                val identifyingClassesIds = classes.filter { it.name in identifyingClasses }.mapToSet { it.id }
+                val identifyingClassesIds = classes.filter { """"${it.schema}"."${it.name}"""" in identifyingClasses }.mapToSet { it.id }
                 AutomaticEtlProcessExecutor(
                     dataStoreDBName,
                     etlProcessId,
@@ -368,7 +368,7 @@ class DebeziumChangeTrackerTest {
                 every { this@mockk.dataStoreDBName } returns this@DebeziumChangeTrackerTest.dataStoreDBName
                 every { this@mockk.metaModelId } returns metaModelId.value
                 every { applyChange(any()) } answers { callOriginal() }
-                every { getExecutorsForClass(any()) } returns listOf(executor)
+                every { getExecutorsForClass(any(), any()) } returns listOf(executor)
             }
 
             DebeziumChangeTracker(

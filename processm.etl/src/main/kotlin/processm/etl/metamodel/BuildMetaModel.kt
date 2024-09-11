@@ -23,16 +23,17 @@ fun buildMetaModel(dataStoreDBName: String, metaModelName: String, databaseExplo
 
         val classIds = Classes
             .batchInsert(classes) {
+                this[Classes.schema] = it.schema
                 this[Classes.name] = it.name
                 this[Classes.dataModelId] = dataModelId
             }.associate {
-                it[Classes.name] to it[Classes.id]
+                (it[Classes.schema] to it[Classes.name]) to it[Classes.id]
             }
 
         val referencingAttributeIds = BatchInsertStatement(AttributesNames).apply {
             classes.forEach { metaModelClass ->
                 metaModelClass.attributes.forEach { attribute ->
-                    classIds[metaModelClass.name]?.let { classId ->
+                    classIds[metaModelClass.schema to metaModelClass.name]?.let { classId ->
                         addBatch()
                         this[AttributesNames.name] = attribute.name
                         this[AttributesNames.isReferencingAttribute] = attribute.isPartOfForeignKey
@@ -51,8 +52,8 @@ fun buildMetaModel(dataStoreDBName: String, metaModelName: String, databaseExplo
 
         BatchInsertStatement(Relationships).apply {
             relationships.forEach { relationship ->
-                classIds[relationship.sourceClass.name]?.let { sourceClassId ->
-                    classIds[relationship.targetClass.name]?.let { targetClassId ->
+                classIds[relationship.sourceClass.schema to relationship.sourceClass.name]?.let { sourceClassId ->
+                    classIds[relationship.targetClass.schema to relationship.targetClass.name]?.let { targetClassId ->
                         referencingAttributeIds[sourceClassId to relationship.sourceColumnName]?.let { referencingAttributeId ->
                             addBatch()
                             this[Relationships.dataModelId] = dataModelId
