@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+import gzip
 import hashlib
 import json
 import logging
 import os
 import subprocess
 import sys
+import tarfile
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -384,13 +386,18 @@ def docker_pull(image: str, platform: Optional[str] = None):
 
 # endregion
 
-def merge_dirs(dir_base: Path, dir_other: Path, name_and_tag: str, digest_base: str, digest_other: str):
+def merge_dirs(dir_base: Path, dir_other: Path, name_and_tag: str, digest_base: str, digest_other: str,
+               accept_layer_other: Optional[Callable[[Path], bool]] = None):
     """
     A low-level tool for merging an extracted image present in `dir_other` into the extracted image present in
     `dir_base`. The resulting image is annotated with the name and tag given in `name_and_tag`.
     The images are expected to be multi-arch images (even if there is only one architecture inside), and
     only a single architecture can be merged at a time - hence digests referencing the corresponding
     manifests must be given in `digest_base` and `digest_other`.
+
+    `accept_layer_other` is used to filter layers in the other image. If the function is not provided,
+    all layers are taken. Otherwise, only the layers for which the function returns `True` are taken.
+    The function gets a path to the layer file.
 
     This function is not intended to be used by itself, see `Merger` for a more friendly interface.
     """
@@ -412,14 +419,33 @@ def merge_dirs(dir_base: Path, dir_other: Path, name_and_tag: str, digest_base: 
                 layers_base: list = manifest_base.content["layers"]
                 layers_other: list = manifest_other.content["layers"]
 
-                # Remove data blobs
+                if accept_layer_other is not None:
+                    accepted_layers_other = []
+                    accepted_diffs_other = []
+                    for layer in layers_other:
+                        file = dir_other / digest_to_path(layer["digest"])
+                        if not file.exists() or accept_layer_other(file):
+                            accepted_layers_other.append(layer)
+                            # diffs are identified by the hashes of ungzipped layers -> we compute them here
+                            with gzip.open(file, 'rb') as f:
+                                block = 4096
+                                m = hashlib.sha256()
+                                while data := f.read(block):
+                                    m.update(data)
+                                accepted_diffs_other.append(f"sha256:{m.hexdigest()}")
+                else:
+                    accepted_layers_other = layers_other
+                    accepted_diffs_other = None
+
+                    # Remove data blobs
                 for layer in layers_base + layers_other:
                     file = dir_base / digest_to_path(layer["digest"])
                     if file.exists():
                         os.remove(file)
 
-                logging.info("Base layers count %d, other layers count %d", len(layers_base), len(layers_other))
-                layers_base += [layer for layer in layers_other if
+                logging.info("Base layers count %d, other layers count %d (accepted: %d)", len(layers_base),
+                             len(layers_other), len(accepted_layers_other))
+                layers_base += [layer for layer in accepted_layers_other if
                                 not any([same_reference(layer, base) for base in layers_base])]
                 manifest["Layers"] = [str(digest_to_path(layer["digest"])) for layer in layers_base]
                 logging.info("Final layers count %d", len(layers_base))
@@ -427,9 +453,10 @@ def merge_dirs(dir_base: Path, dir_other: Path, name_and_tag: str, digest_base: 
                         manifest_other.from_object(manifest_other.content["config"]) as config_other:
                     diff_ids_other: list = config_other.content['rootfs']['diff_ids']
                     diff_ids_base: list = config_base.content['rootfs']['diff_ids']
-                    logging.info("Base diff ids count %d, other diff ids count %d", len(diff_ids_base),
-                                 len(diff_ids_other))
-                    diff_ids_base += [id for id in diff_ids_other if id not in diff_ids_base]
+                    logging.info("Base diff ids count %d, other diff ids count %d (accepted %d)", len(diff_ids_base),
+                                 len(diff_ids_other), len(accepted_diffs_other) if accepted_diffs_other else -1)
+                    diff_ids_base += [id for id in diff_ids_other if id not in diff_ids_base and (
+                            accepted_diffs_other is None or id in accepted_diffs_other)]
                     logging.info("Final diff ids count %d", len(diff_ids_base))
                     merge_configs(config_base.content["config"], config_other.content["config"])
                     config_base.content["created"] = datetime.now(timezone.utc).isoformat()
@@ -538,8 +565,8 @@ class Merger:
                     logging.info("Partially matching platforms: %s %s -> %s", p1, p2, p1)
                     yield p1, d1, d2
 
-    def merge(self, image1: Union[str, Path], image2: Union[str, Path], predicate: Optional[Callable[[dict], bool]]) -> \
-            list[tuple[dict, Path]]:
+    def merge(self, image1: Union[str, Path], image2: Union[str, Path], predicate: Optional[Callable[[dict], bool]],
+              accept_layer: Optional[Callable[[Path], bool]] = None) -> list[tuple[dict, Path]]:
         """
         Merge `image1` and `image2` for all matching platforms if `predicate` is None, or for platforms matching the
         `predicate`. For each architecture **a separate image is created**. Each image is annotated with the name passed
@@ -549,6 +576,7 @@ class Merger:
         is recommended that it is loaded to the local repository and exported from it.
 
         :param predicate: See `match_platforms`
+        :param accept_layer See `accept_layer_other` in `merge_dirs`
         :return: A list of pairs: a platform descriptor and a `Path` to a director containing the image for the platform
         """
         images = []
@@ -562,7 +590,8 @@ class Merger:
             cp(base_dir, new_dir)
             assert new_dir.exists() and new_dir.is_dir()
             cp(other_dir / 'blobs', new_dir)
-            merge_dirs(new_dir, other_dir, f'{self.name_and_tag}-{descriptor}', digest1, digest2)
+            merge_dirs(new_dir, other_dir, f'{self.name_and_tag}-{descriptor}', digest1, digest2,
+                       accept_layer_other=accept_layer)
             images.append((platform, new_dir))
         return images
 
@@ -613,6 +642,14 @@ class Merger:
         return output_dir
 
 
+def accept_java_layer(layer_file: Path) -> bool:
+    with tarfile.open(layer_file, "r:gz") as tar_file:
+        while member := tar_file.next():
+            if member.path.startswith("opt/java"):
+                return True
+    return False
+
+
 def main(processm_version: str, output_file: Optional[str] = None,
          intermediate_name_prefix: str = 'processm/processm-intermediate',
          processm_bare: str = 'processm/processm-bare', timescale: str = 'timescale/timescaledb:latest-pg16-oss',
@@ -656,8 +693,10 @@ def main(processm_version: str, output_file: Optional[str] = None,
         images = merger.merge(f'{processm_bare}:{processm_version}', timescale, predicate=None)
         bare_and_timescale = merger.build_multiarch_image(images, True)
         merger = Merger(root_dir, f'{intermediate_name_prefix}2:{processm_version}')
-        images = merger.merge(bare_and_timescale, temurin_for_arm64, predicate=lambda p: p['architecture'] == 'arm64')
-        images += merger.merge(bare_and_timescale, temurin_for_amd64, predicate=lambda p: p['architecture'] == 'amd64')
+        images = merger.merge(bare_and_timescale, temurin_for_arm64, predicate=lambda p: p['architecture'] == 'arm64',
+                              accept_layer=accept_java_layer)
+        images += merger.merge(bare_and_timescale, temurin_for_amd64, predicate=lambda p: p['architecture'] == 'amd64',
+                               accept_layer=accept_java_layer)
         intermediate = merger.build_multiarch_image(images, True)
         export(intermediate, output_file)
         logging.info("Exported the final image to %s",
