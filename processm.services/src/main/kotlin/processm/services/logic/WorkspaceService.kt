@@ -152,7 +152,7 @@ class WorkspaceService(
         layoutData: String? = null,
         data: String? = null,
         customProperties: Array<CustomProperty>
-    ): Unit = transactionMain {
+    ): WorkspaceComponent = transactionMain {
         val componentAlreadyExists = WorkspaceComponents
             .select { (WorkspaceComponents.id eq workspaceComponentId) and (WorkspaceComponents.deleted eq false) }
             .limit(1)
@@ -227,8 +227,8 @@ class WorkspaceService(
         customizationData: String? = null,
         layoutData: String? = null,
         customProperties: Array<CustomProperty> = emptyArray()
-    ) {
-        WorkspaceComponent.new(workspaceComponentId) {
+    ): WorkspaceComponent {
+        return WorkspaceComponent.new(workspaceComponentId) {
             this.name = name
             this.query = query
             this.dataStoreId = dataStore
@@ -255,7 +255,7 @@ class WorkspaceService(
         layoutData: String? = null,
         data: String? = null,
         customProperties: Array<CustomProperty> = emptyArray()
-    ) {
+    ): WorkspaceComponent {
         WorkspaceComponent[workspaceComponentId].apply {
             var trigger = false
             if (workspaceId != null) this.workspace = Workspace[workspaceId]
@@ -277,13 +277,14 @@ class WorkspaceService(
                 this.properties = newCustomProperties
                 trigger = true
             }
-            this.userLastModified = Instant.now()
 
             if (trigger) {
+                this.userLastModified = Instant.now()
                 afterCommit {
                     triggerEvent(producer, WorkspaceComponentEventType.ComponentCreatedOrUpdated)
                 }
             }
+            return this
         }
     }
 
@@ -317,8 +318,8 @@ class WorkspaceService(
     fun getDataVariant(componentId: UUID, variantId: Long) = transactionMain {
         with(ProcessModelComponentData.create(WorkspaceComponent[componentId])) {
             when (component.componentType) {
-                ComponentTypeDto.CausalNet -> retrieveCausalNetComponentData(variantId)
-                ComponentTypeDto.PetriNet -> retrievePetriNetComponentData(variantId)
+                ComponentTypeDto.CausalNet -> retrieveCausalNetComponentData(variantId, true)
+                ComponentTypeDto.PetriNet -> retrievePetriNetComponentData(variantId, true)
                 else -> throw UnsupportedOperationException("Component type ${component.componentType} does not support data versioning")
             }
         }

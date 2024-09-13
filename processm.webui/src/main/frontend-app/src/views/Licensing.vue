@@ -1468,7 +1468,7 @@ as published by the Free Software Foundation.
    limitations under the License.
 ```
 
-# Netty
+# Jetty
 ```
                                  Apache License
                            Version 2.0, January 2004

@@ -1,7 +1,12 @@
 <template xmlns:v-slot="http://www.w3.org/1999/html">
   <div class="graph">
     <v-toolbar class="toolbar" dense elevation="0" floating>
-      <alignments-dialog :alignments="data.data.alignmentKPIReport?.alignments" :name="data.name"></alignments-dialog>
+      <alignments-dialog
+        :workspace-id="workspaceId"
+        :component-id="data.id"
+        v-if="data.data.alignmentKPIReportVersion != null"
+        :name="data.name"
+      ></alignments-dialog>
       <v-tooltip bottom v-if="hasNewerVersion()">
         <template v-slot:activator="{ on, attrs }">
           <v-btn v-bind="attrs" v-on="on" icon v-if="componentMode == ComponentMode.Edit" @click="loadNewestModel">

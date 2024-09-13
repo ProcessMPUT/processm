@@ -119,8 +119,8 @@ class AutomaticEtlTest : SeleniumBase() {
         typeIn("process-name", etlProcessName)
         openVuetifyDropDown("selected-data-connector-id")
         selectVuetifyDropDownItem(connectorName)
-        doubleClickSvgElement("eban")
-        doubleClickSvgElement("ekko")
+        doubleClickSvgElement("public.eban")
+        doubleClickSvgElement("public.ekko")
         click("btn-create-etl-process-configuration")
         acknowledgeSnackbar()
         assertTrue { byText(etlProcessName).isDisplayed }
