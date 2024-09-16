@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-import sys
 import subprocess
+import sys
 import tarfile
 
 
@@ -16,7 +16,8 @@ def get_blobs(image: str) -> list[str]:
 
 def exclude_blobs(image: str, exclude: list[str]):
     with subprocess.Popen(["docker", "save", image], stdout=subprocess.PIPE) as docker, \
-            subprocess.Popen(["tar", "--delete"] + exclude, stdin=docker.stdout, stderr=subprocess.DEVNULL):
+            subprocess.Popen(["tar", "--delete", '--no-xattrs'] + exclude, stdin=docker.stdout,
+                             stderr=subprocess.DEVNULL):
         # This error redirection is ugly, but tar spams with information that a member was not found in the archive
         pass
 
