@@ -359,18 +359,18 @@ def export(base_dir: Union[str, Path], output: Optional[Union[str, Path]]):
     `None), or loads the resulting image directly to the local Docker registry (via `docker load`)
     """
     if output is not None:
-        subprocess.run(["tar", "cf", output, "."], cwd=base_dir, check=True)
+        subprocess.run(["tar", "cf", '--no-xattrs', output, "."], cwd=base_dir, check=True)
     else:
-        with subprocess.Popen(["tar", "c", "."], cwd=base_dir, stdout=subprocess.PIPE) as tar:
+        with subprocess.Popen(["tar", "c", '--no-xattrs', "."], cwd=base_dir, stdout=subprocess.PIPE) as tar:
             subprocess.run(["docker", "load"], stdin=tar.stdout)
         assert tar.returncode == 0
 
 
-def cp(source, target):
+def cp(source, target, hard_link=False):
     """
     Recursively copies `source` to `target` using `cp` and ommiting files already present in the target
     """
-    subprocess.run(['cp', '-Rn', source, target], check=True)
+    subprocess.run(['cp', '-Rn' + ('l' if hard_link else ''), source, target], shell=False, check=False)
 
 
 def docker_pull(image: str, platform: Optional[str] = None):
@@ -507,11 +507,11 @@ class Merger:
         target.mkdir(exist_ok=False, parents=True)
         if image_file_path.exists():
             logging.info("Extracting %s to %s", image_file, target)
-            subprocess.run(['tar', 'xf', image_file], cwd=target, check=True)
+            subprocess.run(['tar', 'xf', '--no-xattrs', image_file], cwd=target, check=True)
         else:
             logging.info("File %s does not exist. Assuming it is an image name, extracting to %s", image_file, target)
             with subprocess.Popen(["docker", "save", image_file], stdout=subprocess.PIPE) as proc:
-                subprocess.run(['tar', 'x'], stdin=proc.stdout, cwd=target, check=True)
+                subprocess.run(['tar', 'x', '--no-xattrs'], stdin=proc.stdout, cwd=target, check=True)
                 assert proc.wait() == 0
         return target
 
@@ -589,7 +589,7 @@ class Merger:
             assert not new_dir.exists()
             cp(base_dir, new_dir)
             assert new_dir.exists() and new_dir.is_dir()
-            cp(other_dir / 'blobs', new_dir)
+            cp(other_dir / 'blobs', new_dir, hard_link=True)
             merge_dirs(new_dir, other_dir, f'{self.name_and_tag}-{descriptor}', digest1, digest2,
                        accept_layer_other=accept_layer)
             images.append((platform, new_dir))
@@ -627,7 +627,7 @@ class Merger:
         output_dir.mkdir(exist_ok=False, parents=False)
         if include_blobs:
             for _, img_dir in images:
-                cp(img_dir / 'blobs', output_dir)
+                cp(img_dir / 'blobs', output_dir, hard_link=True)
         else:
             (output_dir / 'blobs' / 'sha256').mkdir(parents=True)
         with FileUpdater('index.json', output_dir, allow_missing=True) as index:
