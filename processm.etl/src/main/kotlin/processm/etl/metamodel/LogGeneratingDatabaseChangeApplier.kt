@@ -75,7 +75,7 @@ class LogGeneratingDatabaseChangeApplier(
                     }
                 }
             }
-            logger.debug { "Successfully handled ${databaseChangeEvents.size} DB change events: ${databaseChangeEvents.map { it.entityTable }}" }
+            logger.debug { "Successfully handled ${databaseChangeEvents.size} DB change events" }
         }
 
     companion object {
