@@ -37,7 +37,7 @@ class Producer {
      * @property topic The JMS topic to publish messages to.
      */
     fun produce(topic: String, prepareMessage: MapMessage.() -> Unit) = loggedScope { logger ->
-        jmsPoolingFactory.createTopicConnection().let { jmsConnection ->
+        jmsPoolingFactory.createTopicConnection().use { jmsConnection ->
             val jmsSession = jmsConnection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE)
             val jmsTopic = jmsSession.createTopic(topic)
             jmsSession.createPublisher(jmsTopic).use {
