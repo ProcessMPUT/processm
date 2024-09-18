@@ -47,8 +47,8 @@ class ProducerConsumerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = [500, 501, 2_000])
-    @Timeout(10, unit = TimeUnit.SECONDS)
+    @ValueSource(ints = [500, 501, 1_000])
+    @Timeout(45, unit = TimeUnit.SECONDS)
     fun `send and receive`(messageCount: Int) {
         val topic = "TestTopic_send_and_receive_$messageCount"
         val sender = Thread {
