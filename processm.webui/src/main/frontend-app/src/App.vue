@@ -37,9 +37,10 @@ import "vanilla-cookieconsent";
 import * as CookieConsent from "vanilla-cookieconsent";
 import { Translation } from "vanilla-cookieconsent";
 import "vanilla-cookieconsent/dist/cookieconsent.css";
+import GoogleAnalytics from "@/services/GoogleAnalytics";
 
 @Component({
-  components: { AppNavigation, TopBar }
+  components: { GoogleAnalytics, AppNavigation, TopBar }
 })
 export default class App extends Vue {
   @Provide("app") app = this;
@@ -52,6 +53,7 @@ export default class App extends Vue {
 
   @Inject() configService!: ConfigService;
   @Inject() notificationService!: NotificationService;
+  @Inject() googleAnalytics!: GoogleAnalytics;
   notifications: NotificationsObserver | undefined = undefined;
 
   lastEvent = reactive({ lastEvent: null } as { lastEvent: ComponentUpdatedEvent | null });
@@ -60,7 +62,8 @@ export default class App extends Vue {
     brand: "",
     version: "",
     loginMessage: "",
-    demoMode: false
+    demoMode: false,
+    gaTag: ""
   });
 
   /**
@@ -191,6 +194,7 @@ export default class App extends Vue {
 
   async created() {
     Object.assign(this.config, await this.configService.getConfig());
+    if (this.config.gaTag !== undefined) this.googleAnalytics.setTag(this.config.gaTag);
 
     if (this.notifications === undefined)
       this.notifications = this.notificationService.subscribe(async (event) => {
