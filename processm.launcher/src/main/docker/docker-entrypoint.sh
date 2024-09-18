@@ -3,6 +3,29 @@
 CONFIG_FILE=/processm/conf/config.properties
 MSMTPRC_FILE=/processm/conf/msmtprc
 
+terminate() {
+  if [ -n "$processm_pid" ]
+  then
+    echo "Killing ProcessM"
+    kill "$processm_pid"
+    echo "Waiting for ProcessM to die"
+    wait "$processm_pid"
+    echo "ProcessM is dead"
+  fi
+  if [ -n "$postgres_pid" ]
+  then
+    echo "Killing postgres"
+    kill "$postgres_pid"
+    echo "Waiting for postgres to die"
+    wait "$postgres_pid"
+    echo "Postgres is dead"
+  fi
+  echo "I am done"
+  exit 0
+}
+
+trap terminate INT QUIT
+
 if [ ! -f "$MSMTPRC_FILE" ] && [ -n "$MSMTPRC" ]
 then
   echo "$MSMTPRC" >"$MSMTPRC_FILE"
@@ -29,7 +52,13 @@ then
 fi
 
 #--auth-host to disable the default trust authentication in TCP/IP localhost connections
-POSTGRES_INITDB_ARGS="--auth-host=scram-sha-256" /usr/local/bin/docker-entrypoint.sh postgres &
+#setsid to disconnect from SIGINT
+POSTGRES_INITDB_ARGS="--auth-host=scram-sha-256" setsid /usr/local/bin/docker-entrypoint.sh postgres &
+postgres_pid=$!
 
 url=$(grep '^processm.core.persistence.connection.URL[^[:alnum:]]' <"$CONFIG_FILE" |tail -n 1|sed 's/^[^=]*=[[:space:]]*jdbc://')
-URL="$url" exec gosu processm:processm sh docker-start-processm.sh
+URL="$url" gosu processm:processm sh docker-start-processm.sh &
+processm_pid=$!
+
+wait
+exit 0
