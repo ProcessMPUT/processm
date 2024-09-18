@@ -17,7 +17,7 @@
       </template>
     </v-snackbar>
     <v-footer :app="true">
-      <v-btn type="button" data-cc="show-preferencesModal" x-small color="secondary">{{ this.$t("cookies.openDialog") }}</v-btn>
+      <v-btn type="button" data-cc="show-preferencesModal" x-small color="secondary">{{ this.$t("cookies.openDialog") }} </v-btn>
     </v-footer>
   </v-app>
 </template>
@@ -35,7 +35,7 @@ import ConfigService from "@/services/ConfigService";
 import "vanilla-cookieconsent";
 // Beware. IntelliJ claims the next line can be simplified to `import CookieConsent from "vanilla-cookieconsent"`. It cannot.
 import * as CookieConsent from "vanilla-cookieconsent";
-import { Translation } from "vanilla-cookieconsent";
+import { CookieConsentConfig, Translation } from "vanilla-cookieconsent";
 import "vanilla-cookieconsent/dist/cookieconsent.css";
 import GoogleAnalytics from "@/services/GoogleAnalytics";
 
@@ -122,46 +122,6 @@ export default class App extends Vue {
 
   async mounted() {
     this.resetLocale();
-    const translations: Record<string, () => Translation> = {};
-    // Every function to retrieve locale is the same, but it is called with a different value of this.$i18n.locale set, and thus retrieves different locale. Ugly, but seems to work.
-    for (const locale of this.$i18n.availableLocales) {
-      translations[locale] = () => {
-        return (this.$t("cookies") as unknown) as Translation;
-      };
-    }
-    await CookieConsent.run({
-      guiOptions: {
-        consentModal: {
-          layout: "box",
-          position: "bottom left",
-          equalWeightButtons: true,
-          flipButtons: false
-        },
-        preferencesModal: {
-          layout: "box",
-          position: "right",
-          equalWeightButtons: true,
-          flipButtons: false
-        }
-      },
-      categories: {
-        necessary: {
-          readOnly: true
-        }
-        // Uncomment the last line in #318 and complete the necessary translation using the following template:
-        // {
-        //   "title": "Analytics Cookies",
-        //   "description": "This is to be filled in #318",
-        //   "linkedCategory": "analytics"
-        // },
-        //analytics: {}
-      },
-      language: {
-        default: this.$i18n.locale,
-        autoDetect: "browser",
-        translations: translations
-      }
-    });
   }
 
   // Defining the empty _data fixes the TypeError: Cannot convert undefined or null to object in processState() (in Vue)
@@ -218,6 +178,61 @@ export default class App extends Vue {
         });
       });
     await this.notifications?.start();
+
+    const translations: Record<string, () => Translation> = {};
+    // Every function to retrieve locale is the same, but it is called with a different value of this.$i18n.locale set, and thus retrieves different locale. Ugly, but seems to work.
+    for (const locale of this.$i18n.availableLocales) {
+      translations[locale] = () => {
+        return (this.$t("cookies") as unknown) as Translation;
+      };
+    }
+    const config: CookieConsentConfig = {
+      guiOptions: {
+        consentModal: {
+          layout: "box",
+          position: "bottom left",
+          equalWeightButtons: true,
+          flipButtons: false
+        },
+        preferencesModal: {
+          layout: "box",
+          position: "right",
+          equalWeightButtons: true,
+          flipButtons: false
+        }
+      },
+      categories: {
+        necessary: {
+          readOnly: true
+        }
+      },
+      language: {
+        default: this.$i18n.locale,
+        autoDetect: "browser",
+        translations: translations
+      }
+    };
+    if (this.googleAnalytics.hasNonEmptyTag()) {
+      config.categories["analytics"] = {
+        services: {
+          ga: {
+            label: "Google Analytics",
+            onAccept: () => {
+              this.googleAnalytics.setEnabled(true);
+            },
+            onReject: () => {
+              this.googleAnalytics.setEnabled(false);
+            },
+            cookies: [
+              {
+                name: /^(_ga|_gid)/
+              }
+            ]
+          }
+        }
+      };
+    }
+    await CookieConsent.run(config);
   }
 
   beforeDestroy() {

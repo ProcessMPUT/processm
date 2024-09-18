@@ -470,6 +470,31 @@
           "linkedCategory": "necessary"
         },
         {
+          "title": "Analytics Cookies",
+          "description": "We may use analytical cookies to measure the performance of ProcessM and the way you interact with it, e.g., which parts of the system you visit.  Google Analytics, a service provided by Google, is used for this purpose. While your consent for such tracking could help us to improve the service, the lack thereof will not degrade the capabilities or performance of ProcessM in any way.",
+          "linkedCategory": "analytics",
+          "cookieTable": {
+            "caption": "List of cookies",
+            "headers": {
+              "name": "Name",
+              "description": "Description",
+              "duration": "Duration"
+            },
+            "body": [
+              {
+                "name": "_ga",
+                "description": "Google Analytics: Used to distinguish users.",
+                "duration": "2 years"
+              },
+              {
+                "name": "_ga_&lt;id&gt;",
+                "description": "Google Analytics: Used to persist session state.",
+                "duration": "2 years"
+              }
+            ]
+          }
+        },
+        {
           "title": "More information",
           "description": "For any query in relation to our policy on cookies and your choices, please contact <a class='cc__link' href='https://put.poznan.pl/en/node/24898'>the Data Protection Officer</a>."
         }

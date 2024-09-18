@@ -470,6 +470,31 @@
           "linkedCategory": "necessary"
         },
         {
+          "title": "Ciasteczka analityczne",
+          "description": "Możemy używać analitycznych ciasteczek do pomiaru wydajności ProcessM oraz sposobów w jaki Państwo go używacie, np. które fragmenty systemu odwiedzacie. W tym celu wykorzystywana jest usługa Google Analytics dostarczana przez Google. Chociaż Państwa zgoda na tego rodzaju śledzenie może pomóc nam ulepszyć usługę, brak zgody nie obniży w żaden sposób możliwości lub wydajności ProcessM.",
+          "linkedCategory": "analytics",
+          "cookieTable": {
+            "caption": "Lista ciasteczek",
+            "headers": {
+              "name": "Nazwa",
+              "description": "Opis",
+              "duration": "Czas trwania"
+            },
+            "body": [
+              {
+                "name": "_ga",
+                "description": "Google Analytics: Używane do odróżniania użytkowników.",
+                "duration": "2 lata"
+              },
+              {
+                "name": "_ga_&lt;identyfikator&gt;",
+                "description": "Google Analytics: Używane do przechowywania stanu sesji.",
+                "duration": "2 lata"
+              }
+            ]
+          }
+        },
+        {
           "title": "Więcej informacji",
           "description": "W razie pytań związanych z naszą polityką dotyczącą ciasteczek i Państwa wyborów, prosimy o kontakt z <a class='cc__link' href='https://put.poznan.pl/ochrona-danych-osobowych'>Inspektorem Danych Osobowych</a>."
         }
