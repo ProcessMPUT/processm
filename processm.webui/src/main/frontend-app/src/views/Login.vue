@@ -132,9 +132,7 @@ export default class Login extends Vue {
   }
 
   setLanguage(language: string) {
-    if (this.$i18n.availableLocales.includes(language)) {
-      this.$i18n.locale = language;
-    }
+    this.app.setLocale(language);
   }
 
   private goHome() {

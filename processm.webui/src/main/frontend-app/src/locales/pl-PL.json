@@ -64,7 +64,8 @@
         "dependencyThreshold": "Adekwatne wyłącznie dla Original Heuristic Miner. Próg na miarę zależności (dependency).",
         "l1Threshold": "Adekwatne wyłącznie dla Original Heuristic Miner. Próg na miarę zależności (dependency) dla 1-pętli.",
         "l2Threshold": "Adekwatne wyłącznie dla Original Heuristic Miner. Próg na miarę zależności (dependency) dla 2-pętli.",
-        "andThreshold": "Adekwatne wyłącznie dla Original Heuristic Miner. Próg na miarę zależności koniunkcji (AND-dependency)."},
+        "andThreshold": "Adekwatne wyłącznie dla Original Heuristic Miner. Próg na miarę zależności koniunkcji (AND-dependency)."
+      },
       "flat-log-view": "Tabelaryczny widok logu",
       "flat-log": {
         "log-deviation": "Zdarzenie w dzienniku niepasujące do modelu procesu",
@@ -172,7 +173,7 @@
     "database-name": "Nazwa bazy danych",
     "database": "Baza danych",
     "collection": "Kolekcja",
-    "https":  "Używaj HTTPS",
+    "https": "Używaj HTTPS",
     "trust-server-certificate": "Zawsze ufaj certyfikatowi serwera",
     "connector-not-supported": "Łącza danych zdefiniowane za pomocą connection stringa nie są jeszcze wspierane",
     "masked-password-notification": "Pamiętaj o zmianie zamaskowanego hasła na poprawną wartość.",
@@ -439,6 +440,40 @@
     "new-model-available": {
       "text": "Nowy model jest dostępny w komponencie {componentName} w przestrzeni roboczej {workspaceName}. Czy chcesz teraz wyświetlić edytor komponentu?",
       "title": "Nowy model jest dostępny"
+    }
+  },
+  "cookies": {
+    "openDialog": "Zarządzaj preferencjami ciasteczek",
+    "consentModal": {
+      "title": "Informacje dotyczące ciasteczke i śledzenia",
+      "description": "Nasza strona używa ciasteczek oraz rejestruje Państwa adres IP w celu ułatwienia dostępu, zapewnienia bezpieczeństwa i prowadzenia analityki. Można wyłączyć zbieranie danych i ciasteczka przez zmianę ustawień przeglądarki, ale może wpłynąć to na funkcjonowanie tej strony internetowej.",
+      "acceptAllBtn": "Zaakceptuj wszystkie",
+      "acceptNecessaryBtn": "Zaakceptuj wyłącznie niezbędne",
+      "showPreferencesBtn": "Zarządzaj preferencjami",
+      "footer": "<a href='https://put.poznan.pl/ochrona-danych-osobowych'>Ochrona danych osobowych</a>"
+    },
+    "preferencesModal": {
+      "title": "Preferencje dotyczące zgód",
+      "acceptAllBtn": "Zaakceptuj wszystkie",
+      "acceptNecessaryBtn": "Zaakceptuj wyłącznie niezbędne",
+      "savePreferencesBtn": "Zapisz preferencje",
+      "closeIconLabel": "Zamknij okno",
+      "serviceCounterLabel": "Usługa|Usługi",
+      "sections": [
+        {
+          "title": "Użycie ciasteczek",
+          "description": "Ciasteczka to małe pliki tekstowe przechowywane na Państwa urządzenia przez odwiedzane strony internetowe."
+        },
+        {
+          "title": "Niezbędne ciasteczka <span class='pm__badge'>Zawsze włączone</span>",
+          "description": "Po zalogowaniu się do ProcessM, strona internetowa przypisuje Państwu token (ciąg znaków) który jest następnie wysyłany razem z każdym żadaniem do serwera (jako Bearer token w nagłówku Authentication), w celu zapewnienia kontroli dostepu i ochrony. Token nie jest trwały i jest usuwany natychmiast po wylogowaniu z ProcessM albo zamknięciu okna przeglądarki. Używamy również ciasteczka (nazwanego cc_cookie) w celu śledzenia Państwa preferencji związanych z ciasteczkami, którego mogą Państwo ustawić w tym dialogu.",
+          "linkedCategory": "necessary"
+        },
+        {
+          "title": "Więcej informacji",
+          "description": "W razie pytań związanych z naszą polityką dotyczącą ciasteczek i Państwa wyborów, prosimy o kontakt z <a class='cc__link' href='https://put.poznan.pl/ochrona-danych-osobowych'>Inspektorem Danych Osobowych</a>."
+        }
+      ]
     }
   }
 }

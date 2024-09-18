@@ -16,6 +16,9 @@
         </v-btn>
       </template>
     </v-snackbar>
+    <v-footer :app="true">
+      <v-btn type="button" data-cc="show-preferencesModal" x-small color="secondary">{{ this.$t("cookies.openDialog") }}</v-btn>
+    </v-footer>
   </v-app>
 </template>
 
@@ -29,6 +32,11 @@ import NotificationService, { ComponentUpdatedEvent } from "@/services/Notificat
 import { NotificationsObserver } from "@/utils/NotificationsObserver";
 import { Config } from "@/openapi";
 import ConfigService from "@/services/ConfigService";
+import "vanilla-cookieconsent";
+// Beware. IntelliJ claims the next line can be simplified to `import CookieConsent from "vanilla-cookieconsent"`. It cannot.
+import * as CookieConsent from "vanilla-cookieconsent";
+import { Translation } from "vanilla-cookieconsent";
+import "vanilla-cookieconsent/dist/cookieconsent.css";
 
 @Component({
   components: { AppNavigation, TopBar }
@@ -59,13 +67,14 @@ export default class App extends Vue {
    * @param locale Expected to follow RFC5646, because that's what web browsers seems to do
    * @return true if the locale was available and thus set; false otherwise
    */
-  private setLocale(locale: string | undefined): boolean {
+  setLocale(locale: string | undefined): boolean {
     console.debug("Trying to set locale to", locale);
     console.debug("Available", this.$i18n.availableLocales);
     if (locale == undefined) return false;
     // Use the exact match if possible
     if (this.$i18n.availableLocales.includes(locale)) {
       this.$i18n.locale = locale;
+      this.updateCookieConsentDialog();
       console.debug("Successfully set locale to", locale);
       return true;
     }
@@ -74,6 +83,7 @@ export default class App extends Vue {
       locale = locale.split("-")[0];
       if (this.$i18n.availableLocales.includes(locale)) {
         this.$i18n.locale = locale;
+        this.updateCookieConsentDialog();
         console.debug("Successfully set locale to", locale);
         return true;
       }
@@ -85,10 +95,15 @@ export default class App extends Vue {
     });
     if (candidate !== undefined) {
       this.$i18n.locale = candidate;
+      this.updateCookieConsentDialog();
       console.debug("Successfully set locale to", candidate);
       return true;
     }
     return false;
+  }
+
+  private updateCookieConsentDialog() {
+    CookieConsent.setLanguage(this.$i18n.locale);
   }
 
   /**
@@ -104,6 +119,46 @@ export default class App extends Vue {
 
   async mounted() {
     this.resetLocale();
+    const translations: Record<string, () => Translation> = {};
+    // Every function to retrieve locale is the same, but it is called with a different value of this.$i18n.locale set, and thus retrieves different locale. Ugly, but seems to work.
+    for (const locale of this.$i18n.availableLocales) {
+      translations[locale] = () => {
+        return (this.$t("cookies") as unknown) as Translation;
+      };
+    }
+    await CookieConsent.run({
+      guiOptions: {
+        consentModal: {
+          layout: "box",
+          position: "bottom left",
+          equalWeightButtons: true,
+          flipButtons: false
+        },
+        preferencesModal: {
+          layout: "box",
+          position: "right",
+          equalWeightButtons: true,
+          flipButtons: false
+        }
+      },
+      categories: {
+        necessary: {
+          readOnly: true
+        }
+        // Uncomment the last line in #318 and complete the necessary translation using the following template:
+        // {
+        //   "title": "Analytics Cookies",
+        //   "description": "This is to be filled in #318",
+        //   "linkedCategory": "analytics"
+        // },
+        //analytics: {}
+      },
+      language: {
+        default: this.$i18n.locale,
+        autoDetect: "browser",
+        translations: translations
+      }
+    });
   }
 
   // Defining the empty _data fixes the TypeError: Cannot convert undefined or null to object in processState() (in Vue)
