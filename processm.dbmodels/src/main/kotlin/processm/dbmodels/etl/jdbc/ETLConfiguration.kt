@@ -21,7 +21,6 @@ object ETLConfigurations : UUIDTable("etl_configurations") {
     val metadata = reference("metadata", EtlProcessesMetadata, onDelete = ReferenceOption.CASCADE)
     val query = text("query")
     val refresh = long("refresh").nullable()
-    val enabled = bool("enabled").default(true)
     val batch = bool("batch").default(false)
     val logIdentityId = uuid("log_identity_id").clientDefault { UUID.randomUUID() }
     val lastEventExternalId = text("last_event_external_id").nullable()
@@ -54,11 +53,6 @@ class ETLConfiguration(id: EntityID<UUID>) : UUIDEntity(id) {
      * Refresh time in seconds. null when disabled.
      */
     var refresh by ETLConfigurations.refresh
-
-    /**
-     * Controls whether the ETL process executes.
-     */
-    var enabled by ETLConfigurations.enabled
 
     /**
      * The value of the "identity:id" attribute of the log to write to.

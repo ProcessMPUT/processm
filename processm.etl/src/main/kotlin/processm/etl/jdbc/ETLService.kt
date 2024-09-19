@@ -2,9 +2,7 @@ package processm.etl.jdbc
 
 import jakarta.jms.MapMessage
 import jakarta.jms.Message
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.or
-import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.jdbc.JdbcConnectionImpl
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.quartz.*
@@ -17,6 +15,7 @@ import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.etl.jdbc.*
 import processm.dbmodels.models.DataStores
+import processm.dbmodels.models.EtlProcessesMetadata
 import processm.etl.helpers.notifyAboutNewData
 import processm.etl.helpers.reportETLError
 import processm.helpers.toUUID
@@ -45,10 +44,10 @@ class ETLService : AbstractJobService(QUARTZ_CONFIG, JDBC_ETL_TOPIC, null) {
             logger.trace("Loading ETL configurations from datastore $datastore...")
 
             transaction(DBCache.get(datastore).database) {
-                ETLConfiguration.find {
-                    ETLConfigurations.enabled and (ETLConfigurations.refresh.isNotNull() or ETLConfigurations.lastEventExternalId.isNull())
+                ETLConfigurations.join(EtlProcessesMetadata, JoinType.INNER).select {
+                    EtlProcessesMetadata.isActive and (ETLConfigurations.refresh.isNotNull() or ETLConfigurations.lastEventExternalId.isNull())
                 }.map { config ->
-                    createJob(datastore, config)
+                    createJob(datastore, ETLConfiguration.wrapRow(config))
                 }
             }
         }
