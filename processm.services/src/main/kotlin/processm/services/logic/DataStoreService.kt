@@ -224,13 +224,16 @@ class DataStoreService(
         dataStoreId: UUID,
         dataConnectorId: UUID,
         newName: String?,
-        newConnectionProperties: Map<String, String>?
+        newConnectionProperties: Map<String, String>?,
+        newConnectionString: String?
     ) {
+        require((newConnectionProperties === null) || (newConnectionString === null)) { "At most one of newConnectionProperties and newConnectionString can be not-null" }
         assertDataStoreExists(dataStoreId)
         transaction(DBCache.get("$dataStoreId").database) {
             DataConnectors.update({ DataConnectors.id eq dataConnectorId }) { stmt ->
                 newName?.let { stmt[name] = it }
                 newConnectionProperties?.let { stmt[connectionProperties] = Json.encodeToString(it) }
+                newConnectionString?.let { stmt[connectionProperties] = it }
             } > 0
         }
     }
