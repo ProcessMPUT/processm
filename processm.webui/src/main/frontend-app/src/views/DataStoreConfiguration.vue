@@ -254,7 +254,7 @@
                           <v-btn
                             color="primary"
                             class="mx-2"
-                            :disabled="dataConnectors.length == 0"
+                            :disabled="!hasNonJDBCConnector()"
                             @click.stop="automaticEtlProcessDialogVisible = true"
                             v-bind="attrs"
                             name="btn-add-automatic-etl-process"
@@ -777,6 +777,13 @@ export default class DataStoreConfiguration extends Vue {
       this.app.error(`${this.$t("common.saving.failure")}`);
     }
     this.renameDataStoreDialog = false;
+  }
+
+  hasNonJDBCConnector() {
+    for (const connector of this.dataConnectors) {
+      if (!connector.properties.hasOwnProperty("connection-string")) return true;
+    }
+    return false;
   }
 }
 </script>

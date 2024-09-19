@@ -176,7 +176,7 @@ export default class AutomaticEtlProcessDialog extends Vue {
   updateAvailableDataConnectors() {
     this.availableDataConnectors =
       this.dataConnectors?.map((item: DataConnector) => {
-        return { name: item.name, id: item.id, disabled: Object.keys(item.properties).length == 0 };
+        return { name: item.name, id: item.id, disabled: item.properties.hasOwnProperty("connection-string") };
       }) ?? [];
   }
 

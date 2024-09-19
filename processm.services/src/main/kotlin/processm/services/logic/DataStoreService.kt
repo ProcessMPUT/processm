@@ -74,6 +74,10 @@ class DataStoreService(
                 maskedConnectionProperties
             )
         }
+
+        private fun DataConnector.isJDBC(): Boolean =
+            runCatching { Json.decodeFromString<Map<String, String>>(connectionProperties) }.isFailure
+
     }
 
     /**
@@ -318,11 +322,13 @@ class DataStoreService(
         assertDataStoreExists(dataStoreId)
         return transaction(DBCache.get("$dataStoreId").database) {
             loggedScope { logger ->
+                val connector = DataConnector[dataConnectorId]
+                require(!connector.isJDBC()) { "JDBC connectors are not supported in automatic ETL processes" }
                 val etlProcessMetadata =
                     (etlId?.let { EtlProcessMetadata.findById(it) } ?: EtlProcessMetadata.new {}).apply {
                         this.name = name
                         this.processType = ProcessTypeDto.Automatic.processTypeName
-                        this.dataConnector = DataConnector[dataConnectorId]
+                        this.dataConnector = connector
                     }
 
                 AutomaticEtlProcess.findById(etlProcessMetadata.id.value) ?: AutomaticEtlProcesses.insert {
