@@ -18,7 +18,6 @@ export default class GoogleAnalytics extends Vue {
 
   gtag(...params: any[]) {
     if (this.enabled && window.dataLayer !== undefined) {
-      console.log("GA", arguments);
       window.dataLayer.push(arguments);
     }
   }
