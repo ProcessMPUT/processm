@@ -223,6 +223,8 @@ export default class AutomaticEtlProcessDialog extends Vue {
 
       this.availableCaseNotions = [];
       this.availableCaseNotions = await this.dataStoreService.getCaseNotionSuggestions(this.dataStoreId, this.selectedDataConnectorId);
+    } catch (e) {
+      this.app.error(e);
     } finally {
       this.isLoadingCaseNotions = false;
     }
