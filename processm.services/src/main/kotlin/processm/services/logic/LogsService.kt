@@ -29,7 +29,7 @@ import javax.xml.stream.XMLOutputFactory
 
 class LogsService(private val producer: Producer) {
     companion object {
-        private const val xesFileInputSizeLimit = 5_000_000L
+        private const val xesFileInputSizeLimit = 5 * 1024 * 1024L
         private const val identityIdAttributeName = IDENTITY_ID
     }
 
