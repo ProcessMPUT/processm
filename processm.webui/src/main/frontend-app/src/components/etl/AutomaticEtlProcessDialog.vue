@@ -208,6 +208,8 @@ export default class AutomaticEtlProcessDialog extends Vue {
 
     try {
       this.isLoadingCaseNotions = true;
+      // setting first to null to reset the case notion editor
+      this.relationshipGraph = null;
       this.relationshipGraph = await this.dataStoreService.getRelationshipGraph(this.dataStoreId, this.selectedDataConnectorId);
       this.classIdToName = {};
       this.relationshipGraph.classes.forEach((item) => {
