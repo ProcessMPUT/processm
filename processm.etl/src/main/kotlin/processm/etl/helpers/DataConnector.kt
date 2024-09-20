@@ -26,7 +26,7 @@ import java.time.LocalDateTime
  * @param success The value to put into [DataConnector.lastConnectionStatus]
  */
 private fun DataConnector.timestamp(success: Boolean) {
-    if (TransactionManager.currentOrNull()?.db == db) {
+    if (success && TransactionManager.currentOrNull()?.db == db) {
         lastConnectionStatusTimestamp = LocalDateTime.now()
         lastConnectionStatus = success
     } else {
@@ -48,7 +48,7 @@ fun DataConnector.getConnection(): Connection {
         )
         timestamp(true)
         return connection
-    } catch (e: Exception) {
+    } catch (e: Throwable) {
         timestamp(false)
         throw e
     }
