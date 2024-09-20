@@ -80,10 +80,25 @@ class LogsService(private val producer: Producer) {
         }
     }
 
+    private fun processm.core.log.hierarchical.Log.toFilteredSequence(includeTraces: Boolean, includeEvents: Boolean) =
+        when {
+            includeEvents -> this.toFlatSequence()
+            includeTraces -> sequenceOf(this) + this.traces
+            else -> sequenceOf(this)
+        }
+
     /**
      * Executes the provided [query] against logs stored in [dataStoreId].
+     *
+     * @param includeEvents Whether to include events and traces in the response
+     * @param includeTraces Whether to include traces in the response (valid only if includeEvents=false)
      */
-    fun queryDataStoreJSON(dataStoreId: UUID, query: String): OutputStream.() -> Unit {
+    fun queryDataStoreJSON(
+        dataStoreId: UUID,
+        query: String,
+        includeTraces: Boolean,
+        includeEvents: Boolean
+    ): OutputStream.() -> Unit {
         // All preparation must be done here rather than in the returned lambda, as the lambda will be invoked
         // when writing output stream and error messages (e.g., parse errors) cannot be returned through HTTP
         // from that stage of processing.
@@ -106,7 +121,7 @@ class LogsService(private val producer: Producer) {
 
                 try {
                     XMLXESOutputStream(writer, true).use {
-                        it.write(resultsFromLog.toFlatSequence())
+                        it.write(resultsFromLog.toFilteredSequence(includeTraces, includeEvents))
                     }
                 } finally {
                     writer.close()
@@ -121,8 +136,16 @@ class LogsService(private val producer: Producer) {
 
     /**
      * Executes the provided [query] against logs stored in [dataStoreId] and returns the result as zipped XES file.
+     *
+     * @param includeEvents Whether to include events and traces in the response
+     * @param includeTraces Whether to include traces in the response (valid only if includeEvents=false)
      */
-    fun queryDataStoreZIPXES(dataStoreId: UUID, query: String): OutputStream.() -> Unit {
+    fun queryDataStoreZIPXES(
+        dataStoreId: UUID,
+        query: String,
+        includeTraces: Boolean,
+        includeEvents: Boolean
+    ): OutputStream.() -> Unit {
         // All preparation must be done here rather than in the returned lambda, as the lambda will be invoked
         // when writing output stream and error messages (e.g., parse errors) cannot be returned through HTTP
         // from that stage of processing.
@@ -139,7 +162,7 @@ class LogsService(private val producer: Producer) {
                     val writer = factory.createXMLStreamWriter(zip, "utf-8")
                     try {
                         XMLXESOutputStream(writer).use {
-                            it.write(log.toFlatSequence())
+                            it.write(log.toFilteredSequence(includeTraces, includeEvents))
                         }
                     } finally {
                         writer.close()

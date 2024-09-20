@@ -14,7 +14,13 @@ export default class LogsService extends BaseService {
     }
   }
 
-  public async submitUserQuery(dataStoreId: string, query?: string, accept: "application/json" | "application/zip" = "application/json"): Promise<Array<Log>> {
+  public async submitUserQuery(
+    dataStoreId: string,
+    query?: string,
+    accept: "application/json" | "application/zip" = "application/json",
+    includeTraces: boolean = true,
+    includeEvents: boolean = true
+  ): Promise<Array<Log>> {
     let options: AxiosRequestConfig;
     if (accept == "application/json")
       options = {
@@ -34,7 +40,7 @@ export default class LogsService extends BaseService {
       };
     }
 
-    const response = await this.logsApi.submitLogsQuery(dataStoreId, accept, query, options);
+    const response = await this.logsApi.submitLogsQuery(dataStoreId, accept, query, includeTraces, includeEvents, options);
 
     if (accept == "application/json") {
       // FIXME: TypeError: response.data.reduce is not a function
