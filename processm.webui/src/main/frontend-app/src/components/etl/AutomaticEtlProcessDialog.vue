@@ -182,7 +182,7 @@ export default class AutomaticEtlProcessDialog extends Vue {
 
   @Watch("initialConfig")
   async setInitialConfig() {
-    const etl = this.initialConfig;
+    const etl = this.initialConfig?.type == "automatic" ? this.initialConfig : null;
 
     this.processName = etl?.name || "";
     this.selectedDataConnectorId = etl?.dataConnectorId || "";
