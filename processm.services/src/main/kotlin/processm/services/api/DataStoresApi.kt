@@ -74,7 +74,7 @@ fun Route.DataStoresApi() {
                 DataStore(
                     dataStore.name,
                     dataStore.id.value,
-                    dataStoreSize.toInt(),
+                    dataStoreSize,
                     dataStore.creationDate
                 )
             )

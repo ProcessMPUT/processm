@@ -2010,6 +2010,7 @@ components:
           type: string
         size:
           type: integer
+          format: int64
         createdAt:
           type: string
           format: date-time
