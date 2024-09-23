@@ -208,6 +208,8 @@ export default class AutomaticEtlProcessDialog extends Vue {
 
     try {
       this.isLoadingCaseNotions = true;
+      // setting first to null to reset the case notion editor
+      this.relationshipGraph = null;
       this.relationshipGraph = await this.dataStoreService.getRelationshipGraph(this.dataStoreId, this.selectedDataConnectorId);
       this.classIdToName = {};
       this.relationshipGraph.classes.forEach((item) => {
@@ -221,6 +223,8 @@ export default class AutomaticEtlProcessDialog extends Vue {
 
       this.availableCaseNotions = [];
       this.availableCaseNotions = await this.dataStoreService.getCaseNotionSuggestions(this.dataStoreId, this.selectedDataConnectorId);
+    } catch (e) {
+      this.app.error(e);
     } finally {
       this.isLoadingCaseNotions = false;
     }
