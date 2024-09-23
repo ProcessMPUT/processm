@@ -2006,7 +2006,8 @@ components:
         name:
           type: string
         size:
-          type: long
+          type: integer
+          format: int64
         createdAt:
           type: string
           format: date-time
