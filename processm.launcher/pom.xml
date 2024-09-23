@@ -69,6 +69,7 @@
                 <version>3.7.1</version>
                 <configuration>
                     <descriptors>
+                        <descriptor>src/assembly/core.xml</descriptor>
                         <descriptor>src/assembly/bin.xml</descriptor>
                     </descriptors>
                     <finalName>processm-${project.version}</finalName>
