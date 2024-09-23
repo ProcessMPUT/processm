@@ -193,7 +193,7 @@
                 <v-tooltip bottom>
                   <template v-slot:activator="{ on, attrs }">
                     <v-btn icon color="primary" dark v-bind="attrs" v-on="on" name="btn-data-connector-rename">
-                      <v-icon small @click="dataConnectorIdToRename = item.id">edit</v-icon>
+                      <v-icon small @click="dataConnectorIdToRename = item.id">abc</v-icon>
                     </v-btn>
                   </template>
                   <span>{{ $t("common.rename") }}</span>
