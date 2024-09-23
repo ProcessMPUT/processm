@@ -1,6 +1,5 @@
 package processm.services.logic
 
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -36,7 +35,6 @@ import processm.services.api.models.*
 import processm.services.helpers.ExceptionReason
 import processm.services.helpers.defaultPasswordMask
 import processm.services.helpers.maskPasswordInJdbcUrl
-import java.sql.Connection
 import java.sql.DriverManager
 import java.time.Instant
 import java.util.*
@@ -617,12 +615,6 @@ class DataStoreService(
 
             return dataModelId
         }
-    }
-
-    @OptIn(ExperimentalSerializationApi::class)
-    private fun DataConnector.getConnection(): Connection {
-        return if (connectionProperties.startsWith("jdbc")) DriverManager.getConnection(connectionProperties)
-        else getConnection(Json.decodeFromString(connectionProperties))
     }
 
     fun createSamplingJdbcEtlProcess(
