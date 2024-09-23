@@ -24,13 +24,13 @@ class WWIPurchaseOrderBusinessCase(
         val logger = logger()
     }
 
-    private suspend fun pay(): BusinessCaseStep? {
+    private fun pay(): BusinessCaseStep? {
         pool.paySupplier(Timestamp.from(now()), purchaseOrderID)
         logger.debug("Paying for $purchaseOrderID")
         return null
     }
 
-    override suspend fun start(): BusinessCaseStep =
+    override fun start(): BusinessCaseStep =
         if (pool.receivePurchaseOrder(Timestamp.from(now()), purchaseOrderID)) {
             logger.debug("Received gods from $purchaseOrderID")
             BusinessCaseStep(::pay)

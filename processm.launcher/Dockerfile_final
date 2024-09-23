@@ -9,7 +9,7 @@ RUN adduser -s /bin/false -D -H -h /processm processm processm
 # replace sendmail with msmtp in the default configuration, as our sendmail is provided by busybox and rather clumsy
 # however, we should not replace sendmail with msmtp, as msmtp does not exactly behave like a proper sendmail (not that the busybox variant does)
 RUN set -eux; \
-    apk add --no-cache msmtp; \
+    apk add --no-cache msmtp openssl; \
     rm -rf /var/cache/apk/*; \
     text=$(sed 's/\/usr\/sbin\/sendmail/\/usr\/bin\/msmtp/g' /processm/conf/config.properties) ; \
     echo "$text" >/processm/conf/config.properties; \
