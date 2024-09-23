@@ -51,6 +51,7 @@ import {
   hostnameOrIpV4Rule,
   portNumberRule
 } from "@/utils/FormValidationRules";
+import {ConnectionProperties} from "@/openapi";
 
 @Component({
   components: { SqlConnectionConfiguration }
@@ -61,7 +62,7 @@ export default class CouchDBConnectionConfiguration extends Vue {
       return {};
     }
   })
-  readonly value!: Record<string, string>;
+  readonly value!: ConnectionProperties;
 
   hostnameRules = [
     (v: string) =>

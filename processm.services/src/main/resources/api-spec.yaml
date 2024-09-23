@@ -2022,10 +2022,32 @@ components:
           type: boolean
         lastConnectionStatusTimestamp:
           type: string
-        properties:
-          type: object
-          additionalProperties:
-            type: string
+        connectionProperties:
+          $ref: '#/components/schemas/ConnectionProperties'
+    ConnectionProperties:
+      type: object
+      required: [ connectionType ]
+      properties:
+        connectionType:
+          type: string
+        connectionString:
+          type: string
+        server:
+          type: string
+        port:
+          type: integer
+        username:
+          type: string
+        password:
+          type: string
+        database:
+          type: string
+        trustServerCertificate:
+          type: boolean
+        https:
+          type: boolean
+        collection:
+          type: string
     EtlProcessType:
       type: string
       enum: [ automatic, jdbc ]

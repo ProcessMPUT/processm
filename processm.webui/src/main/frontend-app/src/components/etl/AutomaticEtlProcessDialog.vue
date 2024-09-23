@@ -123,7 +123,7 @@
 </style>
 
 <script lang="ts">
-import { DataConnector } from "@/models/DataStore";
+import { ConnectionType, DataConnector } from "@/models/DataStore";
 import Vue from "vue";
 import { Component, Inject, Prop, Watch } from "vue-property-decorator";
 import DataStoreService from "@/services/DataStoreService";
@@ -133,6 +133,14 @@ import { notEmptyRule } from "@/utils/FormValidationRules";
 import { AutomaticEtlProcess, CaseNotion, EtlProcessType, RelationshipGraph, RelationshipGraphEdgesInner } from "@/openapi";
 
 const CaseNotionEditor = () => import("./CaseNotionEditor.vue");
+
+export const automaticEtlSupportedConnectionTypes = [
+  ConnectionType.Db2,
+  ConnectionType.MySql,
+  ConnectionType.PostgreSql,
+  ConnectionType.SqlServer,
+  ConnectionType.OracleDatabase
+];
 
 @Component({
   components: {
@@ -176,7 +184,12 @@ export default class AutomaticEtlProcessDialog extends Vue {
   updateAvailableDataConnectors() {
     this.availableDataConnectors =
       this.dataConnectors?.map((item: DataConnector) => {
-        return { name: item.name, id: item.id, disabled: item.properties.hasOwnProperty("connection-string") };
+        const ct = ConnectionType[item.connectionProperties.connectionType as keyof typeof ConnectionType];
+        return {
+          name: item.name,
+          id: item.id,
+          disabled: automaticEtlSupportedConnectionTypes.indexOf(ct) < 0
+        };
       }) ?? [];
   }
 

@@ -119,14 +119,25 @@ internal class DataStoreServiceTest : ServiceTestBase() {
     @Test
     fun `creating data connector with connection string throws if nonexistent data store`(): Unit =
         withCleanTables(DataStores) {
-            assertDataStoreExistence { createDataConnector(UUID.randomUUID(), "DataConnector1", "connection string") }
+            assertDataStoreExistence {
+                createDataConnector(
+                    UUID.randomUUID(), "DataConnector1",
+                    ConnectionProperties(ConnectionType.JdbcString, "connection string")
+                )
+            }
         }
 
     @Test
     fun `creating data connector with connection properties throws if nonexistent data store`(): Unit = withCleanTables(
         DataStores
     ) {
-        assertDataStoreExistence { createDataConnector(UUID.randomUUID(), "DataConnector1", emptyMap()) }
+        assertDataStoreExistence {
+            createDataConnector(
+                UUID.randomUUID(),
+                "DataConnector1",
+                ConnectionProperties(ConnectionType.JdbcString)
+            )
+        }
     }
 
     @Test
@@ -136,7 +147,12 @@ internal class DataStoreServiceTest : ServiceTestBase() {
 
     @Test
     fun `renaming data connector throws if nonexistent data store`(): Unit = withCleanTables(DataStores) {
-        assertDataStoreExistence { updateDataConnector(UUID.randomUUID(), UUID.randomUUID(), "newName", emptyMap()) }
+        assertDataStoreExistence {
+            updateDataConnector(
+                UUID.randomUUID(), UUID.randomUUID(), "newName",
+                ConnectionProperties(ConnectionType.JdbcString)
+            )
+        }
     }
 
     @Test
@@ -168,7 +184,7 @@ internal class DataStoreServiceTest : ServiceTestBase() {
                 dataStoreService.createDataConnector(
                     dataStore.id.value,
                     "Data connector",
-                    DatabaseChecker.baseConnectionURL
+                    ConnectionProperties(ConnectionType.JdbcString, DatabaseChecker.baseConnectionURL)
                 )
 
             dataStoreService.getRelationshipGraph(dataStore.id.value, dataConnectorId)
@@ -215,7 +231,9 @@ internal class DataStoreServiceTest : ServiceTestBase() {
 
             val ds = service.createDataStore(userId = user, name = "New data store")
 
-            val dc = service.createDataConnector(ds.id.value, "DC name", "foo://bar")
+            val dc = service.createDataConnector(
+                ds.id.value, "DC name", ConnectionProperties(ConnectionType.JdbcString, "foo://bar")
+            )
 
             val cfg = JdbcEtlProcessConfiguration(
                 "query", true, false,
@@ -236,7 +254,10 @@ internal class DataStoreServiceTest : ServiceTestBase() {
 
             val ds = service.createDataStore(userId = user, name = "New data store")
 
-            val dc = service.createDataConnector(ds.id.value, "DC name", "foo://bar")
+            val dc = service.createDataConnector(
+                ds.id.value, "DC name",
+                ConnectionProperties(ConnectionType.JdbcString, "foo://bar")
+            )
 
             val cfg = JdbcEtlProcessConfiguration(
                 "query", true, false,

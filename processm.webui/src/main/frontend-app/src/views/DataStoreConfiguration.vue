@@ -224,8 +224,8 @@
               </template>
               <template v-slot:expanded-item="{ headers, item }">
                 <td :colspan="headers.length">
-                  <ul v-if="Object.keys(item.properties).length > 0">
-                    <li v-for="(value, name, index) in item.properties" :key="index">{{ capitalize(name.replace("-", " ")) }}: {{ value }}</li>
+                  <ul v-if="Object.keys(item.connectionProperties).length > 0">
+                    <li v-for="(value, name, index) in item.connectionProperties" :key="index">{{ capitalize(name.replace("-", " ")) }}: {{ value }}</li>
                   </ul>
                   <span v-else>
                     {{ $t("data-stores.data-connector-no-properties") }}
@@ -254,7 +254,7 @@
                           <v-btn
                             color="primary"
                             class="mx-2"
-                            :disabled="!hasNonJDBCConnector()"
+                            :disabled="!hasAutomaticEtlCompliantConnector()"
                             @click.stop="automaticEtlProcessDialogVisible = true"
                             v-bind="attrs"
                             name="btn-add-automatic-etl-process"
@@ -430,14 +430,14 @@
 import Vue from "vue";
 import { Component, Inject, Prop, Watch } from "vue-property-decorator";
 import DataStoreService from "@/services/DataStoreService";
-import DataStore, { DataConnector } from "@/models/DataStore";
+import DataStore, { ConnectionType, DataConnector } from "@/models/DataStore";
 import DataConnectorDialog from "@/components/data-connections/DataConnectorDialog.vue";
 import LogsService from "@/services/LogsService";
 import { waitForRepaint } from "@/utils/waitForRepaint";
 import XesProcessor, { LogItem } from "@/utils/XesProcessor";
 import FileUploadDialog from "@/components/FileUploadDialog.vue";
 import RenameDialog from "@/components/RenameDialog.vue";
-import AutomaticEtlProcessDialog from "@/components/etl/AutomaticEtlProcessDialog.vue";
+import AutomaticEtlProcessDialog, { automaticEtlSupportedConnectionTypes } from "@/components/etl/AutomaticEtlProcessDialog.vue";
 import { capitalize } from "@/utils/StringCaseConverter";
 import App from "@/App.vue";
 import JdbcEtlProcessDialog from "@/components/etl/JdbcEtlProcessDialog.vue";
@@ -617,8 +617,7 @@ export default class DataStoreConfiguration extends Vue {
         this.dataConnectorIdToRename != null &&
         (await this.dataStoreService.updateDataConnector(this.dataStoreId, this.dataConnectorIdToRename, {
           id: this.dataConnectorIdToRename,
-          name: newName,
-          properties: {}
+          name: newName
         }))
       ) {
         const dataConnector = this.dataConnectors.find((dataConnector) => dataConnector.id == this.dataConnectorIdToRename);
@@ -779,9 +778,10 @@ export default class DataStoreConfiguration extends Vue {
     this.renameDataStoreDialog = false;
   }
 
-  hasNonJDBCConnector() {
+  hasAutomaticEtlCompliantConnector() {
     for (const connector of this.dataConnectors) {
-      if (!connector.properties.hasOwnProperty("connection-string")) return true;
+      const ct = ConnectionType[connector.connectionProperties.connectionType as keyof typeof ConnectionType];
+      if (automaticEtlSupportedConnectionTypes.indexOf(ct) >= 0) return true;
     }
     return false;
   }

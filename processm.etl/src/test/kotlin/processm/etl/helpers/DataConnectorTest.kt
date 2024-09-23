@@ -6,6 +6,8 @@ import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.DatabaseChecker
 import processm.core.persistence.connection.transaction
 import processm.core.persistence.connection.transactionMain
+import processm.dbmodels.models.ConnectionProperties
+import processm.dbmodels.models.ConnectionType
 import processm.dbmodels.models.DataConnector
 import java.sql.DriverManager
 import java.sql.SQLException
@@ -44,7 +46,7 @@ class DataConnectorTest {
         val dc = transaction(dbName) {
             DataConnector.new {
                 name = "some name"
-                connectionProperties = "jdbc:invalid://"
+                connectionProperties = ConnectionProperties(ConnectionType.JdbcString, "jdbc:invalid://")
             }
         }
         assertNull(dc.lastConnectionStatus)
@@ -64,7 +66,8 @@ class DataConnectorTest {
         val dc = transaction(dbName) {
             DataConnector.new {
                 name = "other name"
-                connectionProperties = DatabaseChecker.baseConnectionURL
+                connectionProperties =
+                    ConnectionProperties(ConnectionType.JdbcString, DatabaseChecker.baseConnectionURL)
             }
         }
         assertNull(dc.lastConnectionStatus)
@@ -84,7 +87,8 @@ class DataConnectorTest {
         val dc = transaction(dbName) {
             DataConnector.new {
                 name = "other name"
-                connectionProperties = DatabaseChecker.baseConnectionURL
+                connectionProperties =
+                    ConnectionProperties(ConnectionType.JdbcString, DatabaseChecker.baseConnectionURL)
             }
         }
         assertNull(dc.lastConnectionStatus)

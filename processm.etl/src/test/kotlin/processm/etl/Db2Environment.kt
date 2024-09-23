@@ -6,6 +6,8 @@ import org.testcontainers.ext.ScriptUtils
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.shaded.org.apache.commons.io.IOUtils
 import org.testcontainers.utility.DockerImageName
+import processm.dbmodels.models.ConnectionProperties
+import processm.dbmodels.models.ConnectionType
 import processm.dbmodels.models.DataConnector
 import processm.etl.DBMSEnvironment.Companion.TEST_DATABASES_PATH
 import processm.etl.Db2Environment.Companion.groupInserts
@@ -159,7 +161,7 @@ class Db2Environment(
         return container
     }
 
-    override val connectionProperties: Map<String, String>
+    override val connectionProperties: ConnectionProperties
         get() = TODO("Not yet implemented")
 
     override fun initContainer(): Db2Container {
@@ -183,6 +185,6 @@ class Db2Environment(
     override val dataConnector: DataConnector
         get() = DataConnector.new {
             name = UUID.randomUUID().toString()
-            connectionProperties = "$jdbcUrl:user=$user;password=$password;"
+            connectionProperties = ConnectionProperties(ConnectionType.JdbcString,  "$jdbcUrl:user=$user;password=$password;")
         }
 }

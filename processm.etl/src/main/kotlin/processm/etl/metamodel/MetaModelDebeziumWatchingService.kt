@@ -2,8 +2,6 @@ package processm.etl.metamodel
 
 import jakarta.jms.MapMessage
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.communication.Consumer
@@ -215,15 +213,8 @@ class MetaModelDebeziumWatchingService : Service {
     ): DebeziumChangeTracker = loggedScope { logger ->
         val dataModelId =
             requireNotNull(dataConnector.dataModel?.id?.value) { "Automatic ETL process has no data model assigned and cannot be tracked" }
-        val connectionProperties = try {
-            Json.decodeFromString<MutableMap<String, String>>(
-                requireNotNull(dataConnector.connectionProperties) { "Data connector properties are missing" }
-            )
-        } catch (e: SerializationException) {
-            throw IllegalArgumentException("Failed to load connection properties. Connection string based configuration is not yet supported.")
-        }
-        val connectorType =
-            ConnectionType.valueOf(requireNotNull(connectionProperties[connectionTypeProperty]) { "Unknown connection type" })
+        val connectionProperties = dataConnector.connectionProperties
+        val connectorType = connectionProperties.connectionType
         if (connectorType == ConnectionType.SqlServer) {
             // enable CDC as per https://debezium.io/documentation/reference/stable/connectors/sqlserver.html#_enabling_cdc_on_the_sql_server_database
             dataConnector.getConnection().use { connection ->
@@ -251,7 +242,7 @@ class MetaModelDebeziumWatchingService : Service {
                             enable.setString(1, schema)
                             enable.setString(2, name)
                             enable.setString(3, instance)
-                            enable.setString(4, connectionProperties["username"])
+                            enable.setString(4, connectionProperties.username)
                             enable.execute()
                         }
                     }
@@ -273,21 +264,31 @@ class MetaModelDebeziumWatchingService : Service {
     }
 
     private val processmToDebezium = mapOf(
-        "server" to "hostname",
-        "username" to "user",
-        "database" to "dbname"
+        ConnectionProperties::server to "hostname",
+        ConnectionProperties::port to "port",
+        ConnectionProperties::username to "user",
+        ConnectionProperties::password to "password",
+        ConnectionProperties::database to "dbname",
+        ConnectionProperties::trustServerCertificate to "trustServerCertificate"
+    )
+
+    private val supportedConnectionTypes = setOf(
+        ConnectionType.PostgreSql, ConnectionType.SqlServer, ConnectionType.MySql,
+        ConnectionType.OracleDatabase, ConnectionType.Db2
     )
 
     private fun Properties.setConnectionProperties(
         dataConnectorId: UUID,
-        connectionProperties: Map<String, String>
+        connectionProperties: ConnectionProperties
     ): Properties {
-        if (connectionProperties.isEmpty()) throw IllegalArgumentException("Unknown connection properties")
+        if (connectionProperties.connectionType !in supportedConnectionTypes) throw LocalizedException(
+            ExceptionReason.UnsupportedDatabaseForAutomaticETL,
+            dataConnectorId
+        )
 
         setProperty("database.server.name", "$dataConnectorId")
-        for ((processmKey, value) in connectionProperties) {
-            val debeziumKey = processmToDebezium[processmKey] ?: processmKey
-            setProperty("database.$debeziumKey", value)
+        for ((processmKey, debeziumKey) in processmToDebezium) {
+            processmKey(connectionProperties)?.let { setProperty("database.$debeziumKey", it.toString()) }
         }
         return this
     }

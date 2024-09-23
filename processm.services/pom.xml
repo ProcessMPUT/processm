@@ -60,7 +60,8 @@
                             <schemaMappings>
                                 Alignment=processm.conformance.models.alignments.Alignment,
                                 AlignmentKPIReport=processm.enhancement.kpi.Report,
-                                Config=processm.services.api.Config
+                                Config=processm.services.api.Config,
+                                ConnectionProperties=processm.dbmodels.models.ConnectionProperties
                             </schemaMappings>
                             <instantiationTypes>array=kotlin.Array</instantiationTypes>
                             <output>${project.build.directory}/generated-sources/openapi</output>

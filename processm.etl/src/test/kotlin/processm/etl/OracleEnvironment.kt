@@ -4,6 +4,8 @@ import org.testcontainers.containers.OracleContainer
 import org.testcontainers.images.builder.Transferable
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
+import processm.dbmodels.models.ConnectionProperties
+import processm.dbmodels.models.ConnectionType
 import processm.dbmodels.models.DataConnector
 import processm.etl.DBMSEnvironment.Companion.TEST_DATABASES_PATH
 import processm.logging.logger
@@ -159,13 +161,13 @@ $sqlplus '@mksample.sql' '${container.password}' '${container.password}' hrpw oe
 
     override val jdbcUrl: String
         get() = container.withSid(sid).jdbcUrl
-    override val connectionProperties: Map<String, String>
+    override val connectionProperties: ConnectionProperties
         get() = TODO("Not yet implemented")
 
     override val dataConnector: DataConnector
         get() = DataConnector.new {
             name = UUID.randomUUID().toString()
-            connectionProperties = jdbcUrl
+            connectionProperties = ConnectionProperties(ConnectionType.JdbcString, jdbcUrl)
         }
 
     override fun close() {

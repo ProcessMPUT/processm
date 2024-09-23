@@ -1,7 +1,5 @@
 package processm.services.logic
 
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.dao.id.EntityID
@@ -36,8 +34,6 @@ import processm.services.api.models.*
 import processm.services.helpers.ExceptionReason
 import processm.services.helpers.defaultPasswordMask
 import processm.services.helpers.maskPasswordInJdbcUrl
-import java.sql.Connection
-import java.sql.DriverManager
 import java.time.Instant
 import java.util.*
 
@@ -50,21 +46,16 @@ class DataStoreService(
 ) {
 
     companion object {
-        val connectionStringPropertyName = "connection-string"
-
         private fun DataConnector.toApi(): ApiDataConnector {
             val maskedConnectionProperties = try {
-                Json.decodeFromString<MutableMap<String, String>>(connectionProperties).apply {
-                    replace("password", defaultPasswordMask)
-                }
-            } catch (e: SerializationException) {
-                val connectionProperties = try {
-                    maskPasswordInJdbcUrl(connectionProperties)
-                } catch (e: Exception) {
-                    logger().warn("Unable to mask connection string in the data connector ${this.id}", e)
-                    connectionProperties
-                }
-                mapOf(connectionStringPropertyName to connectionProperties)
+                connectionProperties.copy(
+                    password = connectionProperties.password?.let { defaultPasswordMask },
+                    connectionString = connectionProperties.connectionString?.let { maskPasswordInJdbcUrl(it) }
+                )
+
+            } catch (e: Exception) {
+                logger().warn("Unable to mask connection string in the data connector ${this.id}", e)
+                connectionProperties
             }
             return ApiDataConnector(
                 id.value,
@@ -74,10 +65,6 @@ class DataStoreService(
                 maskedConnectionProperties
             )
         }
-
-        private fun DataConnector.isJDBC(): Boolean =
-            runCatching { Json.decodeFromString<Map<String, String>>(connectionProperties) }.isFailure
-
     }
 
     /**
@@ -176,24 +163,9 @@ class DataStoreService(
     }
 
     /**
-     * Creates a data connector attached to the specified [dataStoreId] using data from [connectionString].
-     */
-    fun createDataConnector(dataStoreId: UUID, name: String, connectionString: String): UUID {
-        assertDataStoreExists(dataStoreId)
-        return transaction(DBCache.get("$dataStoreId").database) {
-            val dataConnectorId = DataConnectors.insertAndGetId {
-                it[this.name] = name
-                it[this.connectionProperties] = connectionString
-            }
-
-            return@transaction dataConnectorId.value
-        }
-    }
-
-    /**
      * Creates a data connector attached to the specified [dataStoreId] using data from [connectionProperties].
      */
-    fun createDataConnector(dataStoreId: UUID, name: String, connectionProperties: Map<String, String>): UUID {
+    fun createDataConnector(dataStoreId: UUID, name: String, connectionProperties: ConnectionProperties): UUID {
         assertDataStoreExists(dataStoreId)
         return transaction(DBCache.get("$dataStoreId").database) {
             val dataConnectorId = DataConnectors.insertAndGetId {
@@ -228,7 +200,7 @@ class DataStoreService(
         dataStoreId: UUID,
         dataConnectorId: UUID,
         newName: String?,
-        newConnectionProperties: Map<String, String>?
+        newConnectionProperties: ConnectionProperties?
     ) {
         assertDataStoreExists(dataStoreId)
         transaction(DBCache.get("$dataStoreId").database) {
@@ -240,16 +212,9 @@ class DataStoreService(
     }
 
     /**
-     * Tests connectivity using the provided [connectionString].
-     */
-    fun testDatabaseConnection(connectionString: String) {
-        DriverManager.getConnection(connectionString).close()
-    }
-
-    /**
      * Tests connectivity using the provided [connectionProperties].
      */
-    fun testDatabaseConnection(connectionProperties: Map<String, String>) {
+    fun testDatabaseConnection(connectionProperties: ConnectionProperties) {
         getConnection(connectionProperties).close()
     }
 
@@ -323,7 +288,13 @@ class DataStoreService(
         return transaction(DBCache.get("$dataStoreId").database) {
             loggedScope { logger ->
                 val connector = DataConnector[dataConnectorId]
-                require(!connector.isJDBC()) { "JDBC connectors are not supported in automatic ETL processes" }
+                (connector.connectionProperties.connectionType in setOf(
+                    ConnectionType.Db2,
+                    ConnectionType.MySql,
+                    ConnectionType.PostgreSql,
+                    ConnectionType.SqlServer,
+                    ConnectionType.OracleDatabase
+                )).validate(ExceptionReason.ConnectionTypeNotSupportedByAutomaticETL)
                 val etlProcessMetadata =
                     (etlId?.let { EtlProcessMetadata.findById(it) } ?: EtlProcessMetadata.new {}).apply {
                         this.name = name
@@ -624,11 +595,6 @@ class DataStoreService(
         }
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
-    private fun DataConnector.getConnection(): Connection {
-        return if (connectionProperties.startsWith("jdbc")) DriverManager.getConnection(connectionProperties)
-        else getConnection(Json.decodeFromString(connectionProperties))
-    }
 
     fun createSamplingJdbcEtlProcess(
         dataStoreId: UUID,

@@ -1,6 +1,8 @@
 package processm.etl
 
 import org.testcontainers.containers.JdbcDatabaseContainer
+import processm.dbmodels.models.ConnectionProperties
+import processm.dbmodels.models.ConnectionType
 import processm.dbmodels.models.DataConnector
 import java.io.File
 import java.sql.Connection
@@ -21,14 +23,15 @@ interface DBMSEnvironment<Container : JdbcDatabaseContainer<*>> : AutoCloseable 
     /**
      * Properties in a format suitable for [processm.etl.helpers.getConnection]
      */
-    val connectionProperties: Map<String, String>
+    val connectionProperties: ConnectionProperties
     fun connect(): Connection
 
     val dataConnector: DataConnector
         get() = DataConnector.new {
             name = UUID.randomUUID().toString()
             val sep = if ("?" in jdbcUrl) "&" else "?"
-            connectionProperties = "$jdbcUrl${sep}user=$user&password=$password"
+            connectionProperties =
+                ConnectionProperties(ConnectionType.JdbcString, "$jdbcUrl${sep}user=$user&password=$password")
         }
 }
 
