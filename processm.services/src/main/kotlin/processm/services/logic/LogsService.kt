@@ -80,12 +80,17 @@ class LogsService(private val producer: Producer) {
         }
     }
 
-    private fun processm.core.log.hierarchical.Log.toFilteredSequence(includeTraces: Boolean, includeEvents: Boolean) =
-        when {
+    private fun processm.core.log.hierarchical.Log.toFilteredSequence(
+        includeTraces: Boolean,
+        includeEvents: Boolean
+    ): XESInputStream {
+        assert(!includeEvents || includeTraces) { "includeEvents implies includeTraces" }
+        return when {
             includeEvents -> this.toFlatSequence()
             includeTraces -> sequenceOf(this) + this.traces
             else -> sequenceOf(this)
         }
+    }
 
     /**
      * Executes the provided [query] against logs stored in [dataStoreId].
