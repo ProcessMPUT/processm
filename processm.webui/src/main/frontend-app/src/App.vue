@@ -52,7 +52,8 @@ export default class App extends Vue {
     brand: "",
     version: "",
     loginMessage: "",
-    demoMode: false
+    demoMode: false,
+    maxUploadSize: 5 * 1024 * 1024
   });
 
   /**

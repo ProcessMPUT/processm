@@ -492,7 +492,7 @@ export default class DataStoreConfiguration extends Vue {
   readonly dataStoreId!: string | null;
 
   private readonly getLogsQuery = "select log:concept:name, log:identity:id, log:lifecycle:model";
-  private readonly fileSizeLimit = 5242880;
+  private readonly fileSizeLimit = this.app.config.maxUploadSize;
 
   get dataConnectorNameToRename(): string | null {
     return this.dataConnectors.find((connector) => connector.id == this.dataConnectorIdToRename)?.name || null;
