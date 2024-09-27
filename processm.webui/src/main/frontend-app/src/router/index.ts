@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import Vue from "vue";
+import Vue, {inject} from "vue";
 import VueRouter from "vue-router";
+import GoogleAnalytics from "@/services/GoogleAnalytics";
+import App from "@/App.vue";
 
 Vue.use(VueRouter);
 
@@ -94,6 +96,7 @@ const router = new VueRouter({
 });
 
 router.beforeEach((to, _from, next) => {
+  GoogleAnalytics.instance?.page_view(to.path);
   Vue.prototype.$sessionStorage.sessionExists || to.matched.some((record) => record.meta.allowUnauthenticated) ? next() : next({name: "login"});
 });
 

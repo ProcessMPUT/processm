@@ -71,7 +71,7 @@ class WWICustomerOrderBusinessCase(
             field = value
         }
 
-    private suspend fun startOrderProcessing(): BusinessCaseStep {
+    private fun startOrderProcessing(): BusinessCaseStep {
         check(currentOrderID === null)
         check(ordersToComplete.isNotEmpty())
         currentOrderID = ordersToComplete.removeFirst()
@@ -85,7 +85,7 @@ class WWICustomerOrderBusinessCase(
         return BusinessCaseStep(::tryPick)
     }
 
-    private suspend fun pickOrModify(): BusinessCaseStep {
+    private fun pickOrModify(): BusinessCaseStep {
         val p = rng.nextDouble()
         val canModify = modificationsAllowed()
         if (canModify && addLinesProbability > 0 && p <= addLinesProbability)
@@ -96,7 +96,7 @@ class WWICustomerOrderBusinessCase(
         return BusinessCaseStep(::tryPick, delay)
     }
 
-    private suspend fun addLines(): BusinessCaseStep {
+    private fun addLines(): BusinessCaseStep {
         val orderID = currentOrderID
         checkNotNull(orderID)
         val n = orderSize(rng)
@@ -105,7 +105,7 @@ class WWICustomerOrderBusinessCase(
         return pickOrModify()
     }
 
-    private suspend fun removeLineIfPossible(): BusinessCaseStep {
+    private fun removeLineIfPossible(): BusinessCaseStep {
         val orderID = currentOrderID
         checkNotNull(orderID)
         logger.debug("Trying to remove a line from $orderID")
@@ -114,7 +114,7 @@ class WWICustomerOrderBusinessCase(
         return pickOrModify()
     }
 
-    private suspend fun tryPick(): BusinessCaseStep {
+    private fun tryPick(): BusinessCaseStep {
         val orderID = currentOrderID
         checkNotNull(orderID)
         val pickedSomething = pool.pickStockForCustomerOrder(Timestamp.from(now()), orderID)
@@ -131,7 +131,7 @@ class WWICustomerOrderBusinessCase(
         return BusinessCaseStep(::backorder)
     }
 
-    private suspend fun backorder(): BusinessCaseStep {
+    private fun backorder(): BusinessCaseStep {
         val orderID = currentOrderID
         checkNotNull(orderID)
         val backorderOrderID: Int? = pool.backorderIfNecessary(Timestamp.from(now()), orderID)
@@ -141,7 +141,7 @@ class WWICustomerOrderBusinessCase(
         return BusinessCaseStep(::issueInvoice)
     }
 
-    private suspend fun issueInvoice(): BusinessCaseStep {
+    private fun issueInvoice(): BusinessCaseStep {
         check(currentInvoiceID == null)
         val orderID = currentOrderID
         checkNotNull(orderID)
@@ -155,7 +155,7 @@ class WWICustomerOrderBusinessCase(
         return BusinessCaseStep(::deliverOrReceivePayment)
     }
 
-    private suspend fun deliverOrReceivePayment(): BusinessCaseStep {
+    private fun deliverOrReceivePayment(): BusinessCaseStep {
         if (!delivered && !paymentReceived)
             return BusinessCaseStep(if (rng.nextDouble() < paymentBeforeDeliveryProbability) ::receivePayment else ::deliver)
         if (!delivered)
@@ -165,7 +165,7 @@ class WWICustomerOrderBusinessCase(
         return BusinessCaseStep(::completeOrder)
     }
 
-    private suspend fun deliver(): BusinessCaseStep {
+    private fun deliver(): BusinessCaseStep {
         val invoiceID = currentInvoiceID
         checkNotNull(invoiceID)
         check(!delivered)
@@ -175,7 +175,7 @@ class WWICustomerOrderBusinessCase(
         return BusinessCaseStep(::deliverOrReceivePayment)
     }
 
-    private suspend fun receivePayment(): BusinessCaseStep? {
+    private fun receivePayment(): BusinessCaseStep? {
         val invoiceID = currentInvoiceID
         checkNotNull(invoiceID)
         check(!paymentReceived)
@@ -185,7 +185,7 @@ class WWICustomerOrderBusinessCase(
         return BusinessCaseStep(::deliverOrReceivePayment)
     }
 
-    private suspend fun completeOrder(): BusinessCaseStep? {
+    private fun completeOrder(): BusinessCaseStep? {
         check(paymentReceived)
         check(delivered)
         logger.debug("completing order $currentOrderID")
@@ -196,7 +196,7 @@ class WWICustomerOrderBusinessCase(
             null
     }
 
-    override suspend fun start(): BusinessCaseStep {
+    override fun start(): BusinessCaseStep {
         val size = orderSize(rng)
         assert(size >= 1)
         val ts = Timestamp.from(now())

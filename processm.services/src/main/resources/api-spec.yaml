@@ -1900,6 +1900,9 @@ components:
           type: integer
           format: int64
           description: Maximum upload size
+        gaTag:
+          type: string
+          description: If non-empty, the UI will use it as a tag for Google Analytics
     ErrorMessage:
       type: object
       required: [ error ]
@@ -2011,6 +2014,7 @@ components:
           type: string
         size:
           type: integer
+          format: int64
         createdAt:
           type: string
           format: date-time

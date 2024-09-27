@@ -9,7 +9,9 @@ ARG PROCESSM_VERSION
 # The variable is called PROCESSM_VERSION so it looks like PG_VERSION and JAVA_VERSION that are already in the image
 ENV PROCESSM_VERSION=$PROCESSM_VERSION
 
-ADD target/processm-${PROCESSM_VERSION}-bin.tar.xz /
+# Adding libs separately to put them in a separate layer - this should help with sharing and caching
+ADD target/lib/ /processm/lib/
+ADD target/processm-${PROCESSM_VERSION}-core.tar.xz /
 
 ADD src/main/docker/*.sh /processm/
 ADD src/main/docker/msmtprc.sample /processm/conf/

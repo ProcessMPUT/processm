@@ -91,11 +91,13 @@ import { Component, Inject } from "vue-property-decorator";
 import AccountService from "@/services/AccountService";
 import { Organization, UserRoleInOrganization } from "@/openapi";
 import App from "@/App.vue";
+import GoogleAnalytics from "@/services/GoogleAnalytics";
 
 @Component
 export default class Login extends Vue {
   @Inject() app!: App;
   @Inject() accountService!: AccountService;
+  @Inject() googleAnalytics!: GoogleAnalytics;
   readonly errorTimeout = 3000;
   isValidForm = false;
   errorMessage = false;
@@ -120,6 +122,7 @@ export default class Login extends Vue {
 
     try {
       await this.accountService.signIn(this.username, this.password);
+      this.googleAnalytics.login(undefined);
 
       await this.accountService.updateUserInfo();
       this.app.resetLocale();
@@ -132,9 +135,7 @@ export default class Login extends Vue {
   }
 
   setLanguage(language: string) {
-    if (this.$i18n.availableLocales.includes(language)) {
-      this.$i18n.locale = language;
-    }
+    this.app.setLocale(language);
   }
 
   private goHome() {

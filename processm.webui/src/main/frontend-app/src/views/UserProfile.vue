@@ -78,7 +78,7 @@ export default class UserProfile extends Vue {
 
   async updateLocale() {
     if (this.$i18n.availableLocales.includes(this.selectedLocale)) {
-      this.$i18n.locale = this.selectedLocale;
+      this.app.setLocale(this.selectedLocale);
 
       try {
         const locale = this.$t("code", this.selectedLocale).toString();

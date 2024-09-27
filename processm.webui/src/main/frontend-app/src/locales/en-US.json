@@ -173,7 +173,7 @@
     "database-name": "Database name",
     "database": "Database",
     "collection": "Collection",
-    "https":  "Use HTTPS",
+    "https": "Use HTTPS",
     "trust-server-certificate": "Always trust server certificate",
     "connector-not-supported": "Connection string based connectors are not yet supported",
     "masked-password-notification": "Remember to change the masked password to the correct value.",
@@ -440,6 +440,65 @@
     "new-model-available": {
       "text": "A new model is available in component {componentName} in workspace {workspaceName}. Do you want to display the component editor now?",
       "title": "New model available"
+    }
+  },
+  "cookies": {
+    "openDialog": "Manage cookie preferences",
+    "consentModal": {
+      "title": "Information concerning cookies and tracking",
+      "description": "Our website uses cookies and records your IP address for the purposes of accessibility, security, and analytics. You can disable data collection and cookies by changing your browser settings, but it may affect how this website functions.",
+      "acceptAllBtn": "Accept all",
+      "acceptNecessaryBtn": "Accept necessary only",
+      "showPreferencesBtn": "Manage preferences",
+      "footer": "<a href='https://put.poznan.pl/en/node/24898'>Personal data protection</a>"
+    },
+    "preferencesModal": {
+      "title": "Consent Preferences Center",
+      "acceptAllBtn": "Accept all",
+      "acceptNecessaryBtn": "Accept necessary only",
+      "savePreferencesBtn": "Save preferences",
+      "closeIconLabel": "Close modal",
+      "serviceCounterLabel": "Service|Services",
+      "sections": [
+        {
+          "title": "Cookie Usage",
+          "description": "Cookies are small text files stored on your device by websites you visit."
+        },
+        {
+          "title": "Strictly Necessary Cookies <span class='pm__badge'>Always Enabled</span>",
+          "description": "After you log in to ProcessM, the website assigns you a token (a string of characters) that is then sent along with any request to the server (as a Bearer token in the Authentication header), to maintain access control and protection. The token is not persistent and is deleted as soon as you log out of ProcessM or close your web browser. We also use a cookie (named cc_cookie) to keep track of your preferences related to cookies, which you can set in this dialog.",
+          "linkedCategory": "necessary"
+        },
+        {
+          "title": "Analytics Cookies",
+          "description": "We may use analytical cookies to measure the performance of ProcessM and the way you interact with it, e.g., which parts of the system you visit.  Google Analytics, a service provided by Google, is used for this purpose. While your consent for such tracking could help us to improve the service, the lack thereof will not degrade the capabilities or performance of ProcessM in any way.",
+          "linkedCategory": "analytics",
+          "cookieTable": {
+            "caption": "List of cookies",
+            "headers": {
+              "name": "Name",
+              "description": "Description",
+              "duration": "Duration"
+            },
+            "body": [
+              {
+                "name": "_ga",
+                "description": "Google Analytics: Used to distinguish users.",
+                "duration": "2 years"
+              },
+              {
+                "name": "_ga_&lt;id&gt;",
+                "description": "Google Analytics: Used to persist session state.",
+                "duration": "2 years"
+              }
+            ]
+          }
+        },
+        {
+          "title": "More information",
+          "description": "For any query in relation to our policy on cookies and your choices, please contact <a class='cc__link' href='https://put.poznan.pl/en/node/24898'>the Data Protection Officer</a>."
+        }
+      ]
     }
   }
 }

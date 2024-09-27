@@ -16,6 +16,9 @@
         </v-btn>
       </template>
     </v-snackbar>
+    <v-footer :app="true">
+      <v-btn type="button" data-cc="show-preferencesModal" x-small color="secondary">{{ this.$t("cookies.openDialog") }} </v-btn>
+    </v-footer>
   </v-app>
 </template>
 
@@ -29,9 +32,15 @@ import NotificationService, { ComponentUpdatedEvent } from "@/services/Notificat
 import { NotificationsObserver } from "@/utils/NotificationsObserver";
 import { Config } from "@/openapi";
 import ConfigService from "@/services/ConfigService";
+import "vanilla-cookieconsent";
+// Beware. IntelliJ claims the next line can be simplified to `import CookieConsent from "vanilla-cookieconsent"`. It cannot.
+import * as CookieConsent from "vanilla-cookieconsent";
+import { CookieConsentConfig, Translation } from "vanilla-cookieconsent";
+import "vanilla-cookieconsent/dist/cookieconsent.css";
+import GoogleAnalytics from "@/services/GoogleAnalytics";
 
 @Component({
-  components: { AppNavigation, TopBar }
+  components: { GoogleAnalytics, AppNavigation, TopBar }
 })
 export default class App extends Vue {
   @Provide("app") app = this;
@@ -44,6 +53,7 @@ export default class App extends Vue {
 
   @Inject() configService!: ConfigService;
   @Inject() notificationService!: NotificationService;
+  @Inject() googleAnalytics!: GoogleAnalytics;
   notifications: NotificationsObserver | undefined = undefined;
 
   lastEvent = reactive({ lastEvent: null } as { lastEvent: ComponentUpdatedEvent | null });
@@ -53,20 +63,22 @@ export default class App extends Vue {
     version: "",
     loginMessage: "",
     demoMode: false,
-    maxUploadSize: 5 * 1024 * 1024
+    maxUploadSize: 5 * 1024 * 1024,
+    gaTag: ""
   });
 
   /**
    * @param locale Expected to follow RFC5646, because that's what web browsers seems to do
    * @return true if the locale was available and thus set; false otherwise
    */
-  private setLocale(locale: string | undefined): boolean {
+  setLocale(locale: string | undefined): boolean {
     console.debug("Trying to set locale to", locale);
     console.debug("Available", this.$i18n.availableLocales);
     if (locale == undefined) return false;
     // Use the exact match if possible
     if (this.$i18n.availableLocales.includes(locale)) {
       this.$i18n.locale = locale;
+      this.updateCookieConsentDialog();
       console.debug("Successfully set locale to", locale);
       return true;
     }
@@ -75,6 +87,7 @@ export default class App extends Vue {
       locale = locale.split("-")[0];
       if (this.$i18n.availableLocales.includes(locale)) {
         this.$i18n.locale = locale;
+        this.updateCookieConsentDialog();
         console.debug("Successfully set locale to", locale);
         return true;
       }
@@ -86,10 +99,15 @@ export default class App extends Vue {
     });
     if (candidate !== undefined) {
       this.$i18n.locale = candidate;
+      this.updateCookieConsentDialog();
       console.debug("Successfully set locale to", candidate);
       return true;
     }
     return false;
+  }
+
+  private updateCookieConsentDialog() {
+    CookieConsent.setLanguage(this.$i18n.locale);
   }
 
   /**
@@ -137,6 +155,7 @@ export default class App extends Vue {
 
   async created() {
     Object.assign(this.config, await this.configService.getConfig());
+    if (this.config.gaTag !== undefined) this.googleAnalytics.setTag(this.config.gaTag);
 
     if (this.notifications === undefined)
       this.notifications = this.notificationService.subscribe(async (event) => {
@@ -160,6 +179,61 @@ export default class App extends Vue {
         });
       });
     await this.notifications?.start();
+
+    const translations: Record<string, () => Translation> = {};
+    // Every function to retrieve locale is the same, but it is called with a different value of this.$i18n.locale set, and thus retrieves different locale. Ugly, but seems to work.
+    for (const locale of this.$i18n.availableLocales) {
+      translations[locale] = () => {
+        return (this.$t("cookies") as unknown) as Translation;
+      };
+    }
+    const config: CookieConsentConfig = {
+      guiOptions: {
+        consentModal: {
+          layout: "box",
+          position: "bottom left",
+          equalWeightButtons: true,
+          flipButtons: false
+        },
+        preferencesModal: {
+          layout: "box",
+          position: "right",
+          equalWeightButtons: true,
+          flipButtons: false
+        }
+      },
+      categories: {
+        necessary: {
+          readOnly: true
+        }
+      },
+      language: {
+        default: this.$i18n.locale,
+        autoDetect: "browser",
+        translations: translations
+      }
+    };
+    if (this.googleAnalytics.hasNonEmptyTag()) {
+      config.categories["analytics"] = {
+        services: {
+          ga: {
+            label: "Google Analytics",
+            onAccept: () => {
+              this.googleAnalytics.setEnabled(true);
+            },
+            onReject: () => {
+              this.googleAnalytics.setEnabled(false);
+            },
+            cookies: [
+              {
+                name: /^(_ga|_gid)/
+              }
+            ]
+          }
+        }
+      };
+    }
+    await CookieConsent.run(config);
   }
 
   beforeDestroy() {

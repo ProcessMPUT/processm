@@ -88,31 +88,32 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>io.fabric8</groupId>
-                <artifactId>docker-maven-plugin</artifactId>
-                <version>${io.fabric8.docker-maven-plugin.version}</version>
-                <configuration>
-                    <images>
-                        <image>
-                            <name>%g/wwi</name>
-                            <build>
-                                <dockerFile>${project.basedir}/src/main/docker/wwi/Dockerfile</dockerFile>
-                                <contextDir>${project.basedir}</contextDir>
-                            </build>
-                        </image>
-                    </images>
-                </configuration>
+                <artifactId>exec-maven-plugin</artifactId>
+                <groupId>org.codehaus.mojo</groupId>
+                <version>3.3.0</version>
                 <executions>
                     <execution>
-                        <id>Generate Docker Images</id>
-                        <!--
-                        It seems to me that it is safe to bind it to the package phase, per http://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html#Plugins
-                        "When multiple executions are given that match a particular phase, they are executed in the order specified in the POM, with inherited executions running first."
-                        -->
+                        <id>Create docker image for wwi</id>
                         <phase>package</phase>
                         <goals>
-                            <goal>build</goal>
+                            <goal>exec</goal>
                         </goals>
+                        <!-- Using buildx instead of docker-maven-plugin since Dockerfile uses a bind mount
+                        -->
+                        <configuration>
+                            <executable>docker</executable>
+                            <arguments>
+                                <argument>buildx</argument>
+                                <argument>build</argument>
+                                <argument>-f</argument>
+                                <argument>src/main/docker/wwi/Dockerfile</argument>
+                                <argument>--build-arg</argument>
+                                <argument>PROCESSM_VERSION=${revision}</argument>
+                                <argument>-t</argument>
+                                <argument>processm/wwi:${revision}</argument>
+                                <argument>.</argument>
+                            </arguments>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

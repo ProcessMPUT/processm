@@ -1,6 +1,5 @@
 package processm.services.logic
 
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -36,7 +35,6 @@ import processm.services.api.models.*
 import processm.services.helpers.ExceptionReason
 import processm.services.helpers.defaultPasswordMask
 import processm.services.helpers.maskPasswordInJdbcUrl
-import java.sql.Connection
 import java.sql.DriverManager
 import java.time.Instant
 import java.util.*
@@ -139,6 +137,7 @@ class DataStoreService(
     fun removeDataStore(dataStoreId: UUID): Boolean {
         return transactionMain {
             connection.autoCommit = true
+            DBCache.get(dataStoreId.toString()).close()
             SchemaUtils.dropDatabase("\"$dataStoreId\"")
             val dataStoreRemoved = DataStores.deleteWhere {
                 DataStores.id eq dataStoreId
@@ -224,13 +223,16 @@ class DataStoreService(
         dataStoreId: UUID,
         dataConnectorId: UUID,
         newName: String?,
-        newConnectionProperties: Map<String, String>?
+        newConnectionProperties: Map<String, String>?,
+        newConnectionString: String?
     ) {
+        require((newConnectionProperties === null) || (newConnectionString === null)) { "At most one of newConnectionProperties and newConnectionString can be not-null" }
         assertDataStoreExists(dataStoreId)
         transaction(DBCache.get("$dataStoreId").database) {
             DataConnectors.update({ DataConnectors.id eq dataConnectorId }) { stmt ->
                 newName?.let { stmt[name] = it }
                 newConnectionProperties?.let { stmt[connectionProperties] = Json.encodeToString(it) }
+                newConnectionString?.let { stmt[connectionProperties] = it }
             } > 0
         }
     }
@@ -616,12 +618,6 @@ class DataStoreService(
 
             return dataModelId
         }
-    }
-
-    @OptIn(ExperimentalSerializationApi::class)
-    private fun DataConnector.getConnection(): Connection {
-        return if (connectionProperties.startsWith("jdbc")) DriverManager.getConnection(connectionProperties)
-        else getConnection(Json.decodeFromString(connectionProperties))
     }
 
     fun createSamplingJdbcEtlProcess(

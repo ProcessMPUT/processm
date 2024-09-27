@@ -286,7 +286,7 @@ export default class JdbcEtlProcessDialog extends Vue {
 
   @Watch("initialConfig")
   setInitialConfig() {
-    const etl = this.initialConfig;
+    const etl = this.initialConfig?.type == "jdbc" ? this.initialConfig : null;
     const cfg = etl?.configuration;
 
     this.processName = etl?.name || "";
