@@ -744,6 +744,10 @@ export default class DataStoreConfiguration extends Vue {
     try {
       await this.dataStoreService.changeEtlProcessActivationState(this.dataStoreId, etlProcess.id!, !etlProcess.isActive);
       etlProcess.isActive = !etlProcess.isActive;
+      if (etlProcess.type == "jdbc") {
+        const conf = (etlProcess as JdbcEtlProcess).configuration;
+        if (conf != undefined) conf.enabled = etlProcess.isActive;
+      }
       this.app.success(`${this.$t("common.operation-successful")}`);
     } catch (error) {
       this.app.error(error);
