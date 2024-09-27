@@ -562,7 +562,7 @@ export default class DataStoreConfiguration extends Vue {
       this.xesLogHeaders = [];
       this.xesLogItems = [];
 
-      const queryResults = await this.logsService.submitUserQuery(this.dataStoreId, this.getLogsQuery);
+      const queryResults = await this.logsService.submitUserQuery(this.dataStoreId, this.getLogsQuery, "application/json", false, false);
 
       await waitForRepaint(async () => {
         const { headers, logItems } = this.xesProcessor.extractLogItemsFromLogScope(queryResults);
