@@ -51,7 +51,10 @@ class LogKPIService : AbstractJobService(
         val event = WorkspaceComponentEventType.valueOf(message.getStringProperty(WORKSPACE_COMPONENT_EVENT))
 
         return when (event) {
-            WorkspaceComponentEventType.ComponentCreatedOrUpdated -> listOf(createJob(id.toUUID()!!))
+            WorkspaceComponentEventType.ComponentCreatedOrUpdated, WorkspaceComponentEventType.NewExternalData -> listOf(
+                createJob(id.toUUID()!!)
+            )
+
             else -> emptyList()
         }
     }

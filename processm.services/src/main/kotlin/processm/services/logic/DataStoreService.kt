@@ -130,6 +130,7 @@ class DataStoreService(
     fun removeDataStore(dataStoreId: UUID): Boolean {
         return transactionMain {
             connection.autoCommit = true
+            DBCache.get(dataStoreId.toString()).close()
             SchemaUtils.dropDatabase("\"$dataStoreId\"")
             val dataStoreRemoved = DataStores.deleteWhere {
                 DataStores.id eq dataStoreId
@@ -594,7 +595,6 @@ class DataStoreService(
             return dataModelId
         }
     }
-
 
     fun createSamplingJdbcEtlProcess(
         dataStoreId: UUID,

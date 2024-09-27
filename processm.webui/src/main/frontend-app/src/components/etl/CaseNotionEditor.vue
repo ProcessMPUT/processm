@@ -80,58 +80,58 @@ export default class CaseNotionEditor extends Vue {
 
   @Watch("relationshipGraph")
   relationshipGraphChanged(relationshipGraph: RelationshipGraph | null) {
-    if (relationshipGraph == null) return;
-
     this.graph = new dia.Graph();
     this.nodes = new Map<number, shapes.standard.Rectangle>();
     this.links = new Array<shapes.standard.Link>();
 
-    for (let classDescriptor of relationshipGraph.classes) {
-      const classId = classDescriptor.id;
-      const className = classDescriptor.name;
-      const nodeWidth = 100 + className.length;
-      const nodeHeight = 50;
-      const rect = new shapes.standard.Rectangle();
-      rect.resize(nodeWidth, nodeHeight);
-      // FIXME Documentation for JointJS is poor and I am not sure whether annotations has some special meaning or not.
-      // FIXME By the name and the fact it accepts any object, I infer it is intended to store user-defined data, but I may be misguided.
-      rect.attr({
-        annotations: {classId: classId},
-        label: {
-          text: util.breakText(className, {
-            width: nodeWidth,
-            height: nodeHeight
-          })
-        }
+    if (relationshipGraph != null) {
+      for (let classDescriptor of relationshipGraph.classes) {
+        const classId = classDescriptor.id;
+        const className = classDescriptor.name;
+        const nodeWidth = 100 + className.length;
+        const nodeHeight = 50;
+        const rect = new shapes.standard.Rectangle();
+        rect.resize(nodeWidth, nodeHeight);
+        // FIXME Documentation for JointJS is poor and I am not sure whether annotations has some special meaning or not.
+        // FIXME By the name and the fact it accepts any object, I infer it is intended to store user-defined data, but I may be misguided.
+        rect.attr({
+          annotations: { classId: classId },
+          label: {
+            text: util.breakText(className, {
+              width: nodeWidth,
+              height: nodeHeight
+            })
+          }
+        });
+        this.nodes.set(classId, rect);
+      }
+
+      this.nodes.forEach((node: shapes.standard.Rectangle) => {
+        node.addTo(this.graph);
       });
-      this.nodes.set(classId, rect);
+
+      relationshipGraph.edges.forEach((edge) => {
+        const sourceClassId = edge.sourceClassId;
+        const targetClassId = edge.targetClassId;
+        const sourceNode = this.nodes.get(sourceClassId);
+        const targetNode = this.nodes.get(targetClassId);
+
+        if (sourceNode == undefined || targetNode == undefined) return;
+
+        const link = new shapes.standard.Link();
+        link.source(sourceNode);
+        link.target(targetNode);
+        link.connector("rounded");
+        link.attr({
+          annotations: { relationship: edge }
+        });
+        this.links.push(link);
+      });
+
+      this.links.forEach((link: shapes.standard.Link) => {
+        link.addTo(this.graph);
+      });
     }
-
-    this.nodes.forEach((node: shapes.standard.Rectangle) => {
-      node.addTo(this.graph);
-    });
-
-    relationshipGraph.edges.forEach(edge => {
-      const sourceClassId = edge.sourceClassId;
-      const targetClassId = edge.targetClassId;
-      const sourceNode = this.nodes.get(sourceClassId);
-      const targetNode = this.nodes.get(targetClassId);
-
-      if (sourceNode == undefined || targetNode == undefined) return;
-
-      const link = new shapes.standard.Link();
-      link.source(sourceNode);
-      link.target(targetNode);
-      link.connector("rounded");
-      link.attr({
-        annotations: {relationship: edge}
-      });
-      this.links.push(link);
-    });
-
-    this.links.forEach((link: shapes.standard.Link) => {
-      link.addTo(this.graph);
-    });
 
     const graphBox = layout.DirectedGraph.layout(this.graph, {
       dagre,

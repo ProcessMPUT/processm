@@ -354,6 +354,7 @@ class MetaModelDebeziumWatchingService : Service {
         return this
     }
 
+
     private fun Properties.setTrackedEntities(entities: Set<Class>): Properties {
         setProperty("table.include.list", entities.joinToString(",", transform = {
             buildString {

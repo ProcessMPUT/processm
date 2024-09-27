@@ -7,6 +7,7 @@ import processm.dbmodels.models.*
 import processm.etl.tracker.DatabaseChangeApplier
 import processm.etl.tracker.DatabaseChangeApplier.DatabaseChangeEvent
 import processm.helpers.mapToSet
+import processm.logging.debug
 import processm.logging.loggedScope
 import processm.logging.logger
 import java.time.Instant
@@ -74,7 +75,7 @@ class LogGeneratingDatabaseChangeApplier(
                     }
                 }
             }
-            logger.debug("Successfully handled ${databaseChangeEvents.count()} DB change events")
+            logger.debug { "Successfully handled ${databaseChangeEvents.size} DB change events" }
         }
 
     companion object {

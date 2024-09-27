@@ -1,14 +1,14 @@
 package processm.tools.generator
 
-import processm.tools.helpers.CoroutinesConnectionPool
-import processm.tools.helpers.LazyCoroutinesConnectionPool
+import processm.tools.helpers.ConnectionPool
+import processm.tools.helpers.LazyConnectionPool
 import java.sql.Connection
 import java.sql.Timestamp
 import java.sql.Types
 
-class WWIConnectionPool(basePool: CoroutinesConnectionPool) : CoroutinesConnectionPool by basePool {
+class WWIConnectionPool(basePool: ConnectionPool) : ConnectionPool by basePool {
     constructor(maxSize: Int, createConnection: () -> Connection) :
-            this(LazyCoroutinesConnectionPool(maxSize, createConnection))
+            this(LazyConnectionPool(maxSize, createConnection))
 
     val pickStockForCustomerOrder =
         wrapStoredProcedure3<Timestamp, Int, Boolean>(Types.BIT, "ProcessM.PickStockForCustomerOrder")

@@ -31,7 +31,8 @@ import processm.core.models.petrinet.DBSerializer as PetriNetDBSerializer
 class AlignerKPIService : AbstractJobService(
     QUARTZ_CONFIG,
     WORKSPACE_COMPONENTS_TOPIC,
-    "$WORKSPACE_COMPONENT_EVENT IN ('${WorkspaceComponentEventType.ModelAccepted}', '${WorkspaceComponentEventType.Delete}', '${WorkspaceComponentEventType.NewExternalData}')",
+    """($WORKSPACE_COMPONENT_EVENT IN ('${WorkspaceComponentEventType.ModelAccepted}', '${WorkspaceComponentEventType.Delete}', '${WorkspaceComponentEventType.NewExternalData}')) 
+        |AND ($WORKSPACE_COMPONENT_TYPE IN ('${ComponentTypeDto.CausalNet}', '${ComponentTypeDto.PetriNet}'))""".trimMargin()
 ) {
     companion object {
 
