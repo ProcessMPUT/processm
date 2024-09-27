@@ -250,12 +250,23 @@ fun Route.DataStoresApi() {
             )
             val dataConnector = kotlin.runCatching { call.receiveNullable<DataConnector>() }.getOrNull()
                 ?: throw ApiException(ExceptionReason.UnparsableData)
-            dataStoreService.updateDataConnector(
-                pathParams.dataStoreId,
-                pathParams.dataConnectorId,
-                dataConnector.name,
-                dataConnector.properties
-            )
+            val connectionString = dataConnector.properties?.get(connectionStringPropertyName)
+            if (connectionString.isNullOrBlank())
+                dataStoreService.updateDataConnector(
+                    pathParams.dataStoreId,
+                    pathParams.dataConnectorId,
+                    dataConnector.name,
+                    dataConnector.properties,
+                    null
+                )
+            else
+                dataStoreService.updateDataConnector(
+                    pathParams.dataStoreId,
+                    pathParams.dataConnectorId,
+                    dataConnector.name,
+                    null,
+                    connectionString
+                )
 
             call.respond(HttpStatusCode.NoContent)
         }
