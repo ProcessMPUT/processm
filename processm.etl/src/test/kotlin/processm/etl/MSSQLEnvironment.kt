@@ -63,7 +63,7 @@ class MSSQLEnvironment(
         fun import(script: String, dbName: String) {
             with(
                 container.execInContainer(
-                    "/opt/mssql-tools/bin/sqlcmd",
+                    "/opt/mssql-tools18/bin/sqlcmd",
                     "-U",
                     container.username,
                     "-P",
@@ -71,7 +71,8 @@ class MSSQLEnvironment(
                     "-d",
                     dbName,
                     "-i",
-                    "/tmp/test-databases/$script"
+                    "/tmp/test-databases/$script",
+                    "-No"
                 )
             ) {
                 logger.debug(stdout)
@@ -116,7 +117,8 @@ class MSSQLEnvironment(
             "username" to user,
             "password" to password,
             "database" to dbName,
-            "trustServerCertificate" to "true"
+            "trustServerCertificate" to "true",
+            "encrypt" to "false"
         )
 
     override fun connect(): Connection =
