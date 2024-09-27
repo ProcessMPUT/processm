@@ -21,7 +21,7 @@ class MSSQLEnvironment(
         const val SAKILA_SCHEMA_SCRIPT = "sakila/sql-server-sakila-db/sql-server-sakila-schema.sql"
         const val SAKILA_INSERT_SCRIPT = "sakila/sql-server-sakila-db/sql-server-sakila-insert-data.sql"
 
-        private const val DOCKER_IMAGE = "mcr.microsoft.com/mssql/server:2019-CU12-ubuntu-20.04"
+        private const val DOCKER_IMAGE = "mcr.microsoft.com/mssql/server:2019-CU28-ubuntu-20.04"
         private val logger = logger()
 
         fun createContainer(): MSSQLServerContainer<*> = MSSQLServerContainer(DOCKER_IMAGE)
@@ -63,7 +63,7 @@ class MSSQLEnvironment(
         fun import(script: String, dbName: String) {
             with(
                 container.execInContainer(
-                    "/opt/mssql-tools/bin/sqlcmd",
+                    "/opt/mssql-tools18/bin/sqlcmd",
                     "-U",
                     container.username,
                     "-P",
@@ -71,7 +71,8 @@ class MSSQLEnvironment(
                     "-d",
                     dbName,
                     "-i",
-                    "/tmp/test-databases/$script"
+                    "/tmp/test-databases/$script",
+                    "-No"
                 )
             ) {
                 logger.debug(stdout)
@@ -116,7 +117,8 @@ class MSSQLEnvironment(
             "username" to user,
             "password" to password,
             "database" to dbName,
-            "trustServerCertificate" to "true"
+            "trustServerCertificate" to "true",
+            "encrypt" to "false"
         )
 
     override fun connect(): Connection =
