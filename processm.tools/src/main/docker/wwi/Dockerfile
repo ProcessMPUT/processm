@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/mssql/server:2019-CU12-ubuntu-20.04
+FROM mcr.microsoft.com/mssql/server:2019-CU28-ubuntu-20.04
 ARG PROCESSM_VERSION=0.7.0
 ENV PROCESSM_VERSION=$PROCESSM_VERSION
 USER root:root
