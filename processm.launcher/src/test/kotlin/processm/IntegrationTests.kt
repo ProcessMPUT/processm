@@ -23,6 +23,8 @@ import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.LogInputStream
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.ComponentTypeDto
+import processm.dbmodels.models.ConnectionProperties
+import processm.dbmodels.models.ConnectionType
 import processm.dbmodels.models.DataStores
 import processm.etl.DBMSEnvironment
 import processm.etl.MSSQLEnvironment
@@ -81,7 +83,8 @@ class IntegrationTests {
             login("test@example.com", "P@ssw0rd!")
             currentOrganizationId = organizations.single().id
             currentDataStore = createDataStore("datastore")
-            currentDataConnector = createDataConnector("dc1", mapOf("connection-string" to jdbcUrl!!))
+            currentDataConnector =
+                createDataConnector("dc1", ConnectionProperties(ConnectionType.JdbcString, jdbcUrl!!))
             val initialDefinition = AbstractEtlProcess(
                 name = samplingEtlProcessName,
                 dataConnectorId = currentDataConnector?.id!!,
@@ -175,7 +178,8 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             login("test@example.com", "P@ssw0rd!")
             currentOrganizationId = organizations.single().id
             currentDataStore = createDataStore("datastore")
-            currentDataConnector = createDataConnector("dc1", mapOf("connection-string" to sakilaJdbcUrl))
+            currentDataConnector =
+                createDataConnector("dc1", ConnectionProperties(ConnectionType.JdbcString, sakilaJdbcUrl))
 
             val initialDefinition = AbstractEtlProcess(
                 name = samplingEtlProcessName,
@@ -321,7 +325,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 login("test@example.com", "P@ssw0rd!")
                 currentOrganizationId = organizations.single().id
                 currentDataStore = createDataStore("datastore")
-                post<Paths.ConnectionTest, DataConnector, Unit>(DataConnector(properties = sakila.connectionProperties)) {
+                post<Paths.ConnectionTest, DataConnector, Unit>(DataConnector(connectionProperties = sakila.connectionProperties)) {
                     assertEquals(HttpStatusCode.NoContent, status)
                 }
                 currentDataConnector = createDataConnector("dc1", sakila.connectionProperties)
@@ -506,7 +510,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 login("test@example.com", "P@ssw0rd!")
                 currentOrganizationId = organizations.single().id
                 currentDataStore = createDataStore("datastore")
-                post<Paths.ConnectionTest, DataConnector, Unit>(DataConnector(properties = sakila.connectionProperties)) {
+                post<Paths.ConnectionTest, DataConnector, Unit>(DataConnector(connectionProperties = sakila.connectionProperties)) {
                     assertEquals(HttpStatusCode.NoContent, status)
                 }
                 currentDataConnector = createDataConnector("dc1", sakila.connectionProperties)
@@ -884,7 +888,8 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             login("test@example.com", "P@ssw0rd!")
             currentOrganizationId = organizations.single().id
             currentDataStore = createDataStore("datastore")
-            currentDataConnector = createDataConnector("dc1", mapOf("connection-string" to jdbcUrl!!))
+            currentDataConnector =
+                createDataConnector("dc1", ConnectionProperties(ConnectionType.JdbcString, jdbcUrl!!))
 
             val initialDefinition = AbstractEtlProcess(
                 name = etlProcessName,
@@ -1030,7 +1035,8 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             login("test@example.com", "P@ssw0rd!")
             currentOrganizationId = organizations.single().id
             currentDataStore = createDataStore("datastore")
-            currentDataConnector = createDataConnector("dc1", mapOf("connection-string" to jdbcUrl!!))
+            currentDataConnector =
+                createDataConnector("dc1", ConnectionProperties(ConnectionType.JdbcString, jdbcUrl!!))
 
             val initialDefinition = AbstractEtlProcess(
                 name = etlProcessName,
@@ -1175,7 +1181,8 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             login("test@example.com", "P@ssw0rd!")
             currentOrganizationId = organizations.single().id
             currentDataStore = createDataStore("datastore")
-            currentDataConnector = createDataConnector("dc1", mapOf("connection-string" to jdbcUrl!!))
+            currentDataConnector =
+                createDataConnector("dc1", ConnectionProperties(ConnectionType.JdbcString, jdbcUrl!!))
 
             val initialDefinition = AbstractEtlProcess(
                 name = etlProcessName,

@@ -4,6 +4,7 @@ import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.MSSQLServerContainer
 import org.testcontainers.containers.MSSQLServerContainer.MS_SQL_SERVER_PORT
 import org.testcontainers.lifecycle.Startables
+import processm.dbmodels.models.ConnectionProperties
 import processm.dbmodels.models.ConnectionType
 import processm.dbmodels.models.DataConnector
 import processm.etl.DBMSEnvironment.Companion.TEST_DATABASES_PATH
@@ -109,16 +110,16 @@ class MSSQLEnvironment(
 
     override val jdbcUrl: String
         get() = container.withUrlParam("database", dbName).jdbcUrl
-    override val connectionProperties: Map<String, String>
-        get() = mapOf(
-            "connection-type" to ConnectionType.SqlServer.name,
-            "server" to container.host,
-            "port" to container.getMappedPort(MS_SQL_SERVER_PORT).toString(),
-            "username" to user,
-            "password" to password,
-            "database" to dbName,
-            "trustServerCertificate" to "true",
-            "encrypt" to "false"
+    override val connectionProperties: ConnectionProperties
+        get() = ConnectionProperties(
+            ConnectionType.SqlServer,
+            server = container.host,
+            port = container.getMappedPort(MS_SQL_SERVER_PORT),
+            username = user,
+            password = password,
+            database = dbName,
+            trustServerCertificate = true,
+            encrypt = false
         )
 
     override fun connect(): Connection =
@@ -132,7 +133,8 @@ class MSSQLEnvironment(
     override val dataConnector: DataConnector
         get() = DataConnector.new {
             name = UUID.randomUUID().toString()
-            connectionProperties = "$jdbcUrl;user=$user;password=$password"
+            connectionProperties =
+                ConnectionProperties(ConnectionType.JdbcString, "$jdbcUrl;user=$user;password=$password")
         }
 }
 

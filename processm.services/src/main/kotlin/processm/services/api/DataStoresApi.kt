@@ -18,7 +18,6 @@ import processm.helpers.time.toLocalDateTime
 import processm.services.api.models.*
 import processm.services.helpers.ExceptionReason
 import processm.services.logic.DataStoreService
-import processm.services.logic.DataStoreService.Companion.connectionStringPropertyName
 import processm.services.logic.LogsService
 import java.io.OutputStream
 import java.util.*
@@ -208,17 +207,11 @@ fun Route.DataStoresApi() {
             val dataConnector = runCatching { call.receiveNullable<DataConnector>() }.getOrNull()
                 ?: throw ApiException(ExceptionReason.UnparsableData)
             val connectorProperties =
-                dataConnector.properties ?: throw ApiException(ExceptionReason.ConnectorConfigurationRequired)
+                dataConnector.connectionProperties ?: throw ApiException(ExceptionReason.ConnectorConfigurationRequired)
             val connectorName =
                 dataConnector.name ?: throw ApiException(ExceptionReason.ConnectorNameRequired)
-            val connectionString = connectorProperties[connectionStringPropertyName]
             val dataConnectorId =
-                if (connectionString.isNullOrBlank()) dataStoreService.createDataConnector(
-                    pathParams.dataStoreId,
-                    connectorName,
-                    connectorProperties
-                )
-                else dataStoreService.createDataConnector(pathParams.dataStoreId, connectorName, connectionString)
+                dataStoreService.createDataConnector(pathParams.dataStoreId, connectorName, connectorProperties)
 
             call.respond(
                 HttpStatusCode.Created,
@@ -252,23 +245,12 @@ fun Route.DataStoresApi() {
             )
             val dataConnector = kotlin.runCatching { call.receiveNullable<DataConnector>() }.getOrNull()
                 ?: throw ApiException(ExceptionReason.UnparsableData)
-            val connectionString = dataConnector.properties?.get(connectionStringPropertyName)
-            if (connectionString.isNullOrBlank())
-                dataStoreService.updateDataConnector(
-                    pathParams.dataStoreId,
-                    pathParams.dataConnectorId,
-                    dataConnector.name,
-                    dataConnector.properties,
-                    null
-                )
-            else
-                dataStoreService.updateDataConnector(
-                    pathParams.dataStoreId,
-                    pathParams.dataConnectorId,
-                    dataConnector.name,
-                    null,
-                    connectionString
-                )
+            dataStoreService.updateDataConnector(
+                pathParams.dataStoreId,
+                pathParams.dataConnectorId,
+                dataConnector.name,
+                dataConnector.connectionProperties
+            )
 
             call.respond(HttpStatusCode.NoContent)
         }
@@ -280,13 +262,12 @@ fun Route.DataStoresApi() {
                 pathParams.dataStoreId,
                 RoleType.Reader
             )
-            val connectionProperties = runCatching { call.receiveNullable<DataConnector>() }.getOrNull()?.properties
-                ?: throw ApiException(ExceptionReason.UnparsableData)
-            val connectionString = connectionProperties[connectionStringPropertyName]
+            val connectionProperties =
+                runCatching { call.receiveNullable<DataConnector>() }.getOrNull()?.connectionProperties
+                    ?: throw ApiException(ExceptionReason.UnparsableData)
 
             try {
-                if (connectionString.isNullOrBlank()) dataStoreService.testDatabaseConnection(connectionProperties)
-                else dataStoreService.testDatabaseConnection(connectionString)
+                dataStoreService.testDatabaseConnection(connectionProperties)
             } catch (e: Exception) {
                 throw ApiException(ExceptionReason.ConnectionTestFailed, arrayOf(e.message))
             }

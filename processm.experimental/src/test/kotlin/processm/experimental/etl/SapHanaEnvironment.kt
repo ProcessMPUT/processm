@@ -1,5 +1,7 @@
 package processm.experimental.etl
 
+import processm.dbmodels.models.ConnectionProperties
+import processm.dbmodels.models.ConnectionType
 import processm.dbmodels.models.DataConnector
 import processm.etl.DBMSEnvironment
 import java.sql.Connection
@@ -13,13 +15,13 @@ class SapHanaEnvironment(val container: SapHanaSQLContainer<*>) : DBMSEnvironmen
     override val jdbcUrl: String
         get() = container.jdbcUrl
 
-    override val connectionProperties: Map<String, String>
+    override val connectionProperties: ConnectionProperties
         get() = throw NotImplementedError("Unnecessary at this stage")
 
     override val dataConnector: DataConnector
         get() = DataConnector.new {
             name = UUID.randomUUID().toString()
-            connectionProperties = jdbcUrl
+            connectionProperties = ConnectionProperties(ConnectionType.JdbcString, jdbcUrl)
         }
 
     override fun connect(): Connection = container.createConnection("")

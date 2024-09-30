@@ -5,6 +5,7 @@ import {
   AbstractEtlProcess,
   CaseNotion,
   CaseNotion as ApiCaseNotion,
+  ConnectionProperties,
   DataConnector as ApiDataConnector,
   DataStore as ApiDataStore,
   EtlProcess,
@@ -92,7 +93,7 @@ export default class DataStoreService extends BaseService {
           name: dataConnector.name || "",
           lastConnectionStatus: dataConnector.lastConnectionStatus,
           lastConnectionStatusTimestamp: dataConnector.lastConnectionStatusTimestamp,
-          properties: dataConnector.properties || {}
+          connectionProperties: dataConnector.connectionProperties!
         });
       }
 
@@ -100,10 +101,10 @@ export default class DataStoreService extends BaseService {
     }, []);
   }
 
-  public async createDataConnector(dataStoreId: string, dataConnectorName: string, dataConnectorConfiguration: Record<string, string>): Promise<DataConnector> {
+  public async createDataConnector(dataStoreId: string, dataConnectorName: string, dataConnectorConfiguration: ConnectionProperties): Promise<DataConnector> {
     const response = await this.dataStoresApi.createDataConnector(dataStoreId, {
       name: dataConnectorName,
-      properties: dataConnectorConfiguration
+      connectionProperties: dataConnectorConfiguration
     });
 
     const dataConnector = response.data;
@@ -114,11 +115,11 @@ export default class DataStoreService extends BaseService {
       id: dataConnector.id,
       name: dataConnector.name || "",
       lastConnectionStatus: dataConnector.lastConnectionStatus,
-      properties: dataConnector.properties || {}
+      connectionProperties: Object.assign({}, dataConnector.connectionProperties)
     };
   }
 
-  public async updateDataConnector(dataStoreId: string, dataConnectorId: string, dataConnector: DataConnector) {
+  public async updateDataConnector(dataStoreId: string, dataConnectorId: string, dataConnector: ApiDataConnector) {
     const response = await this.dataStoresApi.updateDataConnector(dataStoreId, dataConnectorId, dataConnector);
 
     return response.status == 204;
@@ -130,8 +131,8 @@ export default class DataStoreService extends BaseService {
     });
   }
 
-  public async testDataConnector(dataStoreId: string, dataConnectorConfiguration: Record<string, string>): Promise<void> {
-    await this.dataStoresApi.testDataConnector(dataStoreId, { properties: dataConnectorConfiguration });
+  public async testDataConnector(dataStoreId: string, dataConnectorConfiguration: ConnectionProperties): Promise<void> {
+    await this.dataStoresApi.testDataConnector(dataStoreId, { connectionProperties: dataConnectorConfiguration });
   }
 
   public async getCaseNotionSuggestions(dataStoreId: string, dataConnectorId: string): Promise<CaseNotion[]> {

@@ -66,7 +66,7 @@ class LogGeneratingDatabaseChangeApplierTest {
                 processType = "automatic"
                 dataConnector = DataConnector.new {
                     name = "test"
-                    connectionProperties = ""
+                    connectionProperties = ConnectionProperties(ConnectionType.JdbcString, "")
                 }
             }.id.value
             // DataModel from Fig 9 and Table 1 in https://doi.org/10.1007/s10115-019-01430-6
@@ -175,7 +175,11 @@ class LogGeneratingDatabaseChangeApplierTest {
                     graph.addVertex(r.targetClass.id)
                     graph.addEdge(r.sourceClass.id, r.targetClass.id, r)
                 }
-            AutomaticEtlProcessExecutor(temporaryDB, etlProcessId, DAGBusinessPerspectiveDefinition(graph, identifyingClasses))
+            AutomaticEtlProcessExecutor(
+                temporaryDB,
+                etlProcessId,
+                DAGBusinessPerspectiveDefinition(graph, identifyingClasses)
+            )
         }
 
         val applier = mockk<LogGeneratingDatabaseChangeApplier> {

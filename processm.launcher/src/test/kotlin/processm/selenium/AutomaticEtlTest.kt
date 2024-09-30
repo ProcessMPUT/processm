@@ -101,6 +101,8 @@ class AutomaticEtlTest : SeleniumBase() {
         click("btn-add-data-connector")
         expand("header-specify-connection-properties")
         typeIn("connection-name", connectorName)
+        openVuetifyDropDown("available-connection-types")
+        selectVuetifyDropDownItem("PostgreSQL")
         typeIn("postgresql-server", dbContainer.host)
         typeIn("postgresql-port", dbContainer.port.toString())
         typeIn("postgresql-username", dbContainer.username)

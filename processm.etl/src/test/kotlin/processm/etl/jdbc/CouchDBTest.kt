@@ -1,7 +1,5 @@
 package processm.etl.jdbc
 
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -16,6 +14,8 @@ import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
+import processm.dbmodels.models.ConnectionProperties
+import processm.dbmodels.models.ConnectionType
 import processm.dbmodels.models.DataConnector
 import processm.dbmodels.models.EtlProcessMetadata
 import processm.etl.CouchDBContainer
@@ -62,14 +62,14 @@ class CouchDBTest {
         transaction(DBCache.get(DBTestHelper.dbName).database) {
             DataConnector.new {
                 name = "blah"
-                connectionProperties = buildJsonObject {
-                    put("connection-type", JsonPrimitive("CouchDB"))
-                    put("server", JsonPrimitive(container.host))
-                    put("port", JsonPrimitive(container.port.toString()))
-                    put("username", JsonPrimitive(username))
-                    put("password", JsonPrimitive(password))
-                    put("database", JsonPrimitive(""))
-                }.toString()
+                connectionProperties = ConnectionProperties(
+                    ConnectionType.CouchDBProperties,
+                    server = container.host,
+                    port = container.port,
+                    username = username,
+                    password = password,
+                    database = ""
+                )
             }.getConnection().use {
                 (it as CouchDBConnection).createDatabase(dbName)
             }
@@ -82,7 +82,8 @@ class CouchDBTest {
         transaction(DBCache.get(DBTestHelper.dbName).database) {
             val connector = DataConnector.new {
                 name = "blah"
-                connectionProperties = """couchdb:${container.url}/$dbName"""
+                connectionProperties =
+                    ConnectionProperties(ConnectionType.CouchDBString, """couchdb:${container.url}/$dbName""")
             }
             val etl = ETLConfiguration.new {
                 metadata = EtlProcessMetadata.new {

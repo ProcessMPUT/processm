@@ -3,6 +3,7 @@ package processm.etl
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
+import processm.dbmodels.models.ConnectionProperties
 import processm.dbmodels.models.ConnectionType
 import processm.etl.DBMSEnvironment.Companion.TEST_DATABASES_PATH
 import java.io.File
@@ -53,14 +54,14 @@ class PostgreSQLEnvironment(
         return container as PostgreSQLContainer<*>
     }
 
-    override val connectionProperties: Map<String, String>
-        get() = mapOf(
-            "connection-type" to ConnectionType.PostgreSql.name,
-            "server" to container.host,
-            "port" to container.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT).toString(),
-            "username" to user,
-            "password" to password,
-            "database" to dbName
+    override val connectionProperties: ConnectionProperties
+        get() = ConnectionProperties(
+            ConnectionType.PostgreSql,
+            server = container.host,
+            port = container.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT),
+            username = user,
+            password = password,
+            database = dbName
         )
 
     override fun initContainer(): PostgreSQLContainer<*> {

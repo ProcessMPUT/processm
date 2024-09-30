@@ -4,6 +4,7 @@ import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.MySQLContainer
 import org.testcontainers.images.builder.Transferable
 import org.testcontainers.lifecycle.Startables
+import processm.dbmodels.models.ConnectionProperties
 import processm.dbmodels.models.ConnectionType
 import processm.etl.DBMSEnvironment.Companion.TEST_DATABASES_PATH
 import processm.logging.logger
@@ -92,14 +93,14 @@ class MySQLEnvironment(
         get() = container.password
     override val jdbcUrl: String
         get() = container.withDatabaseName(dbName).jdbcUrl
-    override val connectionProperties: Map<String, String>
-        get() = mapOf(
-            "connection-type" to ConnectionType.MySql.name,
-            "server" to container.host,
-            "port" to container.getMappedPort(MySQLContainer.MYSQL_PORT).toString(),
-            "username" to user,
-            "password" to password,
-            "database" to dbName
+    override val connectionProperties: ConnectionProperties
+        get() = ConnectionProperties(
+            ConnectionType.MySql,
+            server = container.host,
+            port = container.getMappedPort(MySQLContainer.MYSQL_PORT),
+            username = user,
+            password = password,
+            database = dbName
         )
 
     override fun connect(): Connection = container.withDatabaseName(dbName).createConnection("")

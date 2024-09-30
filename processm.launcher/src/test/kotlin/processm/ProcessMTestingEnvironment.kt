@@ -27,6 +27,7 @@ import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.LogInputStream
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DatabaseChecker
+import processm.dbmodels.models.ConnectionProperties
 import processm.enhancement.kpi.AlignerKPIService
 import processm.etl.PostgreSQLEnvironment
 import processm.etl.metamodel.MetaModelDebeziumWatchingService.Companion.DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY
@@ -386,9 +387,9 @@ class ProcessMTestingEnvironment : CoroutineScope {
             return@post ds
         }
 
-    fun createDataConnector(name: String, properties: Map<String, String>) =
+    fun createDataConnector(name: String, properties: ConnectionProperties) =
         post<Paths.DataConnectors, DataConnector, DataConnector>(
-            DataConnector(name = name, properties = properties)
+            DataConnector(name = name, connectionProperties = properties)
         ) {
             val dc = body<DataConnector>()
             assertEquals(name, dc.name)

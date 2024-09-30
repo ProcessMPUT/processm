@@ -67,6 +67,7 @@ enum class ExceptionReason(val statusCode: HttpStatusCode = HttpStatusCode.BadRe
     UserAlreadyExists(HttpStatusCode.Conflict),
     InsufficientPermissionToURN(HttpStatusCode.Forbidden),
     DataStoreNotFound(HttpStatusCode.NotFound),
-    ETLProcessNotFound(HttpStatusCode.NotFound)
+    ETLProcessNotFound(HttpStatusCode.NotFound),
+    ConnectionTypeNotSupportedByAutomaticETL(HttpStatusCode.BadRequest)
 }
 

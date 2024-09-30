@@ -1,3 +1,5 @@
+import { ConnectionProperties } from "@/openapi";
+
 export default interface DataStore {
   id: string;
   name: string;
@@ -10,7 +12,7 @@ export interface DataConnector {
   name: string;
   lastConnectionStatus?: boolean;
   lastConnectionStatusTimestamp?: string;
-  properties: { [key: string]: string };
+  connectionProperties: ConnectionProperties;
 }
 
 export enum ConnectionType {
@@ -19,6 +21,9 @@ export enum ConnectionType {
   MySql = "MySQL",
   OracleDatabase = "Oracle Database",
   Db2 = "DB2",
-  CouchDB = "CouchDB",
-  MongoDB = "MongoDB"
+  CouchDBProperties = "CouchDB",
+  MongoDBProperties = "MongoDB",
+  CouchDBString = "CouchDBString",
+  MongoDBString = "MongoDBString",
+  JdbcString = "JdbcString"
 }

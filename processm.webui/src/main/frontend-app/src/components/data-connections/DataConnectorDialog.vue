@@ -8,7 +8,7 @@
         <v-banner v-show="isEdit">{{ $t("data-connector-dialog.masked-password-notification") }}</v-banner>
         <v-expansion-panels accordion mandatory v-model="configMode">
           <v-expansion-panel>
-            <v-expansion-panel-header>{{ $t("data-connector-dialog.use-connection-string") }} </v-expansion-panel-header>
+            <v-expansion-panel-header>{{ $t("data-connector-dialog.use-connection-string") }}</v-expansion-panel-header>
             <v-expansion-panel-content>
               <v-form ref="connectionStringForm" lazy-validation>
                 <v-text-field
@@ -19,7 +19,7 @@
                   name="connection-string-connection-name"
                 ></v-text-field>
                 <v-text-field
-                  v-model="connectionString['connection-string']"
+                  v-model="connectionProperties.connectionString"
                   outlined
                   hide-details="auto"
                   :label="$t('data-connector-dialog.connection-string')"
@@ -46,14 +46,14 @@
                 ></v-text-field>
 
                 <v-select
-                  v-model="connectionProperties['connection-type']"
+                  v-model="connectionProperties.connectionType"
                   :items="availableConnectionTypes"
                   :label="$t('data-connector-dialog.connection-type')"
                   required
                   name="available-connection-types"
                 ></v-select>
 
-                <component :is="connectionTypeComponent" v-if="connectionProperties['connection-type']" v-model="connectionProperties"></component>
+                <component :is="connectionTypeComponent" v-if="connectionTypeComponent" v-model="connectionProperties"></component>
               </v-form>
             </v-expansion-panel-content>
           </v-expansion-panel>
@@ -99,11 +99,14 @@ import MongoDBConnectionConfiguration from "@/components/data-connections/MongoD
 import DataStoreService from "@/services/DataStoreService";
 import { connectionStringFormatRule, notEmptyRule } from "@/utils/FormValidationRules";
 import App from "@/App.vue";
+import { ConnectionProperties } from "@/openapi";
 
 enum ConfigurationMode {
   ConnectionString = 0,
   ConnectionProperties = 1
 }
+
+const stringBasedConnectionTypes = [ConnectionType.CouchDBString, ConnectionType.JdbcString, ConnectionType.MongoDBString];
 
 @Component({
   components: {
@@ -129,8 +132,7 @@ export default class DataConnectorDialog extends Vue {
   connectionNameRules = [(v: string) => notEmptyRule(v, this.$t("data-connector-dialog.validation.non-empty-field").toString())];
 
   connectionName = "";
-  connectionProperties: Record<string, any> = {};
-  connectionString: Record<string, string> = {};
+  connectionProperties: ConnectionProperties = { connectionType: ConnectionType.PostgreSql };
   isTestingConnection = false;
   isSubmitting = false;
   connectionTestResult: boolean | null = null;
@@ -142,7 +144,11 @@ export default class DataConnectorDialog extends Vue {
 
   constructor() {
     super();
-    this.connectionProperties["connection-type"] = Object.keys(ConnectionType)[0];
+  }
+
+  private isStringBased() {
+    const text = this.connectionProperties.connectionType as keyof typeof ConnectionType;
+    return text == undefined || stringBasedConnectionTypes.indexOf(ConnectionType[text]) >= 0;
   }
 
   @Watch("value")
@@ -150,25 +156,27 @@ export default class DataConnectorDialog extends Vue {
     if (!isVisble) return;
     this.isEdit = this.initialConnector !== undefined && this.initialConnector !== null;
     this.connectionName = this.initialConnector?.name ?? "";
-    if ("connection-type" in (this.initialConnector?.properties ?? {})) {
-      this.connectionProperties = Object.assign({}, this.initialConnector?.properties);
-      this.connectionString = {};
-      this.configMode = ConfigurationMode.ConnectionProperties;
-    } else {
-      this.connectionString = Object.assign({}, this.initialConnector?.properties);
-      this.connectionProperties["connection-type"] = Object.keys(ConnectionType)[0];
+    this.connectionProperties = Object.assign({}, this.initialConnector?.connectionProperties);
+    if (this.isStringBased()) {
       this.configMode = ConfigurationMode.ConnectionString;
+    } else {
+      this.configMode = ConfigurationMode.ConnectionProperties;
     }
   }
 
   get availableConnectionTypes() {
-    return Object.entries(ConnectionType).map(([type, name]) => {
-      return { value: type, text: name };
-    });
+    return Object.entries(ConnectionType)
+      .filter(([type, name]) => {
+        return stringBasedConnectionTypes.indexOf(name) < 0;
+      })
+      .map(([type, name]) => {
+        return { value: type, text: name };
+      });
   }
 
-  get connectionTypeComponent() {
-    return `${this.connectionProperties["connection-type"]}ConnectionConfiguration`;
+  get connectionTypeComponent(): string | undefined {
+    if (this.isStringBased()) return undefined;
+    else return `${this.connectionProperties.connectionType}ConnectionConfiguration`;
   }
 
   get testConnectionButtonColor() {
@@ -184,12 +192,14 @@ export default class DataConnectorDialog extends Vue {
     this.resetForms();
   }
 
-  private valuesToString(input: Record<string, any>): Record<string, string> {
-    const result: Record<string, string> = {};
-    for (let key of Object.keys(input)) {
-      result[key] = input[key].toString();
+  private updateConnectionType() {
+    if (this.configMode == ConfigurationMode.ConnectionString) {
+      const cs = this.connectionProperties.connectionString;
+      if (cs == undefined) return;
+      if (cs.startsWith("jdbc:")) this.connectionProperties.connectionType = ConnectionType.JdbcString;
+      else if (cs.startsWith("couch")) this.connectionProperties.connectionType = ConnectionType.CouchDBString;
+      else if (cs.startsWith("mongodb")) this.connectionProperties.connectionType = ConnectionType.MongoDBString;
     }
-    return result;
   }
 
   async createDataConnector() {
@@ -198,16 +208,16 @@ export default class DataConnectorDialog extends Vue {
 
     try {
       this.isSubmitting = true;
-      const properties = this.configMode == ConfigurationMode.ConnectionString ? this.connectionString : this.valuesToString(this.connectionProperties);
+      this.updateConnectionType();
       if (this.isEdit) {
         const id = this.initialConnector?.id!;
         await this.dataStoreService.updateDataConnector(this.dataStoreId, id, {
           id: id,
           name: this.connectionName,
-          properties: properties
+          connectionProperties: this.connectionProperties
         });
       } else {
-        await this.dataStoreService.createDataConnector(this.dataStoreId, this.connectionName, properties);
+        await this.dataStoreService.createDataConnector(this.dataStoreId, this.connectionName, this.connectionProperties);
       }
       this.app.success(`${this.$t("common.saving.success")}`);
       this.$emit("submitted");
@@ -226,10 +236,8 @@ export default class DataConnectorDialog extends Vue {
       if (this.dataStoreId == null) throw new Error("DataStoreId is not defined");
       if (!this.validateForm()) throw new Error("The provided data is invalid");
 
-      await this.dataStoreService.testDataConnector(
-        this.dataStoreId,
-        this.configMode == ConfigurationMode.ConnectionString ? this.connectionString : this.valuesToString(this.connectionProperties)
-      );
+      this.updateConnectionType();
+      await this.dataStoreService.testDataConnector(this.dataStoreId, this.connectionProperties);
       this.connectionTestResult = true;
       this.app.success(`${this.$t("data-connector-dialog.testing.success")}`);
     } catch (e) {
@@ -254,8 +262,7 @@ export default class DataConnectorDialog extends Vue {
 
   private resetForms() {
     this.connectionName = "";
-    this.connectionProperties = {};
-    this.connectionString = {};
+    this.connectionProperties = { connectionType: ConnectionType.PostgreSql };
     this.connectionTestResult = null;
     (this.$refs.connectionStringForm as HTMLFormElement)?.reset();
     (this.$refs.connectionPropertiesForm as HTMLFormElement)?.reset();
