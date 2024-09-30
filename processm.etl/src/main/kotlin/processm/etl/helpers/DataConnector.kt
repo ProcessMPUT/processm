@@ -74,6 +74,7 @@ fun getConnection(connectionProperties: ConnectionProperties): Connection {
             setPassword(connectionProperties.password.orEmpty())
             databaseName = connectionProperties.database
             trustServerCertificate = connectionProperties.trustServerCertificate ?: false
+            encrypt = connectionProperties.encrypt ?: false
         }.connection
 
         ConnectionType.MySql -> MysqlDataSource().apply {
