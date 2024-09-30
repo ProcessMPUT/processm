@@ -2,6 +2,8 @@ package processm
 
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*
+import io.ktor.client.request.*
+import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import io.ktor.server.locations.*
 import kotlinx.coroutines.channels.Channel
@@ -1298,6 +1300,33 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }.apply {
                 assertEquals(6, this?.nodes?.size)
                 assertEquals(15, this?.alignmentKPIReport?.alignments?.size)
+            }
+        }
+    }
+
+    @Test
+    fun `uploading large XES file`() {
+        ProcessMTestingEnvironment().withFreshDatabase().run {
+
+            registerUser("test@example.com", "some organization")
+            login("test@example.com", "P@ssw0rd!")
+            currentOrganizationId = organizations.single().id
+            currentDataStore = createDataStore("datastore")
+
+            runBlocking {
+                val response = client.post(apiUrl(format<Paths.Logs>())) {
+                    token?.let { bearerAuth(it) }
+                    setBody(MultiPartFormDataContent(formData {
+                        append(
+                            "fileName",
+                            File("../xes-logs/data-driven_process_discovery-artificial_event_log-10-percent-noise.xes.gz").readBytes(),
+                            Headers.build {
+                                append(HttpHeaders.ContentType, ContentType.Application.GZip)
+                                append(HttpHeaders.ContentDisposition, "filename=\"log.xes.gz\"")
+                            })
+                    }))
+                }
+                assertTrue { response.status.isSuccess() }
             }
         }
     }

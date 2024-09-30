@@ -131,7 +131,7 @@ export default class PQL extends Vue {
   private readonly xesProcessor = new XesProcessor();
   private dataStoreId: string | null = null;
   availableDataStores: Array<DataStore> = [];
-  fileSizeLimit = 5242880;
+  fileSizeLimit = this.app.config.maxUploadSize;
   isLoadingData = false;
   isUploading = false;
   isDownloading = false;
