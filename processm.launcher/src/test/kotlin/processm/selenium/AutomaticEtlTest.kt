@@ -174,12 +174,12 @@ class AutomaticEtlTest : SeleniumBase() {
         recorder?.take()
         with(driver.findElements(By.className("fa-plus-square-o")).filter { it.isDisplayed && it.isDisplayed }) {
             assertTrue { size == 1 }
-            forEach { it.click() }
+            forEach { click(it) }
         }
         recorder?.take()
         with(driver.findElements(By.className("fa-plus-square-o")).filter { it.isDisplayed && it.isDisplayed }) {
             assertTrue { size == 3 }
-            forEach { it.click() }
+            forEach { click(it) }
         }
         recorder?.take()
         val headers = driver.findElements(By.xpath("//*[@name='xes-data-table']//thead/tr/th")).withIndex()
