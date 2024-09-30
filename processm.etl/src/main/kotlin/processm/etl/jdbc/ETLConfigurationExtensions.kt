@@ -28,7 +28,7 @@ fun ETLConfiguration.notifyUsers(type: String? = null) {
         message.setString(DATASTORE, this.db.name)
         message.setString(
             TYPE,
-            type ?: (if (deleted || !enabled || (batch && lastEventExternalId !== null)) DEACTIVATE else ACTIVATE)
+            type ?: (if (deleted || !metadata.isActive || (batch && lastEventExternalId !== null)) DEACTIVATE else ACTIVATE)
         )
         message.setString(ID, id.toString())
         jmsPublisher.publish(message)

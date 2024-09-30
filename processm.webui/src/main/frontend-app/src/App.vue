@@ -63,6 +63,7 @@ export default class App extends Vue {
     version: "",
     loginMessage: "",
     demoMode: false,
+    maxUploadSize: 5 * 1024 * 1024,
     gaTag: ""
   });
 

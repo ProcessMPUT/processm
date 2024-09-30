@@ -337,13 +337,13 @@ class DataStoreService(
             this.name = name
             this.processType = ProcessTypeDto.JDBC.processTypeName
             this.dataConnector = DataConnector[dataConnectorId]
+            this.isActive = configuration.enabled || nComponents != null
         }
         val cfg = (ETLConfiguration.find { ETLConfigurations.metadata eq etlProcessMetadata.id }.firstOrNull()
             ?: ETLConfiguration.new {}).apply {
             this.metadata = etlProcessMetadata
             this.query = configuration.query
             this.refresh = if (nComponents == null) configuration.refresh?.toLong() else null
-            this.enabled = configuration.enabled || nComponents != null
             this.batch = configuration.batch
             this.lastEventExternalId = if (!configuration.batch) configuration.lastEventExternalId else null
             this.lastEventExternalIdType =
@@ -419,7 +419,7 @@ class DataStoreService(
         val cfg = this
         return JdbcEtlProcessConfiguration(
             query = cfg.query,
-            enabled = cfg.enabled,
+            enabled = cfg.metadata.isActive,
             batch = cfg.batch,
             traceId = cfg.columnToAttributeMap.first { it.traceId }
                 .let { JdbcEtlColumnConfiguration(it.sourceColumn, it.target) },

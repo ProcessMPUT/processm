@@ -63,7 +63,7 @@ class DataStoresApiTest : BaseApiTest() {
                     dataStoreService.getEtlProcessInfo(dataStoreId, etlProcessId)
                 } returns DataStoreService.EtlProcessInfo(logIdentityId, emptyList(), lastExecutionTime)
                 every {
-                    logsService.queryDataStoreJSON(dataStoreId, "where log:identity:id=$logIdentityId")
+                    logsService.queryDataStoreJSON(dataStoreId, "where log:identity:id=$logIdentityId", true, true)
                 } returns {
                     this.write(text.toByteArray())
                 }

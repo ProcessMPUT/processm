@@ -1666,6 +1666,18 @@ paths:
             type: string
           description: The query to be submitted
           required: false
+        - in: query
+          name: includeTraces
+          schema:
+            type: boolean
+          description: Whether to include traces in the response. True by default, ignored if includeEvents is set to true.
+          required: false
+        - in: query
+          name: includeEvents
+          schema:
+            type: boolean
+          description: Whether to include events in the response. True by default.
+          required: false
       responses:
         '200':
           description: Successful operation
@@ -1880,7 +1892,7 @@ components:
   schemas:
     Config:
       type: object
-      required: [ brand, version, loginMessage, demoMode ]
+      required: [ brand, version, loginMessage, demoMode, maxUploadSize ]
       properties:
         brand:
           type: string
@@ -1896,6 +1908,10 @@ components:
           type: boolean
           description: Switches modes of operation of certain components into demo mode (e.g., less secure).
           default: false
+        maxUploadSize:
+          type: integer
+          format: int64
+          description: Maximum upload size
         gaTag:
           type: string
           description: If non-empty, the UI will use it as a tag for Google Analytics
@@ -2047,6 +2063,8 @@ components:
         database:
           type: string
         trustServerCertificate:
+          type: boolean
+        encrypt:
           type: boolean
         https:
           type: boolean

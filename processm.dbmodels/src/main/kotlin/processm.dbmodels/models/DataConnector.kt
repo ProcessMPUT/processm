@@ -39,6 +39,7 @@ data class ConnectionProperties(
     val password: String? = null,
     val database: String? = null,
     val trustServerCertificate: Boolean? = null,
+    val encrypt: Boolean? = null,
     val https: Boolean? = null,
     val collection: String? = null
 )

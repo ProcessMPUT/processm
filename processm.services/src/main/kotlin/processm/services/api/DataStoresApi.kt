@@ -137,9 +137,11 @@ fun Route.DataStoresApi() {
                 RoleType.Reader
             )
             val query = call.parameters["query"] ?: ""
+            val includeEvents = call.parameters["includeEvents"]?.toBoolean() ?: true
+            val includeTraces = includeEvents || (call.parameters["includeTraces"]?.toBoolean() ?: true)
             val accept = call.request.accept() ?: "application/json";
             val mime: ContentType
-            val formatter: (uuid: UUID, query: String) -> OutputStream.() -> Unit
+            val formatter: (uuid: UUID, query: String, includeTraces: Boolean, includeEvents: Boolean) -> OutputStream.() -> Unit
             when (accept.split(',').first { it == "application/json" || it == "application/zip" }) {
                 "application/json" -> {
                     mime = ContentType.Application.Json
@@ -160,7 +162,7 @@ fun Route.DataStoresApi() {
             }
 
             try {
-                val queryProcessor = formatter(pathParams.dataStoreId, query)
+                val queryProcessor = formatter(pathParams.dataStoreId, query, includeTraces, includeEvents)
                 call.respondOutputStream(mime, HttpStatusCode.OK) {
                     queryProcessor(this)
                 }

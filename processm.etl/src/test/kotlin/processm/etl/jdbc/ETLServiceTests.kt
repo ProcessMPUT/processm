@@ -186,11 +186,11 @@ OFFSET ?::bigint
                         processType = "jdbc"
                         name = _name
                         dataConnector = externalDB.dataConnector
+                        isActive = _enabled
                     }
                     query = sql
                     lastEventExternalId = _lastEventExternalId
                     refresh = _refresh
-                    enabled = _enabled
                     batch = _refresh === null
                 }
 
@@ -414,7 +414,7 @@ OFFSET ?::bigint
                     ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name.eq("repeat") }
                         .first().id
                 }.first()
-                config.enabled = false
+                config.metadata.isActive = false
                 config
             }.notifyUsers()
 
@@ -458,7 +458,7 @@ OFFSET ?::bigint
                     ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name eq "repeat" }
                         .first().id
                 }.first()
-                config.enabled = false
+                config.metadata.isActive = false
                 config
             }
             config.notifyUsers()
@@ -475,7 +475,7 @@ OFFSET ?::bigint
                     ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name eq "repeat" }
                         .first().id
                 }.first()
-                config.enabled = true
+                config.metadata.isActive = true
                 config
             }.notifyUsers()
 

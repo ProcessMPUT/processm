@@ -277,12 +277,10 @@ internal class DataStoreServiceTest : ServiceTestBase() {
 
             val logIdentityId = service.getEtlProcessInfo(ds.id.value, etlProcessId).logIdentityId
 
-            val data = ByteArrayOutputStream().use {
-                logsService.queryDataStoreJSON(ds.id.value, "where log:identity:id=$logIdentityId")(it)
+            ByteArrayOutputStream().use {
+                logsService.queryDataStoreJSON(ds.id.value, "where log:identity:id=$logIdentityId", true, true)(it)
                 return@use it.toByteArray()
             }.decodeToString()
-
-            println(data)
 
             logsService.removeLog(ds.id.value, logIdentityId)
 

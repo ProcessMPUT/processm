@@ -492,7 +492,7 @@ export default class DataStoreConfiguration extends Vue {
   readonly dataStoreId!: string | null;
 
   private readonly getLogsQuery = "select log:concept:name, log:identity:id, log:lifecycle:model";
-  private readonly fileSizeLimit = 5242880;
+  private readonly fileSizeLimit = this.app.config.maxUploadSize;
 
   get dataConnectorNameToRename(): string | null {
     return this.dataConnectors.find((connector) => connector.id == this.dataConnectorIdToRename)?.name || null;
@@ -562,7 +562,7 @@ export default class DataStoreConfiguration extends Vue {
       this.xesLogHeaders = [];
       this.xesLogItems = [];
 
-      const queryResults = await this.logsService.submitUserQuery(this.dataStoreId, this.getLogsQuery);
+      const queryResults = await this.logsService.submitUserQuery(this.dataStoreId, this.getLogsQuery, "application/json", false, false);
 
       await waitForRepaint(async () => {
         const { headers, logItems } = this.xesProcessor.extractLogItemsFromLogScope(queryResults);
@@ -743,6 +743,10 @@ export default class DataStoreConfiguration extends Vue {
     try {
       await this.dataStoreService.changeEtlProcessActivationState(this.dataStoreId, etlProcess.id!, !etlProcess.isActive);
       etlProcess.isActive = !etlProcess.isActive;
+      if (etlProcess.type == "jdbc") {
+        const conf = (etlProcess as JdbcEtlProcess).configuration;
+        if (conf != undefined) conf.enabled = etlProcess.isActive;
+      }
       this.app.success(`${this.$t("common.operation-successful")}`);
     } catch (error) {
       this.app.error(error);
