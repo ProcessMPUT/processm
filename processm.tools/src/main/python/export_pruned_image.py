@@ -15,11 +15,13 @@ def get_blobs(image: str) -> list[str]:
 
 
 def exclude_blobs(image: str, exclude: list[str]):
+    exclude = set(exclude)
     with subprocess.Popen(["docker", "save", image], stdout=subprocess.PIPE) as docker, \
-            subprocess.Popen(["tar", "--delete", '--no-xattrs'] + exclude, stdin=docker.stdout,
-                             stderr=subprocess.DEVNULL):
-        # This error redirection is ugly, but tar spams with information that a member was not found in the archive
-        pass
+            tarfile.open(mode="r|", fileobj=docker.stdout) as intar, \
+            tarfile.open(mode="w|", fileobj=sys.stdout.buffer) as outtar:
+        while (item := intar.next()) is not None:
+            if item.name not in exclude:
+                outtar.addfile(item, fileobj=intar.extractfile(item))
 
 
 def main(base_image: str, reference_images: list[str]):
