@@ -8,7 +8,7 @@ import processm.helpers.map2d.DoublingMap2D
 
 /**
  * A conformance model based on [Footprint]s.
- * See Wil var der Aalst, Process Mining: Data Science in Action, Chapter 8.8
+ * See Wil var der Aalst, Process Mining: Data Science in Action, Chapter 8.4.
  *
  * @property logFootprint The [Footprint] of log.
  * @property modelFootprint The [Footprint] of model.
