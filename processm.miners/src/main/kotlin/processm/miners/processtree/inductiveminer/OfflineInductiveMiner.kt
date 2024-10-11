@@ -9,6 +9,9 @@ import processm.core.models.processtree.ProcessTreeSimplifier
 /**
  * Inductive Miner version Offline, without log split inside.
  * Build a process tree based on directly-follows graph only.
+ * This class is an implementation of the algorithm described in
+ * Sander J. J. Leemans, et al., Scalable Process Discovery with Guarantees, Enterprise, Business-Process and
+ * Information Systems Modeling, pp. 85-101, Springer, 2015.
  */
 class OfflineInductiveMiner : InductiveMiner() {
     /**

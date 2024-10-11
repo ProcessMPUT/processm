@@ -11,7 +11,11 @@ import java.util.*
 import processm.miners.processtree.inductiveminer.CutType.Activity as CertainActivity
 
 /**
- * Online Inductive Miner
+ * Online Inductive Miner.
+ * This is the implementation of algorithm described in
+ * Tomasz P. Pawlak, et. al., Continuous update of business process trees using Continuous Inductive Miner, Bulletin of
+ * the Polish Academy of Sciences. Technical Sciences 71(1):e143551-1-e143551-16, 2023,
+ * [10.24425/bpasts.2022.143551](https://doi.org/10.24425/bpasts.2022.143551)
  */
 class OnlineInductiveMiner : InductiveMiner() {
     companion object {

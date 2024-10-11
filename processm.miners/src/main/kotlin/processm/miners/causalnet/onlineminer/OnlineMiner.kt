@@ -15,7 +15,12 @@ import processm.miners.causalnet.onlineminer.replayer.Replayer
 import processm.miners.causalnet.onlineminer.replayer.SingleReplayer
 
 /**
- * Online miner, generates a valid causal net perfectly fitting the current window, as given by either [processLog] or [processDiff]
+ * Online miner, generates a valid causal net perfectly fitting the current window, as given by either [processLog] or
+ * [processDiff].
+ * This is the implementation of the algorithm described in
+ * Jędrzej Potoniec, et. al., Continuous discovery of Causal nets for non-stationary business processes using the Online
+ * Miner, European Journal of Operational Research 303(3):1304-1320, Elsevier, 2022,
+ * [10.1016/j.ejor.2022.03.046](https://doi.org/10.1016/j.ejor.2022.03.046).
  */
 class OnlineMiner(
     val replayer: Replayer = SingleReplayer(),
