@@ -1,5 +1,6 @@
 package processm.enhancement.kpi
 
+import processm.conformance.measures.Fitness
 import processm.conformance.models.DeviationType
 import processm.conformance.models.alignments.*
 import processm.conformance.models.alignments.cache.CachingAlignerFactory
@@ -71,6 +72,8 @@ class Calculator(
         }
     }
 
+    private val fitness = Fitness(aligner)
+
     /**
      * Creates new instance of the KPI calculator.
      * @param model The process model.
@@ -97,6 +100,8 @@ class Calculator(
         val eventKPIraw = DoublingMap2D<String, Activity?, ArrayList<Double>>()
         val arcKPIraw = DoublingMap2D<String, CausalArc, ArrayList<Double>>()
         val alignmentList = ArrayList<Alignment>()
+        val fitnessValues = ArrayList<Double>()
+        var start = 0
 
         for (_log in logs) {
             var baseXESStream = _log.toFlatSequence()
@@ -134,6 +139,7 @@ class Calculator(
             }
 
             val alignments = aligner.align(log, eventsSummarizer)
+            start = alignmentList.size
 
             for (alignment in alignments) {
                 for ((index, step) in alignment.steps.withIndex()) {
@@ -184,6 +190,11 @@ class Calculator(
                 }
 
                 alignmentList.add(alignment)
+                logKPIraw.compute(Fitness.URN.urn) { _, old ->
+                    (old ?: ArrayList()).apply {
+                        add(fitness(log, alignmentList.subList(start, alignmentList.size)))
+                    }
+                }
             }
 
         }

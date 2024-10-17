@@ -4,6 +4,7 @@ import processm.conformance.models.alignments.Aligner
 import processm.conformance.models.alignments.Alignment
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
+import processm.core.models.metadata.URN
 
 /**
  * Computes fitness (as defined by the PM book) using the given [aligner]
@@ -12,6 +13,9 @@ class Fitness(
     val aligner: Aligner
 ) : Measure<Log, Double> {
 
+    companion object {
+        val URN: URN = URN("urn:processm:measures/fitness")
+    }
 
     internal val movem: Int by lazy {
         aligner.align(Trace(emptySequence())).cost
