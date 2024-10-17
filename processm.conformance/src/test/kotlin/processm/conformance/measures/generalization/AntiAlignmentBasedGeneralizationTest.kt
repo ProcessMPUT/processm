@@ -42,8 +42,9 @@ class AntiAlignmentBasedGeneralizationTest {
         val totalGeneralization = 0.5 * traceBasedGeneralization + 0.5 * logBasedGeneralization
 
         val generalization = AntiAlignmentBasedGeneralization(PetriNets.fig1)
-        assertEquals(traceBasedGeneralization, generalization.traceBasedGeneralization(table1.traces), 1e-6)
-        assertEquals(logBasedGeneralization, generalization.logBasedGeneralization(table1.traces), 1e-6)
+        generalization(table1)
+        assertEquals(traceBasedGeneralization, generalization.traceBasedGeneralization, 1e-6)
+        assertEquals(logBasedGeneralization, generalization.logBasedGeneralization, 1e-6)
         assertEquals(totalGeneralization, generalization(table1), 1e-6)
     }
 }

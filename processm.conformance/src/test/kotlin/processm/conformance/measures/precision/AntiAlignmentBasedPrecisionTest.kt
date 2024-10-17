@@ -29,8 +29,9 @@ class AntiAlignmentBasedPrecisionTest {
         val totalPrecision = 0.5 * traceBasedPrecision + 0.5 * logBasedPrecision
 
         val precision = AntiAlignmentBasedPrecision(PetriNets.fig1)
-        assertEquals(traceBasedPrecision, precision.traceBasedPrecision(table1.traces), 1e-6)
-        assertEquals(logBasedPrecision, precision.logBasedPrecision(table1.traces), 1e-6)
+        precision(table1)
+        assertEquals(traceBasedPrecision, precision.traceBasedPrecision, 1e-6)
+        assertEquals(logBasedPrecision, precision.logBasedPrecision, 1e-6)
         assertEquals(totalPrecision, precision(table1), 1e-6)
     }
 }
