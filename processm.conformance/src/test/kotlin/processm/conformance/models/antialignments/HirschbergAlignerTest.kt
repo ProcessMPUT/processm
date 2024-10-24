@@ -2,13 +2,25 @@ package processm.conformance.models.antialignments
 
 import processm.core.log.Helpers
 import processm.core.models.commons.Activity
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
+import kotlin.test.*
 
 class HirschbergAlignerTest {
     private data class MyActivity(override val name: String, override val isSilent: Boolean = false) : Activity
+
+    @Test
+    fun `nwScore regression`() {
+        val activities = "agtacgca".map { MyActivity(it.toString(), isSilent = it == '_') }
+        val trace = Helpers.logFromString("t a t g c").traces.single()
+        val events = trace.events.toList()
+        with(HirschbergAligner(ReplayModel(activities))) {
+            assertContentEquals(intArrayOf(8, 7, 6, 7, 6, 5), nwScore(activities, events))
+            assertContentEquals(intArrayOf(4, 3, 2, 3, 4, 5), nwScore(activities.subList(0, 4), events))
+            assertContentEquals(
+                intArrayOf(4, 3, 2, 3, 4, 5),
+                nwScore(activities.subList(4, activities.size).asReversed(), events.asReversed())
+            )
+        }
+    }
 
     @Test
     fun test() {
