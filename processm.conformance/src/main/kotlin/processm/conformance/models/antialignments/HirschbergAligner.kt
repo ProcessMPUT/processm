@@ -65,6 +65,8 @@ internal class HirschbergAligner(
                             add(Step(modelMove = a, logMove = e, type = DeviationType.None))
                         } else
                             add(Step(modelMove = null, logMove = e, type = DeviationType.LogDeviation))
+                    if (!hit)
+                        add(Step(modelMove = a, logMove = null, type = DeviationType.ModelDeviation))
                 }
             }
         } else if (y.size == 1) {
@@ -79,44 +81,21 @@ internal class HirschbergAligner(
                         add(Step(modelMove = a, logMove = e, type = DeviationType.None))
                     } else
                         add(Step(modelMove = a, logMove = null, type = DeviationType.ModelDeviation))
+                if (!hit)
+                    add(Step(modelMove = null, logMove = e, type = DeviationType.LogDeviation))
             }
         } else {
             assert(x.size > 1)
             assert(y.size > 1)
             val xmid = x.size / 2
             val scoreL = nwScore(x.subList(0, xmid), y)
-            val scoreR = nwScore(x.subList(xmid + 1, x.size).reversed(), y.reversed())
+            val scoreR = nwScore(x.subList(xmid + 1, x.size).asReversed(), y.asReversed())
             val ymid = y.indices.minBy { scoreL[it] + scoreR[scoreR.size - it - 1] }
             return hirschberg(x.subList(0, xmid), y.subList(0, ymid)) + hirschberg(
                 if (xmid < x.size) x.subList(xmid, x.size) else emptyList(),
                 if (ymid < y.size) y.subList(ymid, y.size) else emptyList()
             )
         }
-    }
-
-    internal fun lev(trace: Trace): Int {
-        val events = trace.events.toList()
-        val activities = model.trace
-        val m = events.size + 1
-        val n = activities.size + 1
-        val d = Array(m) { IntArray(n) }
-        for (i in 1 until m)
-            d[i][0] = i
-        for (j in 1 until n)
-            d[0][j] = j
-        for (j in 1 until n)
-            for (i in 1 until m) {
-                d[i][j] = min(d[i - 1][j] + 1, d[i][j - 1] + (if (activities[j - 1].isSilent) 0 else 1))//TODO costs
-                if (events[i - 1].conceptName == activities[j - 1].name)
-                    d[i][j] = min(d[i][j], d[i - 1][j - 1] + 0) //TODO costs
-            }
-        for (j in 0 until n) {
-            for (i in 0 until m) {
-                print(d[i][j])
-            }
-            println()
-        }
-        return d[m - 1][n - 1]
     }
 
     private val Step.cost: Int
@@ -127,7 +106,9 @@ internal class HirschbergAligner(
         }
 
     override fun align(trace: Trace, costUpperBound: Int): Alignment? {
-        val steps = hirschberg(model.trace, trace.events.toList())
+        val events = trace.events.toList()
+        val steps = hirschberg(model.trace, events)
+//        assert(steps.mapNotNull { it.modelMove } == model.trace) { "Not all activities were reflected in the alignments.\nModel: ${model.trace}\nTrace: ${events.map { it.conceptName }}\nAlignment: ${steps.mapNotNull { it.modelMove }}" }
         return Alignment(steps, steps.sumOf { it.cost })
     }
 }

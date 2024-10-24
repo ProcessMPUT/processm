@@ -1,6 +1,10 @@
 package processm.conformance.models.antialignments
 
+import processm.core.log.Event
 import processm.core.log.Helpers
+import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.mutableAttributeMapOf
+import processm.core.log.hierarchical.Trace
 import processm.core.models.commons.Activity
 import kotlin.test.*
 
@@ -98,5 +102,48 @@ class HirschbergAlignerTest {
             }
             assertEquals(5, a.cost)
         }
+    }
+
+    @Test
+    fun `missing event 1`() {
+        val activities =
+            "invite reviewers, _before review 1*, _before review 3*, time-out 1, time-out 3, _after review 1*, _after review 3*, _before review 2*, time-out 2, _after review 2*, collect reviews, decide, _after decide*, reject, _end*"
+                .split(",").map {
+                    val text = it.trim()
+                    if (text.last() == '*') MyActivity(text.substring(0, text.length - 1), isSilent = true)
+                    else MyActivity(text, isSilent = false)
+                }
+        val events =
+            "invite reviewers, get review 2, time-out 1, time-out 3, collect reviews, decide, invite additional reviewer, time-out X, invite additional reviewer, time-out X, invite additional reviewer, time-out X, invite additional reviewer, time-out X, invite additional reviewer, time-out X, invite additional reviewer, time-out X, invite additional reviewer, time-out X, invite additional reviewer, get review X, invite additional reviewer, time-out X, invite additional reviewer, time-out X, invite additional reviewer, time-out X, invite additional reviewer, get review X, reject"
+//            "invite reviewers, get review 2, time-out 1, time-out 3, collect reviews, decide, reject"
+                .split(",").map {
+                    Event(mutableAttributeMapOf(CONCEPT_NAME to it.trim()))
+                }
+        val alignment = HirschbergAligner(ReplayModel(activities)).align(Trace(events.asSequence()))
+        assertContentEquals(
+            events.mapNotNull { it.conceptName },
+            alignment.steps.mapNotNull { it.logMove?.conceptName })
+        assertContentEquals(activities, alignment.steps.mapNotNull { it.modelMove })
+    }
+
+    @Test
+    fun `missing event 2`() {
+        val activities =
+            "invite reviewers, _before review 1*, _before review 3*, time-out 1, time-out 3, _after review 1*, _after review 3*, _before review 2*, time-out 2, _after review 2*, collect reviews, decide, _after decide*, reject, _end*"
+                .split(",").map {
+                    val text = it.trim()
+                    if (text.last() == '*') MyActivity(text.substring(0, text.length - 1), isSilent = true)
+                    else MyActivity(text, isSilent = false)
+                }
+        val events =
+            "invite reviewers, get review 2, time-out 1, time-out 3, collect reviews, decide, reject"
+                .split(",").map {
+                    Event(mutableAttributeMapOf(CONCEPT_NAME to it.trim()))
+                }
+        val alignment = HirschbergAligner(ReplayModel(activities)).align(Trace(events.asSequence()))
+        assertContentEquals(
+            events.mapNotNull { it.conceptName },
+            alignment.steps.mapNotNull { it.logMove?.conceptName })
+        assertContentEquals(activities, alignment.steps.mapNotNull { it.modelMove })
     }
 }
