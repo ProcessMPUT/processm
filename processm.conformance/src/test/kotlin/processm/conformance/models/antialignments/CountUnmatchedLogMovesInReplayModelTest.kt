@@ -15,6 +15,7 @@ class CountUnmatchedLogMovesInReplayModelTest {
         val activities = "ab_d".map { MyActivity(it.toString(), isSilent = it == '_') }
         val events = logFromString("a b d").traces.single().events.toList()
         val count = CountUnmatchedLogMovesInReplayModel(ReplayModel(activities))
+        count.reset()
         // initial state
         assertEquals(0, count.compute(0, events, ReplayModelState(0), null))
 
