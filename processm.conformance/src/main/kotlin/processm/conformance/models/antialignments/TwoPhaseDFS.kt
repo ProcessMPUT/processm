@@ -28,7 +28,7 @@ class TwoPhaseDFS(
             model = mod,
             penalty = pen,
             countUnmatchedModelMoves = CountUnmatchedReplayModelMoves(mod as ReplayModel),
-            countUnmatchedLogMoves = null
+            countUnmatchedLogMoves = CountUnmatchedLogMovesInReplayModel(mod as ReplayModel)
         )
     }
 ) : AntiAligner {

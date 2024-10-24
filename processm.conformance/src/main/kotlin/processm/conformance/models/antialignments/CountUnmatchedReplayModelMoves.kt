@@ -3,6 +3,7 @@ package processm.conformance.models.antialignments
 import processm.conformance.models.alignments.CountUnmatchedModelMoves
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModelState
+import processm.helpers.Counter
 
 internal class CountUnmatchedReplayModelMoves(val model: ReplayModel) : CountUnmatchedModelMoves {
     override fun compute(
