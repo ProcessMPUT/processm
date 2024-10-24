@@ -22,10 +22,7 @@ internal class HirschbergAligner(
         assert(penalty.silentMove == 0)
     }
 
-    internal data class PrettyActivity(val id: Int, val a: Activity)
-    internal data class PrettyEvent(val id: Int, val e: Event)
-
-    internal fun nwScore(x: List<PrettyActivity>, y: List<PrettyEvent>): IntArray {
+    internal fun nwScore(x: List<Activity>, y: List<Event>): IntArray {
         var s0 = IntArray(y.size + 1)
         var s1 = IntArray(y.size + 1)
         for (j in y.indices)
@@ -33,7 +30,7 @@ internal class HirschbergAligner(
         for (i in x.indices) {
             s1[0] = s0[0] + penalty.modelMove
             for (j in y.indices) {
-                if (x[i].id == y[j].id) {
+                if (x[i].name == y[j].conceptName) {
                     // always commit to the synchronous move
                     s1[j + 1] = s0[j]
                 } else {
@@ -48,37 +45,37 @@ internal class HirschbergAligner(
         return s0
     }
 
-    internal fun hirschberg(target: MutableList<Step>, x: List<PrettyActivity>, y: List<PrettyEvent>) {
+    internal fun hirschberg(target: MutableList<Step>, x: List<Activity>, y: List<Event>) {
         if (x.isEmpty()) {
-            y.mapTo(target) { e -> Step(modelMove = null, logMove = e.e, type = DeviationType.LogDeviation) }
+            y.mapTo(target) { e -> Step(modelMove = null, logMove = e, type = DeviationType.LogDeviation) }
         } else if (y.isEmpty()) {
-            x.mapTo(target) { a -> Step(modelMove = a.a, logMove = null, type = DeviationType.ModelDeviation) }
+            x.mapTo(target) { a -> Step(modelMove = a, logMove = null, type = DeviationType.ModelDeviation) }
         } else if (x.size == 1) {
             // Wiki says I am supposed to call NeedlemanWunsch here, but I think we have simple enough case?
             val a = x.single()
             assert(y.isNotEmpty())
             var hit = false
             for (e in y)
-                if (!hit && e.id == a.id) {
+                if (!hit && e.conceptName == a.name) {
                     hit = true
-                    target.add(Step(modelMove = a.a, logMove = e.e, type = DeviationType.None))
+                    target.add(Step(modelMove = a, logMove = e, type = DeviationType.None))
                 } else
-                    target.add(Step(modelMove = null, logMove = e.e, type = DeviationType.LogDeviation))
+                    target.add(Step(modelMove = null, logMove = e, type = DeviationType.LogDeviation))
             if (!hit)
-                target.add(Step(modelMove = a.a, logMove = null, type = DeviationType.ModelDeviation))
+                target.add(Step(modelMove = a, logMove = null, type = DeviationType.ModelDeviation))
         } else if (y.size == 1) {
             // Wiki says I am supposed to call NeedlemanWunsch here, but I think we have simple enough case?
             assert(x.isNotEmpty())
             val e = y.single()
             var hit = false
             for (a in x)
-                if (!hit && e.id == a.id) {
+                if (!hit && e.conceptName == a.name) {
                     hit = true
-                    target.add(Step(modelMove = a.a, logMove = e.e, type = DeviationType.None))
+                    target.add(Step(modelMove = a, logMove = e, type = DeviationType.None))
                 } else
-                    target.add(Step(modelMove = a.a, logMove = null, type = DeviationType.ModelDeviation))
+                    target.add(Step(modelMove = a, logMove = null, type = DeviationType.ModelDeviation))
             if (!hit)
-                target.add(Step(modelMove = null, logMove = e.e, type = DeviationType.LogDeviation))
+                target.add(Step(modelMove = null, logMove = e, type = DeviationType.LogDeviation))
         } else {
             assert(x.size > 1)
             assert(y.size > 1)
@@ -95,14 +92,10 @@ internal class HirschbergAligner(
         }
     }
 
-    private val name2index = HashMap<String?, Int>()
-    private fun getId(name: String?) = name2index.computeIfAbsent(name) { name2index.size }
-
     override fun align(trace: Trace, costUpperBound: Int): Alignment? {
-        name2index.clear()
         val steps = LinkedList<Step>()
-        val nonSilent = model.trace.mapNotNull { if (!it.isSilent) PrettyActivity(getId(it.name), it) else null }
-        hirschberg(steps, nonSilent, trace.events.map { PrettyEvent(getId(it.conceptName), it) }.toList())
+        val nonSilent = model.trace.filter { !it.isSilent }
+        hirschberg(steps, nonSilent, trace.events.toList())
         val cost = steps.sumOf {
             when (it.type) {
                 DeviationType.None -> 0
@@ -110,10 +103,8 @@ internal class HirschbergAligner(
                 DeviationType.ModelDeviation -> penalty.modelMove
             }
         }
-        if (cost > costUpperBound)
-            return null
         if (nonSilent.size < model.trace.size) {
-            assert(steps.mapNotNull { it.modelMove } == nonSilent.map { it.a }) { "${steps.mapNotNull { it.modelMove }} $nonSilent" }
+            assert(steps.mapNotNull { it.modelMove } == nonSilent) { "${steps.mapNotNull { it.modelMove }} $nonSilent" }
             val i = steps.listIterator()
             for (a in model.trace) {
                 if (a.isSilent) {
