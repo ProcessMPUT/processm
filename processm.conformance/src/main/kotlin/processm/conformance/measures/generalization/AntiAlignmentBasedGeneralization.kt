@@ -8,6 +8,7 @@ import processm.conformance.models.antialignments.AntiAligner
 import processm.conformance.models.antialignments.TwoPhaseDFS
 import processm.core.log.hierarchical.Log
 import processm.core.models.commons.ProcessModel
+import processm.core.models.metadata.URN
 
 /**
  * The anti-alignment-based generalization measure as defined in Definition 7 in B.F. van Dongen,
@@ -16,6 +17,10 @@ import processm.core.models.commons.ProcessModel
 class AntiAlignmentBasedGeneralization(
     val base: AntiAlignmentBasedMeasures
 ) : Measure<Log, Double> {
+
+    companion object {
+        val URN: URN = URN("urn:processm:measures/anti_alignment_based_generalization")
+    }
 
     constructor(
         model: ProcessModel,

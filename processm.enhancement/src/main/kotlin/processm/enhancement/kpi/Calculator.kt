@@ -1,6 +1,8 @@
 package processm.enhancement.kpi
 
+import processm.conformance.measures.AntiAlignmentBasedMeasures
 import processm.conformance.measures.Fitness
+import processm.conformance.measures.generalization.AntiAlignmentBasedGeneralization
 import processm.conformance.models.DeviationType
 import processm.conformance.models.alignments.*
 import processm.conformance.models.alignments.cache.CachingAlignerFactory
@@ -73,6 +75,7 @@ class Calculator(
     }
 
     private val fitness = Fitness(aligner)
+    private val antiAlignmentBasedMeasures = AntiAlignmentBasedMeasures(aligner.model)
 
     /**
      * Creates new instance of the KPI calculator.
@@ -100,7 +103,6 @@ class Calculator(
         val eventKPIraw = DoublingMap2D<String, Activity?, ArrayList<Double>>()
         val arcKPIraw = DoublingMap2D<String, CausalArc, ArrayList<Double>>()
         val alignmentList = ArrayList<Alignment>()
-        val fitnessValues = ArrayList<Double>()
         var start = 0
 
         for (_log in logs) {
@@ -193,6 +195,18 @@ class Calculator(
                 logKPIraw.compute(Fitness.URN.urn) { _, old ->
                     (old ?: ArrayList()).apply {
                         add(fitness(log, alignmentList.subList(start, alignmentList.size)))
+                    }
+                }
+                with(antiAlignmentBasedMeasures(log)) {
+                    logKPIraw.compute(AntiAlignmentBasedGeneralization.URN.urn) { _, old ->
+                        (old ?: ArrayList()).apply {
+                            add(generalization)
+                        }
+                    }
+                    logKPIraw.compute(AntiAlignmentBasedGeneralization.URN.urn) { _, old ->
+                        (old ?: ArrayList()).apply {
+                            add(precision)
+                        }
                     }
                 }
             }

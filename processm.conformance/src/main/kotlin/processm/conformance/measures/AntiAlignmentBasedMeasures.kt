@@ -36,6 +36,7 @@ class AntiAlignmentBasedMeasures(
         prepare(artifact.traces)
         logBased(artifact.traces)
         traceBased()
+        logUnique.clear()
         return PrecisionGeneralization(
             // Definition 7
             precision = alphaPrecision * traceBasedPrecision + (1 - alphaPrecision) * logBasedPrecision,
@@ -51,7 +52,6 @@ class AntiAlignmentBasedMeasures(
     internal var logBasedPrecision: Double = Double.NaN
 
     private fun prepare(traces: Sequence<Trace>) {
-        logUnique.clear()
         for (trace in traces)
             logUnique.compute(ConceptNameEventSummarizer(trace)) { _, old ->
                 if (old === null)
