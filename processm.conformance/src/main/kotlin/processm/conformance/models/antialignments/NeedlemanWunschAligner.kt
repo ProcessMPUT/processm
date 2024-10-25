@@ -8,7 +8,6 @@ import processm.conformance.models.alignments.Step
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
 import processm.core.models.commons.Activity
-import processm.helpers.asList
 import java.util.*
 import kotlin.math.min
 
@@ -23,7 +22,13 @@ internal class NeedlemanWunschAligner(
     }
 
 
-    private var F: Array<IntArray> = Array(0) { IntArray(0) }
+    private var F: IntArray = IntArray(0)
+    private var n: Int = 0
+
+    inline fun f(i: Int, j: Int) = F[i * n + j]
+    inline fun f(i: Int, j: Int, v: Int) {
+        F[i * n + j] = v
+    }
 
     // TODO BigInts and bits?
     private var same: Array<BooleanArray> = Array(0) { BooleanArray(0) }
@@ -38,20 +43,21 @@ internal class NeedlemanWunschAligner(
     }
 
     private fun computeScores(a: List<Activity>, b: List<Event>) {
-        if (a.size + 1 > F.size || (F.isNotEmpty() && b.size + 1 > F[0].size)) {
-            F = Array(a.size + 1) { IntArray(b.size + 1) }
-        }
+        if (F.size < (a.size + 1) * (b.size + 1))
+            F = IntArray((a.size + 1) * (b.size + 1))
+        n = b.size
         for (i in 0..a.size)
-            F[i][0] = penalty.logMove * i
+            f(i, 0, penalty.logMove * i)
         for (j in 0..b.size)
-            F[0][j] = penalty.modelMove * j
+            f(0, j, penalty.modelMove * j)
         for (i in 1..a.size)
             for (j in 1..b.size) {
-                val del = F[i - 1][j] + penalty.logMove
-                val ins = F[i][j - 1] + penalty.modelMove
-                F[i][j] = min(ins, del)
+                val del = f(i - 1, j) + penalty.logMove
+                val ins = f(i, j - 1) + penalty.modelMove
+                val v = min(ins, del)
+                f(i, j, v)
                 if (same[i][j])
-                    F[i][j] = min(F[i][j], F[i - 1][j - 1])
+                    f(i, j, min(v, f(i - 1, j - 1)))
             }
     }
 
@@ -60,15 +66,15 @@ internal class NeedlemanWunschAligner(
         var i = a.size
         var j = b.size
         while (i > 0 || j > 0) {
-            if (i > 0 && j > 0 && F[i][j] == F[i - 1][j - 1] && same[i][j]) {
+            if (i > 0 && j > 0 && f(i, j) == f(i - 1, j - 1) && same[i][j]) {
                 steps.add(0, Step(modelMove = a[i - 1], logMove = b[j - 1], type = DeviationType.None))
                 i--
                 j--
-            } else if (i > 0 && F[i][j] == F[i - 1][j] + penalty.logMove) {
+            } else if (i > 0 && f(i, j) == f(i - 1, j) + penalty.logMove) {
                 steps.add(0, Step(modelMove = a[i - 1], logMove = null, type = DeviationType.LogDeviation))
                 i--
             } else {
-                assert(F[i][j] == F[i][j - 1] + penalty.modelMove)
+                assert(f(i, j) == f(i, j - 1) + penalty.modelMove)
                 steps.add(0, Step(modelMove = null, logMove = b[j - 1], type = DeviationType.ModelDeviation))
                 j--
             }
