@@ -24,7 +24,7 @@ class TwoPhaseDFS(
     override val model: ProcessModel,
     override val penalty: PenaltyFunction = PenaltyFunction(),
     val alignerFactory: AlignerFactory = AlignerFactory { mod, pen, _ ->
-        HirschbergAligner(mod as ReplayModel, pen)
+        NeedlemanWunschAligner(mod as ReplayModel, pen)
     }
 ) : AntiAligner {
 
