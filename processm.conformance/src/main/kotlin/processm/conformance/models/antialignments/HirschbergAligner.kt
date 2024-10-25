@@ -31,6 +31,8 @@ internal class HirschbergAligner(
             s1[0] = s0[0] + penalty.modelMove
             for (j in y.indices) {
                 if (x[i].name == y[j].conceptName) {
+                    assert(s0[j] <= s1[j] + penalty.logMove)
+                    assert(s0[j] <= s0[j + 1] + penalty.modelMove)
                     // always commit to the synchronous move
                     s1[j + 1] = s0[j]
                 } else {
@@ -51,7 +53,7 @@ internal class HirschbergAligner(
         } else if (y.isEmpty()) {
             x.mapTo(target) { a -> Step(modelMove = a, logMove = null, type = DeviationType.ModelDeviation) }
         } else if (x.size == 1) {
-            // Wiki says I am supposed to call NeedlemanWunsch here, but I think we have simple enough case?
+            // Wiki says I am supposed to call NeedlemanWunsch here, but I think we have a simple enough case?
             val a = x.single()
             assert(y.isNotEmpty())
             var hit = false
@@ -64,7 +66,7 @@ internal class HirschbergAligner(
             if (!hit)
                 target.add(Step(modelMove = a, logMove = null, type = DeviationType.ModelDeviation))
         } else if (y.size == 1) {
-            // Wiki says I am supposed to call NeedlemanWunsch here, but I think we have simple enough case?
+            // Wiki says I am supposed to call NeedlemanWunsch here, but I think we have a simple enough case?
             assert(x.isNotEmpty())
             val e = y.single()
             var hit = false
