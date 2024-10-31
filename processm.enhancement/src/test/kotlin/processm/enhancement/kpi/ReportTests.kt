@@ -46,6 +46,7 @@ class ReportTests {
                     Distribution(doubleArrayOf(12.0, 17.0)),
                 )
             },
+            modelKPI = mapOf("a" to 1, "b" to 0xc0ffee),
             alignments = listOf(
                 Alignment(
                     steps = listOf(
@@ -79,6 +80,7 @@ class ReportTests {
         assertTrue(report.eventKPI.equals(deserializedReport.eventKPI) { k1, k2 -> k1?.name == k2?.name })
         assertTrue(report.arcKPI.equals(deserializedReport.arcKPI) { k1, k2 -> k1.source.name == k2.source.name && k1.target.name == k2.target.name })
         assertEquals(report.alignments, deserializedReport.alignments)
+        assertEquals(report.modelKPI, deserializedReport.modelKPI)
     }
 
     private fun <Col> Map2D<String, Col, Distribution>.equals(

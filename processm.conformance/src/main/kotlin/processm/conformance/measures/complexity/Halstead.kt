@@ -2,6 +2,7 @@ package processm.conformance.measures.complexity
 
 import processm.conformance.measures.Measure
 import processm.core.models.commons.ProcessModel
+import processm.core.models.metadata.URN
 
 /**
  * Calculates Halstead complexity metric.
@@ -11,6 +12,11 @@ import processm.core.models.commons.ProcessModel
  * M. H. Halstead. Elements of Software Science. Elsevier, Amsterdam, 1987.
  */
 object Halstead : Measure<ProcessModel, HalsteadComplexityMetric> {
+    val uniqueOperatorsURN: URN = URN("urn:processm:measures/halstead/unique_operators")
+    val uniqueOperandsURN: URN = URN("urn:processm:measures/halstead/unique_operands")
+    val totalOperatorsURN: URN = URN("urn:processm:measures/halstead/total_operators")
+    val totalOperandsURN: URN = URN("urn:processm:measures/halstead/total_operands")
+
     override fun invoke(artifact: ProcessModel): HalsteadComplexityMetric = HalsteadComplexityMetric(
         (artifact.activities + artifact.controlStructures).distinct().count(),
         artifact.activities.distinct().count(),

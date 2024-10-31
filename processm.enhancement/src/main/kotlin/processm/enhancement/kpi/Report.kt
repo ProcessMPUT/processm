@@ -39,6 +39,7 @@ data class Report(
      */
     @Serializable(with = DoublingMap2DStringCausalArcDistributionSerializer::class)
     val arcKPI: Map2D<String, CausalArc, Distribution>,
+    val modelKPI: Map<String, Int>,
 
     /**
      * Alignments corresponding used to calculate this report.
