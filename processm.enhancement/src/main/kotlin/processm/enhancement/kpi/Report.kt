@@ -5,7 +5,6 @@ import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.*
 import kotlinx.serialization.json.*
 import kotlinx.serialization.modules.*
-import processm.conformance.measures.complexity.HalsteadComplexityMetric
 import processm.conformance.models.alignments.Alignment
 import processm.core.models.commons.Activity
 import processm.core.models.commons.CausalArc
@@ -45,9 +44,6 @@ data class Report(
      * Alignments corresponding used to calculate this report.
      */
     val alignments: List<Alignment>,
-    val halsteadComplexityMetric: HalsteadComplexityMetric,
-    val noac: Int,
-    val cfc: Int,
 
     /**
      * `true` if concept drift was detected, `false` if it was not detected, `null` if it was not checked

@@ -3,7 +3,6 @@ package processm.enhancement.kpi
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
-import processm.conformance.measures.complexity.HalsteadComplexityMetric
 import processm.conformance.models.DeviationType
 import processm.conformance.models.alignments.Alignment
 import processm.conformance.models.alignments.Step
@@ -69,10 +68,7 @@ class ReportTests {
                     ),
                     cost = 1
                 )
-            ),
-            halsteadComplexityMetric = HalsteadComplexityMetric(1, 2, 3, 4),
-            noac = 17,
-            cfc = 0xc0ffee
+            )
         )
 
         val json = report.toJson()
@@ -83,9 +79,6 @@ class ReportTests {
         assertTrue(report.eventKPI.equals(deserializedReport.eventKPI) { k1, k2 -> k1?.name == k2?.name })
         assertTrue(report.arcKPI.equals(deserializedReport.arcKPI) { k1, k2 -> k1.source.name == k2.source.name && k1.target.name == k2.target.name })
         assertEquals(report.alignments, deserializedReport.alignments)
-        assertEquals(report.halsteadComplexityMetric, deserializedReport.halsteadComplexityMetric)
-        assertEquals(report.noac, deserializedReport.noac)
-        assertEquals(report.cfc, deserializedReport.cfc)
     }
 
     private fun <Col> Map2D<String, Col, Distribution>.equals(
