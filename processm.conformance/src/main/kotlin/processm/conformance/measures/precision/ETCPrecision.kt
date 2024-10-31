@@ -1,70 +1,74 @@
 package processm.conformance.measures.precision
 
 import processm.conformance.measures.Measure
+import processm.conformance.models.alignments.AStar
+import processm.conformance.models.alignments.AlignerFactory
+import processm.conformance.models.alignments.Alignment
+import processm.conformance.models.alignments.PenaltyFunction
 import processm.core.log.hierarchical.Log
 import processm.core.models.commons.Activity
-import processm.core.models.petrinet.PetriNet
-import processm.core.models.petrinet.PetriNetInstance
+import processm.core.models.commons.ProcessModel
+import processm.core.models.metadata.URN
 import processm.helpers.Trie
-import processm.logging.logger
-import processm.logging.trace
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 /**
- * An approximate precision for [PetriNet]s following Jorge Munoz-Gama, Josep Carmona: A Fresh Look at Precision in Process Conformance. BPM 2010: 211-226
+ * An approximate precision following Jorge Munoz-Gama, Josep Carmona: A Fresh Look at Precision in Process Conformance. BPM 2010: 211-226
+ *
+ * Originally, the measure is defined for PetriNets. However, the implementation here generalizes to arbitrary models
+ * by using alignments.
  */
-class ETCPrecision(val model: PetriNet) : Measure<Log, Double> {
+class ETCPrecision(
+    val model: ProcessModel,
+    val alignerFactory: AlignerFactory = AlignerFactory { m, p, _ ->
+        // FIXME Composite aligner seems to cause problems with ETCPrecisionTest due to the assumptions of DecompositionAligner
+        AStar(m, p)
+    },
+    val pool: ExecutorService = Executors.newCachedThreadPool()
+) :
+    Measure<Log, Double> {
 
     companion object {
-        private val logger = logger()
+        val URN: URN = URN("urn:processm:measures/etc_precision")
+
+        // FIXME 100 is an arbitrary constant. Ideally, I'd forbid model-only moves altogether, but currently it's impossible
+        private val penaltyFunction = PenaltyFunction(modelMove = 100)
     }
 
     private data class Payload(var counter: Int, val available: HashSet<Activity>)
 
-    private val activities = model.activities.filter { !it.isSilent }.groupBy { it.name }
-
-    /**
-     * If there's exactly one activity in the intersection of [activities] and the activities available in [instance], return that activity.
-     * Otherwise, if there's exactly one silent available activity, execute it and reconsider from the beginning.
-     * Otherwise, throw an exception.
-     */
-    private fun pushForward(instance: PetriNetInstance, activities: List<Activity>): Activity {
-        while (true) {
-            val available = instance.availableActivities.toList()
-            if (available.isEmpty())
-                throw IllegalStateException("There are no activities available for execution")
-            val candidates = available.filter(activities::contains)
-            when {
-                candidates.size == 1 -> return candidates.single()
-                candidates.size > 1 -> throw IllegalStateException("Multiple activities with the same name are ready for execution. This requires nondeterministic execution and is thus unsupported.")
-                else -> {
-                    assert(candidates.isEmpty())
-                    val silent = available.single(Activity::isSilent)
-                    instance.getExecutionFor(silent).execute()
-                }
-            }
-        }
-    }
-
-    private fun buildTransitionSystem(artifact: Log): Trie<Activity, Payload> {
+    private fun buildTransitionSystem(alignments: Sequence<Alignment>): Trie<Activity, Payload> {
         val transitionSystem = Trie<Activity, Payload> { Payload(0, HashSet()) }
         val instance = model.createInstance()
-        for (trace in artifact.traces) {
-            instance.setState(null)
+        for (alignment in alignments) {
             var current = transitionSystem
-            for (activities in trace.events.mapNotNull { activities[it.conceptName] }) {
-                val activity = pushForward(instance, activities)
-                current.value.counter++
-                current.value.available.addAll(instance.availableActivities.filter { !it.isSilent })
-                current = current.getOrPut(activity)
-                logger.trace { "${activity.name} ${instance.availableActivities.toList()}" }
-                instance.getExecutionFor(activity).execute()
+            instance.setState(null)
+            val available = ArrayList<Activity>()
+            for (step in alignment.steps) {
+                val a = step.modelMove ?: continue
+                available.addAll(instance.availableActivities.filter { !it.isSilent })
+                if (!a.isSilent) {
+                    current.value.counter++
+                    current.value.available.addAll(available)
+                    available.clear()
+                    current = current.getOrPut(a)
+                }
+                instance.setState(step.modelState)
             }
-            logger.trace("")
         }
         return transitionSystem
     }
 
     override fun invoke(artifact: Log): Double {
+        val aligner = alignerFactory(model, penaltyFunction, pool)
+        return invoke(aligner.align(artifact))
+    }
+
+    /**
+     * This function is not exposed publicly as the alignments should avoid model-only moves
+     */
+    private fun invoke(artifact: Sequence<Alignment>): Double {
         val transitionSystem = buildTransitionSystem(artifact)
         var nom = 0
         var den = 0
