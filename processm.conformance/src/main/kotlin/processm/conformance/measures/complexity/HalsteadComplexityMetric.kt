@@ -1,5 +1,6 @@
 package processm.conformance.measures.complexity
 
+import kotlinx.serialization.Serializable
 import kotlin.math.log2
 
 /**
@@ -15,7 +16,8 @@ import kotlin.math.log2
  * @property totalOperators The total number of activities, splits, joins, and control flow elements (N1).
  * @property totalOperands The total number of data variables and activities (N2).
  */
-data class HalsteadComplexityMetric internal constructor(
+@Serializable
+data class HalsteadComplexityMetric(
     val uniqueOperators: Int,
     val uniqueOperands: Int,
     val totalOperators: Int,

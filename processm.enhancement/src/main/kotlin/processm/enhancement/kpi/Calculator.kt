@@ -1,6 +1,9 @@
 package processm.enhancement.kpi
 
 import processm.conformance.measures.Fitness
+import processm.conformance.measures.complexity.CFC
+import processm.conformance.measures.complexity.Halstead
+import processm.conformance.measures.complexity.NOAC
 import processm.conformance.measures.precision.ETCPrecision
 import processm.conformance.models.DeviationType
 import processm.conformance.models.alignments.*
@@ -209,7 +212,10 @@ class Calculator(
         val traceKPI = traceKPIraw.mapValues { (_, v) -> Distribution(v) }
         val eventKPI = eventKPIraw.mapValues { _, _, v -> Distribution(v) }
         val arcKPI = arcKPIraw.mapValuesNotNull { _, _, v -> if (v.isNotEmpty()) Distribution(v) else null }
-        return Report(logKPI, traceKPI, eventKPI, arcKPI, alignmentList)
+        val halsteadComplexityMetric = Halstead(aligner.model)
+        val noac = NOAC(aligner.model)
+        val cfc = CFC(aligner.model)
+        return Report(logKPI, traceKPI, eventKPI, arcKPI, alignmentList, halsteadComplexityMetric, noac, cfc)
     }
 
     /**
