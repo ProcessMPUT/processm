@@ -1,8 +1,7 @@
 package processm.enhancement.kpi
 
-import processm.conformance.measures.AntiAlignmentBasedMeasures
 import processm.conformance.measures.Fitness
-import processm.conformance.measures.generalization.AntiAlignmentBasedGeneralization
+import processm.conformance.measures.precision.ETCPrecision
 import processm.conformance.models.DeviationType
 import processm.conformance.models.alignments.*
 import processm.conformance.models.alignments.cache.CachingAlignerFactory
@@ -75,7 +74,7 @@ class Calculator(
     }
 
     private val fitness = Fitness(aligner)
-    private val antiAlignmentBasedMeasures = AntiAlignmentBasedMeasures(aligner.model)
+    private val precision = ETCPrecision(aligner.model)
 
     /**
      * Creates new instance of the KPI calculator.
@@ -197,16 +196,9 @@ class Calculator(
                         add(fitness(log, alignmentList.subList(start, alignmentList.size)))
                     }
                 }
-                with(antiAlignmentBasedMeasures(log)) {
-                    logKPIraw.compute(AntiAlignmentBasedGeneralization.URN.urn) { _, old ->
-                        (old ?: ArrayList()).apply {
-                            add(generalization)
-                        }
-                    }
-                    logKPIraw.compute(AntiAlignmentBasedGeneralization.URN.urn) { _, old ->
-                        (old ?: ArrayList()).apply {
-                            add(precision)
-                        }
+                logKPIraw.compute(ETCPrecision.URN.urn) { _, old ->
+                    (old ?: ArrayList()).apply {
+                        add(precision(log))
                     }
                 }
             }
