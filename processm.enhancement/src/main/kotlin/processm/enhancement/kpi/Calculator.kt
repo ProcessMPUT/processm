@@ -15,6 +15,7 @@ import processm.conformance.models.alignments.petrinet.DecompositionAligner
 import processm.core.log.AggregateConceptInstanceToSingleEvent
 import processm.core.log.InferConceptInstanceFromStandardLifecycle
 import processm.core.log.InferTimes
+import processm.core.log.attribute.Attribute
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.Log
@@ -25,6 +26,9 @@ import processm.core.models.commons.CausalArc
 import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.BasicMetadata.BASIC_TIME_STATISTICS
 import processm.core.models.metadata.BasicMetadata.COUNT
+import processm.core.models.metadata.BasicMetadata.LEAD_TIME
+import processm.core.models.metadata.BasicMetadata.SERVICE_TIME
+import processm.core.models.metadata.BasicMetadata.SUSPENSION_TIME
 import processm.core.models.metadata.BasicMetadata.WAITING_TIME
 import processm.core.models.metadata.URN
 import processm.core.models.petrinet.PetriNet
@@ -95,6 +99,9 @@ class Calculator(
      */
     private data class NumericAttribute(val key: String, val attributeValue: Double)
 
+    private fun <T> List<T>.toArrayList(): ArrayList<T> =
+        if (this is ArrayList) this else ArrayList<T>().apply { addAll(this@toArrayList) }
+
     /**
      * Calculates KPI report from all numeric attributes spotted in the [logs].
      */
@@ -106,6 +113,7 @@ class Calculator(
         val arcKPIraw = DoublingMap2D<String, CausalArc, ArrayList<Double>>()
         val alignmentList = ArrayList<Alignment>()
         var start = 0
+        val leadTime = ArrayList<Double>()
 
         for (_log in logs) {
             var baseXESStream = _log.toFlatSequence()
@@ -144,8 +152,24 @@ class Calculator(
 
             val alignments = aligner.align(log, eventsSummarizer)
             start = alignmentList.size
+            val totals = HashMap<String, Double>()
+            val totalCosts = HashMap<String?, Double>()
 
             for (alignment in alignments) {
+                var min: Instant? = null
+                var max: Instant? = null
+                for (step in alignment.steps) {
+                    val t = step.logMove?.timeTimestamp ?: continue
+                    if (min == null || t < min)
+                        min = t
+                    if (max == null || t > max)
+                        max = t
+                }
+                if (max !== null && min !== null) {
+                    leadTime.add(Duration.between(min, max).totalDays)
+                }
+                totals.clear()
+                totalCosts.clear()
                 for ((index, step) in alignment.steps.withIndex()) {
                     val activity = when (step.type) {
                         DeviationType.None -> (step.modelMove as? DecoupledNodeExecution)?.activity ?: step.modelMove!!
@@ -163,9 +187,13 @@ class Calculator(
                         eventKPIraw.compute(key, activity) { _, _, old ->
                             (old ?: ArrayList()).apply { add(attributeValue) }
                         }
+                        totals.compute(key) { _, old -> (old ?: 0.0) + attributeValue }
                     }
                     eventKPIraw.compute(COUNT.urn, activity) { _, _, old ->
                         (old ?: ArrayList()).apply { if (isEmpty()) add(1.0) else set(0, get(0) + 1.0) }
+                    }
+                    step.logMove?.costTotal?.let { cost ->
+                        totalCosts.compute(step.logMove!!.costCurrency) { _, old -> (old ?: 0.0) + cost }
                     }
 
                     if (activity !== null) {
@@ -194,6 +222,12 @@ class Calculator(
                 }
 
                 alignmentList.add(alignment)
+                for (urn in listOf(SERVICE_TIME, WAITING_TIME, SUSPENSION_TIME))
+                    totals[urn.urn]?.let { logKPIraw.computeIfAbsent(urn.urn) { ArrayList() }.add(it) }
+                totalCosts.entries.map { (currency, cost) ->
+                    val kpi = if (currency !== null) "${Attribute.COST_TOTAL}:$currency" else Attribute.COST_TOTAL
+                    logKPIraw.computeIfAbsent(kpi) { ArrayList() }.add(cost)
+                }
             }
             logKPIraw.compute(Fitness.URN.urn) { _, old ->
                 (old ?: ArrayList()).apply {
@@ -205,8 +239,14 @@ class Calculator(
                     add(precision(log))
                 }
             }
-
         }
+        for (urn in listOf(SERVICE_TIME.urn, WAITING_TIME.urn, SUSPENSION_TIME.urn)) {
+            val raw = eventKPIraw.getRow(urn).values.flatten().toArrayList()
+            if (raw.isNotEmpty())
+                logKPIraw[urn] = raw
+        }
+        if (leadTime.isNotEmpty())
+            logKPIraw[LEAD_TIME.urn] = leadTime
 
         val logKPI = logKPIraw.mapValues { (_, v) -> Distribution(v) }
         val traceKPI = traceKPIraw.mapValues { (_, v) -> Distribution(v) }

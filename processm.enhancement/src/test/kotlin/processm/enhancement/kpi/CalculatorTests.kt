@@ -6,8 +6,11 @@ import processm.core.DBTestHelper
 import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.log.Helpers.event
 import processm.core.log.Helpers.trace
+import processm.core.log.XMLXESInputStream
 import processm.core.log.attribute.Attribute.COST_TOTAL
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
+import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
+import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.Log
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
@@ -617,6 +620,101 @@ class CalculatorTests {
                 assertEquals(10.0, max)
                 assertEquals(201, count)
             }
+        }
+    }
+
+
+    @OptIn(InMemoryXESProcessing::class)
+    @Test
+    fun costsAggregation() {
+        val xes = """<?xml version="1.0" encoding="UTF-8" ?>
+            <log xes.version="1.0" xes.features="nested-attributes" openxes.version="1.0RC7" xmlns="http://www.xes-standard.org/">
+                <extension name="Concept" prefix="concept" uri="http://www.xes-standard.org/concept.xesext"/>
+                <extension name="Identity" prefix="identity" uri="http://www.xes-standard.org/identity.xesext"/>
+                <extension name="Lifecycle" prefix="lifecycle" uri="http://www.xes-standard.org/lifecycle.xesext"/>
+                <extension name="Time" prefix="time" uri="http://www.xes-standard.org/time.xesext"/>
+                <extension name="Organizational" prefix="org" uri="http://www.xes-standard.org/org.xesext"/>
+                <extension name="Cost" prefix="cost" uri="http://www.xes-standard.org/cost.xesext"/>
+                <string key="concept:name" value="Log concept:name"/>
+                <id key="identity:id" value="bbf3f64f-2507-4f0b-a6f8-0113377d69e4"/>
+                <string key="lifecycle:model" value="standard"/>
+                <trace>
+                    <string key="concept:name" value="Trace #001"/>
+                    <id key="identity:id" value="ae1a2f41-2d01-479d-b6a3-84f18d790b20"/>
+                    <float key="cost:total" value="99.99"/>
+                    <string key="cost:currency" value="PLN"/>
+                    <event>
+                        <string key="concept:name" value="Event #1 in Trace #001"/>
+                        <id key="identity:id" value="1419fcd5-8fed-4272-8037-453213d8b0d1"/>
+                        <string key="lifecycle:transition" value="start"/>
+                        <date key="time:timestamp" value="2005-01-01T00:00:00.000+01:00"/>
+                        <string key="org:group" value="Endoscopy"/>
+                        <string key="org:resource" value="Drugs"/>
+                        <string key="org:role" value="Intern"/>
+                        <float key="cost:total" value="90.99"/>
+                        <string key="cost:currency" value="PLN"/>
+                    </event>
+                    <event>
+                        <string key="concept:name" value="Event #2 in Trace #001"/>
+                        <id key="identity:id" value="0e461b08-4f5e-4aa2-b0a2-b7779c82b119"/>
+                        <string key="lifecycle:transition" value="complete"/>
+                        <date key="time:timestamp" value="2005-01-03T00:00:00.000+01:00"/>
+                        <string key="org:group" value="Endoscopy"/>
+                        <string key="org:resource" value="Pills"/>
+                        <string key="org:role" value="Assistant"/>
+                        <float key="cost:total" value="9.00"/>
+                    </event>
+                </trace>
+                <trace>
+                    <string key="concept:name" value="Trace #002"/>
+                    <id key="identity:id" value="a192d6c5-683b-4188-8f73-222227dd4796"/>
+                    <float key="cost:total" value="10.00"/>
+                    <string key="cost:currency" value="USD"/>
+                    <event>
+                        <string key="concept:name" value="Event #1 in Trace #002"/>
+                        <id key="identity:id" value="1a912b4d-6c78-4a4e-8e0f-219fcea53ea7"/>
+                        <string key="lifecycle:transition" value="schedule"/>
+                        <date key="time:timestamp" value="2005-01-04T00:00:00.000+01:00"/>
+                        <string key="org:group" value="Radiotherapy"/>
+                        <string key="org:resource" value="Pills"/>
+                        <string key="org:role" value="Intern"/>
+                        <float key="cost:total" value="5.00"/>
+                        <string key="cost:currency" value="USD"/>
+                    </event>
+                    <event>
+                        <string key="concept:name" value="Event #2 in Trace #002"/>
+                        <id key="identity:id" value="8f14c2ec-83eb-4843-9cb4-c45456a5f3cb"/>
+                        <string key="lifecycle:transition" value="complete"/>
+                        <date key="time:timestamp" value="2005-01-05T00:00:00.000+01:00"/>
+                        <string key="org:group" value="Radiotherapy"/>
+                        <string key="org:resource" value="Drugs"/>
+                        <string key="org:role" value="Assistant"/>
+                        <float key="cost:total" value="5.00"/>
+                        <string key="cost:currency" value="USD"/>
+                    </event>
+                </trace>
+            </log>
+        """
+        val log = HoneyBadgerHierarchicalXESInputStream(XMLXESInputStream(xes.byteInputStream()))
+        val calculator = Calculator(AStar(causalnet {
+            start splits end
+            start joins end
+        }))
+        val report = calculator.calculate(log)
+        assertTrue { "cost:total:USD" in report.logKPI }
+        with(report.logKPI["cost:total:USD"]!!) {
+            assertEquals(1, count)
+            assertDoubleEquals(10.0, average)
+        }
+        assertTrue { "cost:total:PLN" in report.logKPI }
+        with(report.logKPI["cost:total:PLN"]!!) {
+            assertEquals(1, count)
+            assertDoubleEquals(90.99, average)
+        }
+        assertTrue { "cost:total" in report.logKPI }
+        with(report.logKPI["cost:total"]!!) {
+            assertEquals(1, count)
+            assertDoubleEquals(9.00, average)
         }
     }
 }

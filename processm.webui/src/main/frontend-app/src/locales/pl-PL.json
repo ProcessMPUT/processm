@@ -436,15 +436,13 @@
     "yes": "Tak",
     "no": "Nie"
   },
-  "statistics": {
+  "kpi": {
     "urn:processm:statistics/count": "Liczba",
     "urn:processm:statistics/lead_time": "Czas realizacji",
     "urn:processm:statistics/service_time": "Czas obsługi",
     "urn:processm:statistics/suspension_time": "Czas wstrzymania",
     "urn:processm:statistics/waiting_time": "Czas oczekiwania",
-    "days": "dni"
-  },
-  "measures": {
+    "days": "dni",
     "urn:processm:measures/control_flow_complexity": "Złożoność przepływu sterowania",
     "urn:processm:measures/halstead/total_operands": "Liczba operandów",
     "urn:processm:measures/halstead/total_operators": "Liczba operatorów",
