@@ -39,6 +39,9 @@ data class Report(
      */
     @Serializable(with = DoublingMap2DStringCausalArcDistributionSerializer::class)
     val arcKPI: Map2D<String, CausalArc, Distribution>,
+    /**
+     * The model-related KPIs, such as Halstead complexity metric
+     */
     val modelKPI: Map<String, Int>,
 
     /**

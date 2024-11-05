@@ -194,15 +194,15 @@ class Calculator(
                 }
 
                 alignmentList.add(alignment)
-                logKPIraw.compute(Fitness.URN.urn) { _, old ->
-                    (old ?: ArrayList()).apply {
-                        add(fitness(log, alignmentList.subList(start, alignmentList.size)))
-                    }
+            }
+            logKPIraw.compute(Fitness.URN.urn) { _, old ->
+                (old ?: ArrayList()).apply {
+                    add(fitness(log, alignmentList.subList(start, alignmentList.size)))
                 }
-                logKPIraw.compute(ETCPrecision.URN.urn) { _, old ->
-                    (old ?: ArrayList()).apply {
-                        add(precision(log))
-                    }
+            }
+            logKPIraw.compute(ETCPrecision.URN.urn) { _, old ->
+                (old ?: ArrayList()).apply {
+                    add(precision(log))
                 }
             }
 
