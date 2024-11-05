@@ -136,15 +136,16 @@ private object DistributionWebAPISerializer : KSerializer<Distribution> {
 
     override fun serialize(encoder: Encoder, value: Distribution) {
         encoder as JsonEncoder
-        encoder.beginStructure(descriptor)
-        encoder.encodeDoubleElement(descriptor, 0, value.min)
-        encoder.encodeDoubleElement(descriptor, 1, value.Q1)
-        encoder.encodeDoubleElement(descriptor, 2, value.median)
-        encoder.encodeDoubleElement(descriptor, 3, value.Q3)
-        encoder.encodeDoubleElement(descriptor, 4, value.max)
-        encoder.encodeDoubleElement(descriptor, 5, value.average)
-        encoder.encodeDoubleElement(descriptor, 6, value.standardDeviation)
-        encoder.endStructure(descriptor)
+        with(encoder.beginStructure(descriptor)) {
+            encodeDoubleElement(descriptor, 0, value.min)
+            encodeDoubleElement(descriptor, 1, value.Q1)
+            encodeDoubleElement(descriptor, 2, value.median)
+            encodeDoubleElement(descriptor, 3, value.Q3)
+            encodeDoubleElement(descriptor, 4, value.max)
+            encodeDoubleElement(descriptor, 5, value.average)
+            encodeDoubleElement(descriptor, 6, value.standardDeviation)
+            endStructure(descriptor)
+        }
     }
 
 }
