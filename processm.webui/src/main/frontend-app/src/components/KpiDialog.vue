@@ -2,7 +2,7 @@
   <v-dialog v-model="value" @click:outside="value = false" max-width="500" @keydown.esc="value = false">
     <template v-slot:activator="{ on, attrs }">
       <v-btn icon v-bind="attrs" v-on="on">
-        <v-icon>format_list_numbered</v-icon>
+        <v-icon>table_view</v-icon>
       </v-btn>
     </template>
     <v-data-table dense :loading="loading" :items="this.items" group-by="group">
