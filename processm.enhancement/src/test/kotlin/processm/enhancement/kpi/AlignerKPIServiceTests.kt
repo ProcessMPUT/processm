@@ -303,7 +303,7 @@ class AlignerKPIServiceTests {
 
             val report =
                 persistenceProvider.get<Report>(ProcessModelComponentData.create(component).alignmentKPIReports.values.single().values.single())
-            assertEquals(1, report.logKPI.size)
+            assertEquals(3, report.logKPI.size)
             assertEquals(6, report.traceKPI.size)
             assertEquals(20.0, report.traceKPI[COST_TOTAL]!!.median)
             assertEquals(50, report.traceKPI[COST_TOTAL]!!.raw.size)
@@ -371,7 +371,7 @@ class AlignerKPIServiceTests {
 
             val report =
                 persistenceProvider.get<Report>(ProcessModelComponentData.create(component).alignmentKPIReports.values.single().values.single())
-            assertEquals(1, report.logKPI.size)
+            assertEquals(3, report.logKPI.size)
             assertEquals(6, report.traceKPI.size)
             assertEquals(20.0, report.traceKPI[COST_TOTAL]!!.median)
             assertEquals(50, report.traceKPI[COST_TOTAL]!!.raw.size)
@@ -483,7 +483,7 @@ class AlignerKPIServiceTests {
 
             val report =
                 persistenceProvider.get<Report>(ProcessModelComponentData.create(component).alignmentKPIReports.values.single().values.single())
-            assertEquals(2, report.logKPI.size)
+            assertEquals(4, report.logKPI.size)
             assertEquals(5, report.traceKPI.size)
             assertEquals(1, report.eventKPI.size)
 
