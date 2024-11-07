@@ -8,6 +8,7 @@ import processm.conformance.models.alignments.Step
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
 import processm.core.models.commons.Activity
+import processm.core.models.commons.ProcessModelState
 import java.util.*
 import kotlin.math.min
 
@@ -68,17 +69,39 @@ internal class NeedlemanWunschAligner(
         val steps = LinkedList<Step>()
         var i = a.size
         var j = b.size
+        var modelState = ReplayModelState(i)
         while (i > 0 || j > 0) {
             if (i > 0 && j > 0 && F[i * n + j] == F[(i - 1) * n + j - 1] && same[i * n + j]) {
-                steps.add(0, Step(modelMove = a[i - 1], logMove = b[j - 1], type = DeviationType.None))
+                steps.add(
+                    0,
+                    Step(modelMove = a[i - 1], logMove = b[j - 1], type = DeviationType.None, modelState = modelState)
+                )
                 i--
                 j--
+                modelState = ReplayModelState(i)
             } else if (i > 0 && F[i * n + j] == F[(i - 1) * n + j] + penalty.logMove) {
-                steps.add(0, Step(modelMove = a[i - 1], logMove = null, type = DeviationType.LogDeviation))
+                steps.add(
+                    0,
+                    Step(
+                        modelMove = a[i - 1],
+                        logMove = null,
+                        type = DeviationType.LogDeviation,
+                        modelState = modelState
+                    )
+                )
                 i--
+                modelState = ReplayModelState(i)
             } else {
                 assert(F[i * n + j] == F[i * n + j - 1] + penalty.modelMove)
-                steps.add(0, Step(modelMove = null, logMove = b[j - 1], type = DeviationType.ModelDeviation))
+                steps.add(
+                    0,
+                    Step(
+                        modelMove = null,
+                        logMove = b[j - 1],
+                        type = DeviationType.ModelDeviation,
+                        modelState = modelState
+                    )
+                )
                 j--
             }
         }
@@ -103,14 +126,23 @@ internal class NeedlemanWunschAligner(
         if (nonSilent.size < model.trace.size) {
             assert(steps.mapNotNull { it.modelMove } == nonSilent) { "${steps.mapNotNull { it.modelMove }} $nonSilent" }
             val i = steps.listIterator()
+            var modelState: ProcessModelState? = null
             for (a in model.trace) {
                 if (a.isSilent) {
-                    i.add(Step(modelMove = a, logMove = null, type = DeviationType.ModelDeviation))
+                    i.add(
+                        Step(
+                            modelMove = a,
+                            logMove = null,
+                            type = DeviationType.ModelDeviation,
+                            modelState = modelState
+                        )
+                    )
                 } else {
                     var step = i.next()
                     while (step.modelMove === null && i.hasNext()) {
                         step = i.next()
                     }
+                    modelState = step.modelState
                     assert(step.modelMove === a)
                 }
             }
