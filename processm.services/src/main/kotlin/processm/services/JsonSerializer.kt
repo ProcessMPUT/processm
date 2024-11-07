@@ -121,17 +121,14 @@ private object DistributionWebAPISerializer : KSerializer<Distribution> {
 
     override fun deserialize(decoder: Decoder): Distribution {
         decoder as JsonDecoder
-        decoder.beginStructure(descriptor)
-        val min = decoder.decodeDoubleElement(descriptor, 0)
-        val Q1 = decoder.decodeDoubleElement(descriptor, 1)
-        val median = decoder.decodeDoubleElement(descriptor, 2)
-        val Q3 = decoder.decodeDoubleElement(descriptor, 3)
-        val max = decoder.decodeDoubleElement(descriptor, 4)
-        val average = decoder.decodeDoubleElement(descriptor, 5)
-        val standardDeviation = decoder.decodeDoubleElement(descriptor, 6)
-        decoder.endStructure(descriptor)
-        // FIXME: #254 Distribution actually does not allow for setting individual aggregates and raw data is not available here.
-        return Distribution(doubleArrayOf(min, Q1, median, Q3, max))
+        // FIXME: There was code using decoder.beginStructure etc., very similar to the one used by `serialize`, but
+        // FIXME: for some reason it completely failed when Distribution was nested inside a Map.
+        with(decoder.decodeJsonElement().jsonObject) {
+            val values =
+                (0 until descriptor.elementsCount).map { this[descriptor.getElementName(it)]!!.jsonPrimitive.double }
+            // FIXME: #254 Distribution actually does not allow for setting individual aggregates and raw data is not available here.
+            return Distribution(values.toDoubleArray())
+        }
     }
 
     override fun serialize(encoder: Encoder, value: Distribution) {

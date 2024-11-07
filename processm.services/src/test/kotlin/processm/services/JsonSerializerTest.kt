@@ -18,18 +18,28 @@ import processm.enhancement.kpi.Report
 import processm.helpers.map2d.DoublingMap2D
 import processm.helpers.stats.Distribution
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @Serializable
-data class PseudoReport(val item: Map<String, @Contextual Distribution>) {
-}
+data class PseudoReport(val item: Map<String, @Contextual Distribution>)
 
 class JsonSerializerTest {
 
     @Test
-    fun pseudoReport() {
+    fun `pseudoReport - encode`() {
         val item = mapOf("a" to Distribution(doubleArrayOf(1.0, 2.0)))
-        println(JsonSerializer.encodeToJsonElement(PseudoReport(item)))
+        assertEquals(
+            JsonSerializer.parseToJsonElement("""{"item":{"a":{"min":1.0,"Q1":1.0,"median":1.5,"Q3":2.0,"max":2.0,"average":1.5,"standardDeviation":0.7071067811865476}}}"""),
+            JsonSerializer.encodeToJsonElement(PseudoReport(item))
+        )
+    }
+
+    @Test
+    fun `pseudoReport - decode`() {
+        val json =
+            """{"item":{"a":{"min":1.0,"Q1":1.0,"median":1.5,"Q3":2.0,"max":2.0,"average":1.5,"standardDeviation":0.7071067811865476}}}"""
+        JsonSerializer.decodeFromString<PseudoReport>(json)
     }
 
     @Test
