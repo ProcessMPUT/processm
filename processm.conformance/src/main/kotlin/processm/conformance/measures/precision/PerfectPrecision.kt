@@ -4,6 +4,7 @@ import processm.core.models.causalnet.CausalNet
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
 import processm.core.models.commons.ProcessModelState
+import processm.core.models.metadata.URN
 import processm.helpers.Trie
 
 
@@ -13,6 +14,13 @@ import processm.helpers.Trie
  * If your model is a [CausalNet], use [processm.conformance.measures.precision.causalnet.CNetPerfectPrecision] instead
  */
 class PerfectPrecision(model: ProcessModel) : AbstractPrecision(model) {
+
+    companion object {
+        val URN: URN = URN("urn:processm:measures/perfect_precision")
+    }
+
+    override val URN: URN
+        get() = PerfectPrecision.URN
 
     init {
         require(model !is CausalNet) { "PerfectPrecision cannot handle causal nets. Use processm.conformance.measures.precision.causalnet.CNetPerfectPrecision instead." }

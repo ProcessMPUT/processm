@@ -4,6 +4,7 @@ import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Node
 import processm.core.models.commons.Activity
+import processm.core.models.metadata.URN
 import processm.helpers.Counter
 import processm.helpers.intersect
 import processm.logging.debug
@@ -18,7 +19,11 @@ class CNetBindingsBasedApproximatePrecision(model: CausalNet) : CNetAbstractPrec
 
     companion object {
         private val logger = logger()
+        val URN: URN = URN("urn:processm:measures/cnet_bindings_based_approximate_precision")
     }
+
+    override val URN: URN
+        get() = CNetBindingsBasedApproximatePrecision.URN
 
     private val mustConsume = model.joins.mapValues { (_, joins) -> intersect(joins.map { join -> join.dependencies }) }
     private val mayProduce = model.outgoing

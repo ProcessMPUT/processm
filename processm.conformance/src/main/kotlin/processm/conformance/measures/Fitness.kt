@@ -17,6 +17,9 @@ class Fitness(
         val URN: URN = URN("urn:processm:measures/fitness")
     }
 
+    override val URN: URN
+        get() = Fitness.URN
+
     internal val movem: Int by lazy {
         aligner.align(Trace(emptySequence())).cost
     }

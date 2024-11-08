@@ -5,6 +5,7 @@ import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.DecoupledNodeExecution
 import processm.core.models.causalnet.Node
 import processm.core.models.commons.Activity
+import processm.core.models.metadata.URN
 import processm.helpers.Trie
 import processm.helpers.mapToSet
 import processm.logging.debug
@@ -20,7 +21,11 @@ class CNetAlignmentsBasedApproximatePrecision(model: CausalNet) : CNetAbstractPr
 
     companion object {
         private val logger = logger()
+        val URN: URN = URN("urn:processm:measures/cnet_alignments_based_approximate_precision")
     }
+
+    override val URN: URN
+        get() = CNetAlignmentsBasedApproximatePrecision.URN
 
     private val availableActivities = Trie<Activity, HashSet<Node>> { HashSet() }
 

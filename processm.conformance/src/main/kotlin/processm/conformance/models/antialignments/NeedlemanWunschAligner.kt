@@ -12,6 +12,13 @@ import processm.core.models.commons.ProcessModelState
 import java.util.*
 import kotlin.math.min
 
+/**
+ * An aligner designed to align with a sequential model. It employs the Needleman–Wunsch algorithm (1) for aligning two sequences.
+ * In theory, [HirschbergAligner] should be more efficient, however, that does not seem to be the case here.
+ *
+ * (1) Needleman, Saul B. & Wunsch, Christian D. (1970). "A general method applicable to the search for similarities in
+ * the amino acid sequence of two proteins". Journal of Molecular Biology. 48 (3): 443–53. doi:10.1016/0022-2836(70)90057-4
+ */
 internal class NeedlemanWunschAligner(
     override val model: ReplayModel,
     override val penalty: PenaltyFunction = PenaltyFunction()
@@ -118,7 +125,7 @@ internal class NeedlemanWunschAligner(
         val steps = backtrack(nonSilent, events)
         val cost = steps.sumOf {
             when (it.type) {
-                DeviationType.None -> 0
+                DeviationType.None -> penalty.synchronousMove
                 DeviationType.LogDeviation -> penalty.logMove
                 DeviationType.ModelDeviation -> penalty.modelMove
             }

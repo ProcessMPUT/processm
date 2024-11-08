@@ -1,9 +1,16 @@
 package processm.conformance.measures
 
+import processm.core.models.metadata.URN
+
 /**
  * A basic interface for a measure
  */
-fun interface Measure<in T, out R> {
+interface Measure<in T, out R> {
+    /**
+     * The urn to identify the measure
+     */
+    val URN: URN
+
     /**
      * Calculates the measure for the given [artifact].
      */

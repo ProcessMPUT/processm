@@ -2,6 +2,7 @@ package processm.conformance.measures.complexity
 
 import processm.conformance.measures.Measure
 import processm.core.models.commons.ProcessModel
+import processm.core.models.metadata.URN
 
 /**
  * NOA = Number of activities in a process. All activities are counted, including silent and artificial ones.
@@ -10,6 +11,7 @@ import processm.core.models.commons.ProcessModel
  * Heidelberg, 2006, pp. 117–128.
  */
 object NumberOfActivities : Measure<ProcessModel, Int> {
+    override val URN: URN = URN("urn:processm:measures/number_of_activities")
     override fun invoke(artifact: ProcessModel): Int = artifact.activities.count()
 }
 

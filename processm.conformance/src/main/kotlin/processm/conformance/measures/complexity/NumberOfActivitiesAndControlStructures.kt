@@ -13,7 +13,7 @@ import processm.core.models.metadata.URN
  * Heidelberg, 2006, pp. 117–128.
  */
 object NumberOfActivitiesAndControlStructures : Measure<ProcessModel, Int> {
-    val URN: URN = URN("urn:processm:measures/number_of_activities_and_control_structures")
+    override val URN: URN = URN("urn:processm:measures/number_of_activities_and_control_structures")
     override fun invoke(artifact: ProcessModel): Int =
         artifact.activities.count() + artifact.controlStructures.count { it !is Activity /* do not count activities twice */ }
 }
