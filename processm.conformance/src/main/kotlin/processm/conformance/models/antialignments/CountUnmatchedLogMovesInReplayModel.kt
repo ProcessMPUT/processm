@@ -7,7 +7,7 @@ import processm.core.models.commons.ProcessModelState
 import processm.helpers.Counter
 
 private fun HashMap<String, Int>.countEvent(e: Event) {
-    e.conceptName?.let { compute(it) { _, v -> if (v !== null) v + 1 else 1 } }
+    e.conceptName?.let { merge(it, 1, Int::plus) }
 }
 
 internal class CountUnmatchedLogMovesInReplayModel(val model: ReplayModel) : CountUnmatchedLogMoves {
