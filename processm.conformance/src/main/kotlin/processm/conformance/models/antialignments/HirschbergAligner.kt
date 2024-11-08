@@ -12,6 +12,12 @@ import java.util.*
 import kotlin.math.min
 
 
+/**
+ * An aligner designed to align with a sequential model. It employs the Hirschberg's algorithm (1) for aligning two sequences.
+ *
+ *  (1) Hirschberg, D. S. (1975). "A linear space algorithm for computing maximal common subsequences". Communications of
+ *  the ACM. 18 (6): 341–343. doi:10.1145/360825.360861
+ */
 internal class HirschbergAligner(
     override val model: ReplayModel,
     override val penalty: PenaltyFunction = PenaltyFunction()
