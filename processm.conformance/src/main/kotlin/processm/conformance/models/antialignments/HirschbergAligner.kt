@@ -47,7 +47,9 @@ internal class HirschbergAligner(
                     s1[j + 1] = min(ins, del)
                 }
             }
-            s0 = s1.also { s1 = s0 }
+            val tmp = s0
+            s0 = s1
+            s1 = tmp
             assert(s0 !== s1)
         }
         return s0
