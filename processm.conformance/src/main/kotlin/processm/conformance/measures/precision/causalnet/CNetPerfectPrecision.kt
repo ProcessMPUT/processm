@@ -2,6 +2,7 @@ package processm.conformance.measures.precision.causalnet
 
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.commons.Activity
+import processm.core.models.metadata.URN
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import processm.helpers.Trie
 import processm.logging.debug
@@ -14,7 +15,11 @@ class CNetPerfectPrecision(model: CausalNet) : CNetAbstractPrecision(model) {
 
     companion object {
         private val logger = logger()
+        val URN: URN = URN("urn:processm:measures/cnet_precision")
     }
+
+    override val URN: URN
+        get() = CNetPerfectPrecision.URN
 
     /**
      * Instead of generating all the valid sequences (possibly infinitely many), we generate only such valid sequences that can provide some new information in the context of [prefixes]

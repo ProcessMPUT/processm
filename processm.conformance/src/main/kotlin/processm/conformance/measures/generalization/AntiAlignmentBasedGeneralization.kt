@@ -29,6 +29,9 @@ class AntiAlignmentBasedGeneralization(
         alpha: Double = 0.5
     ) : this(AntiAlignmentBasedMeasures(model, alignerFactory, antiAligner, alpha, alpha))
 
+    override val URN: URN
+        get() = AntiAlignmentBasedGeneralization.URN
+
     override fun invoke(artifact: Log): Double = base(artifact).generalization
 
     internal val traceBasedGeneralization: Double

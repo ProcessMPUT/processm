@@ -7,6 +7,7 @@ import processm.conformance.models.alignments.events.EventsSummarizer
 import processm.conformance.models.alignments.petrinet.DecompositionAligner
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
+import processm.core.models.metadata.URN
 import java.util.concurrent.ExecutorCompletionService
 import java.util.concurrent.TimeUnit
 
@@ -26,7 +27,12 @@ class RangeFitness(
 
     companion object {
         private val emptyTrace = Trace(emptySequence())
+
+        val URN = URN("urn:processm:measures/range_fitness")
     }
+
+    override val URN: URN
+        get() = RangeFitness.URN
 
     internal val movem: Double by lazy {
         val ecs = ExecutorCompletionService<Double>(aligner.pool)

@@ -9,6 +9,7 @@ import processm.core.log.hierarchical.Trace
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
 import processm.core.models.commons.ProcessModelState
+import processm.core.models.metadata.URN
 import processm.helpers.SameThreadExecutorService
 import kotlin.math.hypot
 
@@ -27,10 +28,18 @@ class AntiAlignmentBasedMeasures(
     val alphaPrecision: Double = 0.5,
     val alphaGeneralization: Double = alphaPrecision
 ) : Measure<Log, PrecisionGeneralization> {
+
+    companion object {
+        val URN: URN = URN("urn:processm:measures/anti_alignment_based_precision_and_generalization")
+    }
+
     init {
         require(alphaPrecision in 0.0..1.0)
         require(alphaGeneralization in 0.0..1.0)
     }
+
+    override val URN: URN
+        get() = AntiAlignmentBasedMeasures.URN
 
     override fun invoke(artifact: Log): PrecisionGeneralization {
         prepare(artifact.traces)

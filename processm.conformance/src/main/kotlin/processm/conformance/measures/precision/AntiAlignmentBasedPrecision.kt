@@ -29,6 +29,9 @@ class AntiAlignmentBasedPrecision(
         alpha: Double = 0.5
     ) : this(AntiAlignmentBasedMeasures(model, alignerFactory, antiAligner, alpha, alpha))
 
+    override val URN: URN
+        get() = AntiAlignmentBasedPrecision.URN
+
     override fun invoke(artifact: Log): Double = base(artifact).precision
 
     internal val traceBasedPrecision: Double

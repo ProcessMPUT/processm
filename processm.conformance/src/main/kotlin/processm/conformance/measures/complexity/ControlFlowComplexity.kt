@@ -10,7 +10,7 @@ import processm.core.models.metadata.URN
  * Academy of Science, Engineering and technology Volume 8 October 2005 ISSN 1307-6884
  */
 object ControlFlowComplexity : Measure<ProcessModel, Int> {
-    val URN: URN = URN("urn:processm:measures/control_flow_complexity")
+    override val URN: URN = URN("urn:processm:measures/control_flow_complexity")
     override fun invoke(artifact: ProcessModel): Int = artifact.controlStructures.sumOf { it.controlFlowComplexity }
 }
 

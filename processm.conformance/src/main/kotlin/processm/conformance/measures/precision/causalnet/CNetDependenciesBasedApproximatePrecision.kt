@@ -3,6 +3,7 @@ package processm.conformance.measures.precision.causalnet
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
 import processm.core.models.commons.Activity
+import processm.core.models.metadata.URN
 import processm.helpers.Counter
 import processm.helpers.mapToSet
 import processm.logging.debug
@@ -17,7 +18,11 @@ class CNetDependenciesBasedApproximatePrecision(model: CausalNet) : CNetAbstract
 
     companion object {
         private val logger = logger()
+        val URN: URN = URN("urn:processm:measures/cnet_dependencies_based_approximate_precision")
     }
+
+    override val URN: URN
+        get() = CNetDependenciesBasedApproximatePrecision.URN
 
     override fun availableActivities(prefix: List<Activity>): Set<Node> {
         if (prefix.isEmpty())

@@ -12,6 +12,7 @@ import processm.core.models.metadata.URN
  * M. H. Halstead. Elements of Software Science. Elsevier, Amsterdam, 1987.
  */
 object Halstead : Measure<ProcessModel, HalsteadComplexityMetric> {
+    override val URN: URN = URN("urn:processm:measures/halstead")
     val uniqueOperatorsURN: URN = URN("urn:processm:measures/halstead/unique_operators")
     val uniqueOperandsURN: URN = URN("urn:processm:measures/halstead/unique_operands")
     val totalOperatorsURN: URN = URN("urn:processm:measures/halstead/total_operators")

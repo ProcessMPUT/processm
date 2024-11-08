@@ -36,6 +36,9 @@ class ETCPrecision(
         private val penaltyFunction = PenaltyFunction(modelMove = 100)
     }
 
+    override val URN: URN
+        get() = ETCPrecision.URN
+
     private data class Payload(var counter: Int, val available: HashSet<Activity>)
 
     private fun buildTransitionSystem(alignments: Sequence<Alignment>): Trie<Activity, Payload> {
