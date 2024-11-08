@@ -11,6 +11,8 @@ import processm.core.models.commons.ProcessModel
 import processm.core.models.commons.ProcessModelState
 import processm.core.models.metadata.URN
 import processm.helpers.SameThreadExecutorService
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import kotlin.math.hypot
 
 data class PrecisionGeneralization(val precision: Double, val generalization: Double)
@@ -24,9 +26,10 @@ data class PrecisionGeneralization(val precision: Double, val generalization: Do
 class AntiAlignmentBasedMeasures(
     val model: ProcessModel,
     val alignerFactory: AlignerFactory = AlignerFactory { m, p, _ -> AStar(m, p) },
-    val antiAligner: AntiAligner = TwoPhaseDFS(model),
+    val antiAlignerFactory: (model: ProcessModel) -> AntiAligner = { TwoPhaseDFS(model) },
     val alphaPrecision: Double = 0.5,
-    val alphaGeneralization: Double = alphaPrecision
+    val alphaGeneralization: Double = alphaPrecision,
+    val pool: ExecutorService = Executors.newCachedThreadPool()
 ) : Measure<Log, PrecisionGeneralization> {
 
     companion object {
@@ -43,8 +46,10 @@ class AntiAlignmentBasedMeasures(
 
     override fun invoke(artifact: Log): PrecisionGeneralization {
         prepare(artifact.traces)
-        logBased(artifact.traces)
-        traceBased()
+        val logBasedFuture = pool.submit { logBased(artifact.traces) }
+        val traceBasedFuture = pool.submit { traceBased() }
+        logBasedFuture.get()
+        traceBasedFuture.get()
         logUnique.clear()
         return PrecisionGeneralization(
             // Definition 7
@@ -75,11 +80,12 @@ class AntiAlignmentBasedMeasures(
      * Definitions 6 and 10
      */
     private fun logBased(traces: Sequence<Trace>) {
+        val antiAligner = antiAlignerFactory(model)
         val n = 2 * traces.maxOf { it.events.count() }
         val antiAlignments = antiAligner.align(traces, n)
         val imprecision = antiAlignments.maxOf { it.cost }.toDouble() / antiAlignments.maxOf { it.size }
         assert(imprecision in 0.0..1.0)
-        val drec = antiAlignments.minOf { drec(it) }
+        val drec = antiAlignments.minOf { drec(antiAligner, it) }
         logBasedGeneralization = 1.0 - hypot(1.0 - imprecision, drec).coerceAtMost(1.0)
         logBasedPrecision = 1.0 - imprecision
     }
@@ -88,6 +94,7 @@ class AntiAlignmentBasedMeasures(
      * Definitions 5 and 9
      */
     private fun traceBased() {
+        val antiAligner = antiAlignerFactory(model)
         var generalizationNom = 0.0
         var generalizationDen = 0.0
         var precision = 0.0
@@ -101,10 +108,10 @@ class AntiAlignmentBasedMeasures(
             val filteredLog = logUnique.values.asSequence().mapNotNull { if (it.first !== trace) it.first else null }
             val antiAlignments = antiAligner.align(filteredLog, size)
             val d = antiAlignments.maxOf { it.cost }.toDouble() / size
-            val drec = antiAlignments.minOf { drec(it) }
+            val drec = antiAlignments.minOf { drec(antiAligner, it) }
             val generalization = 1.0 - hypot(1.0 - d, drec).coerceAtMost(1.0)
             generalizationNom += weight * generalization
-            precision += antiAlignments.maxOf { d(trace, it) }
+            precision += antiAlignments.maxOf { d(antiAligner, trace, it) }
 
             generalizationDen += weight
         }
@@ -118,7 +125,7 @@ class AntiAlignmentBasedMeasures(
     /**
      * Definition 8
      */
-    private fun drec(antiAlignment: AntiAlignment): Double {
+    private fun drec(antiAligner: AntiAligner, antiAlignment: AntiAlignment): Double {
 
         val modelStates = antiAlignment.steps.mapNotNullTo(HashSet()) { it.modelState }
         val aligner = alignerFactory(model, antiAligner.penalty, SameThreadExecutorService)
@@ -197,7 +204,7 @@ class AntiAlignmentBasedMeasures(
     )
 
 
-    private fun d(trace: Trace, antiAlignment: AntiAlignment): Int {
+    private fun d(antiAligner: AntiAligner, trace: Trace, antiAlignment: AntiAlignment): Int {
         val replay = ReplayModel(antiAlignment.steps.mapNotNull { it.modelMove })
         val aligner = alignerFactory(replay, antiAligner.penalty, SameThreadExecutorService)
         val alignment = aligner.align(trace)
