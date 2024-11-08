@@ -125,7 +125,7 @@ internal class NeedlemanWunschAligner(
         val steps = backtrack(nonSilent, events)
         val cost = steps.sumOf {
             when (it.type) {
-                DeviationType.None -> 0
+                DeviationType.None -> penalty.synchronousMove
                 DeviationType.LogDeviation -> penalty.logMove
                 DeviationType.ModelDeviation -> penalty.modelMove
             }
