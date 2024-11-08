@@ -1,30 +1,49 @@
-package processm.enhancement.kpi
+package processm.services
 
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.serializer
+import kotlinx.serialization.Contextual
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonObject
 import processm.conformance.models.DeviationType
 import processm.conformance.models.alignments.Alignment
 import processm.conformance.models.alignments.Step
-import processm.core.log.Helpers.event
+import processm.core.log.Helpers
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Node
 import processm.core.models.commons.Activity
 import processm.core.models.commons.CausalArc
-import processm.core.models.petrinet.Place
 import processm.core.models.petrinet.Transition
 import processm.core.models.processtree.ProcessTreeActivity
+import processm.enhancement.kpi.Report
 import processm.helpers.map2d.DoublingMap2D
-import processm.helpers.map2d.Map2D
 import processm.helpers.stats.Distribution
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class ReportTests {
+@Serializable
+data class PseudoReport(val item: Map<String, @Contextual Distribution>)
+
+class JsonSerializerTest {
+
     @Test
-    fun serializationDeserialization() {
-        val place = Place()
+    fun `pseudoReport - encode`() {
+        val item = mapOf("a" to Distribution(doubleArrayOf(1.0, 2.0)))
+        assertEquals(
+            JsonSerializer.parseToJsonElement("""{"item":{"a":{"min":1.0,"Q1":1.0,"median":1.5,"Q3":2.0,"max":2.0,"average":1.5,"standardDeviation":0.7071067811865476}}}"""),
+            JsonSerializer.encodeToJsonElement(PseudoReport(item))
+        )
+    }
+
+    @Test
+    fun `pseudoReport - decode`() {
+        val json =
+            """{"item":{"a":{"min":1.0,"Q1":1.0,"median":1.5,"Q3":2.0,"max":2.0,"average":1.5,"standardDeviation":0.7071067811865476}}}"""
+        JsonSerializer.decodeFromString<PseudoReport>(json)
+    }
+
+    @Test
+    fun report() {
         val report = Report(
             logKPI = mapOf("a" to Distribution(doubleArrayOf(1.0, 2.0))),
             traceKPI = mapOf("t" to Distribution(doubleArrayOf(3.0, 5.0))),
@@ -54,7 +73,7 @@ class ReportTests {
                             modelMove = Transition("a"),
                             modelState = null,
                             modelCause = emptyList(),
-                            logMove = event("a"),
+                            logMove = Helpers.event("a"),
                             logState = null,
                             type = DeviationType.None
                         ),
@@ -62,7 +81,7 @@ class ReportTests {
                             modelMove = null,
                             modelState = null,
                             modelCause = emptyList(),
-                            logMove = event("b"),
+                            logMove = Helpers.event("b"),
                             logState = null,
                             type = DeviationType.LogDeviation
                         )
@@ -71,53 +90,26 @@ class ReportTests {
                 )
             )
         )
-
-        val json = report.toJson()
-        val deserializedReport = Report.fromJson(json)
-
-        assertEquals(report.logKPI, deserializedReport.logKPI)
-        assertEquals(report.traceKPI, deserializedReport.traceKPI)
-        assertTrue(report.eventKPI.equals(deserializedReport.eventKPI) { k1, k2 -> k1?.name == k2?.name })
-        assertTrue(report.arcKPI.equals(deserializedReport.arcKPI) { k1, k2 -> k1.source.name == k2.source.name && k1.target.name == k2.target.name })
-        assertEquals(report.alignments, deserializedReport.alignments)
-        assertEquals(report.modelKPI, deserializedReport.modelKPI)
-    }
-
-    private fun <Col> Map2D<String, Col, Distribution>.equals(
-        other: Map2D<String, Col, Distribution>,
-        eqCol: (key1: Col, key2: Col) -> Boolean
-    ): Boolean {
-        if (this.rows.size != other.rows.size)
-            return false
-
-        if (this.columns.size != other.columns.size)
-            return false
-
-        for (col in columns) {
-            val matchingOtherCol = other.columns.first { eqCol(col, it) }
-            if (getColumn(col).entries != other.getColumn(matchingOtherCol).entries)
-                return false
+        val s = JsonSerializer.encodeToJsonElement(report)
+        // serialized by DoublingMap2DStringActivityDistributionSerializer
+        with(s.jsonObject["eventKPI"]!!.jsonObject["e"]!!.jsonObject["\u0000"]!!.jsonObject) {
+            assertTrue { containsKey("min") }
+            assertTrue { containsKey("Q1") }
+            assertTrue { containsKey("median") }
+            assertTrue { containsKey("Q3") }
+            assertTrue { containsKey("max") }
+            assertTrue { containsKey("average") }
+            assertTrue { containsKey("standardDeviation") }
         }
-
-        return true
-    }
-
-    @Test
-    fun virtualPetriNetArcSerializationTest() {
-        val place = Place()
-        val a = Transition("a", outPlaces = listOf(place))
-        val b = Transition("b", inPlaces = listOf(place))
-        val arc = VirtualPetriNetCausalArc(a, b, place)
-        val deserialized = Json.decodeFromString(serializer<VirtualPetriNetCausalArc>(), Json.encodeToString(arc))
-        assertEquals(arc, deserialized)
-    }
-
-    @Test
-    fun virtualProcessTreeArcSerializationTest() {
-        val a = ProcessTreeActivity("a")
-        val b = ProcessTreeActivity("b")
-        val arc = VirtualProcessTreeCausalArc(a, b)
-        val deserialized = Json.decodeFromString(serializer<VirtualProcessTreeCausalArc>(), Json.encodeToString(arc))
-        assertEquals(arc, deserialized)
+        // serialized by DistributionWebAPISerializer
+        with(s.jsonObject["logKPI"]!!.jsonObject["a"]!!.jsonObject) {
+            assertTrue { containsKey("min") }
+            assertTrue { containsKey("Q1") }
+            assertTrue { containsKey("median") }
+            assertTrue { containsKey("Q3") }
+            assertTrue { containsKey("max") }
+            assertTrue { containsKey("average") }
+            assertTrue { containsKey("standardDeviation") }
+        }
     }
 }

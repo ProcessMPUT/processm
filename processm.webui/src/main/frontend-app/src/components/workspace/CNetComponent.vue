@@ -7,6 +7,7 @@
         v-if="data.data.alignmentKPIReportVersion != null"
         :name="data.name"
       ></alignments-dialog>
+      <kpi-dialog v-if="data.data.alignmentKPIReportVersion != null" :workspace-id="workspaceId" :component-id="data.id"></kpi-dialog>
       <v-tooltip bottom v-if="hasNewerVersion()">
         <template v-slot:activator="{ on, attrs }">
           <v-btn v-bind="attrs" v-on="on" icon v-if="componentMode == ComponentMode.Edit" @click="loadNewestModel">
@@ -73,6 +74,7 @@ import LogTable from "@/components/LogTable.vue";
 import AlignmentsDialog from "@/components/AlignmentsDialog.vue";
 import WorkspaceService from "@/services/WorkspaceService";
 import { ComponentData } from "@/openapi";
+import KpiDialog from "@/components/KpiDialog.vue";
 
 @Component({
   computed: {
@@ -80,7 +82,7 @@ import { ComponentData } from "@/openapi";
       return ComponentMode;
     }
   },
-  components: { AlignmentsDialog, LogTable, Graph }
+  components: { KpiDialog, AlignmentsDialog, LogTable, Graph }
 })
 export default class CNetComponent extends Vue {
   @Inject() workspaceService!: WorkspaceService;

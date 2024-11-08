@@ -20,12 +20,12 @@ data class Report(
      * The log-scope KPIs retrieved form raw numeric attributes of the log.
      * Keys correspond to the attribute/KPI names; values to the KPI values.
      */
-    val logKPI: Map<String, Distribution>,
+    val logKPI: Map<String, @Contextual Distribution>,
     /**
      * The trace-scope KPIs retrieved from raw numeric attributes of the traces.
      * Keys correspond to the attribute/KPI names; values to the distributions of KPI values among traces.
      */
-    val traceKPI: Map<String, Distribution>,
+    val traceKPI: Map<String, @Contextual Distribution>,
     /**
      * The event-scope KPIs retrieved from raw numeric attributes of the events.
      * The first key corresponds to the attribute/KPI name;
@@ -39,6 +39,10 @@ data class Report(
      */
     @Serializable(with = DoublingMap2DStringCausalArcDistributionSerializer::class)
     val arcKPI: Map2D<String, CausalArc, Distribution>,
+    /**
+     * The model-related KPIs, such as Halstead complexity metric
+     */
+    val modelKPI: Map<String, Int>,
 
     /**
      * Alignments corresponding used to calculate this report.

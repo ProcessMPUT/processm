@@ -2,6 +2,7 @@ package processm.conformance.measures
 
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
+import processm.core.models.metadata.URN
 import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.Token
 import processm.core.models.petrinet.Transition
@@ -29,6 +30,13 @@ data class TokenCounters(val p: Int, val c: Int, val m: Int, val r: Int) {
  * Computing fitness using token replay, as described in the PM book chapter 8.2
  */
 class TokenBasedFitness(val model: PetriNet) : Measure<Log, Double> {
+
+    companion object {
+        val URN = URN("urn:processm:measures/token_based_fitness")
+    }
+
+    override val URN: URN
+        get() = TokenBasedFitness.URN
 
     private val activities = model.activities.filter { !it.isSilent }.groupBy { it.name }
 

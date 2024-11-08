@@ -1,5 +1,10 @@
 package processm.enhancement.kpi
 
+import processm.conformance.measures.Fitness
+import processm.conformance.measures.complexity.CFC
+import processm.conformance.measures.complexity.Halstead
+import processm.conformance.measures.complexity.NOAC
+import processm.conformance.measures.precision.ETCPrecision
 import processm.conformance.models.DeviationType
 import processm.conformance.models.alignments.*
 import processm.conformance.models.alignments.cache.CachingAlignerFactory
@@ -71,6 +76,9 @@ class Calculator(
         }
     }
 
+    private val fitness = Fitness(aligner)
+    private val precision = ETCPrecision(aligner.model)
+
     /**
      * Creates new instance of the KPI calculator.
      * @param model The process model.
@@ -97,6 +105,7 @@ class Calculator(
         val eventKPIraw = DoublingMap2D<String, Activity?, ArrayList<Double>>()
         val arcKPIraw = DoublingMap2D<String, CausalArc, ArrayList<Double>>()
         val alignmentList = ArrayList<Alignment>()
+        var start = 0
 
         for (_log in logs) {
             var baseXESStream = _log.toFlatSequence()
@@ -134,6 +143,7 @@ class Calculator(
             }
 
             val alignments = aligner.align(log, eventsSummarizer)
+            start = alignmentList.size
 
             for (alignment in alignments) {
                 for ((index, step) in alignment.steps.withIndex()) {
@@ -185,6 +195,16 @@ class Calculator(
 
                 alignmentList.add(alignment)
             }
+            logKPIraw.compute(Fitness.URN.urn) { _, old ->
+                (old ?: ArrayList()).apply {
+                    add(fitness(log, alignmentList.subList(start, alignmentList.size)))
+                }
+            }
+            logKPIraw.compute(ETCPrecision.URN.urn) { _, old ->
+                (old ?: ArrayList()).apply {
+                    add(precision(log))
+                }
+            }
 
         }
 
@@ -192,7 +212,17 @@ class Calculator(
         val traceKPI = traceKPIraw.mapValues { (_, v) -> Distribution(v) }
         val eventKPI = eventKPIraw.mapValues { _, _, v -> Distribution(v) }
         val arcKPI = arcKPIraw.mapValuesNotNull { _, _, v -> if (v.isNotEmpty()) Distribution(v) else null }
-        return Report(logKPI, traceKPI, eventKPI, arcKPI, alignmentList)
+        val halstead = Halstead(aligner.model)
+        val modelKPI = mapOf(
+            CFC.URN.urn to CFC(aligner.model),
+            Halstead.totalOperatorsURN.urn to halstead.totalOperators,
+            Halstead.totalOperandsURN.urn to halstead.totalOperands,
+            Halstead.uniqueOperatorsURN.urn to halstead.uniqueOperators,
+            Halstead.uniqueOperandsURN.urn to halstead.uniqueOperands,
+            NOAC.URN.urn to NOAC(aligner.model)
+
+        )
+        return Report(logKPI, traceKPI, eventKPI, arcKPI, modelKPI, alignmentList)
     }
 
     /**

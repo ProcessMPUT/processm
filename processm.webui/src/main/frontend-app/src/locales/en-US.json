@@ -18,6 +18,14 @@
     "title": "Alignments for {name}",
     "page-hint": "Replays every trace from the given event log on the model and shows compatible and deviating moves."
   },
+  "kpi-dialog": {
+    "title": "Key performance indicators",
+    "model-kpi": "KPI based on model",
+    "log-kpi":"@:workspace.component.aligner-kpi",
+    "kpi": "KPI",
+    "value": "Value",
+    "log-count": "Log count"
+  },
   "workspace": {
     "default-name": "Workspace",
     "tooltip": {
@@ -435,6 +443,16 @@
     "urn:processm:statistics/suspension_time": "Suspension time",
     "urn:processm:statistics/waiting_time": "Waiting time",
     "days": "days"
+  },
+  "measures": {
+    "urn:processm:measures/control_flow_complexity": "Control flow complexity",
+    "urn:processm:measures/halstead/total_operands": "Total operands",
+    "urn:processm:measures/halstead/total_operators": "Total operators",
+    "urn:processm:measures/halstead/unique_operands": "Unique operands",
+    "urn:processm:measures/halstead/unique_operators": "Unique operators",
+    "urn:processm:measures/number_of_activities_and_control_structures": "Number of activities and control structures",
+    "urn:processm:measures/etc_precision": "ETC precision",
+    "urn:processm:measures/fitness": "Fitness"
   },
   "notifications": {
     "new-model-available": {

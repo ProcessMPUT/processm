@@ -18,6 +18,14 @@
     "title": "Wyrównania dla {name}",
     "page-hint": "Odtwarza każdy ślad z dziennika zdarzeń na modelu i wskazuje zgodne i odbiegające ruchy."
   },
+  "kpi-dialog": {
+    "title": "Kluczowe wskaźniki efektywności (KPI)",
+    "model-kpi": "KPI bazujące na modelu",
+    "log-kpi":"@:workspace.component.aligner-kpi",
+    "kpi": "KPI",
+    "value": "Wartość",
+    "log-count": "Liczba logów"
+  },
   "workspace": {
     "default-name": "Przestrzeń robocza",
     "tooltip": {
@@ -435,6 +443,16 @@
     "urn:processm:statistics/suspension_time": "Czas wstrzymania",
     "urn:processm:statistics/waiting_time": "Czas oczekiwania",
     "days": "dni"
+  },
+  "measures": {
+    "urn:processm:measures/control_flow_complexity": "Złożoność przepływu sterowania",
+    "urn:processm:measures/halstead/total_operands": "Liczba operandów",
+    "urn:processm:measures/halstead/total_operators": "Liczba operatorów",
+    "urn:processm:measures/halstead/unique_operands": "Unikalne operandy",
+    "urn:processm:measures/halstead/unique_operators": "Unikalne operatory",
+    "urn:processm:measures/number_of_activities_and_control_structures": "Liczba aktywności i struktur sterujących",
+    "urn:processm:measures/etc_precision": "Precyzja ETC",
+    "urn:processm:measures/fitness": "Dopasowanie"
   },
   "notifications": {
     "new-model-available": {

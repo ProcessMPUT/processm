@@ -121,30 +121,28 @@ private object DistributionWebAPISerializer : KSerializer<Distribution> {
 
     override fun deserialize(decoder: Decoder): Distribution {
         decoder as JsonDecoder
-        decoder.beginStructure(descriptor)
-        val min = decoder.decodeDoubleElement(descriptor, 0)
-        val Q1 = decoder.decodeDoubleElement(descriptor, 1)
-        val median = decoder.decodeDoubleElement(descriptor, 2)
-        val Q3 = decoder.decodeDoubleElement(descriptor, 3)
-        val max = decoder.decodeDoubleElement(descriptor, 4)
-        val average = decoder.decodeDoubleElement(descriptor, 5)
-        val standardDeviation = decoder.decodeDoubleElement(descriptor, 6)
-        decoder.endStructure(descriptor)
-        // FIXME: #254 Distribution actually does not allow for setting individual aggregates and raw data is not available here.
-        return Distribution(doubleArrayOf(min, Q1, median, Q3, max))
+        // FIXME: There was code using decoder.beginStructure etc., very similar to the one used by `serialize`, but
+        // FIXME: for some reason it completely failed when Distribution was nested inside a Map.
+        with(decoder.decodeJsonElement().jsonObject) {
+            val values =
+                (0 until descriptor.elementsCount).map { this[descriptor.getElementName(it)]!!.jsonPrimitive.double }
+            // FIXME: #254 Distribution actually does not allow for setting individual aggregates and raw data is not available here.
+            return Distribution(values.toDoubleArray())
+        }
     }
 
     override fun serialize(encoder: Encoder, value: Distribution) {
         encoder as JsonEncoder
-        encoder.beginStructure(descriptor)
-        encoder.encodeDoubleElement(descriptor, 0, value.min)
-        encoder.encodeDoubleElement(descriptor, 1, value.Q1)
-        encoder.encodeDoubleElement(descriptor, 2, value.median)
-        encoder.encodeDoubleElement(descriptor, 3, value.Q3)
-        encoder.encodeDoubleElement(descriptor, 4, value.max)
-        encoder.encodeDoubleElement(descriptor, 5, value.average)
-        encoder.encodeDoubleElement(descriptor, 6, value.standardDeviation)
-        encoder.endStructure(descriptor)
+        with(encoder.beginStructure(descriptor)) {
+            encodeDoubleElement(descriptor, 0, value.min)
+            encodeDoubleElement(descriptor, 1, value.Q1)
+            encodeDoubleElement(descriptor, 2, value.median)
+            encodeDoubleElement(descriptor, 3, value.Q3)
+            encodeDoubleElement(descriptor, 4, value.max)
+            encodeDoubleElement(descriptor, 5, value.average)
+            encodeDoubleElement(descriptor, 6, value.standardDeviation)
+            endStructure(descriptor)
+        }
     }
 
 }
