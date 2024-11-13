@@ -88,12 +88,12 @@ export default class Graph extends Vue {
             if (kpi == "time:timestamp") {
               const f = (d: number) => dateFormat.format(new Date(d));
               const days = d.standardDeviation! / 86400000;
-              return `${f(d.average!)} &pm; ${numberFormat.format(days)} ${self.$t("statistics.days")} [${f(d.min!)}, ${f(d.max!)}]`;
+              return `${f(d.average!)} &pm; ${numberFormat.format(days)} ${self.$t("kpi.days")} [${f(d.min!)}, ${f(d.max!)}]`;
             } else if (kpi == "urn:processm:statistics/count") {
               return intFormat.format(d.median!);
             } else {
               const f = (d: number) => numberFormat.format(d);
-              const days = self.$t("statistics.days");
+              const days = self.$t("kpi.days");
               return `${f(d.average!)} ${days} &pm; ${f(d.standardDeviation!)} ${days} [${f(d.min!)} ${days}, ${f(d.max!)} ${days}]`;
             }
           };
@@ -103,7 +103,7 @@ export default class Graph extends Vue {
             Object.entries(kpis)
               .sort((kpi1, kpi2) => kpi1[0].localeCompare(kpi2[0]))
               .map((kpi) => {
-                const label = self.$te(`statistics.${kpi[0]}`) ? self.$t(`statistics.${kpi[0]}`) : kpi[0];
+                const label = self.$te(`kpi.${kpi[0]}`) ? self.$t(`kpi.${kpi[0]}`) : kpi[0];
                 const val = kpi[1][model.id!];
                 if (val !== undefined) return `<tr><td>${label}</td><td>${format(kpi[0], val)}</td></tr>`;
               })

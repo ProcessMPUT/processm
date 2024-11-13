@@ -1,11 +1,11 @@
 <template>
-  <v-dialog v-model="value" @click:outside="value = false" max-width="500" @keydown.esc="value = false">
+  <v-dialog v-model="value" @click:outside="value = false" max-width="600" @keydown.esc="value = false">
     <template v-slot:activator="{ on, attrs }">
       <v-btn icon v-bind="attrs" v-on="on">
         <v-icon>table_view</v-icon>
       </v-btn>
     </template>
-    <v-data-table dense :loading="loading" :items="this.items" group-by="group">
+    <v-data-table dense :loading="loading" :items="this.items" group-by="group" sort-by="key">
       <template v-slot:top>
         <v-toolbar color="primary" dark>
           <v-btn dark icon name="btn-close" @click="value = false">
@@ -20,12 +20,16 @@
       </template>
       <template v-slot:item="{ item }">
         <tr>
-          <td>{{ $te(item.key) ? $t(item.key) : item.kpi }}</td>
+          <td>{{ item.key }}</td>
           <td>{{ item.value }}</td>
         </tr>
       </template>
       <template v-slot:group.header="{ group }">
         <th colspan="2">{{ $t(group) }}</th>
+      </template>
+      <template v-slot:header="{ header }">
+        <th>{{ $t("kpi-dialog.kpi") }}</th>
+        <th>{{ $t("kpi-dialog.value") }}</th>
       </template>
     </v-data-table>
   </v-dialog>
@@ -70,27 +74,42 @@ export default class KpiDialog extends Vue {
     this.items = [];
     if (this.report !== undefined && this.report !== null) {
       for (const e of Object.entries(this.report?.modelKPI)) {
+        const kpi = e[0];
+        const key = `kpi.${kpi}`;
         this.items.push({
-          key: `measures.${e[0]}`,
+          key: `${this.$te(key) ? this.$t(key) : kpi}`,
           kpi: e[0],
           value: this.intFormat.format(e[1]),
           group: "kpi-dialog.model-kpi"
         });
       }
       for (const e of Object.entries(this.report?.logKPI)) {
-        let key = `measures.${e[0]}`;
-        const d = this.report?.logKPI[e[0]];
+        let kpi = e[0];
+        let key = `kpi.${kpi}`;
+        const d = this.report?.logKPI[kpi];
         let value = "";
 
-        if (e[0] == "urn:processm:statistics/count") {
+        if (kpi == "urn:processm:statistics/count") {
           key = "kpi-dialog.log-count";
           value = this.intFormat.format(d.median!);
         } else {
           const f = this.numberFormat.format;
-          if (d.standardDeviation == 0 && d.average == d.min && d.min == d.max) value = f(d.average!);
-          else value = `${f(d.average!)} ± ${f(d.standardDeviation!)} [${f(d.min!)}, ${f(d.max!)}]`;
+          let unit = "";
+          if (kpi.endsWith("_time")) unit = ` ${this.$t("kpi.days")}`;
+          if (kpi.startsWith("cost:total:")) {
+            unit = " " + kpi.substr("cost:total:".length);
+            key = "kpi.cost:total";
+            kpi = "cost:total";
+          }
+          if (d.standardDeviation == 0 && d.average == d.min && d.min == d.max) value = `${f(d.average!)}${unit}`;
+          else value = `${f(d.average!)} ± ${f(d.standardDeviation!)}${unit} [${f(d.min!)}, ${f(d.max!)}]`;
         }
-        this.items.push({ key: key, kpi: e[0], value: value, group: "kpi-dialog.log-kpi" });
+        this.items.push({
+          key: `${this.$te(key) ? this.$t(key) : kpi}`,
+          kpi: kpi,
+          value: value,
+          group: "kpi-dialog.log-kpi"
+        });
       }
     }
     this.loading = false;
