@@ -51,7 +51,7 @@ const routes = [
   {
     path: "/pql-docs",
     name: "pql-docs",
-    component: () => import("@/views/PQLDocs.vue")
+    component: () => import("@/generated/PQLDocs.vue")
   },
   {
     path: "/login",

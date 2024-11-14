@@ -11,3 +11,4 @@ processm.core/gen/
 *dependency-reduced-pom.xml
 debezium*.dat
 /processm.webui/src/main/frontend-app/tsconfig.tsbuildinfo
+/processm.webui/src/main/frontend-app/src/generated/
