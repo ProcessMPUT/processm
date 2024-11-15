@@ -1337,4 +1337,31 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
         }
     }
+
+    private fun ProcessMTestingEnvironment.aclTestHelper() {
+        registerUser("test@example.com", "some organization")
+        login("test@example.com", "P@ssw0rd!")
+        currentWorkspaceId = post<Paths.Workspaces, NewWorkspace, UUID>(NewWorkspace("workspace")) {
+            return@post body<Workspace>().id!!
+        }
+        get("acl/urn%3Aprocessm%3Adb%2Fworkspaces%2F${currentWorkspaceId}") {
+            assertEquals(HttpStatusCode.OK, this.status)
+        }
+    }
+
+    /**
+     * Test for #332
+     */
+    @Test
+    fun `ACL over HTTP2`() {
+        ProcessMTestingEnvironment().withFreshDatabase().withHttp2().run { aclTestHelper() }
+    }
+
+    /**
+     * Test for #332
+     */
+    @Test
+    fun `ACL over HTTP1`() {
+        ProcessMTestingEnvironment().withFreshDatabase().run { aclTestHelper() }
+    }
 }

@@ -312,5 +312,11 @@
             <version>4.16.1</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-client-java-jvm</artifactId>
+            <version>${ktor.client.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

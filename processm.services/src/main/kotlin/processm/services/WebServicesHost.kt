@@ -30,9 +30,9 @@ class WebServicesHost : Service {
     override fun start() = loggedScope { logger ->
         logger.debug("Starting HTTP server")
         // A work-around, because it seems ktor reads properties once into its own static cache
-        val args = System.getProperty("ktor.deployment.port")?.let { port ->
-            arrayOf("-port=$port")
-        } ?: emptyArray<String>()
+        val args = listOfNotNull(System.getProperty("ktor.deployment.port")?.let { port -> "-port=$port" },
+            System.getProperty("ktor.deployment.sslPort")?.let { port -> "-sslPort=$port" }
+        ).toTypedArray()
         try {
             env = commandLineEnvironment(args)
         } catch (e: IllegalArgumentException) {
