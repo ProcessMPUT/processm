@@ -1,5 +1,5 @@
 lexer grammar QLLexer;
-// lexer rules start with uppercase letters
+// Lexer rules start with uppercase letters
 tokens {STRING}
 @lexer::members {
     private void go(int diff) {
