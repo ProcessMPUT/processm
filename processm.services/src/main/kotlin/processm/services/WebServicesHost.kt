@@ -79,13 +79,13 @@ class WebServicesHost : Service {
             }
         })
         engine.start()
-        status = ServiceStatus.Started
         /*
         Change HttpCompliance to a variant that permits ambiguous URLs, which ProcessM relies on, since it transmits
         URNs in the URLs. RFC7230 seems to be the most stringent of the options available by default that supports
         this use case.
          */
         leakedServer?.addBeanToAllConnectors(HttpCompliance.RFC7230)
+        status = ServiceStatus.Started
 
         logger.info(
             "HTTP server started on port ${engine.environment.config.property("ktor.deployment.sslPort").getString()}"
