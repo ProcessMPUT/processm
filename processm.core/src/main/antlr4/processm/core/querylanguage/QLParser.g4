@@ -1,9 +1,9 @@
 parser grammar QLParser;
 options { tokenVocab=QLLexer; }
 // Process Query Language
-// See https://git.processtom.com/processm-team/processm/-/wikis/Process-Query-Language for language details.
+// See https://github.com/ProcessMPUT/processm/blob/master/docs/pql.md for language details.
 
-// parser rules start with lowercase letters
+// Parser rules start with lowercase letters
 // Axiom.
 query       : read_query EOF
             | delete_query EOF
