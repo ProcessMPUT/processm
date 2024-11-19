@@ -3,6 +3,8 @@ package processm.services
 import io.ktor.network.tls.certificates.*
 import io.ktor.server.engine.*
 import io.ktor.server.jetty.*
+import org.eclipse.jetty.http.HttpCompliance
+import org.eclipse.jetty.server.Server
 import processm.core.esb.Service
 import processm.core.esb.ServiceStatus
 import processm.logging.loggedScope
@@ -30,9 +32,9 @@ class WebServicesHost : Service {
     override fun start() = loggedScope { logger ->
         logger.debug("Starting HTTP server")
         // A work-around, because it seems ktor reads properties once into its own static cache
-        val args = System.getProperty("ktor.deployment.port")?.let { port ->
-            arrayOf("-port=$port")
-        } ?: emptyArray<String>()
+        val args = listOfNotNull(System.getProperty("ktor.deployment.port")?.let { port -> "-port=$port" },
+            System.getProperty("ktor.deployment.sslPort")?.let { port -> "-sslPort=$port" }
+        ).toTypedArray()
         try {
             env = commandLineEnvironment(args)
         } catch (e: IllegalArgumentException) {
@@ -59,10 +61,30 @@ class WebServicesHost : Service {
             )
             assert(env.config.propertyOrNull(keyStoreProperty) != null)
         }
+        /*
+        This is abhorrent. However, due to the following I see no other way.
+        1. JettyApplicationEngineBase (the parent for JettyApplicationEngine, used by the object Jetty below)
+        first calls to configureServer and only then to Server.initializeServer (from io.ktor.server.jetty)
+        2. Server.addBeanToAllConnectors only adds the bean to connectors already registered in the server, not to
+        connectors that will be registered in the future
+        3. It is the responsibility of initializeServer to add connectors
+        4. server is a protected variable in JettyApplicationEngine(Base)
+        5. JettyApplicationEngine is not open (aka sealed)
+        6. Copy-pasting JettyApplicationEngine would be even worse
+         */
+        var leakedServer: Server? = null
         engine = embeddedServer(Jetty, env, configure = {
-            // Nothing for now
+            configureServer = {
+                leakedServer = this
+            }
         })
         engine.start()
+        /*
+        Change HttpCompliance to a variant that permits ambiguous URLs, which ProcessM relies on, since it transmits
+        URNs in the URLs. RFC7230 seems to be the most stringent of the options available by default that supports
+        this use case.
+         */
+        leakedServer?.addBeanToAllConnectors(HttpCompliance.RFC7230)
         status = ServiceStatus.Started
 
         logger.info(

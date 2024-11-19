@@ -41,10 +41,14 @@ import processm.services.helpers.readSSE
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.nio.file.Files
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ForkJoinPool
 import java.util.zip.ZipInputStream
+import javax.net.ssl.SSLContext
+import javax.net.ssl.X509TrustManager
 import kotlin.coroutines.CoroutineContext
 import kotlin.reflect.full.findAnnotation
 import kotlin.test.assertEquals
@@ -64,7 +68,20 @@ class ProcessMTestingEnvironment : CoroutineScope {
     var currentComponentId: UUID? = null
     var properties: HashMap<String, String> = HashMap()
 
-    val client = HttpClient(CIO) {
+    lateinit var client: HttpClient
+
+    private fun createHttp1Client(): HttpClient =
+        HttpClient(CIO) {
+            expectSuccess = true
+            install(ContentNegotiation) {
+                json(JsonSerializer)
+            }
+            install(HttpTimeout) {
+                requestTimeoutMillis = 300_000
+            }
+        }
+
+    private fun createHttp2Client(): HttpClient = HttpClient(io.ktor.client.engine.java.Java) {
         expectSuccess = true
         install(ContentNegotiation) {
             json(JsonSerializer)
@@ -72,7 +89,27 @@ class ProcessMTestingEnvironment : CoroutineScope {
         install(HttpTimeout) {
             requestTimeoutMillis = 300_000
         }
+        engine {
+            protocolVersion = java.net.http.HttpClient.Version.HTTP_2
+            config {
+                this.sslContext(SSLContext.getInstance("TLS").apply {
+                    val tm = object : X509TrustManager {
+                        override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {
+                        }
+
+                        override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {
+                        }
+
+                        override fun getAcceptedIssuers(): Array<X509Certificate> {
+                            return emptyArray()
+                        }
+                    }
+                    this.init(null, arrayOf(tm), SecureRandom())
+                })
+            }
+        }
     }
+
 
     override lateinit var coroutineContext: CoroutineContext
         private set
@@ -120,11 +157,18 @@ class ProcessMTestingEnvironment : CoroutineScope {
     private val sakilaEnv = lazy { PostgreSQLEnvironment.getSakila() }
     private var temporaryDebeziumDirectory: File? = null
     private var httpPort: Int = -1
+    private var httpsPort: Int = -1
+    private var useHttp2: Boolean = false
 
     val sakilaJdbcUrl: String
         get() = with(sakilaEnv.value) {
             "$jdbcUrl&user=$user&password=$password"
         }
+
+    fun withHttp2(): ProcessMTestingEnvironment {
+        this.useHttp2 = true
+        return this
+    }
 
     fun withPreexistingDatabase(jdbcUrl: String): ProcessMTestingEnvironment {
         this.jdbcUrl = jdbcUrl
@@ -156,6 +200,7 @@ class ProcessMTestingEnvironment : CoroutineScope {
     @OptIn(ExperimentalCoroutinesApi::class)
     fun <T> run(block: ProcessMTestingEnvironment.() -> T) {
         try {
+            client = if (useHttp2) createHttp2Client() else createHttp1Client()
             loadConfiguration(true)
             properties.forEach { (k, v) -> System.setProperty(k, v) }
             jdbcUrl?.let { jdbcUrl ->
@@ -163,7 +208,9 @@ class ProcessMTestingEnvironment : CoroutineScope {
                 Migrator.reloadConfiguration()
             }
             httpPort = portSequence.next()
+            httpsPort = portSequence.next()
             System.setProperty("ktor.deployment.port", httpPort.toString())
+            System.setProperty("ktor.deployment.sslPort", httpsPort.toString())
             pool = Executors.newFixedThreadPool(7).asCoroutineDispatcher()
             EnterpriseServiceBus().use { esb ->
                 esb.autoRegister()
@@ -188,7 +235,8 @@ class ProcessMTestingEnvironment : CoroutineScope {
 
     // region HTTP
 
-    fun apiUrl(endpoint: String): String = "http://localhost:$httpPort/api/${endpoint}"
+    fun apiUrl(endpoint: String): String =
+        if (useHttp2) "https://localhost:$httpsPort/api/${endpoint}" else "http://localhost:$httpPort/api/${endpoint}"
 
     inline fun <reified Endpoint> format(vararg args: Pair<String, String?>): String = format<Endpoint>(args.toMap())
 
