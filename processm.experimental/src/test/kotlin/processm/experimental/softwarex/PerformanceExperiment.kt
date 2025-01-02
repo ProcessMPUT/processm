@@ -4,36 +4,35 @@ import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.*
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.slf4j.LoggerFactory
-import processm.core.log.hierarchical.Trace
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.Log
-import processm.helpers.asList
-import processm.miners.causalnet.onlineminer.OnlineMiner
-import processm.miners.causalnet.onlineminer.replayer.SingleReplayer
-import processm.miners.processtree.inductiveminer.OnlineInductiveMiner
-import kotlinx.serialization.json.*
+import processm.core.log.hierarchical.Trace
 import processm.core.models.commons.ProcessModel
 import processm.enhancement.kpi.Calculator
-import processm.enhancement.kpi.Report
+import processm.helpers.asList
 import processm.logging.logger
 import processm.miners.ALGORITHM_HEURISTIC_MINER
 import processm.miners.ALGORITHM_INDUCTIVE_MINER
 import processm.miners.ALGORITHM_ORIGINAL_HEURISTIC_MINER
 import processm.miners.causalnet.heuristicminer.OriginalHeuristicMiner
-
+import processm.miners.causalnet.onlineminer.OnlineMiner
+import processm.miners.causalnet.onlineminer.replayer.SingleReplayer
+import processm.miners.processtree.inductiveminer.OnlineInductiveMiner
 import java.io.File
 import java.io.FileOutputStream
 import java.io.PrintStream
 import java.lang.management.ManagementFactory
 import java.time.Instant
 import java.util.zip.GZIPInputStream
-import kotlin.test.*
+import kotlin.test.Ignore
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 val JsonSerializer = Json {
     allowSpecialFloatingPointValues = true
@@ -190,6 +189,7 @@ class PerformanceExperiment {
         }
     }
 
+    @Ignore("Not a test")
     @Test
     fun test() {
         val resultStream = PrintStream(FileOutputStream("softwarex.jsonl", true))
