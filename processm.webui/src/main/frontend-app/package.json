@@ -1,6 +1,6 @@
 {
   "name": "ProcessM",
-  "version": "0.7.1",
+  "version": "0.7.1-dev",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
@@ -87,17 +87,16 @@
     "eslint-plugin-prettier": "^3.4.0",
     "eslint-plugin-vue": "^8.7.1",
     "jest": "^27.3.1",
-    "mocker-api": "^1.14.0",
     "prettier": "2.1.2",
     "sass": "^1.43.4",
     "sass-loader": "^10.5.2",
     "ts-jest": "^27.0.7",
     "typescript": "~4.1",
-    "vue-cli-plugin-i18n": "~0.6.1",
-    "vue-cli-plugin-vuetify": "^2.4.0",
+    "vue-cli-plugin-i18n": "^1.0.1",
+    "vue-cli-plugin-vuetify": "^2.4.8",
     "vue-loader": "^17.4.2",
-    "vue-template-compiler": "^2.6.12",
+    "vue-template-compiler": "^2.6.14",
     "vuetify-loader": "^1.9.2",
-    "webpack": "^5.90.1"
+    "webpack": "^5.97.1"
   }
 }
