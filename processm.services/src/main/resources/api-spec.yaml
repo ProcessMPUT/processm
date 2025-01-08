@@ -2158,7 +2158,7 @@ components:
           type: string
     Workspace:
       type: object
-      required: [ name ]
+      required: [ id, name ]
       properties:
         id:
           type: string

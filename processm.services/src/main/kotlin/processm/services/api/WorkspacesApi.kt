@@ -15,7 +15,6 @@ import kotlinx.serialization.encodeToString
 import org.koin.ktor.ext.inject
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.RoleType
-import processm.dbmodels.models.WorkspaceComponent
 import processm.dbmodels.models.Workspaces
 import processm.helpers.mapToArray
 import processm.logging.loggedScope
@@ -51,7 +50,14 @@ fun Route.WorkspacesApi() {
 
             val workspaceId = workspaceService.create(newWorkspace.name, principal.userId, newWorkspace.organizationId)
 
-            call.respond(HttpStatusCode.Created, Workspace(newWorkspace.name, workspaceId))
+            call.respond(
+                HttpStatusCode.Created,
+                Workspace(
+                    id = workspaceId,
+                    name = newWorkspace.name,
+                    role = OrganizationRole.owner
+                )
+            )
         }
 
         delete<Paths.Workspace> { path ->
@@ -66,7 +72,13 @@ fun Route.WorkspacesApi() {
         get<Paths.Workspaces> {
             val principal = call.authentication.principal<ApiUser>()!!
             val workspaces = workspaceService.getUserWorkspaces(principal.userId)
-                .map { Workspace(it.first.name, it.first.id.value, OrganizationRole.valueOf(it.second.value)) }
+                .map {
+                    Workspace(
+                        id = it.first.id.value,
+                        name = it.first.name,
+                        role = OrganizationRole.valueOf(it.second.value)
+                    )
+                }
                 .toTypedArray()
 
             call.respond(HttpStatusCode.OK, workspaces)
