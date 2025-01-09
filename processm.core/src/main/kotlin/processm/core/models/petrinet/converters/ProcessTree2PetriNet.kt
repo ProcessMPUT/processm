@@ -87,18 +87,16 @@ private class ProcessTree2PetriNet(val tree: ProcessTree) {
         val candidates = auxiliaries + activities.filter { it.key.isSilent }.values
         var modified = false
         for (c in candidates) {
-            val d = auxiliaries.singleOrNull { outPlaces[c] == inPlaces[it] } ?: continue
+            val places = outPlaces[c] ?: continue
+            val d =
+                auxiliaries.singleOrNull {
+                    places == inPlaces[it] &&
+                            outPlaces.entries.singleOrNull { e -> e.value.intersect(places).isNotEmpty() }?.key == c &&
+                            inPlaces.entries.singleOrNull { e -> e.value.intersect(places).isNotEmpty() }?.key == it
+                }
+                    ?: continue
             outPlaces.remove(d)?.let {
-                outPlaces.merge(c, it) { a, b ->
-                    a.addAll(b)
-                    a
-                }
-            }
-            inPlaces.remove(d)?.let {
-                inPlaces.merge(c, it) { a, b ->
-                    a.addAll(b)
-                    a
-                }
+                outPlaces[c] = it
             }
             removeTransition(d)
             modified = true
