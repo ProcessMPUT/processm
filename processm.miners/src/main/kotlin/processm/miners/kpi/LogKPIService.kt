@@ -12,6 +12,7 @@ import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.persistence.connection.transactionMain
 import processm.core.querylanguage.Query
 import processm.dbmodels.models.*
+import processm.helpers.AbstractLocalizedException
 import processm.helpers.toUUID
 import processm.logging.loggedScope
 import java.time.Instant
@@ -90,14 +91,17 @@ class LogKPIService : AbstractJobService(
                     val stream =
                         DBHierarchicalXESInputStream(component.dataStoreId.toString(), Query(component.query), false)
                     val first = stream.take(2).toList()
-                    require(first.size == 1) { "The query must return exactly one log." }
-                    require(first[0].attributes.size == 1) { "The query must return exactly one attribute." }
+                    require(first.size == 1) { "The query returned ${first.size} event logs but exactly one event log is expected." }
+                    require(first[0].attributes.size == 1) { "The query returned ${first[0].attributes.size} attributes but exactly one attribute is expected." }
 
                     component.data = first[0].attributes.values.first().toString()
                     component.dataLastModified = Instant.now()
                     component.lastError = null
                 } catch (e: Exception) {
-                    component.lastError = e.message
+                    // FIXME: drop hardcoded locale in favor of storing error id or serialized exception and formatting
+                    //  error messages in processm.services for the given request locale
+                    component.lastError =
+                        if (e is AbstractLocalizedException) e.localizedMessage(Locale.ENGLISH) else e.message
                     logger.warn("Cannot calculate log-based KPI for component with id $id.", e)
                 }
                 component.triggerEvent(Producer(), WorkspaceComponentEventType.DataChange)
