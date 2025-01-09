@@ -144,8 +144,13 @@ export default class WorkspaceArea extends Vue {
   @Prop({ default: false })
   readonly viewOnly!: boolean;
 
-  readonly defaultComponentWidth = 4;
-  readonly defaultComponentHeight = 4;
+  readonly defaultComponentWidth = 12;
+  readonly defaultComponentHeight = 6;
+  /**
+   * Default width of small components, like e.g. KPI
+   */
+  readonly defaultSmallComponentWidth = 4;
+  readonly defaultSmallComponentHeight = 4;
   readonly tooltipOpenDelay = 200;
   dirtyLayout = false;
   unlocked = false;
@@ -288,6 +293,11 @@ export default class WorkspaceArea extends Vue {
     const emptyComponent = await this.workspaceService.getEmptyComponent(componentType);
     emptyComponent.id = componentId;
     emptyComponent.dataStore = "";
+    if (componentType == ComponentType.Kpi) {
+      let layout = this.layout.find((l) => l.i === componentId)!;
+      layout.w = this.defaultSmallComponentWidth;
+      layout.h = this.defaultSmallComponentHeight;
+    }
     this.componentsDetails.set(componentId, new WorkspaceComponentModel(emptyComponent));
     this.editComponent(componentId);
   }
