@@ -148,7 +148,7 @@ export default class PetriNetEditor extends Vue {
 
     this.layouter = new BlockLayouter(this.debug);
 
-    this.redraw();
+    waitForRepaint(this.redraw.bind(this));
   }
 
   redraw(forceLayouter: boolean = false) {
