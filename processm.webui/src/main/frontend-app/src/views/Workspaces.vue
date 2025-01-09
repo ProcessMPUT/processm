@@ -2,7 +2,7 @@
   <v-container class="px-0" fluid>
     <v-row class="workspace mx-0">
       <v-tabs-items v-model="currentWorkspaceIndex" style="overflow: auto">
-        <v-tab-item v-for="workspace in workspaces" :key="workspace.index">
+        <v-tab-item v-for="workspace in workspaces" :key="workspace.id">
           <workspace-area :workspaceId="workspace.id" :view-only="isViewOnly(workspace)" />
         </v-tab-item>
       </v-tabs-items>
@@ -38,7 +38,8 @@
             </v-list-item>
           </v-list>
         </v-menu>
-        <v-tab v-for="workspace in workspaces" :id="`workspace-tab-${workspace.id}`":key="workspace.index">{{ workspace.name }}
+        <v-tab v-for="workspace in workspaces" :id="`workspace-tab-${workspace.id}`" :key="workspace.id">
+          {{ workspace.name }}
         </v-tab>
         <v-btn tile color="primary lighten-1" @click="createWorkspace" name="btn-create-workspace">
           <v-icon>add_box</v-icon>
@@ -50,7 +51,7 @@
         @submitted="renameWorkspace"
         :old-name="workspaceNameToRename"
       />
-      <acl-dialog :force-view-only="false" :urn="currentWorkspaceUrn":value="aclDialogDisplayed" @closed="aclDialogDisplayed = false"  />
+      <acl-dialog :force-view-only="false" :urn="currentWorkspaceUrn" :value="aclDialogDisplayed" @closed="aclDialogDisplayed = false" />
     </v-row>
   </v-container>
 </template>
@@ -136,8 +137,8 @@ export default class Workspaces extends Vue {
     const removedWorkspaceIndex = this.currentWorkspaceIndex;
 
     await this.workspaceService.removeWorkspace(this.workspaces[removedWorkspaceIndex].id!);
-    this.currentWorkspaceIndex = Math.max(0, this.currentWorkspaceIndex - 1);
     this.workspaces.splice(removedWorkspaceIndex, 1);
+    this.currentWorkspaceIndex = Math.max(0, this.currentWorkspaceIndex - 1);
   }
 
   async renameWorkspace(newName: string) {

@@ -6,6 +6,7 @@ export class SvgArc {
 
   readonly model: Arc;
 
+  private readonly _svgId: string;
   private readonly _svgGroup: SVGSelection;
   private readonly _svgLine: SVGLineSelection;
 
@@ -14,31 +15,22 @@ export class SvgArc {
   private x2 = 0;
   private y2 = 0;
 
-  constructor(svg: SVGSelection, arc: Arc) {
+  constructor(svgId: string, svg: SVGSelection, arc: Arc) {
     this.model = arc;
 
+    this._svgId = svgId;
     this._svgGroup = svg.select(".arcs");
 
-    this._svgLine = SvgArc.createLine(this._svgGroup, SvgArc.WIDTH).attr(
-      "id",
-      this.model.id
-    );
+    this._svgLine = SvgArc.createLine(this._svgId, this._svgGroup, SvgArc.WIDTH).attr("id", this.model.id);
   }
 
-  static createLine(scope: SVGSelection, width: number): SVGLineSelection {
-    return scope
-      .append("line")
-      .attr("fill", "none")
-      .attr("stroke", "black")
-      .attr("stroke-width", width)
-      .attr("marker-end", "url(#arrow)");
+  static createLine(svgId: string, scope: SVGSelection, width: number): SVGLineSelection {
+    return scope.append("line").attr("fill", "none").attr("stroke", "black").attr("stroke-width", width).attr("marker-end", `url(#arrow-${svgId})`);
   }
 
   private static makeNanSafe(value: number): number {
-    if(isFinite(value))
-      return value
-    else
-      return 0;
+    if (isFinite(value)) return value;
+    else return 0;
   }
 
   delete() {

@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.koin.test.mock.declareMock
-import processm.core.communication.Producer
 import processm.core.esb.Artemis
 import processm.core.models.metadata.URN
 import processm.dbmodels.models.*
@@ -122,7 +121,7 @@ class NotificationsApiTest : BaseApiTest() {
                     repeat(5) {
                         delay(200L)
                         println("Producing")
-                        component1.triggerEvent(Producer(), WorkspaceComponentEventType.DataChange)
+                        component1.triggerEvent(eventData = DataChangeType.Model)
                     }
                 }
                 runBlocking {
@@ -160,8 +159,8 @@ class NotificationsApiTest : BaseApiTest() {
             withAuthentication(userId) {
                 launch(context = Dispatchers.Request) {
                     sync.receive()
-                    component1.triggerEvent(Producer(), WorkspaceComponentEventType.DataChange)
-                    component2.triggerEvent(Producer(), WorkspaceComponentEventType.DataChange)
+                    component1.triggerEvent(eventData = DataChangeType.Model)
+                    component2.triggerEvent(eventData = DataChangeType.Model)
                 }
                 runBlocking {
                     handleSse("/api/notifications") { channel ->
@@ -199,7 +198,7 @@ class NotificationsApiTest : BaseApiTest() {
                 }
                 runBlocking {
                     repeat(n) { sync.receive() }
-                    component1.triggerEvent(Producer(), WorkspaceComponentEventType.DataChange)
+                    component1.triggerEvent(eventData = DataChangeType.Model)
                     jobs.forEach { it.join() }
                 }
             }
@@ -233,7 +232,7 @@ class NotificationsApiTest : BaseApiTest() {
             }
             runBlocking {
                 repeat(n) { sync.receive() }
-                component1.triggerEvent(Producer(), WorkspaceComponentEventType.DataChange)
+                component1.triggerEvent(eventData = DataChangeType.Model)
                 jobs.forEach { it.join() }
             }
         }

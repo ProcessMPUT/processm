@@ -6,7 +6,6 @@ import org.jetbrains.exposed.sql.deleteWhere
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import processm.core.DBTestHelper
-import processm.core.communication.Producer
 import processm.core.esb.Artemis
 import processm.core.esb.ServiceStatus
 import processm.core.persistence.connection.transactionMain
@@ -46,7 +45,7 @@ class LogKPIServiceTests {
                 query = _query
                 workspace = Workspace.all().firstOrNull() ?: Workspace.new { name = "test-workspace" }
             }
-        }.triggerEvent(Producer(), WorkspaceComponentEventType.ComponentCreatedOrUpdated)
+        }.triggerEvent(event = WorkspaceComponentEventType.ComponentCreatedOrUpdated)
     }
 
     @AfterTest
@@ -154,7 +153,7 @@ class LogKPIServiceTests {
                 }.first()
                 component.query = "select count(^t:name) where l:name='JournalReview'"
                 component
-            }.triggerEvent(Producer(), WorkspaceComponentEventType.ComponentCreatedOrUpdated)
+            }.triggerEvent(event = WorkspaceComponentEventType.ComponentCreatedOrUpdated)
 
 
             Thread.sleep(1000L) // wait for calculation
