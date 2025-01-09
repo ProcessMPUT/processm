@@ -39,6 +39,9 @@
     </div>
     <div class="workspace-component-content-parent ignore-drag">
       <v-progress-linear :active="loading" :indeterminate="true" absolute class="progressbar" color="secondary accent-4" top></v-progress-linear>
+      <v-alert v-if="componentDetails?.lastError !== undefined && !isInEditMode" dense type="error">
+        {{ componentDetails.lastError }}
+      </v-alert>
       <component
         :is="componentType"
         v-if="isDisplayable"
@@ -48,7 +51,7 @@
         :update-data="updateData"
         class="workspace-component-content fill-height"
       />
-      <p v-else class="no-data">{{ $t("workspace.component.no-data") }}</p>
+      <v-alert v-else dense type="warning">{{ $t("workspace.component.no-data") }}</v-alert>
       <div class="last-updated">
         {{ $t("common.last-updated") }}:
         {{ new Date(lastModified + "Z").toLocaleString() }}
@@ -96,10 +99,6 @@ button.v-btn.v-btn.component-name[type="button"] {
   position: absolute;
   top: 2px;
   right: 2px;
-}
-
-.no-data {
-  text-align: center;
 }
 
 .last-updated {
@@ -202,6 +201,10 @@ export default class WorkspaceComponent extends Vue {
 
   get canSwitchToEdit() {
     return this.componentMode != ComponentMode.Edit;
+  }
+
+  get isInEditMode() {
+    return this.componentMode == ComponentMode.Edit;
   }
 
   @Watch("componentDetails")
