@@ -16,11 +16,21 @@
         </v-btn>
       </template>
     </v-snackbar>
-    <v-footer :app="true">
-      <v-btn type="button" data-cc="show-preferencesModal" x-small color="secondary">{{ this.$t("cookies.openDialog") }} </v-btn>
-    </v-footer>
+
+    <v-btn :title="$t('cookies.openDialog')" class="cookie-btn" color="secondary" data-cc="show-preferencesModal" icon type="button" x-large>
+      <v-icon>cookie</v-icon>
+    </v-btn>
   </v-app>
 </template>
+
+<style>
+.cookie-btn {
+  position: fixed;
+  left: 1px;
+  bottom: 1px;
+  z-index: 10;
+}
+</style>
 
 <script lang="ts">
 import Vue, { reactive } from "vue";
