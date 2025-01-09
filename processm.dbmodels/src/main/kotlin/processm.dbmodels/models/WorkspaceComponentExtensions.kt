@@ -29,6 +29,9 @@ fun WorkspaceComponent.triggerEvent(
         eventData?.let { setStringProperty(WORKSPACE_COMPONENT_EVENT_DATA, it) }
         setString(WORKSPACE_COMPONENT_ID, id.value.toString())
         if (event == WorkspaceComponentEventType.DataChange) {
+            requireNotNull(eventData) {
+                "eventData must be set for DataChange event. It is recommended to use the triggerEvent(producer: Producer, eventData: DataChangeType) overload."
+            }
             setString(WORKSPACE_ID, workspace.id.toString())
         }
     }

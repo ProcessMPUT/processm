@@ -5,12 +5,12 @@ import jakarta.jms.Message
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.quartz.*
-import processm.core.communication.Producer
 import processm.core.esb.AbstractJobService
 import processm.core.esb.ServiceJob
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.persistence.connection.transactionMain
 import processm.core.querylanguage.Query
+import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
 import processm.helpers.AbstractLocalizedException
 import processm.helpers.toUUID
@@ -97,14 +97,23 @@ class LogKPIService : AbstractJobService(
                     component.data = first[0].attributes.values.first().toString()
                     component.dataLastModified = Instant.now()
                     component.lastError = null
+
+                    component.afterCommit {
+                        // TODO: add support for versioning of KPI values; for now just send it as initial model to just update value in GUI
+                        component.triggerEvent(eventData = DataChangeType.InitialModel)
+                    }
                 } catch (e: Exception) {
                     // FIXME: drop hardcoded locale in favor of storing error id or serialized exception and formatting
                     //  error messages in processm.services for the given request locale
                     component.lastError =
                         if (e is AbstractLocalizedException) e.localizedMessage(Locale.ENGLISH) else e.message
+
+                    component.afterCommit {
+                        component.triggerEvent(eventData = DataChangeType.LastError)
+                    }
+
                     logger.warn("Cannot calculate log-based KPI for component with id $id.", e)
                 }
-                component.triggerEvent(Producer(), WorkspaceComponentEventType.DataChange)
             }
         }
     }

@@ -16,6 +16,11 @@ abstract class AbstractLocalizedException(
     message: String
 ) : Exception(message) {
 
+    /**
+     * Reads the formatting string for the given [key] and [locale].
+     *
+     * @throws IllegalStateException if the given [key] is not found for the given [locale] and the fallback locale en_US.
+     */
     protected fun getFormatString(locale: Locale, key: String) =
         try {
             locale.getErrorMessage(key)
@@ -25,7 +30,7 @@ abstract class AbstractLocalizedException(
                 Locale.US.getErrorMessage(key)
             } catch (e: MissingResourceException) {
                 logger().warn("Missing translation of {} to en_US (fallback)", key)
-                key
+                throw IllegalStateException("Missing translation of $key to $locale.")
             }
         }
 
