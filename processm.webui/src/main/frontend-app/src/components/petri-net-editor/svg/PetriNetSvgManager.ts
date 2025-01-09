@@ -16,6 +16,7 @@ import { NodeBlock } from "@/components/petri-net-editor/layouter/blocks/NodeBlo
 export class PetriNetSvgManager {
   private readonly _eventBus: EventBus | null;
 
+  private _svgId: string;
   private _svgPlaces: Map<string, SvgPlace> = new Map<string, SvgPlace>();
   private _svgTransitions: Map<string, SvgTransition> = new Map<string, SvgTransition>();
   private _svgArcs: Map<string, SvgArc> = new Map<string, SvgArc>();
@@ -23,7 +24,8 @@ export class PetriNetSvgManager {
   private _connectSvgLine: SVGLineSelection | null = null;
   private readonly _draggingEnabled: boolean;
 
-  constructor(svg: SVGSelection, draggingEnabled: boolean) {
+  constructor(svgId: string, svg: SVGSelection, draggingEnabled: boolean) {
+    this._svgId = svgId;
     this._svg = svg;
     this._state = new PetriNetState();
 
@@ -142,7 +144,7 @@ export class PetriNetSvgManager {
   connect(outId: string, inId: string): void {
     const arc = this._state.createArc(outId, inId);
     if (arc != null) {
-      const svgArc = new SvgArc(this._svg, arc);
+      const svgArc = new SvgArc(this._svgId, this._svg, arc);
       this._svgArcs.set(arc.id, svgArc);
       this.updateArcPosition(svgArc);
     }
@@ -167,7 +169,7 @@ export class PetriNetSvgManager {
     // @ts-ignore
     this._svg.on("mousemove", (event: MouseEvent) => {
       if (this._connectSvgLine == null) {
-        this._connectSvgLine = SvgArc.createLine(this._svg.select(".arcs"), SvgArc.WIDTH).attr("x1", x1).attr("y1", y1);
+        this._connectSvgLine = SvgArc.createLine(this._svgId, this._svg.select(".arcs"), SvgArc.WIDTH).attr("x1", x1).attr("y1", y1);
       }
 
       this._connectSvgLine.attr("x2", event.offsetX / this.scale);

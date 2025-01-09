@@ -39,7 +39,16 @@
     <div v-show="!isDebuggerEnabled" class="fill-height">
       <svg ref="editorSvg" height="100%" width="100%">
         <defs>
-          <marker id="arrow" markerHeight="25" markerUnits="userSpaceOnUse" markerWidth="25" orient="auto-start-reverse" refX="0" refY="5" viewBox="0 0 10 10">
+          <marker
+            :id="'arrow-' + svgId"
+            markerHeight="25"
+            markerUnits="userSpaceOnUse"
+            markerWidth="25"
+            orient="auto-start-reverse"
+            refX="0"
+            refY="5"
+            viewBox="0 0 10 10"
+          >
             <path d="M 0 0 L 10 5 L 0 10 z" />
           </marker>
         </defs>
@@ -77,6 +86,7 @@ import { Place } from "@/components/petri-net-editor/model/Place";
 import { Transition } from "@/components/petri-net-editor/model/Transition";
 import { Arc } from "@/components/petri-net-editor/model/Arc";
 import svgPanZoom from "svg-pan-zoom";
+import { waitForRepaint } from "@/utils/waitForRepaint";
 
 @Component({
   name: "petri-net-editor",
@@ -94,6 +104,7 @@ export default class PetriNetEditor extends Vue {
     contextMenu: ContextMenu;
     editorSvg: HTMLElement;
   };
+  private svgId = uuidv4();
   private isEditPlaceDialogVisible = false;
   private isEditTransitionDialogVisible = false;
   private isExportPnmlDialogVisible = false;
@@ -129,11 +140,11 @@ export default class PetriNetEditor extends Vue {
 
   // noinspection JSUnusedGlobalSymbols
   mounted() {
-    const svgId = `editor-${uuidv4()}`;
+    const editorId = `editor-${this.svgId}`;
 
-    this.$refs.editorSvg.setAttribute("id", svgId);
+    this.$refs.editorSvg.setAttribute("id", editorId);
 
-    this.petriNetManager = new PetriNetSvgManager(d3.select(`#${svgId}`), this.enableDragging);
+    this.petriNetManager = new PetriNetSvgManager(this.svgId, d3.select(`#${editorId}`), this.enableDragging);
 
     this.layouter = new BlockLayouter(this.debug);
 
