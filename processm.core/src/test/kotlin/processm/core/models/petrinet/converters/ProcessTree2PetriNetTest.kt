@@ -91,16 +91,10 @@ class ProcessTree2PetriNetTest {
     }
 
     @Test
-    fun selfLoop() {
-        with(ProcessTree.parse("⟲(A,τ)").toPetriNet()) {
-            assertEquals(2, transitions.size)
-            val a = transitions.single { it.name == "A" && !it.isSilent }
-            val tau = transitions.single { it.isSilent }
-            assertEquals(3, places.size)
-            assertEquals(1, initialMarking.size)
-            assertEquals(initialMarking.keys + a.outPlaces, a.inPlaces)
-            assertEquals(a.outPlaces, tau.inPlaces)
-            assertEquals(tau.outPlaces, finalMarking.keys)
+    fun `self-loop within a larger structure`() {
+        with(ProcessTree.parse("→(A,⟲(B,τ),D)").toPetriNet()) {
+            assertTrue { transitions.all { it.inPlaces.size == 1 } }
+            assertTrue { transitions.all { it.outPlaces.size == 1 } }
         }
     }
 }

@@ -146,38 +146,6 @@ private class ProcessTree2PetriNet(val tree: ProcessTree) {
         inPlaces.remove(transitionId)
     }
 
-    private fun simplifySelfLoops(): Boolean {
-        // before: 1 external input, 1 input from the silent transaction, 1 output to the named transaction
-        // after: 1 input from the named transaction, 1 external output, 1 output to the silent transaction
-        // the silent transaction
-        // the named transaction
-        var modified = false
-        val allNonSilent = ArrayList<UUID>()
-        val allSilent = HashSet(auxiliaries)
-        for ((key, value) in activities)
-            if (key.isSilent)
-                allSilent.add(value)
-            else
-                allNonSilent.add(value)
-        val precedingTransitions = computePrecedingTransitions()
-        val succeedingTransitions = computeSucceedingTransitions()
-        for (named in allNonSilent) {
-            val before = inPlaces[named]?.singleOrNull() ?: continue
-            if (succeedingTransitions[before]?.singleOrNull() != named) continue
-            val after = outPlaces[named]?.singleOrNull() ?: continue
-            if (precedingTransitions[after]?.singleOrNull() != named) continue
-            val silent =
-                succeedingTransitions[after].orEmpty().intersect(precedingTransitions[before].orEmpty()).singleOrNull()
-                    ?: continue
-            if (silent !in allSilent) continue
-            // silent is removed, after is now going to named directly
-            removeTransition(silent)
-            inPlaces[named]!!.add(after)
-            modified = true
-        }
-        return modified
-    }
-
     private fun trimStart(): Boolean {
         val succeeding = computeSucceedingTransitions()
         val preceding = computePrecedingTransitions()
@@ -215,7 +183,7 @@ private class ProcessTree2PetriNet(val tree: ProcessTree) {
         var modified = true
         while (modified) {
             modified =
-                removeRedundantSilents() or simplifySelfLoops() or removeDanglingPlaces() or trimStart() or trimEnd()
+                removeRedundantSilents() or removeDanglingPlaces() or trimStart() or trimEnd()
         }
         val transitions = activities.mapTo(ArrayList()) { (activitiy, id) ->
             Transition(
