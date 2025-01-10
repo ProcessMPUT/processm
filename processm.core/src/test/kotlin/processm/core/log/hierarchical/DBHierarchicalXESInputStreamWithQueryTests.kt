@@ -1,5 +1,6 @@
 package processm.core.log.hierarchical
 
+import org.junit.platform.commons.util.Preconditions.condition
 import processm.core.DBTestHelper.dbName
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR
@@ -825,6 +826,16 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
         val log = stream.first()
         assertTrue(log.traces.count() <= 2)
         assertTrue(log.traces.all { t -> t.events.count() <= 3 })
+    }
+
+    @Test
+    fun `limits do not affect upper scopes`() {
+        val totalLogs = (q("select count(l:id)").first().attributes["count(log:identity:id)"] as Long).toInt()
+        condition(totalLogs >= 2, "This test requires at least two event logs")
+
+        assertEquals(totalLogs, q("select l:name limit l:$totalLogs, t:1, e:1").count())
+        assertEquals(totalLogs, q("select l:name limit l:$totalLogs, e:1").count())
+        assertEquals(totalLogs, q("select l:name limit l:$totalLogs, t:1").count())
     }
 
     @Test

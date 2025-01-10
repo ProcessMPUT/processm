@@ -1,39 +1,57 @@
-/* eslint-disable prettier/prettier */
 <template>
   <v-container>
     <v-row no-gutters>
-      <v-alert type="info" text>
-        The system comes preloaded with several demonstrative event logs. You can upload your own XES event log below. Raw *.xes files and the compressed
-        *.xes.gz files are supported.
-      </v-alert>
-      <v-alert type="warning">
-        DO NOT upload event logs containing personal, sensitive, and/or classified information. The uploaded event logs will be stored in the system for an
-        undefined period of time, e.g., until scheduled clean-up or system update. It will be also shared with the other users of this system. The uploaded
-        files will be public available. The system operator is not responsible for the content made public in this way.
-      </v-alert>
+      <v-alert text type="info">{{ $t("pql-interpreter.page-hint") }}</v-alert>
+      <v-alert v-if="app.config.demoMode" type="warning">{{ $t("pql-interpreter.demo-mode") }}</v-alert>
       <v-col align="left">
         <v-select v-model="dataStoreId" :items="availableDataStores" dense item-text="name" item-value="id" label="Select data store"></v-select>
       </v-col>
       <v-col align="right">
         <v-btn class="mx-2" color="primary" @click="fileUploadDialog = true">
-          Upload XES file
-          <v-icon right>upload_file</v-icon>
+          <v-icon>upload_file</v-icon>
+          {{ $t("pql-interpreter.upload-xes-file.title") }}
           <v-progress-circular v-show="isUploading" :size="20" :width="3" class="ml-2" color="secondary" indeterminate></v-progress-circular>
         </v-btn>
-        <v-btn :to="{ name: 'pql-docs' }" class="mx-2" color="primary" target="_blank"> Documentation</v-btn>
+        <v-btn :title="$t('pql-interpreter.pql-documentation-hint')" :to="{ name: 'pql-docs' }" class="mx-2" color="primary" target="_blank">
+          <v-icon>description</v-icon>
+          {{ $t("pql-interpreter.pql-documentation") }}
+        </v-btn>
       </v-col>
     </v-row>
     <v-row>
       <v-col>
-        <v-alert type="info" text>
-          Type PQL query below and click [Execute] to see query results or [Download XES] to download the resulting XES files. Use the drop-down list for
-          predefined queries. Use the [Documentation] button to open the PQL documentation.
-        </v-alert>
+        <p class="text-subtitle-1">{{ $t("pql-interpreter.logs") }}</p>
+        <div class="text-center">
+          <v-progress-circular v-show="isLoadingXesLogs" color="primary" indeterminate></v-progress-circular>
+        </div>
+        <xes-data-table
+          v-show="!isLoadingXesLogs"
+          :disable-hierarchy="true"
+          :disable-pagination="false"
+          :empty-text="$t('common.no-data')"
+          :headers="xesLogHeaders"
+          :is-expanded="false"
+          :is-fold="false"
+          :items="xesLogItems"
+          :items-per-page="5"
+          :items-per-page-options="[1, 5, -1]"
+          :keep-tree-expand="false"
+          :loading="isLoadingXesLogs"
+          :removable="false"
+          :selectable="true"
+          children-prop="_children"
+        />
       </v-col>
     </v-row>
     <v-row>
       <v-col>
-        <v-select v-model="selectedQuery" :items="predefinedQueries" dense label="Select query" @change="(selectedQuery) => (query = selectedQuery)"></v-select>
+        <v-select
+          v-model="selectedQuery"
+          :items="predefinedQueries"
+          :label="$t('pql-interpreter.select-query')"
+          dense
+          @change="(selectedQuery) => (query = selectedQuery)"
+        ></v-select>
       </v-col>
     </v-row>
     <v-row no-gutters>
@@ -44,7 +62,8 @@
           rows="4"
           background-color="grey lighten-4"
           class="pql-code"
-          label="Query"
+          :hint="$t('pql-interpreter.query-hint')"
+          :label="$t('pql-interpreter.query')"
           v-model="query"
           @input="queryModified"
           name="query"
@@ -55,21 +74,17 @@
     <v-row no-gutters>
       <v-col>
         <v-btn :disabled="isLoadingData" class="mr-4" color="primary" name="btn-submit-query" @click="submitQuery">
-          Execute
+          {{ $t("pql-interpreter.execute") }}
           <v-progress-circular v-show="isLoadingData" :size="20" :width="3" class="ml-2" color="secondary" indeterminate></v-progress-circular>
         </v-btn>
         <v-btn color="primary" @click="download">
-          Download XES
+          {{ $t("pql-interpreter.download") }}
           <v-progress-circular v-show="isDownloading" :size="20" :width="3" class="ml-2" color="secondary" indeterminate></v-progress-circular>
         </v-btn>
       </v-col>
     </v-row>
     <v-row>
       <v-col>
-        <v-alert type="info" text>
-          This view shows at most 10 logs, 30 traces per log, and 90 events per trace. For downloading the limits for the numbers of traces and events are 10
-          times larger.
-        </v-alert>
         <xes-data-table
           :items="items"
           :headers="headers"
@@ -79,6 +94,7 @@
           :keep-tree-expand="false"
           :empty-text="$t('common.no-data')"
           :disable-pagination="false"
+          :items-per-page="5"
           :items-per-page-options="[1, 5, -1]"
           :selectable="false"
           children-prop="_children"
@@ -111,7 +127,7 @@
 <script lang="ts">
 import Vue from "vue";
 import { waitForRepaint } from "@/utils/waitForRepaint";
-import { Component, Inject } from "vue-property-decorator";
+import { Component, Inject, Watch } from "vue-property-decorator";
 import LogsService from "@/services/LogsService";
 import DataStoreService from "@/services/DataStoreService";
 import XesProcessor, { LogItem } from "@/utils/XesProcessor";
@@ -136,12 +152,18 @@ export default class PQL extends Vue {
   isUploading = false;
   isDownloading = false;
   isLoadingDataStores = false;
+
+  xesLogHeaders: string[] = [];
+  xesLogItems: LogItem[] = [];
+  isLoadingXesLogs = false;
+  readonly getLogsQuery = "select log:concept:name, log:identity:id, log:lifecycle:model";
+
   query = "";
   headers = new Array<string>();
   items = new Array<LogItem>();
   selectedQuery = "";
   fileUploadDialog = false;
-  predefinedQueries = [
+  readonly predefinedQueries = [
     { text: "Custom", value: "" },
     { text: "UC1: Read the entire database", value: "select *" },
     {
@@ -241,6 +263,7 @@ export default class PQL extends Vue {
       this.app.error(err);
     } finally {
       this.isUploading = false;
+      await this.loadXesLogs();
     }
   }
 
@@ -265,11 +288,9 @@ export default class PQL extends Vue {
         const { headers, logItems } = this.xesProcessor.extractHierarchicalLogItemsFromAllScopes(queryResults);
         this.headers = headers;
 
-        for (const item of logItems) {
-          await waitForRepaint(() => {
-            this.items.push(item);
-          });
-        }
+        await waitForRepaint(() => {
+          this.items.push(...logItems);
+        });
 
         const formattingTime = new Date().getTime() - start;
         this.app.info("Query executed and results retrieved in " + executionTime + "ms. Formatted results in " + formattingTime + "ms.");
@@ -296,6 +317,36 @@ export default class PQL extends Vue {
       this.app.error(err?.response?.data?.error ?? err);
     } finally {
       this.isDownloading = false;
+    }
+  }
+
+  /**
+   * Loads the list of event logs.
+   */
+  @Watch("dataStoreId")
+  async loadXesLogs() {
+    if (this.dataStoreId == null) return;
+    try {
+      this.isLoadingXesLogs = true;
+      this.xesLogHeaders = [];
+      this.xesLogItems = [];
+
+      const queryResults = await this.logsService.submitUserQuery(this.dataStoreId, this.getLogsQuery, "application/json", false, false);
+
+      await waitForRepaint(async () => {
+        const { headers, logItems } = this.xesProcessor.extractLogItemsFromLogScope(queryResults);
+        this.xesLogHeaders = headers;
+
+        for (const item of logItems) {
+          await waitForRepaint(() => {
+            this.xesLogItems.push(item);
+          });
+        }
+      });
+    } catch (err) {
+      this.app.error(err?.response?.data?.error ?? err);
+    } finally {
+      this.isLoadingXesLogs = false;
     }
   }
 }

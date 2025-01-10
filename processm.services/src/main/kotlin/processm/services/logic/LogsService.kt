@@ -194,8 +194,7 @@ class LogsService(private val producer: Producer) {
         limitFactor: Long = 1L,
     ): DBHierarchicalXESInputStream {
         loggedScope { logger ->
-            logger.info("Querying data store: $dataStoreId")
-            logger.debug("User query: $query")
+            logger.info("Querying data store $dataStoreId using user query $query")
 
             val q = Query(query)
             q.applyLimits(logLimit, traceLimit * limitFactor, eventLimit * limitFactor)
