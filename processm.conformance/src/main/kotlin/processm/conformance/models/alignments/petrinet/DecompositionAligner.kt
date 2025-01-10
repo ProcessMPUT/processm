@@ -70,7 +70,7 @@ class DecompositionAligner(
 
     private fun returnToOriginalModel(alignment: Alignment): Alignment = Alignment(
         alignment.steps.map { step ->
-            if (step.modelMove !== null || step.modelCause.isNotEmpty())
+            if (step.modelMove !== null)
                 step.copy(
                     modelMove = step.modelMove?.name?.let { renaming[it] },
                     modelCause = step.modelCause.map { renaming[it.name]!! })
