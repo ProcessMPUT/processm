@@ -11,7 +11,16 @@
       :transitions="getTransitionsAsDto()"
       :arcs="getArcsAsDto()"
       @loadNewestModel="loadNewestModel"
-    ></petri-net-editor>
+    >
+      <template v-slot:toolbar v-if="data.data.alignmentKPIReportVersion != null">
+        <alignments-dialog
+          :workspace-id="workspaceId"
+          :component-id="data.id"
+          :name="data.name"
+        ></alignments-dialog>
+        <kpi-dialog :workspace-id="workspaceId" :component-id="data.id"></kpi-dialog>
+      </template>
+    </petri-net-editor>
     <div class="node-details" />
   </div>
   <p v-else>{{ $t("workspace.component.no-data") }}</p>
@@ -30,6 +39,7 @@ import AlignmentsDialog from "@/components/AlignmentsDialog.vue";
 import { ComponentData } from "@/openapi";
 import WorkspaceService from "@/services/WorkspaceService";
 import { waitForRepaint } from "@/utils/waitForRepaint";
+import KpiDialog from "@/components/KpiDialog.vue";
 
 @Component({
   computed: {
@@ -37,7 +47,7 @@ import { waitForRepaint } from "@/utils/waitForRepaint";
       return ComponentMode;
     }
   },
-  components: { AlignmentsDialog, PetriNetEditor },
+  components: { KpiDialog, AlignmentsDialog, PetriNetEditor },
   directives: {
     resize
   }

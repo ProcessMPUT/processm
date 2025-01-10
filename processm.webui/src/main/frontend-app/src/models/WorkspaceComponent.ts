@@ -68,6 +68,7 @@ export class PetriNetComponentData extends ComponentData {
   initialMarking?: { [key: string]: number };
   finalMarking?: { [key: string]: number };
   alignmentKPIReport?: AlignmentKPIReport;
+  alignmentKPIReportVersion?: number;
   'modelVersion'?: number;
   'newestVersion'?: number;
 

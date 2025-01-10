@@ -6,7 +6,8 @@
 
     <export-pnml-dialog v-if="isExportPnmlDialogVisible" :state="petriNetManager.state" @close="closeExportPnmlDialog" />
 
-    <v-container v-if="showButtons || hasNewerVersion" elevation-6 fill-width fluid pa-0 style="z-index: 1">
+    <v-container v-if="showButtons" elevation-6 fill-width fluid pa-0 style="z-index: 1">
+      <slot name="toolbar"> </slot>
       <v-tooltip bottom v-if="hasNewerVersion">
         <template v-slot:activator="{ on, attrs }">
           <v-btn v-bind="attrs" v-on="on" icon v-if="showButtons" @click="$emit('loadNewestModel')">
@@ -33,6 +34,19 @@
 
       <v-btn v-if="isDebuggerEnabled" class="ma-2" color="primary" light v-on:click="() => (isDebuggerEnabled = false)"> Stop debugger </v-btn>
     </v-container>
+    <v-toolbar v-if="!showButtons && (hasNewerVersion || $slots.toolbar)" class="toolbar" dense elevation="0" floating>
+      <slot name="toolbar"> </slot>
+      <v-tooltip bottom v-if="hasNewerVersion">
+        <template v-slot:activator="{ on, attrs }">
+          <v-btn v-bind="attrs" v-on="on" icon v-if="showButtons" @click="$emit('loadNewestModel')">
+            <v-icon color="warning">priority_high</v-icon>
+          </v-btn>
+          <v-icon v-bind="attrs" v-on="on" color="warning" v-else>priority_high</v-icon>
+        </template>
+        <span v-if="showButtons">{{ $t("workspace.component.edit.load-new-model") }}</span>
+        <span v-else>{{ $t("workspace.component.new-model-available") }}</span>
+      </v-tooltip>
+    </v-toolbar>
 
     <PetriNetDebugger v-if="isDebuggerEnabled" :state="this.petriNetManager.state" class="fill-height" />
 
