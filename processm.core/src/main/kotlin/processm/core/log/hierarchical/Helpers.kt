@@ -36,7 +36,7 @@ internal fun ResultSet.to2DIntArray(): List<IntArray> =
         var maxSize = 0
         this@to2DIntArray.use {
             while (it.next()) {
-                val array = (it.getArray(1).array as Array<Int>).toIntArray()
+                val array = ((it.getArray(1) ?: continue).array as Array<Int>).toIntArray()
                 if (array.size > maxSize)
                     maxSize = array.size
                 out.add(array)
