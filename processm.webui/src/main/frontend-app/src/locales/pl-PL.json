@@ -21,7 +21,7 @@
   "kpi-dialog": {
     "title": "Kluczowe wskaźniki efektywności (KPI)",
     "model-kpi": "KPI bazujące na modelu",
-    "log-kpi":"@:workspace.component.aligner-kpi",
+    "log-kpi": "@:workspace.component.aligner-kpi",
     "kpi": "KPI",
     "value": "Wartość",
     "log-count": "Liczba logów"
@@ -516,5 +516,21 @@
         }
       ]
     }
+  },
+  "pql-interpreter": {
+    "page-title": "Interpreter PQL",
+    "page-hint": "Ten widok jest przeznaczony do prototypowania i testowania zapytań PQL. Dzienniki zdarzeń ze wszystkich magazynów danych dostępnych dla bieżącego użytkownika są dostępne. Możesz przesłać swój własny dziennik zdarzeń XES poniżej. Obsługiwane są pliki *.xes oraz skompresowane pliki *.xes.gz. Wpisz zapytanie PQL poniżej i kliknij [Wykonaj], aby zobaczyć wyniki zapytania lub [Pobierz XES], aby pobrać wynikowe pliki XES. Użyj listy rozwijanej, aby wybrać wstępnie zdefiniowane zapytania. Użyj przycisku [Dokumentacja PQL], aby otworzyć dokumentację PQL.",
+    "demo-mode": "NIE przesyłaj dzienników zdarzeń zawierających dane osobowe, wrażliwe i/lub poufne informacje. Przesłane dzienniki zdarzeń będą przechowywane w systemie przez nieokreślony czas, np. do zaplanowanego czyszczenia lub aktualizacji systemu. Będą również udostępniane innym użytkownikom tego systemu. Przesłane pliki będą publicznie dostępne. Operator systemu nie ponosi odpowiedzialności za treści udostępnione w ten sposób.",
+    "upload-xes-file": {
+      "title": "@:data-stores.upload-xes-file.title"
+    },
+    "pql-documentation": "Dokumentacja PQL",
+    "pql-documentation-hint": "@:workspace.component.edit.query-doc",
+    "logs": "Dzienniki zdarzeń w wybranym magazynie danych",
+    "select-query": "Wybierz zapytanie",
+    "query": "@:workspace.component.edit.query",
+    "query-hint": "Zapytanie wykonane na wybranym magazynie danych w celu pobrania dzienników zdarzeń",
+    "execute": "Wykonaj",
+    "download": "Pobierz XES"
   }
 }

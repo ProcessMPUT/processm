@@ -568,11 +568,9 @@ export default class DataStoreConfiguration extends Vue {
         const { headers, logItems } = this.xesProcessor.extractLogItemsFromLogScope(queryResults);
         this.xesLogHeaders = headers;
 
-        for (const item of logItems) {
-          await waitForRepaint(() => {
-            this.xesLogItems.push(item);
-          });
-        }
+        await waitForRepaint(() => {
+          this.xesLogItems.push(...logItems);
+        });
       });
     } catch (err) {
       this.app.error(err?.response?.data?.error ?? err);

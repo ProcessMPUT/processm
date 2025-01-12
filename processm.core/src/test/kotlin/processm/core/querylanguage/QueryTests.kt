@@ -1088,6 +1088,16 @@ class QueryTests {
     }
 
     @Test
+    fun applyLimitsTest() {
+        val query = Query("limit t:1, e:1")
+        query.applyLimits(10, 20, 30)
+
+        assertEquals(10, query.limit[Scope.Log])
+        assertEquals(1, query.limit[Scope.Trace])
+        assertEquals(1, query.limit[Scope.Event])
+    }
+
+    @Test
     fun offsetSingleTest() {
         val query = Query("offset l:1")
         assertEquals(null, query.limit[Scope.Log])

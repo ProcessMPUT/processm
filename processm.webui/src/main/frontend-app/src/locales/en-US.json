@@ -7,7 +7,7 @@
     "workspaces": "Workspaces",
     "users": "@:users.page-title",
     "data-stores": "@:data-stores.page-title",
-    "pql-interpreter": "PQL interpreter",
+    "pql-interpreter": "@:pql-interpreter.page-title",
     "about": "@:about.page-title"
   },
   "topbar": {
@@ -516,5 +516,21 @@
         }
       ]
     }
+  },
+  "pql-interpreter": {
+    "page-title": "PQL interpreter",
+    "page-hint": "This view is intended for prototyping and testing PQL queries. Event logs from all data stores accessible by the current user are available. You can upload your own XES event log below. Raw *.xes files and compressed *.xes.gz files are supported. Type a PQL query below and click [Execute] to see the query results or [Download XES] to download the resulting XES files. Use the drop-down list for predefined queries. Use the [PQL Documentation] button to open the PQL documentation.",
+    "demo-mode": "DO NOT upload event logs containing personal, sensitive, and/or classified information. The uploaded event logs will be stored in the system for an undefined period of time, e.g., until scheduled clean-up or system update. It will be also shared with the other users of this system. The uploaded files will be public available. The system operator is not responsible for the content made public in this way.",
+    "upload-xes-file": {
+      "title": "@:data-stores.upload-xes-file.title"
+    },
+    "pql-documentation": "PQL documentation",
+    "pql-documentation-hint": "@:workspace.component.edit.query-doc",
+    "logs": "Event logs in the selected data store",
+    "select-query": "Select query",
+    "query": "@:workspace.component.edit.query",
+    "query-hint": "The query executed against the selected data store for the retrieval of event logs",
+    "execute": "Execute",
+    "download": "Download XES"
   }
 }
