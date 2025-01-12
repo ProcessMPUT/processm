@@ -184,11 +184,11 @@ class AutomaticEtlTest : SeleniumBase() {
             forEach { click(it) }
         }
         recorder?.take()
-        val headers = driver.findElements(By.xpath("//*[@name='xes-data-table']//thead/tr/th")).withIndex()
+        val headers = driver.findElements(By.xpath("(//*[@name='xes-data-table'])[2]//thead/tr/th")).withIndex()
             .associate { it.value.text to it.index }
         val dbTextColumn = headers["db:text"]
         assertNotNull(dbTextColumn)
-        val rows = driver.findElements(By.xpath("//*[@name='xes-data-table']//tbody/tr"))
+        val rows = driver.findElements(By.xpath("(//*[@name='xes-data-table'])[2]//tbody/tr"))
             .filter { it.findElements(By.tagName("td")).size >= 2 }
         assertEquals(12, rows.size)
         val log = ArrayList<ArrayList<String>>()
