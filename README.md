@@ -86,3 +86,27 @@ the object that you have created. Add new access control entries to grant access
 users, groups, or organizations, and grant them read, write, and owner permissions. The user is granted with the
 highest permission that results from the ACL.
 
+## How to cite
+
+To cite ProcessM software, use the following citation:
+
+Tomasz P. Pawlak, Jędrzej Potoniec, ProcessM: Intelligent Process Mining software, SoftwareX, Volume 30, 102079,
+Elsevier, 2025, doi:[10.1016/j.softx.2025.102079](https://doi.org/10.1016/j.softx.2025.102079).<br/>
+BibTeX:
+
+ ```bibtex
+@article{ProcessM2025,
+    author = {Tomasz P. Pawlak and Jędrzej Potoniec},
+    title = {ProcessM: Intelligent Process Mining software},
+    journal = {SoftwareX},
+    volume = {30},
+    pages = {102079},
+    year = {2025},
+    issn = {2352-7110},
+    doi = {10.1016/j.softx.2025.102079},
+    url = {https://www.sciencedirect.com/science/article/pii/S2352711025000469},
+    keywords = {Petri net, Key performance indicator, Conformance checking, Event log},
+}
+```
+
+See the [full list of publications and BibTeX entries](docs/publications.md).
