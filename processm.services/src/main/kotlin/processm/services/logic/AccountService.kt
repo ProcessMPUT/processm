@@ -1,12 +1,12 @@
 package processm.services.logic
 
-import com.kosprov.jargon2.api.Jargon2.*
 import jakarta.mail.Message
 import jakarta.mail.Session
 import jakarta.mail.internet.MimeMessage
 import org.jetbrains.exposed.dao.load
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder
 import processm.core.communication.Producer
 import processm.core.communication.email.EMAIL_ID
 import processm.core.communication.email.EMAIL_TOPIC
@@ -26,10 +26,9 @@ import java.time.Duration
 import java.time.Instant
 import java.util.*
 
+
 class AccountService(private val groupService: GroupService, private val producer: Producer) {
-    private val passwordHasher =
-        jargon2Hasher().type(Type.ARGON2d).memoryCost(65536).timeCost(3).saltLength(16).hashLength(16)
-    private val passwordVerifier = jargon2Verifier()
+    private val hasher = Argon2PasswordEncoder(16, 16, 1, 65536, 3)
     private val defaultLocale = Locale.UK
 
     /**
@@ -239,8 +238,8 @@ class AccountService(private val groupService: GroupService, private val produce
         }
     }
 
-    private fun calculatePasswordHash(password: String) = passwordHasher.password(password.toByteArray()).encodedHash()
+    private fun calculatePasswordHash(password: String) = hasher.encode(password)
 
-    private fun verifyPassword(password: String, passwordHash: String) =
-        passwordVerifier.hash(passwordHash).password(password.toByteArray()).verifyEncoded()
+    private fun verifyPassword(password: String, passwordHash: String) = hasher.matches(password, passwordHash)
+
 }
