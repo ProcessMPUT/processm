@@ -225,6 +225,12 @@
                             <name>%g/db2</name>
                             <build>
                                 <contextDir>db2</contextDir>
+                                <buildx>
+                                    <platforms>
+                                        <!-- On Apple Silicon, it requires Docker with Apple Virtualization Framework and Rosetta enabled -->
+                                        <platform>linux/amd64</platform>
+                                    </platforms>
+                                </buildx>
                             </build>
                         </image>
                         <image>
