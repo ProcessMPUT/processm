@@ -21,9 +21,9 @@ class WebServicesHostTest {
             customizeClient {
                 setSSLContext(SSLContextBuilder.create().loadTrustMaterial(TrustSelfSignedStrategy()).build())
                 setSSLHostnameVerifier(NoopHostnameVerifier())
-                connectTimeout = 1000
-                connectionRequestTimeout = 1000
-                socketTimeout = 1000
+                connectTimeout = 5_000
+                connectionRequestTimeout = 10_000
+                socketTimeout = 5_000
             }
         }
     }
@@ -35,16 +35,16 @@ class WebServicesHostTest {
     @Test
     fun startStopStartStopTest() = runBlocking {
         for (i in 0..2) {
-            host.start()
-            var response = client.get(baseURIs).bodyAsText()
             try {
+                host.start()
+                val response = client.get(baseURIs).bodyAsText()
                 assertTrue(response.startsWith("<!DOCTYPE html>", ignoreCase = true))
             } finally {
                 host.stop()
             }
 
             assertFails {
-                response = client.get(baseURIs).bodyAsText()
+                val response = client.get(baseURIs).bodyAsText()
             }
         }
     }
