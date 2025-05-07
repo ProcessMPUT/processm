@@ -56,8 +56,8 @@
                         </goals>
                         <phase>initialize</phase>
                         <configuration>
-                            <nodeVersion>v18.20.4</nodeVersion>
-                            <npmVersion>10.7.0</npmVersion>
+                            <nodeVersion>v18.20.8</nodeVersion>
+                            <npmVersion>10.8.2</npmVersion>
                         </configuration>
                     </execution>
 
