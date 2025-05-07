@@ -29,7 +29,7 @@ import java.util.*
 
 class AccountService(private val groupService: GroupService, private val producer: Producer) {
     private val hasher = Argon2PasswordEncoder(16, 16, 1, 65536, 3)
-    private val defaultLocale = Locale.UK
+    private val defaultLocale = Locale.US
 
     /**
      * Verifies that [username] with the specified [password] exists and returns the [UserDto] object.
