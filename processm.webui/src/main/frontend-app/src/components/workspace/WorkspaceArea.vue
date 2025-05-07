@@ -73,6 +73,7 @@
       v-if="displayViewModal"
       v-model="displayViewModal"
       :component-details="displayedComponentDetails"
+      :workspace-id="workspaceId"
       @close="closeModals"
       @view="viewComponent"
       @edit="editComponent"

@@ -14,6 +14,7 @@
         <workspace-component
           v-if="isMounted"
           :component-details="componentDetails"
+          :workspace-id="workspaceId"
           :component-mode="ComponentMode.Interactive"
           @view="$emit('view', componentDetails.id)"
           @edit="$emit('edit', componentDetails.id)"
@@ -48,6 +49,8 @@ export default class SingleComponentView extends Vue {
 
   @Prop({ default: {} })
   readonly componentDetails!: WorkspaceComponentModel;
+  @Prop()
+  readonly workspaceId!: string;
   @Prop({ default: false })
   readonly value!: boolean;
 

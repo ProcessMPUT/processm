@@ -286,7 +286,7 @@ abstract class SeleniumBase(
         })
         driver.manage().timeouts().implicitlyWait(Duration.ofMillis(2000))
         if (recordSlideshow) recorder = VideoRecorder(driver)
-        wait = WebDriverWait(driver, Duration.ofSeconds(15))
+        wait = WebDriverWait(driver, Duration.ofSeconds(15), Duration.ofMillis(50))
         driver.get("http://localhost:$httpPort/")
     }
 
