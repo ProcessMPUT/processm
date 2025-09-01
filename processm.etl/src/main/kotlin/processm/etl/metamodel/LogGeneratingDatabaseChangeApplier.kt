@@ -4,9 +4,11 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
+import processm.etl.helpers.notifyAboutNewData
 import processm.etl.tracker.DatabaseChangeApplier
 import processm.etl.tracker.DatabaseChangeApplier.DatabaseChangeEvent
 import processm.helpers.mapToSet
+import processm.helpers.toUUID
 import processm.logging.debug
 import processm.logging.loggedScope
 import processm.logging.logger
@@ -59,6 +61,7 @@ class LogGeneratingDatabaseChangeApplier(
     override fun applyChange(databaseChangeEvents: List<DatabaseChangeEvent>) =
         loggedScope { logger ->
             val executors = HashMap<String, List<AutomaticEtlProcessExecutor>>()
+            val notify = HashSet<UUID>()
             for (dbEvent in databaseChangeEvents) {
                 transaction(DBCache.get(dataStoreDBName).database) {
                     val executorsForClass =
@@ -68,6 +71,7 @@ class LogGeneratingDatabaseChangeApplier(
                     assert(executorsForClass.mapToSet { it.logId }.size == executorsForClass.size)
                     for (executor in executorsForClass) {
                         if (executor.processEvent(dbEvent)) {
+                            executor.dataStoreDBName.toUUID()?.let { notify.add(it) }
                             EtlProcessesMetadata.update({ EtlProcessesMetadata.id eq executor.logId }) {
                                 it[lastExecutionTime] = Instant.now()
                             }
@@ -75,7 +79,8 @@ class LogGeneratingDatabaseChangeApplier(
                     }
                 }
             }
-            logger.debug { "Successfully handled ${databaseChangeEvents.size} DB change events" }
+            logger.debug { "Successfully handled ${databaseChangeEvents.size} DB change events. Notifying ${notify.size} data store(s)." }
+            notify.forEach(::notifyAboutNewData)
         }
 
     companion object {
