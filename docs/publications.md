@@ -38,7 +38,7 @@ BibTex:
     number = {2},
     journal = {Foundations of Computing and Decision Sciences},
     publisher = {Walter de Gruyter GmbH},
-    author = {Pawlak, Tomasz P. and Potoniec, Jędrzej},
+    author = {Pawlak, Tomasz P. and Potoniec, J\k edrzej},
     year = {2025},
     month = jun,
     pages = {271–317}
