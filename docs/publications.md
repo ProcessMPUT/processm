@@ -23,6 +23,28 @@ BibTeX:
 
 To cite specific algorithms and solutions contained in ProcessM, cite these papers accordingly:
 
+Tomasz P. Pawlak, Jędrzej Potoniec, Process Query Language: A Domain-Specific Language for Querying Event Logs of
+Business Processes, Foundations of Computing and Decision Sciences, Volume 50, Issue 2 (June 2025), Walter de Gruyter
+GmbH, 2025, doi:[10.2478/fcds-2025-0010](https://doi.org/10.2478/fcds-2025-0010).<br/>
+BibTex:
+
+```bibtex
+@article{Pawlak2025,
+    title = {Process Query Language: A Domain-Specific Language for Querying Event Logs of Business Processes},
+    volume = {50},
+    ISSN = {2300-3405},
+    url = {https://doi.org/10.2478/fcds-2025-0010},
+    DOI = {10.2478/fcds-2025-0010},
+    number = {2},
+    journal = {Foundations of Computing and Decision Sciences},
+    publisher = {Walter de Gruyter GmbH},
+    author = {Pawlak, Tomasz P. and Potoniec, Jędrzej},
+    year = {2025},
+    month = jun,
+    pages = {271–317}
+}
+```
+
 Tomasz P. Pawlak, Bartosz Górka, Continuous update of business process trees using Continuous Inductive Miner,
 Bulletin of the Polish Academy of Sciences Technical Sciences, Volume 71, Number 1, e143551, Polish Academy of Sciences
 2023, doi:[10.24425/bpasts.2022.143551](https://doi.org/10.24425/bpasts.2022.143551).<br/>
